@@ -101,7 +101,7 @@ Legend:
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
 - [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
-- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added for TextInput/TextArea double/triple-click cancel; CodeEditor click selection cancel).
+- [x] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput/TextArea double/triple-click cancel + command-driven navigation cancel; CodeEditor click selection cancel).
 
 ### Tests
 
@@ -219,8 +219,8 @@ Evidence anchors:
 
 ## M6 — Semantics (a11y) and selection state
 
-- [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
-- [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value; code editor handles `SetTextSelection` best-effort within its windowed value).
+- [x] Define semantics role for the editor surface (v1: a `TextField` node via `TextInputRegion`, plus a sibling `Viewport` node for the scrollable windowed surface).
+- [x] Ensure selection and composition ranges follow ADR 0071 rules (UTF-8 byte offsets into the exported `value`; code editor handles `SetTextSelection` best-effort within its windowed value and cancels inline preedit deterministically).
 - [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (documented in workstream; v1 chooses stub/viewport semantics).
   - [x] Add regression gates for selection/composition invariants (including wrap and drag-selection cases):
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json`

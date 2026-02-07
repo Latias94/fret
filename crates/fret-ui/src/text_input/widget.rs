@@ -917,6 +917,23 @@ impl<H: UiHost> Widget<H> for TextInput {
             other => other,
         };
 
+        // During IME composition the displayed text is base text with a preedit splice at the
+        // caret (ADR 0071). To keep command-driven navigation/editing deterministic, cancel the
+        // inline preedit before applying commands (except copy; clear cancels preedit itself).
+        let is_vertical = matches!(
+            cmd,
+            "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"
+        );
+        if self.is_ime_composing() && is_vertical {
+            return true;
+        }
+        if self.is_ime_composing() && cmd != "text.copy" && cmd != "text.clear" {
+            self.clear_ime_composition();
+            self.mark_text_blobs_dirty();
+            cx.invalidate_self(Invalidation::Layout);
+            cx.request_redraw();
+        }
+
         match cmd {
             "text.clear" => {
                 self.text.clear();

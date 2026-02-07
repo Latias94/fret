@@ -535,8 +535,8 @@ Evidence anchors:
 
 ### 6) Semantics (a11y) and selection state
 
-- [~] Define semantics role for the editor surface (currently: `TextInputRegion` emits `SemanticsRole::TextField`).
-- [~] Ensure selection and composition ranges follow ADR 0071 rules (partial: `TextInputRegion` can publish UTF-8 ranges within an app-provided value).
+- [x] Define semantics role for the editor surface (v1: `TextInputRegion` emits `SemanticsRole::TextField`, plus a sibling `Viewport` node for the windowed surface).
+- [x] Ensure selection and composition ranges follow ADR 0071 rules (`value` is windowed display text; `text_selection`/`text_composition` are UTF-8 byte offsets into that `value`; `SetTextSelection` is mapped best-effort into buffer indices).
 - [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1.
   - v1 decision: **stub/viewport semantics**.
   - We expose:

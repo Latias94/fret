@@ -29,14 +29,13 @@ pub(super) fn a11y_composed_text_window(
 
         let composition = Some((before_len, before_len.saturating_add(preedit_len)));
 
+        // ADR 0071: selection offsets are (anchor, focus) byte offsets into the semantics value.
+        // Preserve directionality when the IME reports a cursor range.
         let (mut a, mut b) = preedit
             .cursor
             .unwrap_or_else(|| (preedit.text.len(), preedit.text.len()));
         a = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, a).min(preedit.text.len());
         b = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, b).min(preedit.text.len());
-        if a > b {
-            std::mem::swap(&mut a, &mut b);
-        }
 
         let selection = Some((
             before_len.saturating_add(a as u32),
@@ -122,4 +121,49 @@ pub(super) fn map_a11y_offset_to_buffer_with_preedit(
 
     let byte = window_start.saturating_add(base_offset).min(window_end);
     buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{CodeEditorHandle, PreeditState, Selection};
+    use super::a11y_composed_text_window;
+
+    #[test]
+    fn a11y_window_selection_preserves_direction_without_preedit() {
+        let handle = CodeEditorHandle::new("hello world");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 8,
+                focus: 3,
+            };
+        }
+
+        let st = handle.state.borrow();
+        let (_value, selection, composition) = a11y_composed_text_window(&st);
+        assert_eq!(composition, None);
+        assert_eq!(selection, Some((8, 3)));
+    }
+
+    #[test]
+    fn a11y_window_selection_preserves_direction_for_preedit_cursor() {
+        let handle = CodeEditorHandle::new("hello world");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 5,
+                focus: 5,
+            };
+            st.preedit = Some(PreeditState {
+                text: "yo".to_string(),
+                cursor: Some((2, 0)),
+            });
+        }
+
+        let st = handle.state.borrow();
+        let (value, selection, composition) = a11y_composed_text_window(&st);
+        assert_eq!(value, "helloyo world");
+        assert_eq!(composition, Some((5, 7)));
+        assert_eq!(selection, Some((7, 5)));
+    }
 }
