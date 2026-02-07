@@ -71,6 +71,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/dock/op.rs`
     - `crates/fret-core/src/lib.rs`
 
+- [x] BU-FR-core-016 Extract docking persistence helpers and tests out of `dock/mod.rs`.
+  - Goal: shrink the main runtime dock graph module and keep layout IO/persistence code discoverable.
+  - Evidence:
+    - `crates/fret-core/src/dock/persistence.rs`
+    - `crates/fret-core/src/dock/tests.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
