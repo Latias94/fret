@@ -1,3 +1,11 @@
+//! UI runtime contract and mechanisms for the Fret workspace.
+//!
+//! This crate focuses on the **mechanisms** needed for editor-grade UI (tree, layout, input
+//! routing, paint orchestration) rather than policy-heavy components. Radix/shadcn-style
+//! interaction policies live in the ecosystem layer (`fret-ui-kit`, `fret-ui-shadcn`) instead.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-ui/README.md`.
+
 #![cfg_attr(test, allow(clippy::arc_with_non_send_sync))]
 
 pub mod action;
