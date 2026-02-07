@@ -113,6 +113,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/scene/fingerprint.rs`
     - `crates/fret-core/src/scene/mod.rs`
 
+- [x] BU-FR-core-023 Convert `fret-core` text module to a directory subsystem (`text/mod.rs`).
+  - Goal: enable incremental internal splits of text vocabulary (styles, spans, hit testing) without crate-root churn.
+  - Evidence:
+    - `crates/fret-core/src/text/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
