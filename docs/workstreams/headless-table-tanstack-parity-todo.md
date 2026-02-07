@@ -63,9 +63,11 @@ ColumnDef keys referenced by upstream feature implementations:
 - [x] HTP-base-003 Add a 鈥渇eature-by-feature parity matrix鈥?section (one row per upstream feature file).
   - Include: current status, blocking gaps, and evidence anchors (tests/fixtures).
   - Evidence: `docs/workstreams/headless-table-tanstack-parity.md`.
-- [ ] HTP-base-004 Extend the upstream inventory to include non-option parity surfaces:
+- [~] HTP-base-004 Extend the upstream inventory to include non-option parity surfaces:
   - column/header/cell/row method inventories (where feasible),
   - state 鈥渞eset鈥?and 鈥渁uto-reset鈥?behavior inventory.
+  - In progress: core + pinning inventories are tracked in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md`.
 
 ---
 
@@ -112,9 +114,11 @@ P2 (engineering guardrails for sustained parity):
 Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upstream public API surfaces
 (table/row/column/header/cell) and mapping them to Fret equivalents.
 
-- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
+- [~] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
   - Evidence target: expand 鈥淐apability Inventory鈥?in `docs/workstreams/headless-table-tanstack-parity.md`
     with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
+  - In progress: initial core + pinning mapping is tracked in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md`.
   - Source of truth:
     - Core: `repo-ref/table/packages/table-core/src/core/*`
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
@@ -470,13 +474,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `pinning_action_reset_row_pinning_default_true_clears`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_row_pinning`)
-- [ ] HTP-rowpin-040 Gate `row.pin(position, includeLeafRows, includeParentRows)` semantics.
-  - Note: tree-only include-leaf/include-parent semantics are already fixture-gated via
-    `pinning_tree_action_pin_root_includes_leaf_rows` and
-    `pinning_tree_action_pin_grandchild_includes_parent_rows`.
-  - Goal: extend coverage to grouped row models and ensure ordering/dedupe semantics stay TanStack-compatible.
-  - Deliverable: fixture(s) that pin grouped rows with include-leaf/include-parent flags and assert
-    the resulting `rowPinning` state and top/center/bottom partition outcomes.
+- [x] HTP-rowpin-040 Gate `row.pin(position, includeLeafRows, includeParentRows)` semantics.
+  - Tree-only include-leaf/include-parent semantics are parity-gated via `pinning_tree.json`.
+  - Grouped row model include-leaf/include-parent semantics are parity-gated via `pinning_grouped_rows.json`.
+    - Snapshots:
+      - `pinning_grouped_rows_action_pin_group_role_1_top_include_leaf_rows`
+      - `pinning_grouped_rows_action_pin_leaf_1_top_include_parent_rows`
 - [x] HTP-rowpin-050 Gate pinning grouped rows by id (e.g. `role:1`) under grouping.
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`

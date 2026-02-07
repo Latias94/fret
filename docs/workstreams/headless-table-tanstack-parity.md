@@ -63,6 +63,10 @@ Non-goals:
 This is the “not weaker than TanStack” checklist. Each item should map to a concrete Rust surface
 and be covered by parity fixtures when behavior overlap exists.
 
+Detailed capability mapping lives in:
+
+- `docs/workstreams/headless-table-tanstack-parity-capability.md`
+
 ### Instance-level surface (Table/Row/Column/Header/Cell)
 
 Upstream source of truth:
