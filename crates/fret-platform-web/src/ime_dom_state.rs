@@ -91,6 +91,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn beforeinput_suppression_does_not_affect_followup_input_disposition() {
+        let mut st = WebImeDomState::default();
+        st.on_shortcut_suppressed();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
+    fn composition_end_beforeinput_suppression_does_not_affect_followup_input_disposition() {
+        let mut st = WebImeDomState::default();
+        st.on_composition_start();
+        st.on_composition_end();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
     fn shortcut_suppression_consumes_one_input_turn() {
         let mut st = WebImeDomState::default();
         st.on_shortcut_suppressed();

@@ -738,6 +738,10 @@ impl WebImeBridge {
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
+                let Ok(input) = e.dyn_into::<InputEvent>() else {
+                    return;
+                };
+
                 match dom_state.borrow_mut().input_disposition() {
                     DomInputDisposition::IgnoreComposing => return,
                     DomInputDisposition::IgnoreSuppressed => {
@@ -756,10 +760,6 @@ impl WebImeBridge {
                     }
                     DomInputDisposition::Process => {}
                 }
-
-                let Ok(input) = e.dyn_into::<InputEvent>() else {
-                    return;
-                };
 
                 #[cfg(debug_assertions)]
                 {
