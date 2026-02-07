@@ -5709,6 +5709,20 @@ Worst overall:
 - top_total_time_us: `15204`
 - bundle: `target/fret-diag-codex-resize-stress-steady-1770425071/1770425080919-ui-gallery-window-resize-stress-steady/bundle.json`
 
+Worst-frame breakdown (from the bundle; `frame_id=470`):
+- Layout:
+  - `layout_time_us=11659`
+  - `layout_engine_solve_time_us=1799`, `layout_engine_solves=4`
+  - `layout_request_build_roots_time_us=2307`
+  - `layout_roots_time_us=8416`
+  - `layout_semantics_refresh_time_us=737`
+  - `layout_view_cache_time_us=190`
+  - `layout_collapse_layout_observations_time_us=187`
+  - `layout_nodes_visited=1101`, `layout_nodes_performed=828`
+- Paint:
+  - `paint_time_us=3444`
+  - `paint_text_prepare_time_us=1452` (`calls=18`, `width_changed=18`)
+
 Interpretation:
 - Resize remains layout-dominant on this probe; the solve itself is not the primary cost.
   Primary leverage is reducing layout plumbing overhead and width-jitter-induced text churn while resizing.
