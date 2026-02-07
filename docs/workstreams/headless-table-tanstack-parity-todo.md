@@ -667,10 +667,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
   - Done (UI parity gate): retained path now has a dedicated regression test covering pin/unpin + resize + center-overflow alignment.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow`)
-- [ ] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
-  - Target: catch real consumer regressions that manifest as non-uniform row widths / misaligned columns in the demo.
-  - Preferred harness: `fretboard diag` script with a deterministic table scenario (pinning + sizing + visibility + scroll).
-  - Deliverable: a `tools/diag-scripts/*.json` script + a short doc note in the workstream for how to run it.
+- [x] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
+  - Done: `fretboard diag` scripts assert header/body column alignment via semantics bounds checks.
+    - Retained table torture: `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
+    - Data table torture: `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
 
 ---
 
