@@ -6441,3 +6441,69 @@ Results:
 Notes:
 - Renderer churn counters may remain `0` under the default gate env set unless renderer perf instrumentation is enabled
   (use the “deep profiling” protocol when investigating GPU/upload hitches).
+
+## 2026-02-07 21:23 — perf(fret-ui): track interactive resize state
+
+Problem:
+- Resize-drag smoothness requires knowing when the window is in an “interactive resize” regime so we can apply
+  guarded LOD/deferrals and make experiments reproducible.
+
+Change (commit `34bac1b78`):
+- Track an `interactive_resize_active` window in `UiTree` based on layout bounds/scale-factor changes, with a stable
+  frame debounce.
+- Add knobs for resize-specific experiments:
+  - `FRET_UI_INTERACTIVE_RESIZE_STABLE_FRAMES` (default: `2`)
+  - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (default: `0` / off) — wrap-width bucketing during interactive resize (experimental)
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r24
+```
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r4 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Optional experiment (wrap-width bucketing enabled):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-resize-probes \
+  --dir target/fret-diag-resize-probes-wrap-bucket2-r1 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX=2 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r24/summary.json`).
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r4/check.perf_thresholds.json`).
+- Wrap-bucketing experiment: `failures=0` (`target/fret-diag-resize-probes-wrap-bucket2-r1/check.perf_thresholds.json`).
+
+Notes:
+- Keep `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` **off by default** until we have stronger evidence that it improves resize
+  smoothness without visible “step reflow” artifacts; the long-term plan is still to reduce resize text churn via a
+  better text caching model (shaping vs wrapping separation), not just quantization.

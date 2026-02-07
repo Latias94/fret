@@ -31,6 +31,8 @@ Conventions:
     - Evidence: perf log entry `2026-02-07 11:50`.
   - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
     - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+  - [x] Track an “interactive resize” window in the UI tree to enable guarded LOD/deferral experiments (commit `34bac1b78`).
+    - Evidence: perf log entry `2026-02-07 21:23` (`target/fret-diag-resize-probes-gate-r24/summary.json`).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
@@ -38,6 +40,7 @@ Conventions:
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
+    - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off; needs visual + perf proof before promotion.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
 ## Milestones
