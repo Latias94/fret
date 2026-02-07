@@ -79,6 +79,8 @@ ColumnDef keys referenced by upstream feature implementations:
 - Step 2: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
 - Step 3: Expand filtering `getCanFilter`/controlled hooks parity surface.
 - Step 4: Extend API inventory coverage (`HTP-base-004` + `HTP-cap-010`) for non-option surfaces.
+  - Next (pinning-adjacent): header inventories (flat/leaf/footer) so UI consumers do not re-implement
+    TanStack header traversal logic incorrectly.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
@@ -229,6 +231,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (expects `core_model`)
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
+- [ ] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
+  - Target capabilities (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
+  - Fret mapping: snapshot-friendly `HeaderSnapshot` lists + `HeaderGroupSnapshot` reversal helpers.
+  - Rationale: “UI gallery table rows/columns misalignment” class bugs often come from consumers re-deriving
+    header inventories inconsistently from header groups. Treat these as engine-provided obligations.
+  - Planned parity gate: extend `headers_cells.json` (or add a dedicated `headers_inventory.json`) and assert via
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (or a new gate).
 
 ---
 

@@ -2451,6 +2451,122 @@ impl<'a, TData> Table<'a, TData> {
         )
     }
 
+    pub fn footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn left_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.left_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn center_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.center_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn right_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.right_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn center_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn right_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn center_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn right_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    /// TanStack-style `getLeafHeaders` (postorder traversal from top headers).
+    pub fn leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        fn recurse(
+            id: &Arc<str>,
+            headers_by_id: &HashMap<Arc<str>, super::HeaderSnapshot>,
+            out: &mut Vec<super::HeaderSnapshot>,
+        ) {
+            let Some(h) = headers_by_id.get(id) else {
+                return;
+            };
+            for child in &h.sub_header_ids {
+                recurse(child, headers_by_id, out);
+            }
+            out.push(h.clone());
+        }
+
+        let left = self.left_header_groups();
+        let center = self.center_header_groups();
+        let right = self.right_header_groups();
+
+        let mut roots: Vec<Arc<str>> = Vec::new();
+        for groups in [&left, &center, &right] {
+            if let Some(top) = groups.first() {
+                roots.extend(top.headers.iter().map(|h| h.id.clone()));
+            }
+        }
+
+        let mut headers_by_id: HashMap<Arc<str>, super::HeaderSnapshot> = HashMap::new();
+        for groups in [left, center, right] {
+            for g in groups {
+                for h in g.headers {
+                    headers_by_id.insert(h.id.clone(), h);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        for root in roots {
+            recurse(&root, &headers_by_id, &mut out);
+        }
+        out
+    }
+
     pub fn row_cells(&self, row_key: RowKey) -> Option<super::RowCellsSnapshot> {
         let row = self.row(row_key, true)?;
         let row_id = row.id.as_str();

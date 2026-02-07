@@ -66,6 +66,10 @@ Source of truth:
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::column_tree_snapshot` + `Table::ordered_columns` + `Table::column` + `Table::visible_leaf_columns`-style surfaces | Partial | `tanstack_v8_headers_cells_parity.rs` (core model snapshot) |
+| `getHeaderGroups/getLeftHeaderGroups/getCenterHeaderGroups/getRightHeaderGroups` | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` (snapshot output) | Aligned | `tanstack_v8_headers_cells_parity.rs` |
+| `getFooterGroups/getLeftFooterGroups/getCenterFooterGroups/getRightFooterGroups` | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Missing | tracked by `HTP-core-050` |
+| `getFlatHeaders/getLeftFlatHeaders/getCenterFlatHeaders/getRightFlatHeaders` | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Missing | tracked by `HTP-core-050` |
+| `getLeafHeaders/getLeftLeafHeaders/getCenterLeafHeaders/getRightLeafHeaders` | `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` | Missing | tracked by `HTP-core-050` |
 | `getCoreRowModel` | `Table::core_row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRowModel` | `Table::row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRow(id, searchAll?)` | `Table::row_by_id(..)` / `Table::row_key_for_id(..)` (+ `rows_by_id` parity gate) | Aligned | `tanstack_v8_row_id_lookup_parity.rs` |
@@ -274,6 +278,7 @@ Source of truth:
 This inventory is intentionally incomplete. Next expansions (tracked in `HTP-cap-010` / `HTP-base-004`):
 
 - Header/footer/flat/leaf header inventories under visibility + pinning + nested columns (deep nesting + edge cases).
+  - Next concrete: close `HTP-core-050` with fixture parity for flat/leaf/footer inventories.
 - Fill in missing “column/row instance method” helpers where consumers should not have to reimplement logic (e.g. `getCanFilter`-style gates).
 - Global faceting instance surface (`getGlobalFaceted*`) if/when consumers need it.
 

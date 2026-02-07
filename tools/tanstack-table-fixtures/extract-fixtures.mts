@@ -450,7 +450,37 @@ type FixtureSnapshot = {
           sub_header_ids: string[]
         }[]
       }[]
+      footer_groups?: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
       left_header_groups: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
+      left_footer_groups?: {
         id: string
         depth: number
         headers: {
@@ -480,6 +510,21 @@ type FixtureSnapshot = {
           sub_header_ids: string[]
         }[]
       }[]
+      center_footer_groups?: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
       right_header_groups: {
         id: string
         depth: number
@@ -494,6 +539,109 @@ type FixtureSnapshot = {
           row_span: number
           sub_header_ids: string[]
         }[]
+      }[]
+      right_footer_groups?: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
+      flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      left_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      center_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      right_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      left_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      center_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      right_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
       }[]
       cells: Record<
         string,
@@ -2022,6 +2170,30 @@ function snapshotHeaderGroups(groups: any[]): {
       row_span: Number(h.rowSpan),
       sub_header_ids: (h.subHeaders ?? []).map((sh: any) => String(sh.id)),
     })),
+  }))
+}
+
+function snapshotHeaders(headers: any[]): {
+  id: string
+  column_id: string
+  depth: number
+  index: number
+  is_placeholder: boolean
+  placeholder_id: string | null
+  col_span: number
+  row_span: number
+  sub_header_ids: string[]
+}[] {
+  return (headers ?? []).map((h: any) => ({
+    id: String(h.id),
+    column_id: String(h.column?.id),
+    depth: Number(h.depth),
+    index: Number(h.index),
+    is_placeholder: Boolean(h.isPlaceholder),
+    placeholder_id: h.placeholderId === undefined ? null : String(h.placeholderId),
+    col_span: Number(h.colSpan),
+    row_span: Number(h.rowSpan),
+    sub_header_ids: (h.subHeaders ?? []).map((sh: any) => String(sh.id)),
   }))
 }
 
@@ -4388,6 +4560,18 @@ function snapshotColumnPinning(
       const left_header_groups = snapshotHeaderGroups(table.getLeftHeaderGroups())
       const center_header_groups = snapshotHeaderGroups(table.getCenterHeaderGroups())
       const right_header_groups = snapshotHeaderGroups(table.getRightHeaderGroups())
+      const footer_groups = snapshotHeaderGroups(table.getFooterGroups())
+      const left_footer_groups = snapshotHeaderGroups(table.getLeftFooterGroups())
+      const center_footer_groups = snapshotHeaderGroups(table.getCenterFooterGroups())
+      const right_footer_groups = snapshotHeaderGroups(table.getRightFooterGroups())
+      const flat_headers = snapshotHeaders(table.getFlatHeaders())
+      const left_flat_headers = snapshotHeaders(table.getLeftFlatHeaders())
+      const center_flat_headers = snapshotHeaders(table.getCenterFlatHeaders())
+      const right_flat_headers = snapshotHeaders(table.getRightFlatHeaders())
+      const leaf_headers = snapshotHeaders(table.getLeafHeaders())
+      const left_leaf_headers = snapshotHeaders(table.getLeftLeafHeaders())
+      const center_leaf_headers = snapshotHeaders(table.getCenterLeafHeaders())
+      const right_leaf_headers = snapshotHeaders(table.getRightLeafHeaders())
       const cells = snapshotCells(table)
 
       return {
@@ -4398,9 +4582,21 @@ function snapshotColumnPinning(
           ...baseExpect,
           headers_cells: {
             header_groups,
+            footer_groups,
             left_header_groups,
+            left_footer_groups,
             center_header_groups,
+            center_footer_groups,
             right_header_groups,
+            right_footer_groups,
+            flat_headers,
+            left_flat_headers,
+            center_flat_headers,
+            right_flat_headers,
+            leaf_headers,
+            left_leaf_headers,
+            center_leaf_headers,
+            right_leaf_headers,
             cells,
           },
           core_model: {
