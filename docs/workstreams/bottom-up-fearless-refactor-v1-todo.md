@@ -201,6 +201,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-launch/README.md`
     - `crates/fret-launch/src/lib.rs`
 
+- [x] BU-FR-launch-070 Split `crates/fret-launch/src/runner/common.rs` into focused submodules.
+  - Goal: reduce a single large “misc glue” file into stable contracts (`WinitAppDriver`, contexts, config) and support types.
+  - Evidence:
+    - `crates/fret-launch/src/runner/common/mod.rs`
+    - `crates/fret-launch/src/runner/common/config.rs`
+    - `crates/fret-launch/src/runner/common/context.rs`
+    - `crates/fret-launch/src/runner/common/engine_frame_update.rs`
+    - `crates/fret-launch/src/runner/common/fn_driver.rs`
+    - `crates/fret-launch/src/runner/common/viewport_overlay_3d.rs`
+    - `crates/fret-launch/src/runner/common/window_create_spec.rs`
+    - `crates/fret-launch/src/runner/common/winit_app_driver.rs`
+
 - [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
   - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
   - Evidence:

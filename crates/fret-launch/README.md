@@ -8,6 +8,7 @@ for starting apps (native and web) while keeping platform/runner details out of 
 ## Module ownership map
 
 - `src/runner/`: the primary winit/web runner integration surfaces and helpers.
+- `src/runner/common/`: shared runner contracts and support types (driver traits, contexts, config).
 - `src/error.rs`: runner error types.
 - `src/stacksafe_config.rs`: stack-safety configuration (env-driven).
 - `src/lib.rs`: public facade re-exports (`run_app*`, contexts, and runner config types).
@@ -21,4 +22,3 @@ plumbing and is expected to evolve as the backend seams firm up.
 
 - Formatting: `cargo fmt`
 - Build/test: `cargo nextest run -p fret-launch --no-tests pass` (until crate-local tests exist)
-
