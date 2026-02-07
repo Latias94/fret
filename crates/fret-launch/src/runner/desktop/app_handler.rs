@@ -808,10 +808,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     for evt in mapped {
                         self.deliver_window_event_now(app_window, &evt);
                     }
-                    self.deliver_window_event_now(
-                        app_window,
-                        &Event::WindowScaleFactorChanged(scale_factor),
-                    );
+                    let should_deliver_scale_factor = self
+                        .app
+                        .global::<fret_core::WindowMetricsService>()
+                        .and_then(|svc| svc.scale_factor(app_window))
+                        .is_none_or(|prev| prev.to_bits() != scale_factor.to_bits());
+                    if should_deliver_scale_factor {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::WindowScaleFactorChanged(scale_factor),
+                        );
+                    }
                 }
 
                 {
