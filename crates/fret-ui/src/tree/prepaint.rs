@@ -272,7 +272,7 @@ impl<H: UiHost> UiTree<H> {
                                 // be within the rendered overscan envelope, we should stage a
                                 // one-shot prefetch to the ideal window so the next frame can
                                 // rebuild the correct visible-items set.
-                                if visible_len > rendered_visible_len && allow_preemptive_prefetch {
+                                if visible_len > rendered_visible_len {
                                     window_shift_kind =
                                         crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;
                                     // For the non-retained VirtualList path, we will schedule a cache
