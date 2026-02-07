@@ -524,6 +524,7 @@ Perf acceptance:
   - Evidence + numbers: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for 2026-02-06 (commit `0d8ad27ac`).
 - [x] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
   - `paint_widget_hotspots` now include `ElementInstance` kind attribution (commit `c80525b9`).
+  - `paint_widget_hotspots` now include element debug paths for faster attribution (commit `414974a44`).
   - Paint-phase text prepare counters + reason counts:
     - `paint_text_prepare_time_us`, `paint_text_prepare_calls` (commit `07d2ccf2`)
     - `paint_text_prepare_reason_*` (commit `80a46d49`)

@@ -5903,3 +5903,17 @@ tools/perf/diag_resize_probes_gate.sh \
 
 Result:
 - `pass=true` (`target/fret-diag-resize-probes-gate-v2-r1/summary.json`)
+
+## 2026-02-07 12:29:32 (commit `414974a44`)
+
+Change:
+- Improve paint hitch attribution by including element debug paths in `debug.paint_widget_hotspots[]`.
+
+Why this matters:
+- Resize and scroll probes can show paint spikes where `paint_widget_hotspots` points at a high-cost widget, but the
+  previous payload only included `element` ids. Adding `element_path` makes it fast to jump from a hotspot to the
+  responsible callsite (`root[...]...file:line:col[...]`), which is essential for “fearless refactors” without guesswork.
+
+Validation:
+- Run any perf probe that captures a bundle and inspect a top snapshot:
+  - `debug.paint_widget_hotspots[0].element_path` should be present when element debug identity is available.
