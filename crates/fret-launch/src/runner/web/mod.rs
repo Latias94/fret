@@ -1,4 +1,11 @@
 //! Web launcher implementation (winit + wgpu via WebGPU).
+//!
+//! Submodules:
+//! - `app_handler`: winit `ApplicationHandler` glue (window creation + event dispatch entrypoints).
+//! - `gfx_init`: async GPU adoption + font seeding + canvas DPI sizing.
+//! - `render_loop`: per-frame driving and fixed-point effect/event draining.
+//! - `streaming_images`: streaming image updates, including YUV conversion paths.
+//! - `ime_mount`: DOM mounting helpers for IME overlays.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -39,16 +46,21 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub app: App,
     pub driver: D,
 
+    exit_requested: Rc<Cell<bool>>,
+    exiting: bool,
+
     event_loop_proxy: Option<EventLoopProxy>,
     dispatcher: WebDispatcher,
 
+    app_window: AppWindowId,
     window: Option<Arc<dyn Window>>,
     window_id: Option<WindowId>,
-    app_window: AppWindowId,
     window_state: Option<D::WindowState>,
 
     pending_gfx: Rc<RefCell<Option<GfxState>>>,
     gfx: Option<GfxState>,
+    renderer_caps: Option<fret_render::RendererCapabilities>,
+    gpu_ready_called: bool,
     scene: Scene,
 
     pending_events: Vec<Event>,
@@ -58,14 +70,10 @@ pub struct WinitRunner<D: WinitAppDriver> {
     uploaded_images: HashMap<fret_core::ImageId, streaming_images::UploadedImageEntry>,
     streaming_uploads: StreamingUploadQueue,
     nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
-    renderer_caps: Option<fret_render::RendererCapabilities>,
 
     platform: fret_runner_winit::WinitPlatform,
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
     web_services: WebPlatformServices,
-    gpu_ready_called: bool,
-    exiting: bool,
-    exit_requested: Rc<Cell<bool>>,
 }
 
 #[derive(Clone)]
@@ -146,14 +154,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             config,
             app,
             driver,
+            exit_requested: Rc::new(Cell::new(false)),
+            exiting: false,
             event_loop_proxy: None,
             dispatcher,
+            app_window: AppWindowId::default(),
             window: None,
             window_id: None,
-            app_window: AppWindowId::default(),
             window_state: None,
             pending_gfx: Rc::new(RefCell::new(None)),
             gfx: None,
+            renderer_caps: None,
+            gpu_ready_called: false,
             scene: Scene::default(),
             pending_events: Vec::new(),
             tick_id: TickId::default(),
@@ -161,13 +173,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             uploaded_images: HashMap::new(),
             streaming_uploads: StreamingUploadQueue::default(),
             nv12_gpu: None,
-            renderer_caps: None,
             platform: fret_runner_winit::WinitPlatform::default(),
             web_cursor: None,
             web_services: WebPlatformServices::default(),
-            gpu_ready_called: false,
-            exiting: false,
-            exit_requested: Rc::new(Cell::new(false)),
         }
     }
 
