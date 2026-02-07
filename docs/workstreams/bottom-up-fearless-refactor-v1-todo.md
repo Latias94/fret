@@ -119,10 +119,23 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [ ] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
   - Link: `docs/renderer-refactor-roadmap.md`
-  - Evidence anchors: `crates/fret-render/src/renderer/mod.rs`, `crates/fret-render/src/text.rs`
+  - Evidence anchors: `crates/fret-render/src/renderer/mod.rs`, `crates/fret-render/src/text/mod.rs`
 
 - [ ] BU-FR-render-031 Inventory the current profiling/inspection workflows and ensure they are runnable on Windows.
   - Link: `docs/tracy.md`, `docs/renderdoc-inspection.md`
+
+- [x] BU-FR-render-032 Add a module ownership map for `crates/fret-render` and document the intended public surface.
+  - Goal: make renderer code easier to navigate while keeping runner-facing exports intentional.
+  - Evidence:
+    - `crates/fret-render/README.md`
+    - `crates/fret-render/src/lib.rs`
+
+- [x] BU-FR-render-033 Convert renderer crate-root “module roots” into `mod.rs` subsystems where a directory already exists.
+  - Candidates: `text.rs` → `text/mod.rs`, `viewport_overlay.rs` → `viewport_overlay/mod.rs`.
+  - Goal: remove ambiguous `foo.rs` / `foo/` splits and enable incremental internal splits without crate-root churn.
+  - Evidence:
+    - `crates/fret-render/src/text/mod.rs`
+    - `crates/fret-render/src/viewport_overlay/mod.rs`
 
 ## M4 — Ecosystem rationalization
 
