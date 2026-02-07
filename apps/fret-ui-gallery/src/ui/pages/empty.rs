@@ -329,9 +329,8 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-empty-component"),
-    );
+    let component_panel = shell(cx, component_panel_body)
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-component"));
 
     let code_panel_body = stack::vstack(
         cx,

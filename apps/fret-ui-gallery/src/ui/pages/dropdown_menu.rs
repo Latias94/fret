@@ -261,8 +261,8 @@ pub(super) fn preview_dropdown_menu(
                             .on_select(CMD_MENU_DROPDOWN_APPLE)
                             .test_id("ui-gallery-dropdown-menu-demo-profile"),
                     ),
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("More").submenu(vec![
+                    shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("More").submenu(
+                        vec![
                             shadcn::DropdownMenuEntry::Item(
                                 shadcn::DropdownMenuItem::new("Invite users")
                                     .on_select(CMD_MENU_DROPDOWN_APPLE),
@@ -271,8 +271,8 @@ pub(super) fn preview_dropdown_menu(
                                 shadcn::DropdownMenuItem::new("Preferences")
                                     .on_select(CMD_MENU_DROPDOWN_ORANGE),
                             ),
-                        ]),
-                    ),
+                        ],
+                    )),
                 ]
             },
         )
@@ -431,8 +431,11 @@ pub(super) fn preview_dropdown_menu(
             |cx| {
                 vec![
                     shadcn::DropdownMenuEntry::CheckboxItem(
-                        shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
-                            .leading(icon(cx, "lucide.panel-bottom")),
+                        shadcn::DropdownMenuCheckboxItem::new(
+                            show_status_bar.clone(),
+                            "Status Bar",
+                        )
+                        .leading(icon(cx, "lucide.panel-bottom")),
                     ),
                     shadcn::DropdownMenuEntry::CheckboxItem(
                         shadcn::DropdownMenuCheckboxItem::new(
@@ -529,7 +532,8 @@ pub(super) fn preview_dropdown_menu(
                 .refine_layout(LayoutRefinement::default().w_px(Px(36.0)).h_px(Px(36.0)))
                 .into_element(cx)
                 .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-dropdown-menu-avatar-trigger"),
+                    SemanticsDecoration::default()
+                        .test_id("ui-gallery-dropdown-menu-avatar-trigger"),
                 )
         },
         |_cx| {
@@ -607,10 +611,12 @@ pub(super) fn preview_dropdown_menu(
                 |_cx| {
                     vec![
                         shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Dashboard").on_select(CMD_MENU_DROPDOWN_APPLE),
+                            shadcn::DropdownMenuItem::new("Dashboard")
+                                .on_select(CMD_MENU_DROPDOWN_APPLE),
                         ),
                         shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Settings").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                            shadcn::DropdownMenuItem::new("Settings")
+                                .on_select(CMD_MENU_DROPDOWN_ORANGE),
                         ),
                     ]
                 },
