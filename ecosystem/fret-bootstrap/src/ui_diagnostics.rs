@@ -6223,6 +6223,10 @@ pub struct UiLayoutHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub layout_time_us: u64,
     #[serde(default)]
@@ -6234,6 +6238,8 @@ impl UiLayoutHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -6944,6 +6950,10 @@ pub struct UiFrameStatsV1 {
     pub interaction_records: u32,
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_queries: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
     #[serde(default)]
     pub layout_fast_path_taken: bool,
@@ -7332,6 +7342,9 @@ impl UiFrameStatsV1 {
             interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
+            layout_engine_child_rect_queries: stats.layout_engine_child_rect_queries,
+            layout_engine_child_rect_time_us: stats.layout_engine_child_rect_time.as_micros()
+                as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             layout_fast_path_taken: stats.layout_fast_path_taken,
             layout_invalidations_count: stats.layout_invalidations_count,

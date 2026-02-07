@@ -533,6 +533,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
+            self.debug_stats.layout_engine_child_rect_queries = 0;
+            self.debug_stats.layout_engine_child_rect_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
             self.debug_stats.layout_collect_roots_time = Duration::default();
             self.debug_stats
@@ -2415,9 +2417,33 @@ impl<H: UiHost> UiTree<H> {
                 parent.child_inclusive_time += inclusive_time;
             }
             let element = self.nodes.get(node).and_then(|n| n.element);
+            let element_kind = self.window.and_then(|window| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| record.instance.kind_name())
+            });
+            let element_path = if self.debug_enabled {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window.and_then(|window| {
+                        element.and_then(|element| {
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.debug_path_for_element(element)
+                            })
+                        })
+                    })
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
             let record = super::UiDebugLayoutHotspot {
                 node,
                 element,
+                element_kind,
+                element_path,
                 widget_type,
                 inclusive_time,
                 exclusive_time,

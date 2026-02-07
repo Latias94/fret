@@ -720,7 +720,6 @@ impl<H: UiHost> UiTree<H> {
                             crate::elements::with_window_state(app, window, |st| {
                                 st.debug_path_for_element(element)
                             })
-                            .flatten()
                         })
                     })
                 }

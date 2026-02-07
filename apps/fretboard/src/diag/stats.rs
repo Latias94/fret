@@ -345,6 +345,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_scene_encoding_cache_misses: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_engine_child_rect_queries: u64,
+    pub(super) layout_engine_child_rect_time_us: u64,
     pub(super) changed_models: u32,
     pub(super) changed_globals: u32,
     pub(super) changed_global_types_sample: Vec<String>,
@@ -1558,6 +1560,14 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_queries".to_string(),
+                    Value::from(row.layout_engine_child_rect_queries),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_time_us".to_string(),
+                    Value::from(row.layout_engine_child_rect_time_us),
                 );
                 obj.insert(
                     "layout_collect_roots_time_us".to_string(),
@@ -7432,6 +7442,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_engine_child_rect_queries = stats
+                .and_then(|m| m.get("layout_engine_child_rect_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_child_rect_time_us = stats
+                .and_then(|m| m.get("layout_engine_child_rect_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_collect_roots_time_us = stats
                 .and_then(|m| m.get("layout_collect_roots_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7937,6 +7955,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_scene_encoding_cache_misses,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_engine_child_rect_queries,
+                layout_engine_child_rect_time_us,
                 changed_models,
                 changed_globals,
                 changed_global_types_sample,

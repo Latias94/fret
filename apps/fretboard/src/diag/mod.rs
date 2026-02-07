@@ -3686,6 +3686,10 @@ See: `docs/tracy.md`.\n";
                         let top_layout_roots = top.map(|r| r.layout_roots_time_us).unwrap_or(0);
                         let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
                         let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
+                        let top_layout_engine_child_rect_queries =
+                            top.map(|r| r.layout_engine_child_rect_queries).unwrap_or(0);
+                        let top_layout_engine_child_rect_time_us =
+                            top.map(|r| r.layout_engine_child_rect_time_us).unwrap_or(0);
                         let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                         let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
@@ -3862,6 +3866,8 @@ See: `docs/tracy.md`.\n";
                                 "top_layout_roots_time_us": top_layout_roots,
                                 "top_layout_engine_solve_time_us": top_solve,
                                 "top_layout_engine_solves": top_solves,
+                                "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                                "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
                                 "top_prepaint_time_us": top_prepaint,
                                 "top_paint_time_us": top_paint,
                                 "top_dispatch_time_us": top_dispatch,
@@ -4046,11 +4052,13 @@ See: `docs/tracy.md`.\n";
                                         "top_layout_roots_time_us": top_layout_roots,
                                         "top_layout_engine_solve_time_us": top_solve,
                                         "top_layout_engine_solves": top_solves,
+                                        "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                                        "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
                                         "pointer_move_frames_present": pointer_move_frames_present,
                                         "pointer_move_frames_considered": pointer_move_frames_considered,
                                         "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
                                 "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 "top_tick_id": top_tick,
@@ -4291,6 +4299,10 @@ See: `docs/tracy.md`.\n";
                     let top_layout_roots = top.map(|r| r.layout_roots_time_us).unwrap_or(0);
                     let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
                     let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
+                    let top_layout_engine_child_rect_queries =
+                        top.map(|r| r.layout_engine_child_rect_queries).unwrap_or(0);
+                    let top_layout_engine_child_rect_time_us =
+                        top.map(|r| r.layout_engine_child_rect_time_us).unwrap_or(0);
                     let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
@@ -4479,6 +4491,8 @@ See: `docs/tracy.md`.\n";
                         "top_layout_roots_time_us": top_layout_roots,
                         "top_layout_engine_solve_time_us": top_solve,
                         "top_layout_engine_solves": top_solves,
+                        "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                        "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
                         "top_prepaint_time_us": top_prepaint,
                         "top_paint_time_us": top_paint,
                         "top_dispatch_time_us": top_dispatch,

@@ -442,6 +442,10 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Total number of `layout_engine_child_local_rect` queries performed during the current frame.
+    pub layout_engine_child_rect_queries: u64,
+    /// Total wall time spent inside layout engine child-rect queries during the current frame.
+    pub layout_engine_child_rect_time: Duration,
     /// Number of "widget-local" layout engine solves triggered as a fallback when a widget cannot
     /// consume already-solved engine child rects.
     ///
@@ -1138,6 +1142,8 @@ pub struct UiDebugLayoutEngineSolve {
 pub struct UiDebugLayoutHotspot {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
     pub widget_type: &'static str,
     pub inclusive_time: Duration,
     pub exclusive_time: Duration,
@@ -4068,6 +4074,25 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<Rect> {
         self.layout_engine
             .child_layout_rect_if_solved(parent, child)
+    }
+
+    pub(crate) fn layout_engine_child_local_rect_profiled(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> Option<Rect> {
+        let started = self.debug_enabled.then(Instant::now);
+        let rect = self
+            .layout_engine
+            .child_layout_rect_if_solved(parent, child);
+        if let Some(started) = started {
+            self.debug_stats.layout_engine_child_rect_queries = self
+                .debug_stats
+                .layout_engine_child_rect_queries
+                .saturating_add(1);
+            self.debug_stats.layout_engine_child_rect_time += started.elapsed();
+        }
+        rect
     }
 
     #[allow(dead_code)]
