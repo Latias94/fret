@@ -601,8 +601,8 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         }
 
-        self.ensure_ready_file();
         self.poll_script_trigger();
+        self.ensure_ready_file();
 
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
@@ -1490,8 +1490,9 @@ impl UiDiagnosticsService {
                     };
 
                     if path.is_empty() {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-menu_select_path-empty"));
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-menu_select_path-empty"
+                        ));
                         stop_script = true;
                         failure_reason = Some("menu_select_path_empty".to_string());
                         active.v2_step_state = None;
@@ -4949,6 +4950,8 @@ pub enum UiPrepaintActionKindV1 {
     RequestRedraw,
     RequestAnimationFrame,
     VirtualListWindowShift,
+    ChartSamplingWindowShift,
+    NodeGraphCullWindowShift,
 }
 
 impl UiPrepaintActionKindV1 {
@@ -4961,6 +4964,12 @@ impl UiPrepaintActionKindV1 {
             }
             fret_ui::tree::UiDebugPrepaintActionKind::VirtualListWindowShift => {
                 Self::VirtualListWindowShift
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::ChartSamplingWindowShift => {
+                Self::ChartSamplingWindowShift
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::NodeGraphCullWindowShift => {
+                Self::NodeGraphCullWindowShift
             }
         }
     }

@@ -92,6 +92,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
+    let mut max_pointer_move_dispatch_us: Option<u64> = None;
+    let mut max_pointer_move_hit_test_us: Option<u64> = None;
+    let mut max_pointer_move_global_changes: Option<u64> = None;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -402,6 +405,38 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
                 );
+                i += 1;
+            }
+            "--max-pointer-move-dispatch-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-dispatch-us".to_string());
+                };
+                max_pointer_move_dispatch_us =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-pointer-move-dispatch-us".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-pointer-move-hit-test-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-hit-test-us".to_string());
+                };
+                max_pointer_move_hit_test_us =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-pointer-move-hit-test-us".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-pointer-move-global-changes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-global-changes".to_string());
+                };
+                max_pointer_move_global_changes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-pointer-move-global-changes".to_string()
+                })?);
                 i += 1;
             }
             "--max-working-set-bytes" => {
@@ -3093,6 +3128,9 @@ See: `docs/tracy.md`.\n";
                 max_top_total_us,
                 max_top_layout_us,
                 max_top_solve_us,
+                max_pointer_move_dispatch_us,
+                max_pointer_move_hit_test_us,
+                max_pointer_move_global_changes,
             };
             let perf_baseline = perf_baseline_path
                 .clone()
@@ -3253,6 +3291,12 @@ See: `docs/tracy.md`.\n";
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                        let pointer_move_max_dispatch_time_us =
+                            report.pointer_move_max_dispatch_time_us;
+                        let pointer_move_max_hit_test_time_us =
+                            report.pointer_move_max_hit_test_time_us;
+                        let pointer_move_snapshots_with_global_changes =
+                            u64::from(report.pointer_move_snapshots_with_global_changes);
                         let top_view_cache_contained_relayouts =
                             top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
                         let top_cache_roots_contained_relayout =
@@ -3282,6 +3326,9 @@ See: `docs/tracy.md`.\n";
                                 "top_paint_time_us": top_paint,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
+                                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
@@ -3314,6 +3361,9 @@ See: `docs/tracy.md`.\n";
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
+                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 },
                             }));
                         }
@@ -3334,12 +3384,30 @@ See: `docs/tracy.md`.\n";
                                 cli_thresholds.max_top_solve_us,
                                 baseline_thresholds.max_top_solve_us,
                             );
+                            let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
+                                resolve_threshold(
+                                    cli_thresholds.max_pointer_move_dispatch_us,
+                                    baseline_thresholds.max_pointer_move_dispatch_us,
+                                );
+                            let (thr_pointer_move_hit_test, src_pointer_move_hit_test) =
+                                resolve_threshold(
+                                    cli_thresholds.max_pointer_move_hit_test_us,
+                                    baseline_thresholds.max_pointer_move_hit_test_us,
+                                );
+                            let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
+                                resolve_threshold(
+                                    cli_thresholds.max_pointer_move_global_changes,
+                                    baseline_thresholds.max_pointer_move_global_changes,
+                                );
                             let run = serde_json::json!({
                                 "run_index": 0,
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
                                 "top_layout_engine_solve_time_us": top_solve,
                                 "top_layout_engine_solves": top_solves,
+                                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "bundle": bundle_path.display().to_string(),
@@ -3353,16 +3421,25 @@ See: `docs/tracy.md`.\n";
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
+                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
                                     "max_top_layout_us": thr_layout,
                                     "max_top_solve_us": thr_solve,
+                                    "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
+                                    "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
+                                    "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                                 },
                                 "threshold_sources": {
                                     "max_top_total_us": src_total,
                                     "max_top_layout_us": src_layout,
                                     "max_top_solve_us": src_solve,
+                                    "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
+                                    "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
+                                    "max_pointer_move_global_changes": src_pointer_move_global_changes,
                                 },
                             });
                             perf_threshold_rows.push(row);
@@ -3374,6 +3451,9 @@ See: `docs/tracy.md`.\n";
                                 top_total,
                                 top_layout,
                                 top_solve,
+                                pointer_move_max_dispatch_time_us,
+                                pointer_move_max_hit_test_time_us,
+                                pointer_move_snapshots_with_global_changes,
                             ));
                         }
 
@@ -3408,6 +3488,12 @@ See: `docs/tracy.md`.\n";
                 let mut runs_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_pointer_move_max_dispatch_time_us: Vec<u64> =
+                    Vec::with_capacity(repeat);
+                let mut runs_pointer_move_max_hit_test_time_us: Vec<u64> =
+                    Vec::with_capacity(repeat);
+                let mut runs_pointer_move_snapshots_with_global_changes: Vec<u64> =
+                    Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf)> = None;
 
@@ -3540,6 +3626,12 @@ See: `docs/tracy.md`.\n";
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                    let pointer_move_max_dispatch_time_us =
+                        report.pointer_move_max_dispatch_time_us;
+                    let pointer_move_max_hit_test_time_us =
+                        report.pointer_move_max_hit_test_time_us;
+                    let pointer_move_snapshots_with_global_changes =
+                        u64::from(report.pointer_move_snapshots_with_global_changes);
                     let top_view_cache_contained_relayouts =
                         top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
                     let top_cache_roots_contained_relayout =
@@ -3562,6 +3654,10 @@ See: `docs/tracy.md`.\n";
                     runs_solve.push(top_solve);
                     runs_prepaint.push(top_prepaint);
                     runs_paint.push(top_paint);
+                    runs_pointer_move_max_dispatch_time_us.push(pointer_move_max_dispatch_time_us);
+                    runs_pointer_move_max_hit_test_time_us.push(pointer_move_max_hit_test_time_us);
+                    runs_pointer_move_snapshots_with_global_changes
+                        .push(pointer_move_snapshots_with_global_changes);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "top_total_time_us": top_total,
@@ -3572,6 +3668,9 @@ See: `docs/tracy.md`.\n";
                         "top_paint_time_us": top_paint,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
+                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
@@ -3706,6 +3805,19 @@ See: `docs/tracy.md`.\n";
                     let max_total = *runs_total.iter().max().unwrap_or(&0);
                     let max_layout = *runs_layout.iter().max().unwrap_or(&0);
                     let max_solve = *runs_solve.iter().max().unwrap_or(&0);
+                    let max_pointer_move_dispatch_time_us = *runs_pointer_move_max_dispatch_time_us
+                        .iter()
+                        .max()
+                        .unwrap_or(&0);
+                    let max_pointer_move_hit_test_time_us = *runs_pointer_move_max_hit_test_time_us
+                        .iter()
+                        .max()
+                        .unwrap_or(&0);
+                    let max_pointer_move_global_changes =
+                        *runs_pointer_move_snapshots_with_global_changes
+                            .iter()
+                            .max()
+                            .unwrap_or(&0);
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
                     if perf_baseline_out.is_some() {
@@ -3715,6 +3827,9 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch_time_us,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test_time_us,
+                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                             },
                         }));
                     }
@@ -3736,6 +3851,21 @@ See: `docs/tracy.md`.\n";
                             cli_thresholds.max_top_solve_us,
                             baseline_thresholds.max_top_solve_us,
                         );
+                        let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
+                            resolve_threshold(
+                                cli_thresholds.max_pointer_move_dispatch_us,
+                                baseline_thresholds.max_pointer_move_dispatch_us,
+                            );
+                        let (thr_pointer_move_hit_test, src_pointer_move_hit_test) =
+                            resolve_threshold(
+                                cli_thresholds.max_pointer_move_hit_test_us,
+                                baseline_thresholds.max_pointer_move_hit_test_us,
+                            );
+                        let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
+                            resolve_threshold(
+                                cli_thresholds.max_pointer_move_global_changes,
+                                baseline_thresholds.max_pointer_move_global_changes,
+                            );
                         let row = serde_json::json!({
                             "script": script_key.clone(),
                             "sort": sort.as_str(),
@@ -3745,16 +3875,25 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch_time_us,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test_time_us,
+                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                             },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
                                 "max_top_layout_us": thr_layout,
                                 "max_top_solve_us": thr_solve,
+                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
+                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
+                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                             },
                             "threshold_sources": {
                                 "max_top_total_us": src_total,
                                 "max_top_layout_us": src_layout,
                                 "max_top_solve_us": src_solve,
+                                "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
+                                "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
+                                "max_pointer_move_global_changes": src_pointer_move_global_changes,
                             },
                         });
                         perf_threshold_rows.push(row);
@@ -3766,6 +3905,9 @@ See: `docs/tracy.md`.\n";
                             max_total,
                             max_layout,
                             max_solve,
+                            max_pointer_move_dispatch_time_us,
+                            max_pointer_move_hit_test_time_us,
+                            max_pointer_move_global_changes,
                         ));
                     }
                 }
@@ -3787,23 +3929,48 @@ See: `docs/tracy.md`.\n";
                         let max_total = max.get("top_total_time_us")?.as_u64()?;
                         let max_layout = max.get("top_layout_time_us")?.as_u64()?;
                         let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
+                        let max_pointer_move_dispatch =
+                            max.get("pointer_move_max_dispatch_time_us").and_then(|v| v.as_u64());
+                        let max_pointer_move_hit_test =
+                            max.get("pointer_move_max_hit_test_time_us").and_then(|v| v.as_u64());
+                        let max_pointer_move_global_changes = max
+                            .get("pointer_move_snapshots_with_global_changes")
+                            .and_then(|v| v.as_u64());
                         let thr_total =
                             apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
                         let thr_layout =
                             apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
                         let thr_solve =
                             apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+                        let thr_pointer_move_dispatch =
+                            max_pointer_move_dispatch.map(|v| {
+                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
+                            });
+                        let thr_pointer_move_hit_test =
+                            max_pointer_move_hit_test.map(|v| {
+                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
+                            });
+                        let thr_pointer_move_global_changes =
+                            max_pointer_move_global_changes.map(|v| {
+                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
+                            });
                         Some(serde_json::json!({
                             "script": script,
                             "thresholds": {
                                 "max_top_total_us": thr_total,
                                 "max_top_layout_us": thr_layout,
                                 "max_top_solve_us": thr_solve,
+                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
+                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
+                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                             },
                             "measured_max": {
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
+                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                             },
                         }))
                     })
@@ -3837,6 +4004,9 @@ See: `docs/tracy.md`.\n";
                         "max_top_total_us": cli_thresholds.max_top_total_us,
                         "max_top_layout_us": cli_thresholds.max_top_layout_us,
                         "max_top_solve_us": cli_thresholds.max_top_solve_us,
+                        "max_pointer_move_dispatch_us": cli_thresholds.max_pointer_move_dispatch_us,
+                        "max_pointer_move_hit_test_us": cli_thresholds.max_pointer_move_hit_test_us,
+                        "max_pointer_move_global_changes": cli_thresholds.max_pointer_move_global_changes,
                     },
                     "baseline": perf_baseline.as_ref().map(|b| serde_json::json!({
                         "path": b.path.display().to_string(),
@@ -8504,11 +8674,17 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: None,
+                max_pointer_move_hit_test_us: None,
+                max_pointer_move_global_changes: None,
             },
             PerfThresholds::default(),
             99,
             79,
             49,
+            0,
+            0,
+            0,
         );
         assert!(failures.is_empty());
     }
@@ -8522,11 +8698,17 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: None,
+                max_pointer_move_hit_test_us: None,
+                max_pointer_move_global_changes: None,
             },
             PerfThresholds::default(),
             101,
             81,
             51,
+            0,
+            0,
+            0,
         );
         assert_eq!(failures.len(), 3);
         let metrics: Vec<String> = failures
