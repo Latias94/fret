@@ -29,6 +29,9 @@ struct RowSelectionDetail {
     is_selected: BTreeMap<String, bool>,
     is_some_selected: BTreeMap<String, bool>,
     is_all_sub_rows_selected: BTreeMap<String, bool>,
+    can_select: BTreeMap<String, bool>,
+    can_multi_select: BTreeMap<String, bool>,
+    can_select_sub_rows: BTreeMap<String, bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -401,6 +404,48 @@ fn tanstack_v8_selection_tree_parity() {
                     table.row_is_all_sub_rows_selected(row_key),
                     *expected_value,
                     "snapshot {} is_all_sub_rows_selected[{}] mismatch",
+                    snap.id,
+                    row_id
+                );
+            }
+            for (row_id, expected_value) in &expected.can_select {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                assert_eq!(
+                    table.row_can_select(row_key),
+                    *expected_value,
+                    "snapshot {} can_select[{}] mismatch",
+                    snap.id,
+                    row_id
+                );
+            }
+            for (row_id, expected_value) in &expected.can_multi_select {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                assert_eq!(
+                    table.row_can_multi_select(row_key),
+                    *expected_value,
+                    "snapshot {} can_multi_select[{}] mismatch",
+                    snap.id,
+                    row_id
+                );
+            }
+            for (row_id, expected_value) in &expected.can_select_sub_rows {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                assert_eq!(
+                    table.row_can_select_sub_rows(row_key),
+                    *expected_value,
+                    "snapshot {} can_select_sub_rows[{}] mismatch",
                     snap.id,
                     row_id
                 );

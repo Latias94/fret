@@ -1,3 +1,10 @@
+//! Portable runtime contracts and value types shared across the Fret workspace.
+//!
+//! This crate intentionally avoids backend bindings (`winit`, `wgpu`, `web-sys`) and must not
+//! force a global async runtime (Tokio, etc.).
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-runtime/README.md`.
+
 pub mod capabilities;
 pub mod command;
 pub mod commands;
@@ -32,6 +39,9 @@ pub mod window_metrics;
 pub mod window_text_boundary_mode;
 pub mod window_text_input_snapshot;
 
+// -----------------------------------------------------------------------------
+// Stable re-exports (portable runtime contract surface)
+// -----------------------------------------------------------------------------
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,

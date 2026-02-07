@@ -3,11 +3,12 @@ use std::sync::Arc;
 use fret_authoring::UiWriter as _;
 use fret_core::{Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size};
 use fret_runtime::DragPhase;
+use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
-    ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PointerRegionProps,
-    PositionStyle, PressableA11y, PressableProps, RowProps,
+    AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
 };
 
 pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
@@ -19,6 +20,7 @@ pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
     initial_position: Point,
     initial_size: Option<Size>,
     resize: Option<super::FloatingWindowResizeOptions>,
+    options: super::FloatingWindowOptions,
     build: Build,
 ) -> super::FloatingWindowChromeResponse
 where
@@ -26,9 +28,10 @@ where
 {
     let (window, chrome) = ui.with_cx_mut(|cx| {
         let window_id = area.id;
-        let resizable = initial_size.is_some();
+        let resizable_layout = initial_size.is_some();
+        let resize_enabled = options.inputs_enabled && options.resizable && resizable_layout;
 
-        let resize_snapshot = if resizable {
+        let resize_snapshot = if resize_enabled {
             [
                 super::FloatWindowResizeHandle::Left,
                 super::FloatWindowResizeHandle::Right,
@@ -59,7 +62,10 @@ where
             .map(|(_, dragging, _, _)| dragging)
             .unwrap_or(false);
         let collapsed_model = super::float_window_collapsed_model_for(cx, window_id);
-        if cx.take_transient_for(window_id, super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED) {
+        if options.inputs_enabled
+            && options.collapsible
+            && cx.take_transient_for(window_id, super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED)
+        {
             let _ = cx.app.models_mut().update(&collapsed_model, |v| {
                 *v = !*v;
             });
@@ -221,7 +227,7 @@ where
         }
 
         let chrome = super::FloatingWindowChromeResponse {
-            size: resizable.then_some(size),
+            size: resizable_layout.then_some(size),
             resizing: resizing && !collapsed,
             collapsed,
         };
@@ -237,7 +243,7 @@ where
 
         let mut window_props = ContainerProps::default();
         window_props.layout.overflow = Overflow::Visible;
-        if resizable {
+        if resizable_layout {
             window_props.layout.size.width = Length::Px(size.width);
             if !collapsed {
                 window_props.layout.size.height = Length::Px(size.height);
@@ -292,6 +298,26 @@ where
                     let title = title_for_window.clone();
                     let title_bar_test_id = title_bar_test_id.clone();
                     let open_for_key = open_for_window.clone();
+                    let can_interact = options.inputs_enabled;
+                    let can_close = can_interact && options.closable && open_for_key.is_some();
+                    let can_collapse = can_interact && options.collapsible;
+                    let can_move = can_interact && options.movable;
+                    let on_left_double_click: Option<super::OnFloatingAreaLeftDoubleClick> =
+                        if can_collapse {
+                            Some(Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      acx: fret_ui::action::ActionCx| {
+                                    host.record_transient_event(
+                                        acx,
+                                        super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED,
+                                    );
+                                    host.notify(acx);
+                                },
+                            ))
+                        } else {
+                            None
+                        };
+
                     let drag_surface = super::floating_area_drag_surface_element(
                         cx,
                         area,
@@ -302,18 +328,14 @@ where
                                 layout.size.height = Length::Fill;
                                 layout
                             },
+                            enabled: can_interact,
                             ..Default::default()
                         },
-                        Some(Arc::new(move |host, acx| {
-                            host.record_transient_event(
-                                acx,
-                                super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED,
-                            );
-                            host.notify(acx);
-                        })),
+                        on_left_double_click,
+                        can_move,
                         move |cx, region_id| {
                             cx.key_clear_on_key_down_for(region_id);
-                            if let Some(open) = open_for_key {
+                            if can_close && let Some(open) = open_for_key {
                                 cx.key_on_key_down_for(
                                     region_id,
                                     Arc::new(move |host, acx, down| {
@@ -340,26 +362,29 @@ where
                         },
                     );
 
-                    let close = open_for_window.clone().map(|open| {
-                        let mut props = PressableProps::default();
-                        props.a11y = PressableA11y {
-                            role: Some(SemanticsRole::Button),
-                            label: Some(Arc::from("Close")),
-                            test_id: Some(close_button_test_id.clone()),
-                            ..Default::default()
-                        };
-                        props.layout.size.width = Length::Px(Px(20.0));
-                        props.layout.size.height = Length::Px(Px(20.0));
-                        cx.pressable(props, move |cx, _state| {
-                            cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                                let _ = host.update_model(&open, |v: &mut bool| {
-                                    *v = false;
-                                });
-                                host.notify(acx);
-                            }));
-                            vec![cx.text("\u{00D7}")]
-                        })
-                    });
+                    let close = (options.inputs_enabled && options.closable)
+                        .then(|| open_for_window.clone())
+                        .flatten()
+                        .map(|open| {
+                            let mut props = PressableProps::default();
+                            props.a11y = PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(Arc::from("Close")),
+                                test_id: Some(close_button_test_id.clone()),
+                                ..Default::default()
+                            };
+                            props.layout.size.width = Length::Px(Px(20.0));
+                            props.layout.size.height = Length::Px(Px(20.0));
+                            cx.pressable(props, move |cx, _state| {
+                                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                                    let _ = host.update_model(&open, |v: &mut bool| {
+                                        *v = false;
+                                    });
+                                    host.notify(acx);
+                                }));
+                                vec![cx.text("\u{00D7}")]
+                            })
+                        });
 
                     vec![cx.row(row, move |_cx| {
                         let mut out = vec![drag_surface];
@@ -371,23 +396,60 @@ where
                 },
             );
 
-            let content = cx.container(
-                {
-                    let mut props = ContainerProps::default();
-                    props.padding = Edges::all(Px(8.0));
-                    props
-                },
-                move |cx| {
-                    let mut out = Vec::new();
-                    let mut ui = super::ImUiFacade {
-                        cx,
-                        out: &mut out,
-                        build_focus: None,
+            let content = {
+                let content_container = |cx: &mut ElementContext<'_, H>| {
+                    cx.container(
+                        {
+                            let mut props = ContainerProps::default();
+                            props.padding = Edges::all(Px(8.0));
+                            props
+                        },
+                        move |cx| {
+                            let mut out = Vec::new();
+                            let mut ui = super::ImUiFacade {
+                                cx,
+                                out: &mut out,
+                                build_focus: None,
+                            };
+                            build(&mut ui);
+                            out
+                        },
+                    )
+                };
+
+                if options.inputs_enabled && options.activate_on_click {
+                    let layout = {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
                     };
-                    build(&mut ui);
-                    out
-                },
-            );
+                    cx.pointer_region(
+                        PointerRegionProps {
+                            layout,
+                            enabled: true,
+                        },
+                        move |cx| {
+                            let region_id = cx.root_id();
+                            super::float_layer_bring_to_front_if_activated(
+                                cx, region_id, window_id,
+                            );
+
+                            cx.pointer_region_clear_on_pointer_down();
+                            cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, _down| {
+                                host.request_focus(acx.target);
+                                host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                                host.notify(acx);
+                                false
+                            }));
+
+                            vec![content_container(cx)]
+                        },
+                    )
+                } else {
+                    content_container(cx)
+                }
+            };
 
             let body = if collapsed {
                 title_bar
@@ -395,7 +457,40 @@ where
                 cx.column(col, move |_cx| vec![title_bar, content])
             };
 
-            if !resizable || collapsed {
+            let blocker = (!options.inputs_enabled).then(|| {
+                let mut layout = LayoutStyle::default();
+                layout.position = PositionStyle::Absolute;
+                layout.inset = InsetStyle {
+                    left: Some(Px(0.0)),
+                    right: Some(Px(0.0)),
+                    top: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                };
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+
+                cx.pointer_region(
+                    PointerRegionProps {
+                        layout,
+                        enabled: true,
+                    },
+                    move |cx| {
+                        cx.pointer_region_clear_on_pointer_down();
+                        cx.pointer_region_clear_on_pointer_move();
+                        cx.pointer_region_clear_on_pointer_up();
+
+                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
+                        cx.pointer_region_on_pointer_move(Arc::new(|_host, _acx, _mv| true));
+                        cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
+                        Vec::new()
+                    },
+                )
+            });
+
+            if !resizable_layout || collapsed || !resize_enabled {
+                if let Some(blocker) = blocker {
+                    return vec![cx.stack(move |_cx| vec![body, blocker])];
+                }
                 return vec![body];
             }
 
@@ -585,52 +680,47 @@ where
                 )
             };
 
-            let left = resize_handle(
+            let mut stacked: Vec<AnyElement> = Vec::new();
+            stacked.push(body);
+
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::Left,
                 resize_left_test_id.clone(),
-            );
-            let right = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::Right,
                 resize_right_test_id.clone(),
-            );
-            let top = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::Top,
                 resize_top_test_id.clone(),
-            );
-            let bottom = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::Bottom,
                 resize_bottom_test_id.clone(),
-            );
-            let top_left = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::TopLeft,
                 resize_top_left_test_id.clone(),
-            );
-            let top_right = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::TopRight,
                 resize_top_right_test_id.clone(),
-            );
-            let bottom_left = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::BottomLeft,
                 resize_bottom_left_test_id.clone(),
-            );
-            let corner = resize_handle(
+            ));
+            stacked.push(resize_handle(
                 super::FloatWindowResizeHandle::BottomRight,
                 resize_corner_test_id.clone(),
-            );
+            ));
 
-            vec![cx.stack(|_cx| {
-                vec![
-                    body,
-                    left,
-                    right,
-                    top,
-                    bottom,
-                    top_left,
-                    top_right,
-                    bottom_left,
-                    corner,
-                ]
-            })]
+            if let Some(blocker) = blocker {
+                stacked.push(blocker);
+            }
+
+            vec![cx.stack(move |_cx| stacked)]
         });
         (window, chrome)
     });

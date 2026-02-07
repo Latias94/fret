@@ -979,6 +979,7 @@ dependencies = [
  "fret-platform-native",
  "fret-platform-web",
  "fret-render",
+ "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui",
@@ -1358,7 +1359,8 @@ dependencies = [
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
- "fret-render",
+ "fret-render-wgpu",
+ "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "getrandom 0.3.4",
@@ -1486,12 +1488,27 @@ dependencies = [
 name = "fret-render"
 version = "0.1.0"
 dependencies = [
+ "fret-render-wgpu",
+]
+
+[[package]]
+name = "fret-render-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "fret-render-wgpu"
+version = "0.1.0"
+dependencies = [
  "anyhow",
  "bytemuck",
  "cosmic-text",
  "etagere",
  "fret-core",
  "fret-fonts",
+ "fret-render-core",
  "glam",
  "lyon",
  "naga",
@@ -1523,10 +1540,7 @@ name = "fret-router"
 version = "0.1.0"
 dependencies = [
  "fret-query",
- "fret-runtime",
- "fret-ui",
  "js-sys",
- "serde",
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",
@@ -1536,7 +1550,10 @@ dependencies = [
 name = "fret-runner-web"
 version = "0.1.0"
 dependencies = [
+ "fret-core",
  "fret-platform-web",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1547,8 +1564,6 @@ dependencies = [
  "fret-a11y-accesskit",
  "fret-core",
  "tracing",
- "wasm-bindgen",
- "web-sys",
  "windows-sys 0.61.2",
  "winit",
 ]
@@ -1765,7 +1780,6 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",
- "fret-ui-primitives",
  "fret-viewport-tooling",
  "serde",
  "serde_json",
@@ -1790,16 +1804,6 @@ dependencies = [
  "serde",
  "serde_json",
  "time",
-]
-
-[[package]]
-name = "fret-ui-primitives"
-version = "0.1.0"
-dependencies = [
- "fret-app",
- "fret-core",
- "fret-ui",
- "fret-ui-headless",
 ]
 
 [[package]]

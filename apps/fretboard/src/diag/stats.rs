@@ -201,6 +201,8 @@ pub(super) struct BundleStatsReport {
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    pub(super) max_paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) max_paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -228,6 +230,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_roots_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
     pub(super) layout_contained_view_cache_roots_time_us: u64,
@@ -309,6 +312,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
     pub(super) paint_cache_misses: u32,
+    pub(super) paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) paint_cache_replay_time_us: u64,
     pub(super) paint_cache_bounds_translate_time_us: u64,
     pub(super) paint_cache_bounds_translated_nodes: u32,
@@ -350,6 +355,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_scene_encoding_cache_misses: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_engine_child_rect_queries: u64,
+    pub(super) layout_engine_child_rect_time_us: u64,
     pub(super) changed_models: u32,
     pub(super) changed_globals: u32,
     pub(super) changed_global_types_sample: Vec<String>,
@@ -1628,12 +1635,28 @@ impl BundleStatsReport {
                     Value::from(row.paint_cache_misses),
                 );
                 obj.insert(
+                    "paint_cache_hit_test_only_replay_allowed".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_allowed),
+                );
+                obj.insert(
+                    "paint_cache_hit_test_only_replay_rejected_key_mismatch".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_rejected_key_mismatch),
+                );
+                obj.insert(
                     "layout_engine_solves".to_string(),
                     Value::from(row.layout_engine_solves),
                 );
                 obj.insert(
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_queries".to_string(),
+                    Value::from(row.layout_engine_child_rect_queries),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_time_us".to_string(),
+                    Value::from(row.layout_engine_child_rect_time_us),
                 );
                 obj.insert(
                     "layout_collect_roots_time_us".to_string(),
@@ -1650,6 +1673,10 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_request_build_roots_time_us".to_string(),
                     Value::from(row.layout_request_build_roots_time_us),
+                );
+                obj.insert(
+                    "layout_roots_time_us".to_string(),
+                    Value::from(row.layout_roots_time_us),
                 );
                 obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),
@@ -3701,6 +3728,302 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
     msg.push_str(
         "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
     );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_scroll_offset_stable(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scroll_offset_stable_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scroll_offset_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_target = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        let mut target_node_id: Option<u64> = None;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            if let Some(node_id) = semantics_node_id_for_test_id(s, test_id) {
+                target_node_id = Some(node_id);
+                break;
+            }
+        }
+        let Some(target_node_id) = target_node_id else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} error=missing_semantics_or_test_id (ensure FRET_DIAG_SEMANTICS=1)"
+            ));
+            continue;
+        };
+
+        let mut baseline: Option<(f32, f32)> = None;
+        let mut baseline_frame: u64 = 0;
+        let mut samples = 0u64;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let entry = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_nodes"))
+                .and_then(|v| v.as_array())
+                .and_then(|nodes| {
+                    nodes.iter().find(|n| {
+                        n.get("node")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|id| id == target_node_id)
+                    })
+                });
+            let Some(entry) = entry else {
+                continue;
+            };
+
+            let Some(x) = entry
+                .get("offset_x")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+            let Some(y) = entry
+                .get("offset_y")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+
+            samples += 1;
+            if baseline.is_none() {
+                baseline = Some((x, y));
+                baseline_frame = frame_id;
+                continue;
+            }
+            let (bx, by) = baseline.unwrap();
+            if (x - bx).abs() > EPS || (y - by).abs() > EPS {
+                failures.push(format!(
+                    "window={window_id} test_id={test_id} target_node={target_node_id} error=offset_changed frame_id={frame_id} baseline_frame={baseline_frame} baseline=({bx:.2},{by:.2}) cur=({x:.2},{y:.2}) eps={EPS:.2}"
+                ));
+            }
+        }
+
+        if samples > 0 {
+            any_target = true;
+        } else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} target_node={target_node_id} error=no_scroll_nodes_samples (ensure scroll telemetry is enabled in the bundle)"
+            ));
+        }
+    }
+
+    if !any_target {
+        let mut msg = String::new();
+        msg.push_str("scroll offset stable check failed (no samples)\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        for line in failures {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scroll offset stable check failed (expected offset to remain stable)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_scrollbar_thumb_valid(
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scrollbar_thumb_valid_json(&bundle, bundle_path, selector, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scrollbar_thumb_valid_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    if selector != "all" {
+        return Err(format!(
+            "scrollbar thumb validity check only supports selector=all for now (got {selector})"
+        ));
+    }
+
+    fn rect_f32(v: &serde_json::Value) -> Option<(f32, f32, f32, f32)> {
+        let x = v.get("x")?.as_f64()? as f32;
+        let y = v.get("y")?.as_f64()? as f32;
+        let w = v.get("w")?.as_f64()? as f32;
+        let h = v.get("h")?.as_f64()? as f32;
+        if !(x.is_finite() && y.is_finite() && w.is_finite() && h.is_finite()) {
+            return None;
+        }
+        Some((x, y, w, h))
+    }
+
+    fn rect_contains(outer: (f32, f32, f32, f32), inner: (f32, f32, f32, f32), eps: f32) -> bool {
+        let (ox, oy, ow, oh) = outer;
+        let (ix, iy, iw, ih) = inner;
+        (ix + eps) >= ox
+            && (iy + eps) >= oy
+            && (ix + iw) <= (ox + ow + eps)
+            && (iy + ih) <= (oy + oh + eps)
+    }
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_scrollbar_samples = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            let scrollbars = s
+                .get("debug")
+                .and_then(|v| v.get("scrollbars"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if scrollbars.is_empty() {
+                continue;
+            }
+            any_scrollbar_samples = true;
+
+            for sb in scrollbars {
+                let node = sb.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+                let axis = sb.get("axis").and_then(|v| v.as_str()).unwrap_or("?");
+                let Some(track) = sb.get("track").and_then(rect_f32) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_track_rect"
+                    ));
+                    continue;
+                };
+                let (_tx, _ty, tw, th) = track;
+                if tw < -EPS || th < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_track_size track=({tw:.2},{th:.2}) eps={EPS:.2}"
+                    ));
+                }
+
+                let Some(thumb_v) = sb.get("thumb") else {
+                    continue;
+                };
+                if thumb_v.is_null() {
+                    continue;
+                }
+
+                let Some(thumb) = rect_f32(thumb_v) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_thumb_rect"
+                    ));
+                    continue;
+                };
+                let (_x, _y, w, h) = thumb;
+                if w < -EPS || h < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_thumb_size thumb=({w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                    continue;
+                }
+                if !rect_contains(track, thumb, EPS) {
+                    let (tx, ty, tw, th) = track;
+                    let (x, y, w, h) = thumb;
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=thumb_out_of_track track=({tx:.2},{ty:.2},{tw:.2},{th:.2}) thumb=({x:.2},{y:.2},{w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if !any_scrollbar_samples {
+        return Err(format!(
+            "scrollbar thumb validity check failed (no samples). bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scrollbar thumb validity check failed\n");
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
         msg.push_str("  ");
@@ -7334,6 +7657,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_cache_hit_test_only_replay_allowed = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_allowed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_cache_hit_test_only_replay_rejected_key_mismatch = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_rejected_key_mismatch"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_cache_replay_time_us = stats
                 .and_then(|m| m.get("paint_cache_replay_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7499,6 +7834,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_engine_child_rect_queries = stats
+                .and_then(|m| m.get("layout_engine_child_rect_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_child_rect_time_us = stats
+                .and_then(|m| m.get("layout_engine_child_rect_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_collect_roots_time_us = stats
                 .and_then(|m| m.get("layout_collect_roots_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7513,6 +7856,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let layout_request_build_roots_time_us = stats
                 .and_then(|m| m.get("layout_request_build_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_pending_barrier_relayouts_time_us = stats
@@ -7854,6 +8201,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_paint_cache_hit_test_only_replay_allowed = out
+                .max_paint_cache_hit_test_only_replay_allowed
+                .max(paint_cache_hit_test_only_replay_allowed);
+            out.max_paint_cache_hit_test_only_replay_rejected_key_mismatch = out
+                .max_paint_cache_hit_test_only_replay_rejected_key_mismatch
+                .max(paint_cache_hit_test_only_replay_rejected_key_mismatch);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -7869,6 +8222,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_invalidate_scroll_handle_bindings_time_us,
                 layout_expand_view_cache_invalidations_time_us,
                 layout_request_build_roots_time_us,
+                layout_roots_time_us,
                 layout_pending_barrier_relayouts_time_us,
                 layout_repair_view_cache_bounds_time_us,
                 layout_contained_view_cache_roots_time_us,
@@ -7950,6 +8304,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_nodes_performed,
                 paint_nodes_performed,
                 paint_cache_misses,
+                paint_cache_hit_test_only_replay_allowed,
+                paint_cache_hit_test_only_replay_rejected_key_mismatch,
                 paint_cache_replay_time_us,
                 paint_cache_bounds_translate_time_us,
                 paint_cache_bounds_translated_nodes,
@@ -7991,6 +8347,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_scene_encoding_cache_misses,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_engine_child_rect_queries,
+                layout_engine_child_rect_time_us,
                 changed_models,
                 changed_globals,
                 changed_global_types_sample,

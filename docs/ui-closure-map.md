@@ -181,7 +181,7 @@ Validation anchors:
 **Code entry points**
 
 - UI paint emission: `crates/fret-ui/src/paint.rs`, `crates/fret-ui/src/declarative.rs`
-- Scene rendering: `crates/fret-render/src/renderer/mod.rs`
+- Scene rendering: `crates/fret-render-wgpu/src/renderer/mod.rs`
 
 **Validation anchors**
 
@@ -294,7 +294,7 @@ Validation anchors:
 **Code entry points**
 
 - `crates/fret-ui/src/tree/mod.rs` (debug stats structs; overlay stack/focus/capture visibility)
-- Renderer metrics: `crates/fret-render/src/renderer/mod.rs`
+- Renderer metrics: `crates/fret-render-wgpu/src/renderer/mod.rs`
 
 **Closure requirement**
 

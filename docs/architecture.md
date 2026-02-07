@@ -78,8 +78,10 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
 - `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.
 - `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
-- `crates/fret-runner-web`: compatibility shim re-exporting `fret-platform-web` (dedicated DOM adapter TBD).
-- `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
+- `crates/fret-runner-web`: browser DOM adapter (event translation, RAF scheduling, canvas wiring).
+- `crates/fret-render-core`: portable render-facing contract types.
+- `crates/fret-render-wgpu`: wgpu renderer implementation (device/bootstrap + pipelines + text/svg).
+- `crates/fret-render`: compatibility facade for the default renderer backend.
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
 - `crates/fret-launch`: integration glue (desktop now; web/mobile later) that owns presentation/effect draining and drives the frame loop.
 - `ecosystem/fret-ui-kit`: component infrastructure (policies, style composition, overlay managers) built on `fret-ui`.
@@ -111,7 +113,7 @@ Backend split direction (planned):
 
 Current workspace note:
 
-- Today these backends live as `crates/fret-platform-native` / `crates/fret-platform-web` and `crates/fret-render` (wgpu).
+- Today the renderer implementation lives in `crates/fret-render-wgpu`, and `crates/fret-render` is a facade.
 
 See `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
@@ -255,4 +257,3 @@ References: `docs/adr/0016-plugin-and-panel-boundaries.md`, `docs/adr/0037-works
 - Module-oriented ADR index: `docs/adr/README.md`
 - Pinned upstream references: `docs/repo-ref.md`
 - Current focus ADRs (decision gates): `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0037-workspace-boundaries-and-components-repository.md`
-

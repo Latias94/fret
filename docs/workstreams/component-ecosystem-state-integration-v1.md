@@ -266,7 +266,6 @@ Notes:
 | `fret-ui-headless` | `S` | Headless state machines and derived projections are core value. |
 | `fret-ui-kit` | `N` core, optional `S+Q` adapters | Keep primitives/contracts agnostic; add optional `state-*` adapters. |
 | `fret-ui-material3` | `N` core, optional `S+Q` adapters | Same policy as shadcn/ui-kit ecosystems. |
-| `fret-ui-primitives` | `N` | Mechanism layer should remain state-stack agnostic. |
 | `fret-ui-shadcn` | `N` core, optional `S+Q` adapters | Recipe layer can offer optional convenience adapters. |
 | `fret-undo` | `S` | Derived undo/redo availability and projection logic are selector-first. |
 | `fret-viewport-tooling` | `S` (optional `Q`) | Viewport/editor state derivation first; optional async asset/resource queries. |

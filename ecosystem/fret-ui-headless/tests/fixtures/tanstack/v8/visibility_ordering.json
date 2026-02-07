@@ -366,7 +366,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -717,7 +719,9 @@
               ]
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -1036,7 +1040,9 @@
               ]
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -1358,7 +1364,9 @@
               ]
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -1682,7 +1690,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -2025,7 +2035,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -2398,7 +2410,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -2772,7 +2786,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -3084,7 +3100,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -3465,7 +3483,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -3845,7 +3865,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -4222,7 +4244,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -4604,7 +4628,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -4959,7 +4985,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": false,
+        "is_some_columns_visible": true
       }
     },
     {
@@ -5332,7 +5360,9 @@
               "right": []
             }
           }
-        }
+        },
+        "is_all_columns_visible": true,
+        "is_some_columns_visible": true
       }
     }
   ]

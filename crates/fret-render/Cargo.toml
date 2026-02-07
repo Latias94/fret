@@ -10,25 +10,4 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
-wgpu.workspace = true
-bytemuck.workspace = true
-anyhow.workspace = true
-glam.workspace = true
-fret-core = { path = "../fret-core" }
-slotmap.workspace = true
-thiserror.workspace = true
-cosmic-text.workspace = true
-parley.workspace = true
-unicode-script.workspace = true
-unicode-segmentation.workspace = true
-etagere.workspace = true
-lyon.workspace = true
-resvg.workspace = true
-usvg.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-
-[dev-dependencies]
-naga.workspace = true
-pollster.workspace = true
-fret-fonts = { path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
+fret-render-wgpu = { path = "../fret-render-wgpu" }

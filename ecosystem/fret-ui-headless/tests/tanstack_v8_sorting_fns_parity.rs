@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use fret_ui_headless::table::{
     ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState, TanStackValue,
-    toggle_sorting_tanstack,
 };
 use serde::Deserialize;
 
@@ -171,13 +170,25 @@ fn tanstack_v8_sorting_fns_parity() {
                             panic!("unknown action column_id: {}", column_id);
                         };
                         let auto_sort_dir_desc = auto_sort_dir_desc_for_column(&data, column);
-                        toggle_sorting_tanstack(
-                            &mut state.sorting,
-                            column,
-                            options,
-                            *multi,
-                            auto_sort_dir_desc,
-                        );
+                        let table_for_action = Table::builder(&data)
+                            .columns(columns.clone())
+                            .sorting_fn_builtin(
+                                "custom_text",
+                                fret_ui_headless::table::BuiltInSortingFn::Text,
+                            )
+                            .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                            .state(state.clone())
+                            .options(options)
+                            .build();
+
+                        state.sorting = table_for_action
+                            .toggled_column_sorting_tanstack(
+                                column_id.as_str(),
+                                *multi,
+                                auto_sort_dir_desc,
+                            )
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                 }
             }

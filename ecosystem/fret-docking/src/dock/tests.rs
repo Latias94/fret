@@ -25,17 +25,12 @@ use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-#[cfg(feature = "layout-engine-v2")]
 use fret_ui::declarative;
-#[cfg(feature = "layout-engine-v2")]
 use fret_ui::overlay_placement::{
     Align as OverlayAlign, Side as OverlaySide, anchored_panel_bounds,
 };
-#[cfg(feature = "layout-engine-v2")]
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
-#[cfg(feature = "layout-engine-v2")]
 use slotmap::KeyData;
-#[cfg(feature = "layout-engine-v2")]
 use std::sync::atomic::AtomicBool;
 
 #[derive(Default)]
@@ -560,7 +555,6 @@ impl DockPanelRegistry<TestHost> for CachedRetainedPanelRegistry {
     }
 }
 
-#[cfg(feature = "layout-engine-v2")]
 struct OverlayAssertsViewportBounds {
     left_spacer: fret_core::NodeId,
     right_spacer: fret_core::NodeId,
@@ -569,7 +563,6 @@ struct OverlayAssertsViewportBounds {
     ok: Arc<AtomicBool>,
 }
 
-#[cfg(feature = "layout-engine-v2")]
 impl<H: UiHost> Widget<H> for OverlayAssertsViewportBounds {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let left = cx.tree.debug_node_bounds(self.left_spacer);
@@ -582,7 +575,6 @@ impl<H: UiHost> Widget<H> for OverlayAssertsViewportBounds {
     }
 }
 
-#[cfg(feature = "layout-engine-v2")]
 struct OverlayAssertsLastFrameElementBounds {
     window: AppWindowId,
     left_element: fret_ui::elements::GlobalElementId,
@@ -601,7 +593,6 @@ struct OverlayAssertsLastFrameElementBounds {
     ok: Arc<AtomicBool>,
 }
 
-#[cfg(feature = "layout-engine-v2")]
 impl<H: UiHost> Widget<H> for OverlayAssertsLastFrameElementBounds {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let left_last =
@@ -659,7 +650,6 @@ impl<H: UiHost> Widget<H> for OverlayAssertsLastFrameElementBounds {
     }
 }
 
-#[cfg(feature = "layout-engine-v2")]
 struct OverlayAssertsWindowScopedBoundsForElement {
     window_a: AppWindowId,
     window_b: AppWindowId,
@@ -670,7 +660,6 @@ struct OverlayAssertsWindowScopedBoundsForElement {
     ok: Arc<AtomicBool>,
 }
 
-#[cfg(feature = "layout-engine-v2")]
 impl<H: UiHost> Widget<H> for OverlayAssertsWindowScopedBoundsForElement {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let a_from_a = fret_ui::elements::bounds_for_element(cx.app, self.window_a, self.element_a);
@@ -690,7 +679,6 @@ impl<H: UiHost> Widget<H> for OverlayAssertsWindowScopedBoundsForElement {
     }
 }
 
-#[cfg(feature = "layout-engine-v2")]
 struct OverlayAssertsWindowLocalOverlayPlacement {
     window_a: AppWindowId,
     window_b: AppWindowId,
@@ -706,7 +694,6 @@ struct OverlayAssertsWindowLocalOverlayPlacement {
     ok: Arc<AtomicBool>,
 }
 
-#[cfg(feature = "layout-engine-v2")]
 impl<H: UiHost> Widget<H> for OverlayAssertsWindowLocalOverlayPlacement {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         let anchor_b = fret_ui::elements::bounds_for_element(cx.app, self.window_b, self.element_b);
@@ -757,7 +744,6 @@ impl<H: UiHost> Widget<H> for OverlayAssertsWindowLocalOverlayPlacement {
     }
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_fill() {
     let window = AppWindowId::default();
@@ -935,7 +921,6 @@ fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn docking_bounds_for_element_reports_last_frame_panel_rects() {
     let window = AppWindowId::default();
@@ -1156,7 +1141,6 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_correct() {
     let window = AppWindowId::default();
@@ -1365,7 +1349,6 @@ fn docking_viewport_panels_keep_scroll_and_virtual_list_extents_constraint_corre
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn bounds_for_element_is_window_scoped_across_multi_window_docking() {
     let window_a = AppWindowId::default();
@@ -1518,7 +1501,6 @@ fn bounds_for_element_is_window_scoped_across_multi_window_docking() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn overlay_placement_must_use_window_local_anchor_bounds() {
     let window_a = AppWindowId::default();

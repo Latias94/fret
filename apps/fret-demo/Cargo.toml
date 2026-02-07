@@ -25,7 +25,6 @@ hotpatch = [
     "dep:fret-ui-shadcn",
 ]
 node-graph-demos = ["fret-examples/node-graph-demos"]
-layout-engine-v2 = ["fret-examples/layout-engine-v2"]
 
 [dependencies]
 anyhow.workspace = true

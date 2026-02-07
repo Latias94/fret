@@ -12,6 +12,7 @@ Active workstreams:
 
 - `docs/workstreams/workspace-crate-boundaries-v1.md`
 - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+- `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
 - `docs/workstreams/diag-devtools-gui-v1.md`
 - `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
@@ -61,6 +62,7 @@ Active workstreams:
 - `docs/workstreams/ui-gallery-layout-correctness.md`
 - `docs/workstreams/ui-gallery-perf-scroll-measure.md`
 - `docs/workstreams/ui-perf-zed-smoothness-v1.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1-execution-plan.md`
 - `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
 - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - `docs/workstreams/scroll-extents-dom-parity.md` (draft)

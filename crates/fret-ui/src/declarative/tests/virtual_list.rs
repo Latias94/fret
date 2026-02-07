@@ -422,7 +422,6 @@ fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
     assert_eq!(ui.children(list_node).len(), 5);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn virtual_list_wraps_visible_items_in_engine_tree() {
     let mut app = TestHost::new();
@@ -1873,7 +1872,6 @@ fn virtual_list_measured_scroll_to_item_does_not_force_layout_invalidation_in_co
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn virtual_list_probe_layout_does_not_consume_deferred_scroll_request() {
     let mut app = TestHost::new();

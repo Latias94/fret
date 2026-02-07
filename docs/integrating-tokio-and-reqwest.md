@@ -35,6 +35,7 @@ without taking a dependency on any particular runtime.
 
 Cargo features:
 
+- enable `fret-query/ui` (for `ElementContext` sugar),
 - enable `fret-query/tokio` (for `TokioSpawner`), and
 - add a direct `tokio` dependency in your app crate.
 
@@ -63,6 +64,7 @@ Notes:
 
 Cargo features:
 
+- enable `fret-query/ui` (for `ElementContext` sugar),
 - enable `fret-query/wasm` (for `WasmSpawner`).
 
 Install:

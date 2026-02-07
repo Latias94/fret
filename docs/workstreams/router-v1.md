@@ -85,16 +85,15 @@ Optional features:
 - `hash-routing`
   - bind router state to `location.hash` (`#/...`)
   - static hosting fallback
-- `serde-query`
-  - structured query encode/decode helpers
-- `ui`
-  - `ElementContext` extension sugar (`use_route`, `navigate`)
 - `query-integration`
   - helpers for route-keyed prefetch/invalidate patterns with `fret-query`
-- `diagnostics`
-  - route transition logs and snapshot export for diagnostics bundles
-- `macro-dsl` (optional; see macro strategy)
-  - declarative `macro_rules!` helpers for route table ergonomics
+
+Future (not implemented in the v1 baseline):
+
+- Structured query encode/decode helpers (serde-driven).
+- UI sugar (`ElementContext` helpers like `use_route` / `navigate`).
+- Diagnostics hooks (transition logs, snapshots).
+- A macro DSL for route table ergonomics.
 
 ## Route model (v1)
 
