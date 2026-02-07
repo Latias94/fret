@@ -807,7 +807,7 @@ and does not need to preserve method names, but the **capability must exist**.
 | `toggleGrouping/getToggleGroupingHandler` | `Table::{toggled_column_grouping,grouping_handler_updater}` | Aligned | `grouping.json` |
 | `getAggregationFn/getAutoAggregationFn` | aggregation registry (`aggregation_fns.rs`) + `ColumnDef.aggregation_fn` | Aligned | `grouping_aggregation_fns.json` |
 | `getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
-| `clearSorting` | remove column from `TableState.sorting` (engine helper TBD) | Partial | N/A |
+| `clearSorting` | `Table::cleared_column_sorting(column_id)` (remove column from `TableState.sorting`) | Aligned | `demo_process.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
 | `getCanSort/getIsSorted/getSortIndex` | `Table::{column_can_sort,column_is_sorted,column_sort_index}` + `sort_for_column(&TableState.sorting, id)` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
 | `getCanMultiSort` | `Table::column_can_multi_sort(column_id)` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
 | `getAutoSortDir/getFirstSortDir/getNextSortingOrder` | `Table::{column_auto_sort_dir_desc_tanstack,column_first_sort_dir_desc_tanstack,column_next_sorting_order_desc_tanstack}` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |

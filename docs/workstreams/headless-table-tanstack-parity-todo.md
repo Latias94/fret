@@ -400,6 +400,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Parity-gated via `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/demo_process.json`
     (`sorting_helpers`) + `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`.
   - Evidence: `Table::{column_can_multi_sort,column_auto_sort_dir_desc_tanstack,column_first_sort_dir_desc_tanstack,column_next_sorting_order_desc_tanstack}`.
+- [x] HTP-sort-023 Align `column.clearSorting()` semantics.
+  - Parity-gated via `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/demo_process.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`.
+  - Evidence: `Table::cleared_column_sorting(..)`.
 - [x] HTP-sort-030 Implement option gates and transitions:
   - `enableSorting`, `enableMultiSort`, `maxMultiSortColCount`,
   - `enableSortingRemoval`, `enableMultiRemove`.

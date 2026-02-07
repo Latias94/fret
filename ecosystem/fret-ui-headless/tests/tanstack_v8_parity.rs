@@ -67,6 +67,8 @@ enum FixtureAction {
         #[serde(default)]
         event_multi: bool,
     },
+    #[serde(rename = "clearSorting")]
+    ClearSorting { column_id: String },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -206,6 +208,11 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
                                 *event_multi,
                                 false,
                             )
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
+                    }
+                    FixtureAction::ClearSorting { column_id } => {
+                        state.sorting = table_for_action
+                            .cleared_column_sorting(column_id.as_str())
                             .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                 }

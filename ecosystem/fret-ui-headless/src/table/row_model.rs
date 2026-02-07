@@ -1912,6 +1912,15 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// TanStack-aligned: `column.clearSorting()`.
+    pub fn cleared_column_sorting(&self, column_id: &str) -> Option<super::SortingState> {
+        self.column(column_id)?;
+
+        let mut next = self.state.sorting.clone();
+        next.retain(|spec| spec.column.as_ref() != column_id);
+        Some(next)
+    }
+
     /// TanStack-aligned: `column.getIsSorted()` (boolean form).
     pub fn column_is_sorted(&self, column_id: &str) -> Option<bool> {
         self.column(column_id)?;

@@ -856,6 +856,10 @@ type FixtureAction =
       event_multi?: boolean
     }
   | {
+      type: "clearSorting"
+      column_id: string
+    }
+  | {
       type: "setColumnFilterValue"
       column_id: string
       value: unknown
@@ -2981,6 +2985,17 @@ function snapshotColumnPinning(
         col.toggleSorting(undefined, action.multi ?? false)
         continue
       }
+      if (action.type === "clearSorting") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.clearSorting !== "function") {
+          throw new Error("Column has no clearSorting")
+        }
+        col.clearSorting()
+        continue
+      }
       if (action.type === "toggleSortingHandler") {
         const col = table.getColumn(action.column_id)
         if (!col) {
@@ -3518,6 +3533,17 @@ function snapshotColumnPinning(
         options: defaultOptions,
         state: { sorting: [{ id: "cpu", desc: true }] },
         expect: mkExpectState(defaultOptions, { sorting: [{ id: "cpu", desc: true }] }),
+      },
+      {
+        id: "sorted_cpu_desc_then_clear",
+        options: defaultOptions,
+        state: { sorting: [{ id: "cpu", desc: true }] },
+        actions: [{ type: "clearSorting", column_id: "cpu" }],
+        expect: mkExpectActions(
+          defaultOptions,
+          { sorting: [{ id: "cpu", desc: true }] },
+          [{ type: "clearSorting", column_id: "cpu" }],
+        ),
       },
       {
         id: "sorted_cpu_invert_asc",
