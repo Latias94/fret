@@ -61,6 +61,31 @@
     },
     { "type": "wait_frames", "n": 2 },
     {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor"
+      },
+      "text": " hello_soft_wrap_marker",
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "press_key", "key": "z", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "press_key", "key": "z", "modifiers": { "ctrl": true, "shift": true } },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-reset-stats" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
       "type": "drag_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" },
       "delta_x": -240.0,
@@ -79,4 +104,3 @@
     }
   ]
 }
-

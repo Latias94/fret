@@ -10122,6 +10122,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
     let mut max_pointer_fallbacks_observed = 0u64;
     let mut max_caret_rect_fallbacks_observed = 0u64;
     let mut max_vertical_move_fallbacks_observed = 0u64;
+    let mut max_pointer_fallbacks_observed_global = 0u64;
+    let mut max_caret_rect_fallbacks_observed_global = 0u64;
+    let mut max_vertical_move_fallbacks_observed_global = 0u64;
+    let mut resets_observed = 0u64;
+    let mut segment_start_observed = None::<serde_json::Value>;
+    let mut prev_fallbacks = None::<(u64, u64, u64)>;
 
     let windows = bundle
         .get("windows")
@@ -10181,11 +10187,49 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
 
-            max_pointer_fallbacks_observed = max_pointer_fallbacks_observed.max(pointer_fallbacks);
-            max_caret_rect_fallbacks_observed =
-                max_caret_rect_fallbacks_observed.max(caret_rect_fallbacks);
-            max_vertical_move_fallbacks_observed =
-                max_vertical_move_fallbacks_observed.max(vertical_move_fallbacks);
+            max_pointer_fallbacks_observed_global =
+                max_pointer_fallbacks_observed_global.max(pointer_fallbacks);
+            max_caret_rect_fallbacks_observed_global =
+                max_caret_rect_fallbacks_observed_global.max(caret_rect_fallbacks);
+            max_vertical_move_fallbacks_observed_global =
+                max_vertical_move_fallbacks_observed_global.max(vertical_move_fallbacks);
+
+            let reset_detected = prev_fallbacks.is_some_and(|prev| {
+                pointer_fallbacks < prev.0
+                    || caret_rect_fallbacks < prev.1
+                    || vertical_move_fallbacks < prev.2
+            });
+            if reset_detected {
+                resets_observed = resets_observed.saturating_add(1);
+                segment_start_observed = Some(serde_json::json!( {
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "selected_page": selected_page,
+                    "soft_wrap_cols": soft_wrap_cols,
+                    "geom_pointer_hit_test_fallbacks": pointer_fallbacks,
+                    "geom_caret_rect_fallbacks": caret_rect_fallbacks,
+                    "geom_vertical_move_fallbacks": vertical_move_fallbacks,
+                }));
+
+                // Start a new “post-reset” segment. We intentionally gate only against the latest
+                // segment so scripts can isolate interactions via a "Reset stats" step.
+                max_pointer_fallbacks_observed = pointer_fallbacks;
+                max_caret_rect_fallbacks_observed = caret_rect_fallbacks;
+                max_vertical_move_fallbacks_observed = vertical_move_fallbacks;
+            } else {
+                max_pointer_fallbacks_observed =
+                    max_pointer_fallbacks_observed.max(pointer_fallbacks);
+                max_caret_rect_fallbacks_observed =
+                    max_caret_rect_fallbacks_observed.max(caret_rect_fallbacks);
+                max_vertical_move_fallbacks_observed =
+                    max_vertical_move_fallbacks_observed.max(vertical_move_fallbacks);
+            }
+            prev_fallbacks = Some((
+                pointer_fallbacks,
+                caret_rect_fallbacks,
+                vertical_move_fallbacks,
+            ));
 
             last_observed = Some(serde_json::json!({
                 "window": window_id,
@@ -10219,6 +10263,11 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
         "max_pointer_fallbacks_observed": max_pointer_fallbacks_observed,
         "max_caret_rect_fallbacks_observed": max_caret_rect_fallbacks_observed,
         "max_vertical_move_fallbacks_observed": max_vertical_move_fallbacks_observed,
+        "max_pointer_fallbacks_observed_global": max_pointer_fallbacks_observed_global,
+        "max_caret_rect_fallbacks_observed_global": max_caret_rect_fallbacks_observed_global,
+        "max_vertical_move_fallbacks_observed_global": max_vertical_move_fallbacks_observed_global,
+        "resets_observed": resets_observed,
+        "segment_start_observed": segment_start_observed,
         "last_observed": last_observed,
     });
     write_json_value(&evidence_path, &payload)?;
