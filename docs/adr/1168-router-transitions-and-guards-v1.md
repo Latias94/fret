@@ -30,7 +30,7 @@ This ADR locks the minimal v1 contract for transitions, events, and guards.
   - `Sync`: the router state changed due to external history changes (e.g. web `popstate`)
 - `RouterTransition` includes:
   - `from` and `to` canonical `RouteLocation`
-  - `redirect_chain`: a list of attempted locations (v1: at least 0..1; multi-hop is future work)
+  - `redirect_chain`: a list of attempted locations (0..N, excludes the final `to`)
   - `blocked_by`: optional `RouterBlockReason` when a guard blocks an attempt
 
 `RouterUpdate` is returned from `Router::navigate(...)` / `Router::sync()`:
@@ -73,7 +73,7 @@ For `Push` and `Replace`, the router always evaluates the guard **before** mutat
 - `Allow`: perform navigation
 - `Block`: do not mutate history; emit `Blocked`
 - `Redirect`: navigate to `to` with `action` (normalized; see below); emit `Transitioned` with
-  `cause = Redirect { action }` and `redirect_chain = [attempted]`
+- `cause = Redirect { action }` and `redirect_chain` including the attempted locations
 
 #### Back / Forward (peek-preferred, post-guard fallback)
 
@@ -91,6 +91,13 @@ Back/Forward navigation depends on adapter capabilities:
 This design keeps web adapters usable while still allowing deterministic pre-guard behavior for
 portable/native adapters.
 
+#### Redirect hop limits and loop detection
+
+To avoid infinite redirect cycles and unstable UX:
+
+- The router must detect redirect loops (by canonical URL) and return a `Blocked` update.
+- The router must cap redirects with a hop limit. v1 default: **4** redirects.
+
 ### 5) Redirect action normalization
 
 Redirect decisions normalize invalid redirect actions:
@@ -102,7 +109,6 @@ Redirect decisions normalize invalid redirect actions:
 
 v1 intentionally leaves these as follow-ups:
 
-- Multi-hop redirect chains, loop detection, and hop limits.
 - Async guard outcomes (awaitable policies) and cancellation semantics.
 - `serde`-friendly transition/event snapshots for diagnostics bundles.
 
@@ -128,4 +134,3 @@ determinism and avoids unnecessary history mutations when available.
 - Router transitions/events/guards: `ecosystem/fret-router/src/router_state.rs`
 - Workstream tracking: `docs/workstreams/router-tanstack-parity-v1.md`
 - Workstream TODOs: `docs/workstreams/router-tanstack-parity-v1-todo.md`
-

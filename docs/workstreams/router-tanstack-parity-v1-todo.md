@@ -52,6 +52,7 @@ Status legend:
 - `[x]` Add guard contract:
   - `Push`/`Replace`: pre-guard (block/redirect)
   - `Back`/`Forward`: pre-guard when history can peek, post-guard fallback otherwise
+- `[x]` Add redirect loop detection + hop limit (default 4).
 - `[x]` Define `HistoryAdapter` trait and implement:
   - memory adapter (wrap `MemoryHistory`)
   - web history adapter (wrap existing `web-history`)

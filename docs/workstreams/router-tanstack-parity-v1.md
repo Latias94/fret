@@ -127,8 +127,8 @@ Standardize a transition snapshot (portable; diagnostics-friendly):
 
 - `cause`: `RouterTransitionCause` (`Navigate { action }`, `Redirect { action }`, `Sync`)
 - `from` / `to`: canonical locations
-- `redirect_chain`: optional (future)
-- `blocked_by`: optional (future guards)
+- `redirect_chain`: attempted locations (0..N, excludes the final `to`; capped with a hop limit)
+- `blocked_by`: optional guard reason
 - `RouterUpdate`: `navigate` / `sync` returns a structured “changed vs no-op” result
 - `RouterEvent`: a deterministic event stream (`Router::take_events()`) for diagnostics and tests
 - `guard`: optional app/ecosystem policy hook:
