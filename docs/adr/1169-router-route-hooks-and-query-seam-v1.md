@@ -117,6 +117,6 @@ mention `QueryKey<T>` remain behind `query-integration`.
 
 - Match/search stabilization: `ecosystem/fret-router/src/route_tree.rs`, `ecosystem/fret-router/src/search.rs`
 - Transitions/events/guards: `ecosystem/fret-router/src/router_state.rs` (ADR 1168)
+- Route hooks + prefetch intents: `ecosystem/fret-router/src/router_state.rs` (`RouteHooksTable`, `RouteHookContext`, `RoutePrefetchIntent`, `Router::route_hooks_mut`, `Router::take_prefetch_intents`), tests in the same file
 - Query helpers and planning: `ecosystem/fret-router/src/query_integration.rs` (feature `query-integration`)
 - Query key conventions: `docs/query-key-conventions.md`
-
