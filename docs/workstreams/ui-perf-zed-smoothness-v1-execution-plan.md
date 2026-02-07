@@ -70,7 +70,9 @@ This workstream can easily drift into “rare tail hitch” micro-fixes. Those a
 must keep a clear order of operations based on *how often the hot path executes*.
 
 - **P0: Resize-drag smoothness (layout/solve budgets)**  
-  Target probe: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
+  Target probes:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (large-step resize stress).
+  - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (small-step width jitter; live-drag approximation).
 - **P1: Text pipeline stability under width jitter**  
   Target probes: editor autoscroll + resize.
 - **P2: GPU vs CPU attribution + upload churn**  
