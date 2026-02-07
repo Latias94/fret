@@ -525,6 +525,10 @@ impl<H: UiHost> UiTree<H> {
 
         self.measure_cache_this_frame.clear();
 
+        if pass_kind == LayoutPassKind::Final {
+            self.update_interactive_resize_state_for_layout(app.frame_id(), bounds, scale_factor);
+        }
+
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.begin_debug_frame_if_needed(app.frame_id());
