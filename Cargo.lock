@@ -1032,6 +1032,7 @@ dependencies = [
  "fret-app",
  "fret-canvas",
  "fret-core",
+ "fret-diag-protocol",
  "fret-i18n",
  "fret-i18n-fluent",
  "fret-icons",
@@ -1166,6 +1167,26 @@ dependencies = [
  "js-sys",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "fret-diag"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "serde_json",
+ "sysinfo",
+ "windows-sys 0.61.2",
+ "zip",
+]
+
+[[package]]
+name = "fret-diag-protocol"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1853,11 +1874,8 @@ dependencies = [
 name = "fretboard"
 version = "0.1.0"
 dependencies = [
- "image",
+ "fret-diag",
  "serde_json",
- "sysinfo",
- "windows-sys 0.61.2",
- "zip",
 ]
 
 [[package]]

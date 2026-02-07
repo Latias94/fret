@@ -71,7 +71,7 @@ struct LaunchedDemo {
     launch_cmd: Vec<String>,
 }
 
-pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
+pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
     let mut pack_out: Option<PathBuf> = None;
@@ -1135,7 +1135,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         );
     }
 
-    let workspace_root = crate::cli::workspace_root()?;
+    let workspace_root = workspace_root()?;
 
     let resolved_out_dir = {
         let raw = out_dir
@@ -4696,6 +4696,16 @@ See: `docs/tracy.md`.\n";
         }
         other => Err(format!("unknown diag subcommand: {other}")),
     }
+}
+
+fn workspace_root() -> Result<PathBuf, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    for dir in cwd.ancestors() {
+        if dir.join("Cargo.toml").is_file() {
+            return Ok(dir.to_path_buf());
+        }
+    }
+    Err("failed to locate workspace root (Cargo.toml not found in ancestors)".to_string())
 }
 
 fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {

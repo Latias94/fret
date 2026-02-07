@@ -1,5 +1,5 @@
 [package]
-name = "fretboard"
+name = "fret-diag"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,5 +11,9 @@ documentation.workspace = true
 publish = false
 
 [dependencies]
-fret-diag = { path = "../../crates/fret-diag" }
 serde_json.workspace = true
+zip.workspace = true
+image.workspace = true
+windows-sys.workspace = true
+sysinfo.workspace = true
+

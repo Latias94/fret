@@ -67,5 +67,5 @@ Status legend:
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - `[x]` Surface query snapshot aggregates in `fretboard diag stats` reports.
   - Added human/json metrics: `frames_with_query_snapshot`, `query_entries_*`, `query_namespace_hotspots`.
-  - Evidence: `apps/fretboard/src/diag/stats.rs`
-  - Regression coverage: `bundle_stats_aggregates_query_snapshot_entries` in `apps/fretboard/src/diag/mod.rs`.
+  - Evidence: `crates/fret-diag/src/stats.rs`
+  - Regression coverage: `bundle_stats_aggregates_query_snapshot_entries` in `crates/fret-diag/src/lib.rs`.

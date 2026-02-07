@@ -46,6 +46,7 @@ fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-icons = { path = "../fret-icons" }
 fret-launch = { path = "../../crates/fret-launch" }
 fret-render = { path = "../../crates/fret-render" }
+fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
 fret-canvas = { path = "../fret-canvas", optional = true }

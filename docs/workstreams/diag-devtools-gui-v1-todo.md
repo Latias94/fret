@@ -19,16 +19,16 @@ Conventions:
 ### M0: Scaffolding + decisions (docs + contracts)
 
 - [x] Add this workstream doc + TODO tracker.
-- [ ] Decide WS topology for web runner support:
-  - [ ] DevTools hosts local WS server (recommended).
-  - [ ] Session token / Origin policy defaults.
-- [ ] Decide the initial protocol framing:
-  - [ ] `{"schema_version":1,"type":"...","request_id":...,"payload":...}` (or similar).
-  - [ ] Correlation rules for request/response vs push events.
-- [ ] Decide protocol naming and limits:
-  - [ ] env var + query string keys for web runner.
-  - [ ] message type naming convention (`inspect.set` vs `inspect_set`).
-  - [ ] max message size + hover event rate/backpressure rules.
+- [x] Decide WS topology for web runner support:
+  - [x] DevTools hosts local WS server (recommended).
+  - [x] Session token defaults (origin allowlist is implementation-time polish).
+- [x] Decide the initial protocol framing:
+  - [x] `{"schema_version":1,"type":"...","request_id":...,"payload":...}` (or similar).
+  - [x] Correlation rules for request/response vs push events.
+- [x] Decide protocol naming and limits:
+  - [x] env var + query string keys for web runner.
+  - [x] message type naming convention (`inspect.set` vs `inspect_set`).
+  - [x] max message size + hover event backpressure rules.
 - [x] Decide the default tree shown in the left panel:
   - [x] semantics tree (recommended default),
   - [ ] layout tree (debugging layout engine),
@@ -36,14 +36,14 @@ Conventions:
 
 ### M1: Extract reusable tooling into crates
 
-- [ ] Create `crates/fret-diag-protocol` (wasm32-compatible, no std::fs required).
-  - [ ] Move script/selector/predicate types into it (schema v1/v2).
-  - [ ] Add serde roundtrip tests for representative scripts from `tools/diag-scripts/`.
-- [ ] Create `crates/fret-diag` and move core logic from `apps/fretboard/src/diag/*`:
-  - [ ] pack/share helpers (zip + `_root/` artifacts),
-  - [ ] bundle stats + gates + compare,
-  - [ ] file-trigger helpers (touch/write/wait) for the existing transport.
-- [ ] Make `apps/fretboard` depend on `crates/fret-diag` and keep CLI behavior identical.
+- [x] Create `crates/fret-diag-protocol` (wasm32-compatible, no std::fs required).
+  - [x] Move script/selector/predicate types into it (schema v1/v2).
+  - [x] Add serde roundtrip tests for representative scripts from `tools/diag-scripts/`.
+- [x] Create `crates/fret-diag` and move core logic from `apps/fretboard` diag CLI into it:
+  - [x] pack/share helpers (zip + `_root/` artifacts),
+  - [x] bundle stats + gates + compare,
+  - [x] file-trigger helpers (touch/write/wait) for the existing transport.
+- [x] Make `apps/fretboard` depend on `crates/fret-diag` and keep CLI behavior identical.
 
 ### M2: New GUI app skeleton (`apps/fret-devtools`)
 

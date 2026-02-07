@@ -30,6 +30,12 @@ Related ADRs:
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
 
+Implementation pointers (where the code lives today):
+
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Script/selector/result types (serde): `crates/fret-diag-protocol`
+- CLI tooling engine (pack/stats/gates/compare): `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
+
 ## Quick Start (manual bundle dump)
 
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:

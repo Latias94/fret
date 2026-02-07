@@ -213,6 +213,7 @@ pub(super) struct BundleStatsReport {
     pub(super) top: Vec<BundleStatsSnapshotRow>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 pub(super) struct BundleStatsSnapshotRow {
     pub(super) window: u64,

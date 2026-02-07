@@ -39,7 +39,7 @@ Each TODO is labeled:
   - Evidence:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records `ViewportInputEvent` into diagnostics)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.viewport_input`)
-    - `apps/fretboard/src/diag.rs` (`--check-viewport-input-min`)
+    - `crates/fret-diag/src/stats.rs` (`--check-viewport-input-min`)
 - [x] DMV1-diag-002 Export docking drag/capture ownership as a stable diagnostic record.
   - Target: per-frame “dock drag active” + pointer owner (dock drag vs viewport capture vs none).
   - Rationale: most regressions are arbitration bugs; diagnostics must make ownership visible.
@@ -92,7 +92,7 @@ Each TODO is labeled:
   - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
   - Evidence:
     - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
-    - runner: `apps/fretboard/src/diag.rs` (`diag suite docking-arbitration`)
+    - runner: `crates/fret-diag/src/lib.rs` (`diag suite docking-arbitration`; `apps/fretboard/src/diag.rs` is a thin wrapper)
 
 ## P2 — Unification Opportunities (Optional)
 
