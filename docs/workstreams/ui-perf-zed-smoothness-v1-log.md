@@ -6180,3 +6180,103 @@ Result:
 - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v19/selection-summary.json`
 - Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v19/candidate-results.json`
 - Both candidates validated `3/3` with `failures=0`; winner chosen by lower resize p90.
+
+## 2026-02-07 09:02 — fix(diag): quantize perf baseline thresholds (reduce 1–2us flakes)
+
+Motivation:
+- `ui-gallery-steady` perf threshold checks can fail by single-digit microseconds due to normal jitter.
+- This makes it harder to tell “real regression” from “measurement noise”.
+
+Change (commit `c7ea64bb5`):
+- Quantize `top_total/layout/solve` baseline thresholds to a `4us` quantum while keeping `% headroom` semantics.
+- Keep pointer-move thresholds on the existing slack+quantum scheme.
+- Harden `tools/perf/diag_perf_baseline_select.sh` under `bash -u` when no `--preset` paths are supplied.
+
+Verification:
+```bash
+cargo test -p fretboard
+```
+
+## 2026-02-07 09:15 — perf(fret-launch): dedupe scale-factor change events (resize plumbing)
+
+Change (commit `66b610487`):
+- Only deliver `Event::WindowScaleFactorChanged(scale_factor)` when the scale factor actually changes.
+- Avoids redundant app-level event dispatch during interactive resize (where we already coalesce size changes).
+
+Notes:
+- This is intentionally “small plumbing”, but it reduces per-frame work during resize-drag.
+
+## 2026-02-07 09:28 — perf(diag): stabilize P0 resize probes + refresh baseline
+
+Problem:
+- The resize scripts were effectively measuring “how many resizes land in one frame”, which can vary by scheduler/OS
+  timing and caused large tail spikes in steady-suite checks.
+
+Change (commit `cad3fef6a`):
+- Stabilize:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (insert 1-frame waits between resizes; settle
+    before capture).
+  - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (insert waits; shrink jitter span).
+- Refresh baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`
+- Update gate default baseline pointer: `tools/perf/diag_resize_probes_gate.sh`
+
+Evidence run (gate):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json \
+  --out-dir target/fret-diag-resize-probes-gate-r13
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r13/summary.json`)
+
+P0 worst-frame maxima (from `target/fret-diag-resize-probes-gate-r13/stdout.json`):
+- resize-stress:
+  - `max_total=16557us`
+  - `max_layout=9574us`
+  - `max_solve=2228us`
+  - `max_paint=7078us`
+- drag-jitter:
+  - `max_total=15602us`
+  - `max_layout=9518us`
+  - `max_solve=2326us`
+  - `max_paint=6127us`
+
+## 2026-02-07 10:10 — Refresh canonical `ui-gallery-steady` baseline (preset policy + stabilized resize script)
+
+Baseline selection run:
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v22 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result:
+- Canonical baseline updated: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v22/candidate-results.json`
+
+Sanity check (against v22):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-check-v22-r1 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 3 --warmup-frames 5 \
+  --sort time --top 5 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Result:
+- `pass=true` (exit code `0`)
+- Worst overall: `top_total_time_us=17900` (see JSON output; worst bundle path under
+  `target/fret-diag-ui-gallery-steady-check-v22-r1/`)

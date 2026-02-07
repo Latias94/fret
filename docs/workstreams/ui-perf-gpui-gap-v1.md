@@ -86,6 +86,41 @@ To close the gap responsibly, treat perf as a contract and work from the “lowe
 This playbook is intentionally compatible with “fearless refactors”: each change should produce a measurable delta and
 an entry in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commit-addressable) so regressions are reversible.
 
+## 0.2.1 Resize smoothness: gaps to investigate vs GPUI/Zed
+
+Resize-drag is a “stress multiplier”: it invalidates layout constraints, which tends to trigger the widest set of
+reflow + paint work. Zed feels smooth here primarily because it keeps the per-frame work bounded and predictable.
+
+What we already do in Fret (evidence in the perf log):
+
+- **Coalesce resizes to once per frame** at the runner boundary (apply pending size at `RedrawRequested`).
+- **Defer known-expensive scroll measurement** while the viewport is actively resizing (unbounded probe deferral).
+- **Make resize probes stable and reproducible** (so baselines measure “work per resize” rather than “scheduler timing”).
+
+Open questions / likely gaps (need code-level confirmation against `repo-ref/zed/crates/gpui`):
+
+1) **Text layout cache model under width jitter**
+   - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
+     layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
+   - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+
+2) **Layout invalidation granularity**
+   - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.
+   - Fret TODO: tighten layout-root construction and subtree invalidation so a resize does not always imply
+     “layout the whole tree” when only a small set of constraints changed.
+
+3) **Per-frame allocation discipline on hot resize frames**
+   - GPUI likely relies heavily on per-frame scratch arenas and stable caches; sporadic allocations can manifest as
+     rare tail hitches even when p90 looks fine.
+   - Fret TODO: track allocation and cache miss reasons directly in resize bundles (already partially available via
+     layout and view-cache counters) and close remaining blind spots.
+
+4) **GPU work scaling with surface area**
+   - Even if CPU layout is stable, large resizes can spike GPU cost if we re-rasterize masks, upload atlases, or
+     thrash intermediate textures.
+   - Fret TODO: ensure resize probes include renderer churn counters in the log (text atlas, SVG cache, intermediate
+     pool) and classify whether tail spikes are CPU-only or GPU-influenced.
+
 ## 0.3 Pointer-move hit-test status (current probe)
 
 Current “Zed feel” probe:

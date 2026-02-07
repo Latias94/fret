@@ -80,7 +80,7 @@ Execution plan:
 - [x] Add a dedicated P0 resize probe suite + gate runner (so resize regressions are always caught).
   - Suite: `ui-resize-probes` (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` +
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`).
-  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json`.
+  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
 - [x] Create a commit-addressable perf log:
@@ -96,7 +96,7 @@ Execution plan:
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 - [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
-  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
+  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 - [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
@@ -606,15 +606,33 @@ Perf acceptance:
   - Rule: choose candidate by failures -> resize p90 -> threshold-sum.
   - Template doc updated: `docs/workstreams/perf-baselines/seed-policy-template.md` (`Candidate selection workflow`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
+  - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
+  - Commit: `c7ea64bb5`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:02.
 - [x] Promote selected v18 baseline as canonical after candidate-selection run.
   - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`.
   - Selection summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`.
   - Stability: both candidates validated `3/3` with `failures=0`; winner copied to v18 baseline.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
 - [x] Refresh the canonical steady baseline after diagnostics/perf instrumentation changes.
-  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
-  - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v19/selection-summary.json`.
-  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 16:05.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+  - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 10:10.
+
+- [x] Stabilize resize perf scripts and refresh the P0 resize probes baseline + default gate pointer.
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (insert per-resize waits; settle before capture)
+    - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (insert waits; shrink jitter span)
+  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`
+  - Gate default: `tools/perf/diag_resize_probes_gate.sh`
+  - Commit: `cad3fef6a`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:28.
+
+- [x] Avoid redundant scale-factor events during interactive resize.
+  - Change: only deliver `Event::WindowScaleFactorChanged` when the scale factor actually changes.
+  - Commit: `66b610487`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:15.
 
 
 - [x] Coalesce window resizes to once per frame in the desktop runner.

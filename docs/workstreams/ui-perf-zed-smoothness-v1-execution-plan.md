@@ -26,13 +26,13 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 ## Current state (as of 2026-02-07)
 
-- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
+- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
-- P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json`.
+- P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
-- Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 00:35`.
+- Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.
@@ -118,7 +118,8 @@ must keep a clear order of operations based on *how often the hot path executes*
 
 | Milestone | Status | Scope | Required evidence |
 | --- | --- | --- | --- |
-| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v19.json`, selection summary in perf log (2026-02-07 16:05) |
+| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v22.json`, selection summary in perf log (2026-02-07 10:10) |
+| M4.0.1 Resize probes stabilization + baseline | Done | Make resize probes stable + reproducible, then refresh baseline and gate default | `ui-resize-probes.macos-m4.v3.json`, gate pass summary `target/fret-diag-resize-probes-gate-r13/summary.json` (2026-02-07 09:28) |
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
 | M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |
