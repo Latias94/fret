@@ -24,7 +24,7 @@ fret-launch = { path = "../fret-launch", optional = true }
 fret-fonts = { path = "../fret-fonts", optional = true }
 
 [features]
-default = ["core", "app", "ui"]
+default = ["core"]
 
 core = ["dep:fret-core"]
 app = ["dep:fret-app", "core"]

@@ -9,6 +9,9 @@
 //! - `fretboard` (dev tooling)
 //!
 //! See ADR 0111: `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`.
+//!
+//! Default features are intentionally minimal (`core` only). Enable additional feature bundles
+//! explicitly, or use `fret-kit` for the batteries-included golden path.
 
 #[cfg(feature = "core")]
 pub mod core {
