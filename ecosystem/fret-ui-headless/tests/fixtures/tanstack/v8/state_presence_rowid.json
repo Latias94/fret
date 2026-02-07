@@ -1,0 +1,140 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "state_presence_rowid",
+  "data": [
+    {
+      "id": 1,
+      "role": "engineer",
+      "team": "alpha",
+      "score": 10
+    },
+    {
+      "id": 2,
+      "role": "engineer",
+      "team": "beta",
+      "score": 20
+    },
+    {
+      "id": 3,
+      "role": "artist",
+      "team": "alpha",
+      "score": 30
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "state_presence_rowid_explicit_empty_maps",
+      "state": {
+        "rowSelection": {},
+        "expanded": {},
+        "rowPinning": {
+          "top": [],
+          "bottom": []
+        }
+      },
+      "expect": {
+        "json_roundtrip": {
+          "rowSelection": {},
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          }
+        },
+        "state_row_selection_len": 0,
+        "state_expanded_kind": "keys",
+        "state_expanded_keys_len": 0,
+        "state_row_pinning_top_len": 0,
+        "state_row_pinning_bottom_len": 0
+      }
+    },
+    {
+      "id": "state_presence_rowid_string_keys",
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "rowSelection": {
+          "role:engineer": true,
+          "row:1": true,
+          "row:2": false
+        },
+        "expanded": {
+          "role:engineer": true,
+          "row:3": true,
+          "row:2": false
+        },
+        "rowPinning": {
+          "top": [
+            "role:engineer",
+            "row:3"
+          ],
+          "bottom": [
+            "row:1"
+          ]
+        }
+      },
+      "expect": {
+        "json_roundtrip": {
+          "grouping": [
+            "role"
+          ],
+          "rowSelection": {
+            "role:engineer": true,
+            "row:1": true
+          },
+          "expanded": {
+            "role:engineer": true,
+            "row:3": true
+          },
+          "rowPinning": {
+            "top": [
+              "role:engineer",
+              "row:3"
+            ],
+            "bottom": [
+              "row:1"
+            ]
+          }
+        },
+        "state_row_selection_len": 2,
+        "state_expanded_kind": "keys",
+        "state_expanded_keys_len": 2,
+        "state_row_pinning_top_len": 2,
+        "state_row_pinning_bottom_len": 1
+      }
+    },
+    {
+      "id": "state_presence_rowid_expanded_all_false",
+      "state": {
+        "expanded": false,
+        "rowSelection": {},
+        "rowPinning": {
+          "top": [],
+          "bottom": []
+        }
+      },
+      "expect": {
+        "json_roundtrip": {
+          "expanded": false,
+          "rowSelection": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          }
+        },
+        "state_row_selection_len": 0,
+        "state_expanded_kind": "keys",
+        "state_expanded_keys_len": 0,
+        "state_row_pinning_top_len": 0,
+        "state_row_pinning_bottom_len": 0
+      }
+    }
+  ]
+}

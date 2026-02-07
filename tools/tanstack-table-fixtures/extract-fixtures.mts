@@ -15,6 +15,7 @@ type CaseId =
   | "visibility_ordering"
   | "pinning"
   | "pinning_tree"
+  | "pinning_grouped_rows"
   | "column_pinning"
   | "faceting"
   | "column_sizing"
@@ -25,6 +26,7 @@ type CaseId =
   | "expanding"
   | "grouping"
   | "grouping_aggregation_fns"
+  | "row_id_state_ops"
   | "render_fallback"
 
 type SnapshotId =
@@ -177,6 +179,20 @@ type SnapshotId =
   | "expanding_action_toggle_row_on_expanded_change_noop_ignores"
   | "expanding_action_toggle_row_enable_expanding_false_still_updates_state"
   | "expanding_action_toggle_all"
+  | "row_id_state_ops_leaf_selection_prefixed"
+  | "row_id_state_ops_group_selection"
+  | "row_id_state_ops_group_selection_select_children_false"
+  | "row_id_state_ops_group_selection_toggle_off"
+  | "row_id_state_ops_nested_group_selection"
+  | "row_id_state_ops_group_selection_on_row_selection_change_noop"
+  | "row_id_state_ops_group_expanding"
+  | "row_id_state_ops_group_expanding_on_expanded_change_noop"
+  | "row_id_state_ops_group_pinning_on_row_pinning_change_noop"
+  | "row_id_state_ops_group_pinning"
+  | "row_id_state_ops_nested_group_pinning"
+  | "row_id_state_ops_group_mixed_select_expand_pin"
+  | "row_id_state_ops_nested_group_mixed_select_expand_pin"
+  | "row_id_state_ops_group_mixed_selection_noop_expand_pin"
   | "pagination_baseline"
   | "pagination_set_page_index_out_of_range_uncontrolled"
   | "pagination_set_page_index_clamps_when_page_count_is_set"
@@ -208,6 +224,11 @@ type SnapshotId =
   | "pinning_tree_keep_false_never_surfaces_child_row"
   | "pinning_tree_action_pin_root_includes_leaf_rows"
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
+  | "pinning_grouped_rows_baseline_page_0"
+  | "pinning_grouped_rows_action_pin_group_role_1_top"
+  | "pinning_grouped_rows_action_pin_group_role_1_top_include_leaf_rows"
+  | "pinning_grouped_rows_action_pin_leaf_1_top_include_parent_rows"
+  | "pinning_grouped_rows_state_page_1_pinned_role_1"
   | "column_pinning_default_can_pin"
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
@@ -356,6 +377,8 @@ type TanStackOptions = {
   __onColumnOrderChange?: "noop"
   __onRowPinningChange?: "noop"
   __onRowSelectionChange?: "noop"
+  // Fixture-only: choose a deterministic custom row id strategy.
+  __getRowId?: "prefixed"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
@@ -827,6 +850,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "visibility_ordering" &&
         v !== "pinning" &&
         v !== "pinning_tree" &&
+        v !== "pinning_grouped_rows" &&
         v !== "column_pinning" &&
         v !== "faceting" &&
         v !== "column_sizing" &&
@@ -837,6 +861,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "expanding" &&
         v !== "grouping" &&
         v !== "grouping_aggregation_fns" &&
+        v !== "row_id_state_ops" &&
         v !== "render_fallback"
       ) {
         throw new Error(`unknown --case ${v}`)
@@ -848,7 +873,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1073,7 +1098,8 @@ async function main(): Promise<void> {
     case_id === "pagination" ||
     case_id === "state_shapes" ||
     case_id === "selection" ||
-    case_id === "pinning"
+    case_id === "pinning" ||
+    case_id === "row_id_state_ops"
   ) {
     const demo: DemoProcessRow[] = [
       { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
@@ -1157,6 +1183,20 @@ async function main(): Promise<void> {
       },
     ]
   } else if (case_id === "grouping") {
+    const rows: { id: number; role: number; team: number; score: number }[] = [
+      { id: 1, role: 1, team: 10, score: 5 },
+      { id: 2, role: 2, team: 20, score: 7 },
+      { id: 3, role: 1, team: 20, score: 1 },
+      { id: 4, role: 2, team: 10, score: 3 },
+      { id: 5, role: 1, team: 10, score: 2 },
+    ]
+    data = rows
+    columns = [
+      { id: "role", accessorFn: (row: any) => row.role },
+      { id: "team", accessorFn: (row: any) => row.team },
+      { id: "score", accessorFn: (row: any) => row.score },
+    ]
+  } else if (case_id === "pinning_grouped_rows") {
     const rows: { id: number; role: number; team: number; score: number }[] = [
       { id: 1, role: 1, team: 10, score: 5 },
       { id: 2, role: 2, team: 20, score: 7 },
@@ -1632,10 +1672,15 @@ async function main(): Promise<void> {
       ...state,
     }
 
+    const getRowId =
+      options.__getRowId === "prefixed"
+        ? (row: DemoProcessRow) => `row:${String(row.id)}`
+        : (row: DemoProcessRow) => String(row.id)
+
     const table = tableCore.createTable<DemoProcessRow>({
     data,
     columns,
-    getRowId: (row: DemoProcessRow) => String(row.id),
+    getRowId,
     getSubRows: (row: DemoProcessRow) => (row as any).subRows,
       initialState: options.initialState,
       autoResetAll: options.autoResetAll,
@@ -1744,7 +1789,10 @@ async function main(): Promise<void> {
             getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
           }
         : {}),
-      ...(case_id === "grouping" || case_id === "grouping_aggregation_fns"
+      ...(case_id === "grouping" ||
+      case_id === "grouping_aggregation_fns" ||
+      case_id === "row_id_state_ops" ||
+      case_id === "pinning_grouped_rows"
         ? {
             getGroupedRowModel:
               options.__getGroupedRowModel === "pre_grouped"
@@ -3834,6 +3882,183 @@ function snapshotColumnPinning(
         ]),
       },
     ]
+  } else if (case_id === "row_id_state_ops") {
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect,
+      }
+    }
+
+    snapshots = [
+      mkActions(
+        "row_id_state_ops_leaf_selection_prefixed",
+        { __getRowId: "prefixed" },
+        {},
+        [{ type: "toggleRowSelected", row_id: "row:1", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection",
+        {},
+        { grouping: ["status"] },
+        [{ type: "toggleRowSelected", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection_select_children_false",
+        {},
+        { grouping: ["status"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running",
+            value: true,
+            select_children: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection_toggle_off",
+        {},
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowSelected", row_id: "status:Running", value: false },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_selection",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running>name:Renderer",
+            value: true,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection_on_row_selection_change_noop",
+        { __onRowSelectionChange: "noop" },
+        { grouping: ["status"] },
+        [{ type: "toggleRowSelected", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_expanding",
+        {},
+        { grouping: ["status"] },
+        [{ type: "toggleRowExpanded", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_expanding_on_expanded_change_noop",
+        { __onExpandedChange: "noop" },
+        { grouping: ["status"] },
+        [{ type: "toggleRowExpanded", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_pinning",
+        {},
+        { grouping: ["status"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_pinning_on_row_pinning_change_noop",
+        { __onRowPinningChange: "noop" },
+        { grouping: ["status"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_pinning",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running>name:Renderer",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_mixed_select_expand_pin",
+        {},
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_mixed_select_expand_pin",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running>name:Renderer",
+            value: true,
+          },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running>name:Renderer",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_mixed_selection_noop_expand_pin",
+        { __onRowSelectionChange: "noop" },
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+    ]
   } else if (case_id === "sorting_fns") {
     snapshots = [
       {
@@ -4814,6 +5039,104 @@ function snapshotColumnPinning(
           },
         ],
       ),
+    ]
+  } else if (case_id === "pinning_grouped_rows") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const baseOptions: TanStackOptions = { enableRowPinning: true, keepPinnedRows: true }
+
+    snapshots = [
+      mk("pinning_grouped_rows_baseline_page_0", baseOptions, {
+        grouping: ["role"],
+        pagination: { pageIndex: 0, pageSize: 1 },
+      }),
+      mkActions(
+        "pinning_grouped_rows_action_pin_group_role_1_top",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "role:1",
+            position: "top",
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_grouped_rows_action_pin_group_role_1_top_include_leaf_rows",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "role:1",
+            position: "top",
+            include_leaf_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_grouped_rows_action_pin_leaf_1_top_include_parent_rows",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "1",
+            position: "top",
+            include_parent_rows: true,
+          },
+        ],
+      ),
+      mk("pinning_grouped_rows_state_page_1_pinned_role_1", baseOptions, {
+        grouping: ["role"],
+        pagination: { pageIndex: 1, pageSize: 1 },
+        rowPinning: { top: ["role:1"], bottom: [] },
+      }),
     ]
   } else if (case_id === "column_pinning") {
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {

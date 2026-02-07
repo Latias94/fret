@@ -1,0 +1,123 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "grouping_sorting_precedence",
+  "data": [
+    {
+      "id": 1,
+      "role": 1,
+      "score": 1
+    },
+    {
+      "id": 2,
+      "role": 1,
+      "score": 9
+    },
+    {
+      "id": 3,
+      "role": 2,
+      "score": 4
+    },
+    {
+      "id": 4,
+      "role": 2,
+      "score": 3
+    },
+    {
+      "id": 5,
+      "role": 2,
+      "score": 3
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "grouping_sorting_multi_spec_tie_break",
+      "options": {
+        "manualGrouping": false,
+        "manualSorting": false,
+        "enableGrouping": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "sorting": [
+          {
+            "id": "score_sum",
+            "desc": true
+          },
+          {
+            "id": "role",
+            "desc": true
+          }
+        ]
+      },
+      "expect": {
+        "sorted_grouped_ids": {
+          "root": [
+            "role:2",
+            "role:1"
+          ],
+          "flat": [
+            "role:2",
+            "3",
+            "4",
+            "5",
+            "role:1",
+            "2",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "grouping_sorting_mean_uses_aggregated_values",
+      "options": {
+        "manualGrouping": false,
+        "manualSorting": false,
+        "enableGrouping": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "sorting": [
+          {
+            "id": "score_mean",
+            "desc": true
+          }
+        ]
+      },
+      "expect": {
+        "sorted_grouped_ids": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "2",
+            "1",
+            "role:2",
+            "3",
+            "4",
+            "5"
+          ]
+        }
+      }
+    }
+  ]
+}

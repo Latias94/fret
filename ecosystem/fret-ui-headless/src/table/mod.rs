@@ -41,8 +41,8 @@ pub use aggregation_fns::{
 pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
-    FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec, TanStackValue,
-    ValueU64Fn, create_column_helper,
+    FilterFnWithMeta, FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec,
+    TanStackValue, ValueU64Fn, create_column_helper,
 };
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
@@ -67,8 +67,9 @@ pub use faceting::{
     faceted_unique_value_labels, faceted_unique_values,
 };
 pub use filtering::{
-    ColumnFilter, ColumnFiltersState, FilterFnDef, GlobalFilterState,
-    contains_ascii_case_insensitive, filter_row_model, set_column_filter_value_tanstack,
+    ColumnFilter, ColumnFiltersState, FilterFnDef, GlobalFilterState, RowColumnFilters,
+    RowColumnFiltersMeta, RowFilterStateSnapshot, contains_ascii_case_insensitive,
+    evaluate_row_filter_state, filter_row_model, set_column_filter_value_tanstack,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
 pub use grouped_aggregation::{

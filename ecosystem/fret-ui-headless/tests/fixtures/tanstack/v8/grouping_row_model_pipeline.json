@@ -1,0 +1,172 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "grouping_row_model_pipeline",
+  "data": [
+    {
+      "id": 1,
+      "role": 1,
+      "score": 1
+    },
+    {
+      "id": 2,
+      "role": 1,
+      "score": 9
+    },
+    {
+      "id": 3,
+      "role": 2,
+      "score": 4
+    },
+    {
+      "id": 4,
+      "role": 2,
+      "score": 3
+    },
+    {
+      "id": 5,
+      "role": 2,
+      "score": 3
+    },
+    {
+      "id": 6,
+      "role": 3,
+      "score": 7
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "grouping_row_model_sorting_empty",
+      "options": {
+        "manualGrouping": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "paginateExpandedRows": true,
+        "enableGrouping": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "sorting": [],
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 10
+        }
+      },
+      "expect": {
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2",
+            "role:3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "3",
+            "4",
+            "5",
+            "6",
+            "6",
+            "role:1",
+            "role:2",
+            "role:3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2",
+            "role:3"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "2",
+            "role:2",
+            "3",
+            "4",
+            "5",
+            "role:3",
+            "6"
+          ]
+        }
+      }
+    },
+    {
+      "id": "grouping_row_model_sorted_paginated",
+      "options": {
+        "manualGrouping": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "paginateExpandedRows": true,
+        "enableGrouping": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "sorting": [
+          {
+            "id": "score_sum",
+            "desc": true
+          }
+        ],
+        "pagination": {
+          "pageIndex": 1,
+          "pageSize": 1
+        }
+      },
+      "expect": {
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2",
+            "role:3"
+          ],
+          "flat": [
+            "role:1",
+            "2",
+            "1",
+            "role:2",
+            "3",
+            "4",
+            "5",
+            "role:3",
+            "6"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:2"
+          ],
+          "flat": [
+            "role:2",
+            "3",
+            "4",
+            "5"
+          ]
+        }
+      }
+    }
+  ]
+}

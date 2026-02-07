@@ -15,6 +15,10 @@ pub struct TableOptions {
     pub enable_column_filters: bool,
     /// Enables/disables global filtering (TanStack `enableGlobalFilter`).
     pub enable_global_filter: bool,
+    /// Filter children first and bubble matches to parents (TanStack `filterFromLeafRows`).
+    pub filter_from_leaf_rows: bool,
+    /// Maximum depth to apply leaf-row filtering recursion (TanStack `maxLeafRowFilterDepth`).
+    pub max_leaf_row_filter_depth: usize,
     /// If enabled, sorting is assumed to be done externally (e.g. server-side).
     ///
     /// When `true`, `sorted_row_model()` returns `pre_sorted_row_model()`.
@@ -102,6 +106,8 @@ impl Default for TableOptions {
             enable_filters: true,
             enable_column_filters: true,
             enable_global_filter: true,
+            filter_from_leaf_rows: false,
+            max_leaf_row_filter_depth: 100,
             manual_sorting: false,
             manual_pagination: false,
             auto_reset_page_index: None,
