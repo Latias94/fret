@@ -5965,3 +5965,59 @@ Result:
 - `target/fret-diag-resize-probes-gate-r3/stdout.json` now includes:
   - `top_layout_request_build_roots_time_us`
   - `top_layout_roots_time_us`
+
+## 2026-02-07 13:59:21 (commit `3d6f0870e`)
+
+Change:
+- Improve resize layout attribution by:
+  - exporting `layout_engine_child_rect_{queries,time_us}` to quantify layout-engine rect query overhead,
+  - enriching `layout_hotspots[]` with `element_kind` and (when available) `element_path`,
+  - extending `fretboard diag perf --json` rows with `top_layout_engine_child_rect_*`,
+  - fixing a diagnostics-only build issue in paint hotspot debug-path lookup.
+
+Build note:
+- The `ui-resize-probes` gate launches `target/release/fret-ui-gallery`, so you must rebuild it to see new
+  diagnostics fields:
+```bash
+cargo build -p fret-ui-gallery --release
+```
+
+Evidence run:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r6 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r6/summary.json`)
+
+Worst frame (resize-stress, from `target/fret-diag-resize-probes-gate-r6/stdout.json`):
+- `top_total_time_us=16010`
+  - `top_layout_time_us=11739`
+    - `top_layout_request_build_roots_time_us=2221`
+    - `top_layout_roots_time_us=8545`
+    - `top_layout_engine_solve_time_us=1729`
+    - `top_layout_engine_child_rect_queries=534`
+    - `top_layout_engine_child_rect_time_us=38`
+  - `top_paint_time_us=4172`
+
+Interpretation:
+- Layout engine child-rect queries are **not** a bottleneck on this probe (tens of µs per frame).
+- The bulk of the resize cost is in widget layout (see `debug.layout_hotspots[]`), not in renderer CPU work.
+
+Layout hotspot attribution (example):
+- Bundle: `target/fret-diag-resize-probes-gate-r6/1770443890221-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot extraction (top 8 layout hotspots):
+```bash
+jq '(.windows[0].snapshots | map(select(.debug.stats != null)) | max_by(.debug.stats.layout_time_us)) |
+  {tick_id, frame_id, layout: .debug.stats.layout_time_us,
+   layout_hotspots: (.debug.layout_hotspots | sort_by(.layout_time_us) | reverse | .[0:8])}' \
+  target/fret-diag-resize-probes-gate-r6/1770443890221-ui-gallery-window-resize-stress-steady/bundle.json
+```
+- In this run, the top layout hotspots are `Scroll` element hosts (exclusive layout time in the ms range), suggesting
+  the next concrete investigation should focus on scroll layout policy during live resize (including width-jitter text
+  preparation and unbounded-probe behavior).

@@ -23,6 +23,8 @@ Conventions:
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - Use `debug.layout_hotspots[]` attribution (now includes `element_kind` and best-effort `element_path`,
+    plus `layout_engine_child_rect_*` counters) to identify the dominant layout contributors (commit `3d6f0870e`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
