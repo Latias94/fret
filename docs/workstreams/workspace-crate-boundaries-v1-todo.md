@@ -12,7 +12,7 @@ Related plan:
 
 - [x] Add this workstream to `docs/workstreams/README.md`.
 - [x] Add a short entry to `docs/todo-tracker.md` pointing to this workstream (optional).
-- [ ] Confirm the intended wasm “golden path” bundles in `crates/fret` (`web` vs `web-winit`).
+- [x] Confirm the intended wasm “golden path” bundles in `crates/fret` (`web` vs `web-winit`).
 
 ### M1 — Render split (`fret-render-core` + `fret-render-wgpu`)
 
@@ -24,12 +24,12 @@ Related plan:
 
 ### M2 — Web runner becomes real (`fret-runner-web`)
 
-- [ ] Implement DOM/canvas event translation in `crates/fret-runner-web`.
-- [ ] Provide RAF scheduling and “wake” hooks for drivers.
-- [ ] Move wasm-only DOM glue out of `crates/fret-runner-winit`.
-- [ ] Update `crates/fret` feature bundles:
-  - [ ] `web` uses `fret-runner-web` (default),
-  - [ ] `web-winit` (optional) remains available if needed.
+- [x] Implement DOM/canvas event translation in `crates/fret-runner-web`.
+- [x] Provide RAF scheduling and “wake” hooks for drivers.
+- [x] Move wasm-only DOM glue out of `crates/fret-runner-winit`.
+- [x] Update `crates/fret` feature bundles:
+  - [x] `web` uses `fret-runner-web` (default),
+  - [x] `web-winit` (optional) remains available if needed.
 
 ### M3 — Layout feature fork removal (if committed)
 
