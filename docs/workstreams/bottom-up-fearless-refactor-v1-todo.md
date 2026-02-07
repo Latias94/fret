@@ -141,6 +141,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/src/menu/wire.rs`
     - `crates/fret-runtime/src/menu/tests.rs`
 
+- [x] BU-FR-core-027 Convert `fret-runtime` keymap module to a directory subsystem (`keymap/mod.rs`).
+  - Goal: remove ambiguous `keymap.rs` / `keymap/` split and enable incremental internal splits by responsibility.
+  - Evidence:
+    - `crates/fret-runtime/src/keymap/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
