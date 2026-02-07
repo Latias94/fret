@@ -659,7 +659,7 @@ fn wrap_word_range(
         );
     }
 
-    if spans.is_none() && shape_once_word_wrap_enabled() {
+    if spans.is_none() && shape_once_word_wrap_enabled(end.saturating_sub(start)) {
         if let Some(out) =
             wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
         {
@@ -746,14 +746,28 @@ fn wrap_word_range(
     (line_ranges, lines)
 }
 
-fn shape_once_word_wrap_enabled() -> bool {
-    static ENABLED: OnceLock<bool> = OnceLock::new();
-    *ENABLED.get_or_init(|| {
+fn shape_once_word_wrap_enabled(text_len_bytes: usize) -> bool {
+    const DEFAULT_MIN_BYTES: usize = 256;
+
+    static OVERRIDE: OnceLock<Option<bool>> = OnceLock::new();
+    let override_value = *OVERRIDE.get_or_init(|| {
         std::env::var("FRET_TEXT_WORD_WRAP_SHAPE_ONCE")
             .ok()
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false)
-    })
+            .and_then(|v| {
+                let v = v.trim();
+                match v {
+                    "1" => Some(true),
+                    "0" => Some(false),
+                    _ if v.eq_ignore_ascii_case("true") => Some(true),
+                    _ if v.eq_ignore_ascii_case("false") => Some(false),
+                    _ => None,
+                }
+            })
+    });
+
+    // Default: enable only for long plain-text paragraphs where the per-line shaping strategy
+    // tends to show O(n^2) behavior.
+    override_value.unwrap_or(text_len_bytes >= DEFAULT_MIN_BYTES)
 }
 
 fn wrap_word_range_plain_shape_once(
