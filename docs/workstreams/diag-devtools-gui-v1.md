@@ -77,11 +77,14 @@ These are v1 defaults we should treat as “sticky”:
 - **Default left-panel tree is the Semantics tree** (`SemanticsSnapshot`).
   - Rationale: stable selectors (`test_id`) and alignment with inspect/pick/scripts.
   - Layout/element trees can exist as secondary views, but scripts should not depend on them.
+- **Default real-time transport is WebSocket** (bidirectional, low-latency, web-runner friendly).
+  - Session routing uses `session_id` to support multiple app targets concurrently.
 - **Minimize live traffic**:
   - Live transport sends only a minimal tree skeleton and small hover/focus summaries.
   - Expensive details are fetched on-demand for the selected node (“inspect-on-demand”).
 - **Selected node detail refresh uses low-frequency polling** (e.g. ~1Hz), not per-frame push.
 - **Virtualize the tree UI** (target 50k+ semantics nodes) and keep filtering/search cheap.
+  - MVP implementations may start non-virtualized but must cap rows/work per frame to remain responsive.
 - **Backpressure is allowed** for hover spam: drop intermediate hover events under load.
 
 ### UI skeleton (prototype-driven)

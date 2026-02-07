@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use fret_ui_shadcn as shadcn;
 
 mod pack;
 mod script_studio;
+mod semantics;
 mod ws;
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -51,6 +53,7 @@ struct State {
     cfg: DevtoolsConfig,
 
     panel_fractions: Model<Vec<f32>>,
+    left_tab: Model<Option<Arc<str>>>,
     details_tab: Model<Option<Arc<str>>>,
     sessions: Model<Vec<DevtoolsSessionDescriptorV1>>,
     selected_session_id: Model<Option<Arc<str>>>,
@@ -84,6 +87,14 @@ struct State {
     last_bundle_json: Model<String>,
     last_screenshot_json: Model<String>,
     log_lines: Model<Vec<Arc<str>>>,
+
+    semantics_cache: Model<Option<Arc<semantics::SemanticsIndex>>>,
+    semantics_source_hash: Model<Option<u64>>,
+    semantics_error: Model<Option<Arc<str>>>,
+    semantics_search: Model<String>,
+    semantics_expanded: Model<HashSet<u64>>,
+    semantics_selected_id: Model<Option<u64>>,
+    semantics_selected_node_json: Model<String>,
 
     client: DevtoolsWsClient,
     applied_session_id: Option<Arc<str>>,
@@ -137,6 +148,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         .expect("DevtoolsConfig must be set before starting the app");
 
     let panel_fractions = app.models_mut().insert(vec![0.25f32, 0.45f32, 0.30f32]);
+    let left_tab = app.models_mut().insert(Some(Arc::<str>::from("semantics")));
     let details_tab = app.models_mut().insert(Some(Arc::<str>::from("pick")));
     let sessions = app
         .models_mut()
@@ -176,6 +188,16 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_screenshot_json = app.models_mut().insert(String::new());
     let log_lines = app.models_mut().insert(Vec::<Arc<str>>::new());
 
+    let semantics_cache = app
+        .models_mut()
+        .insert(None::<Arc<semantics::SemanticsIndex>>);
+    let semantics_source_hash = app.models_mut().insert(None::<u64>);
+    let semantics_error = app.models_mut().insert(None::<Arc<str>>);
+    let semantics_search = app.models_mut().insert(String::new());
+    let semantics_expanded = app.models_mut().insert(HashSet::<u64>::new());
+    let semantics_selected_id = app.models_mut().insert(None::<u64>);
+    let semantics_selected_node_json = app.models_mut().insert(String::new());
+
     let mut client_cfg =
         DevtoolsWsClientConfig::with_defaults(cfg.ws_url.to_string(), cfg.token.to_string());
     client_cfg.client_kind = ClientKindV1::Tooling;
@@ -193,6 +215,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let mut st = State {
         cfg,
         panel_fractions,
+        left_tab,
         details_tab,
         sessions,
         selected_session_id,
@@ -222,6 +245,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_bundle_json,
         last_screenshot_json,
         log_lines,
+        semantics_cache,
+        semantics_source_hash,
+        semantics_error,
+        semantics_search,
+        semantics_expanded,
+        semantics_selected_id,
+        semantics_selected_node_json,
         client,
         applied_session_id: None,
         pack_tx,
@@ -236,6 +266,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
+    semantics::refresh_semantics_cache_if_needed(cx.app, st);
 
     let mut needs_frames = false;
     cx.with_state(
@@ -257,6 +288,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     }
 
     cx.observe_model(&st.panel_fractions, Invalidation::Layout);
+    cx.observe_model(&st.left_tab, Invalidation::Paint);
     cx.observe_model(&st.details_tab, Invalidation::Paint);
     cx.observe_model(&st.sessions, Invalidation::Paint);
     cx.observe_model(&st.selected_session_id, Invalidation::Paint);
@@ -285,6 +317,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
+    cx.observe_model(&st.semantics_cache, Invalidation::Paint);
+    cx.observe_model(&st.semantics_error, Invalidation::Paint);
+    cx.observe_model(&st.semantics_search, Invalidation::Paint);
+    cx.observe_model(&st.semantics_expanded, Invalidation::Paint);
+    cx.observe_model(&st.semantics_selected_id, Invalidation::Paint);
+    cx.observe_model(&st.semantics_selected_node_json, Invalidation::Paint);
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -462,6 +500,7 @@ fn resizable_body(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -
 }
 
 fn left_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> AnyElement {
+    let semantics = semantics_panel(cx, st);
     let lines = cx
         .app
         .models()
@@ -483,15 +522,181 @@ fn left_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> A
     )])
     .into_element(cx);
 
+    let tabs = shadcn::Tabs::new(st.left_tab.clone())
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .items([
+            shadcn::TabsItem::new("semantics", "Semantics", [semantics]),
+            shadcn::TabsItem::new("events", "Events", [list]),
+        ])
+        .into_element(cx);
+
     shadcn::Card::new([
         shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Events").into_element(cx),
-            shadcn::CardDescription::new("Latest WS messages (tail)").into_element(cx),
+            shadcn::CardTitle::new("Left").into_element(cx),
+            shadcn::CardDescription::new("Semantics tree and WS message tail.").into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new([list]).into_element(cx),
+        shadcn::CardContent::new([tabs]).into_element(cx),
     ])
     .into_element(cx)
+}
+
+fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let index = cx
+        .app
+        .models()
+        .read(&st.semantics_cache, |v| v.clone())
+        .ok()
+        .flatten();
+    let error = cx
+        .app
+        .models()
+        .read(&st.semantics_error, |v| v.clone())
+        .ok()
+        .flatten();
+    let search = cx
+        .app
+        .models()
+        .read(&st.semantics_search, |v| v.clone())
+        .unwrap_or_default();
+    let expanded = cx
+        .app
+        .models()
+        .read(&st.semantics_expanded, |v| v.clone())
+        .unwrap_or_default();
+    let selected_id = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_id, |v| *v)
+        .ok()
+        .flatten();
+
+    let search_input = shadcn::Input::new(st.semantics_search.clone())
+        .a11y_label("Semantics search")
+        .placeholder("Search role/test_id/label/value...")
+        .into_element(cx);
+
+    let header = fret_ui_kit::declarative::stack::hstack(
+        cx,
+        fret_ui_kit::declarative::stack::HStackProps::default()
+            .gap_x(fret_ui_kit::Space::N2)
+            .items_center(),
+        |_cx| [search_input],
+    );
+
+    let content: AnyElement = match (index, error) {
+        (_index, Some(err)) => cx.text(format!("semantics error: {err}")),
+        (None, None) => {
+            cx.text("No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.")
+        }
+        (Some(index), None) => {
+            let max_rows = 4000usize;
+            let rows = semantics::compute_rows(&index, &expanded, &search, max_rows);
+            let truncated = rows.len() >= max_rows;
+
+            let mut elems: Vec<AnyElement> = Vec::new();
+            elems.reserve(rows.len().min(800));
+
+            for row in rows.iter().take(max_rows) {
+                let variant = if selected_id == Some(row.id) {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Ghost
+                };
+
+                let toggle = if row.has_children {
+                    let expanded_model = st.semantics_expanded.clone();
+                    let id = row.id;
+                    let is_expanded = row.is_expanded;
+                    let on_toggle: fret_ui::action::OnActivate =
+                        Arc::new(move |host, action_cx, _reason| {
+                            let _ = host.models_mut().update(&expanded_model, |set| {
+                                if is_expanded {
+                                    set.remove(&id);
+                                } else {
+                                    set.insert(id);
+                                }
+                            });
+                            host.request_redraw(action_cx.window);
+                        });
+                    let glyph = if row.is_expanded { "▾" } else { "▸" };
+                    shadcn::Button::new(glyph)
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_toggle)
+                        .into_element(cx)
+                } else {
+                    cx.text(" ")
+                };
+
+                let indent = "  ".repeat(row.depth);
+                let label = format!("{indent}{}", row.label);
+                let selected_id_model = st.semantics_selected_id.clone();
+                let selected_json_model = st.semantics_selected_node_json.clone();
+                let index_for_select = Arc::clone(&index);
+                let id = row.id;
+                let on_select: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&selected_id_model, |v| *v = Some(id));
+                        let text =
+                            semantics::selected_node_json(index_for_select.as_ref(), Some(id));
+                        let _ = host
+                            .models_mut()
+                            .update(&selected_json_model, |v| *v = text);
+                        host.request_redraw(action_cx.window);
+                    });
+
+                let row_button = shadcn::Button::new(label)
+                    .variant(variant)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_select)
+                    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                    .into_element(cx);
+
+                let line = fret_ui_kit::declarative::stack::hstack(
+                    cx,
+                    fret_ui_kit::declarative::stack::HStackProps::default()
+                        .gap_x(fret_ui_kit::Space::N1)
+                        .items_center()
+                        .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                    |_cx| [toggle, row_button],
+                );
+                elems.push(line);
+            }
+
+            let footer = cx.text(format!(
+                "window={} roots={} nodes={} rows={}{}",
+                index.window,
+                index.roots.len(),
+                index.nodes_by_id.len(),
+                rows.len(),
+                if truncated { " (truncated)" } else { "" }
+            ));
+
+            let mut all_rows = Vec::with_capacity(elems.len() + 1);
+            all_rows.push(footer);
+            all_rows.extend(elems);
+
+            shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
+                cx,
+                fret_ui_kit::declarative::stack::VStackProps::default()
+                    .gap_y(fret_ui_kit::Space::N1)
+                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                |_cx| all_rows,
+            )])
+            .into_element(cx)
+        }
+    };
+
+    fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
+        |_cx| [header, content],
+    )
 }
 
 fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> AnyElement {
@@ -941,6 +1146,11 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .models()
         .read(&st.last_screenshot_json, |v| v.clone())
         .unwrap_or_default();
+    let semantics_node = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_json, |v| v.clone())
+        .unwrap_or_default();
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -949,6 +1159,7 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
             shadcn::TabsItem::new("screenshot", "Screenshot", [text_blob(cx, screenshot)]),
+            shadcn::TabsItem::new("sem_node", "Sem Node", [text_blob(cx, semantics_node)]),
         ])
         .into_element(cx);
 

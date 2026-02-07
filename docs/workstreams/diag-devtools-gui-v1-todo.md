@@ -48,11 +48,13 @@ Conventions:
 ### M2: New GUI app skeleton (`apps/fret-devtools`)
 
 - [x] Add `apps/fret-devtools` (native target first, but structured for web runner).
-- [ ] Implement the minimal 4-panel UX:
+- [x] Implement the minimal 4-panel UX:
   - [x] Inspect (inspect toggle + pick + show selector JSON),
   - [x] Run (run a script; show progress + failures),
   - [x] Artifacts (latest bundle dump payload),
   - [x] Scripts (browse `tools/diag-scripts` + open editor).
+  - [x] Semantics tree (MVP: capped, non-virtualized; raw selected-node JSON).
+  - [x] WS message tail (basic event log).
 - [ ] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
   - [ ] auto-refresh latest bundle,
   - [ ] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.

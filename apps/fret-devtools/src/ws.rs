@@ -150,6 +150,22 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                         });
                     }
                 }
+                if msg.payload.get("bundle").is_none() {
+                    let loaded = msg
+                        .payload
+                        .get("out_dir")
+                        .and_then(|v| v.as_str())
+                        .zip(msg.payload.get("dir").and_then(|v| v.as_str()))
+                        .and_then(|(out_dir, dir)| resolve_bundle_dir_abs(out_dir, dir))
+                        .and_then(|abs_dir| {
+                            let path = PathBuf::from(abs_dir).join("bundle.json");
+                            std::fs::read_to_string(path).ok()
+                        })
+                        .map(Arc::<str>::from);
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_bundle_dump_bundle_json, |v| *v = loaded);
+                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
                 }
