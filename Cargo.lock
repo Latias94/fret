@@ -1226,6 +1226,7 @@ dependencies = [
  "fret-app",
  "fret-bootstrap",
  "fret-core",
+ "fret-diag",
  "fret-diag-protocol",
  "fret-diag-ws",
  "fret-launch",

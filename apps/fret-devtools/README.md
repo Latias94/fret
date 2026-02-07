@@ -23,6 +23,20 @@ When multiple apps connect, use the **Session** selector in the toolbar to targe
 - **Fork** copies the loaded `tools/diag-scripts/*.json` file into `.fret/diag/scripts/` (to avoid editing workspace scripts by default).
 - **Save** writes the current editor text back to the loaded `.fret/diag/scripts/*.json` file.
 - **Apply Pick** replaces a JSON pointer (e.g. `/steps/0/target`) with the best selector from the latest `pick.result`.
+- **Run & Pack** runs the current script and packs the latest dumped bundle into `.fret/diag/packs/*.zip`.
+- **Pack last bundle** packs the latest dumped bundle into `.fret/diag/packs/*.zip` (useful after a manual dump/run).
+
+## Offline bundle viewer
+
+Run the viewer:
+
+```powershell
+cd tools/fret-bundle-viewer
+pnpm install
+pnpm dev
+```
+
+Then use **Open viewer** in DevTools and drop/open the generated `.zip` in the viewer UI.
 
 ## Connect a target app (native)
 

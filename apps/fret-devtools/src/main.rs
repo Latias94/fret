@@ -8,7 +8,8 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
-    DevtoolsSessionRemovedV1, DiagTransportMessageV1,
+    DevtoolsSessionRemovedV1, DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2,
+    UiScriptResultV1, UiScriptStageV1,
 };
 use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
@@ -29,10 +30,14 @@ const CMD_BUNDLE_DUMP: &str = "fret.devtools.bundle_dump";
 const CMD_SCREENSHOT_REQUEST: &str = "fret.devtools.screenshot_request";
 const CMD_SCRIPT_PUSH: &str = "fret.devtools.script_push";
 const CMD_SCRIPT_RUN: &str = "fret.devtools.script_run";
+const CMD_SCRIPT_RUN_AND_PACK: &str = "fret.devtools.script_run_and_pack";
 const CMD_SCRIPTS_REFRESH: &str = "fret.devtools.scripts.refresh";
 const CMD_SCRIPT_FORK: &str = "fret.devtools.script.fork";
 const CMD_SCRIPT_SAVE: &str = "fret.devtools.script.save";
 const CMD_SCRIPT_APPLY_PICK: &str = "fret.devtools.script.apply_pick";
+const CMD_PACK_LAST_BUNDLE: &str = "fret.devtools.pack_last_bundle";
+const CMD_COPY_PACK_PATH: &str = "fret.devtools.copy_pack_path";
+const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -57,6 +62,17 @@ struct State {
     loaded_script_path: Model<Option<Arc<str>>>,
     script_apply_pointer: Model<String>,
     script_text: Model<String>,
+
+    script_last_stage: Model<Option<UiScriptStageV1>>,
+    script_last_step_index: Model<Option<u32>>,
+    script_last_reason: Model<Option<Arc<str>>>,
+    script_last_bundle_dir: Model<Option<Arc<str>>>,
+    script_pack_after_run: Model<bool>,
+
+    target_out_dir: Model<Option<Arc<str>>>,
+    last_bundle_dir_abs: Model<Option<Arc<str>>>,
+    last_pack_path: Model<Option<Arc<str>>>,
+    viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
     last_script_result_json: Model<String>,
@@ -132,6 +148,16 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let script_apply_pointer = app.models_mut().insert("/steps/0/target".to_string());
 
     let script_text = app.models_mut().insert(String::new());
+    let script_last_stage = app.models_mut().insert(None::<UiScriptStageV1>);
+    let script_last_step_index = app.models_mut().insert(None::<u32>);
+    let script_last_reason = app.models_mut().insert(None::<Arc<str>>);
+    let script_last_bundle_dir = app.models_mut().insert(None::<Arc<str>>);
+    let script_pack_after_run = app.models_mut().insert(false);
+
+    let target_out_dir = app.models_mut().insert(None::<Arc<str>>);
+    let last_bundle_dir_abs = app.models_mut().insert(None::<Arc<str>>);
+    let last_pack_path = app.models_mut().insert(None::<Arc<str>>);
+    let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
@@ -164,6 +190,15 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         loaded_script_path,
         script_apply_pointer,
         script_text,
+        script_last_stage,
+        script_last_step_index,
+        script_last_reason,
+        script_last_bundle_dir,
+        script_pack_after_run,
+        target_out_dir,
+        last_bundle_dir_abs,
+        last_pack_path,
+        viewer_url,
         last_pick_json,
         last_script_result_json,
         last_bundle_json,
@@ -211,6 +246,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
     cx.observe_model(&st.script_apply_pointer, Invalidation::Paint);
     cx.observe_model(&st.script_text, Invalidation::Paint);
+    cx.observe_model(&st.script_last_stage, Invalidation::Paint);
+    cx.observe_model(&st.script_last_step_index, Invalidation::Paint);
+    cx.observe_model(&st.script_last_reason, Invalidation::Paint);
+    cx.observe_model(&st.script_last_bundle_dir, Invalidation::Paint);
+    cx.observe_model(&st.script_pack_after_run, Invalidation::Paint);
+    cx.observe_model(&st.target_out_dir, Invalidation::Paint);
+    cx.observe_model(&st.last_bundle_dir_abs, Invalidation::Paint);
+    cx.observe_model(&st.last_pack_path, Invalidation::Paint);
+    cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
@@ -458,6 +502,59 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         .read(&st.loaded_script_path, |v| v.clone())
         .ok()
         .flatten();
+    let script_last_stage = cx
+        .app
+        .models()
+        .read(&st.script_last_stage, |v| v.clone())
+        .ok()
+        .flatten();
+    let script_last_step_index = cx
+        .app
+        .models()
+        .read(&st.script_last_step_index, |v| *v)
+        .ok()
+        .flatten();
+    let script_last_reason = cx
+        .app
+        .models()
+        .read(&st.script_last_reason, |v| v.clone())
+        .ok()
+        .flatten();
+    let script_last_bundle_dir = cx
+        .app
+        .models()
+        .read(&st.script_last_bundle_dir, |v| v.clone())
+        .ok()
+        .flatten();
+    let pack_after_run = cx
+        .app
+        .models()
+        .read(&st.script_pack_after_run, |v| *v)
+        .unwrap_or(false);
+
+    let target_out_dir = cx
+        .app
+        .models()
+        .read(&st.target_out_dir, |v| v.clone())
+        .ok()
+        .flatten();
+    let last_bundle_dir_abs = cx
+        .app
+        .models()
+        .read(&st.last_bundle_dir_abs, |v| v.clone())
+        .ok()
+        .flatten();
+    let last_pack_path = cx
+        .app
+        .models()
+        .read(&st.last_pack_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let viewer_url = cx
+        .app
+        .models()
+        .read(&st.viewer_url, |v| v.clone())
+        .unwrap_or_default();
 
     let consume_clicks = cx
         .app
@@ -478,10 +575,16 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     let can_fork = loaded_origin == Some(script_studio::ScriptOrigin::WorkspaceTools);
     let can_save = loaded_origin == Some(script_studio::ScriptOrigin::UserLocal);
     let can_apply_pick = !pick_text.trim().is_empty() && !apply_pointer.trim().is_empty();
+    let can_pack = last_bundle_dir_abs.is_some();
 
     let pointer_input = shadcn::Input::new(st.script_apply_pointer.clone())
         .a11y_label("JSON pointer")
         .placeholder("/steps/0/target")
+        .into_element(cx);
+
+    let viewer_url_input = shadcn::Input::new(st.viewer_url.clone())
+        .a11y_label("Bundle viewer URL")
+        .placeholder("http://localhost:5173")
         .into_element(cx);
 
     let textarea = shadcn::Textarea::new(st.script_text.clone())
@@ -489,6 +592,29 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         .min_height(Px(360.0))
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
         .into_element(cx);
+
+    let (script_summary, script_is_valid) = script_summary_line(&script_text);
+    let script_steps = script_steps_len(&script_text).unwrap_or(0);
+    let status_line = {
+        let stage = script_last_stage
+            .as_ref()
+            .map(|s| format!("{s:?}"))
+            .unwrap_or_else(|| "None".to_string());
+        let step = script_last_step_index
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let reason = script_last_reason
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        let bundle = script_last_bundle_dir
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!(
+            "status={stage} step={step}/{script_steps} reason={reason} last_bundle_dir={bundle}"
+        )
+    };
 
     let buttons = fret_ui_kit::declarative::stack::hstack(
         cx,
@@ -500,14 +626,20 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                 shadcn::Button::new("Push Script")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session)
+                    .disabled(!has_session || !script_is_valid)
                     .on_click(CMD_SCRIPT_PUSH)
                     .into_element(cx),
                 shadcn::Button::new("Run Script")
                     .variant(shadcn::ButtonVariant::Default)
                     .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session)
+                    .disabled(!has_session || !script_is_valid)
                     .on_click(CMD_SCRIPT_RUN)
+                    .into_element(cx),
+                shadcn::Button::new("Run & Pack")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session || !script_is_valid)
+                    .on_click(CMD_SCRIPT_RUN_AND_PACK)
                     .into_element(cx),
                 shadcn::Button::new("Refresh Scripts")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -535,6 +667,38 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         },
     );
 
+    let pack_row = fret_ui_kit::declarative::stack::hstack(
+        cx,
+        fret_ui_kit::declarative::stack::HStackProps::default()
+            .gap_x(fret_ui_kit::Space::N2)
+            .items_center(),
+        |cx| {
+            let copy_enabled = last_pack_path.is_some();
+            [
+                cx.text("Artifacts:"),
+                shadcn::Button::new("Pack last bundle")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!can_pack)
+                    .on_click(CMD_PACK_LAST_BUNDLE)
+                    .into_element(cx),
+                shadcn::Button::new("Copy pack path")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!copy_enabled)
+                    .on_click(CMD_COPY_PACK_PATH)
+                    .into_element(cx),
+                viewer_url_input,
+                shadcn::Button::new("Open viewer")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(viewer_url.trim().is_empty())
+                    .on_click(CMD_OPEN_VIEWER_URL)
+                    .into_element(cx),
+            ]
+        },
+    );
+
     let apply_row = fret_ui_kit::declarative::stack::hstack(
         cx,
         fret_ui_kit::declarative::stack::HStackProps::default()
@@ -557,6 +721,14 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     let loaded_line = match (loaded_origin, loaded_path.as_deref()) {
         (Some(origin), Some(path)) => format!("Loaded: [{}] {path}", origin.label()),
         _ => "Loaded: <none>".to_string(),
+    };
+    let out_dir_line = match target_out_dir.as_deref() {
+        Some(dir) => format!("Target diag out_dir: {dir}"),
+        None => "Target diag out_dir: <unknown>".to_string(),
+    };
+    let pack_line = match last_pack_path.as_deref() {
+        Some(p) => format!("Last pack: {p}"),
+        None => "Last pack: <none>".to_string(),
     };
 
     let mut script_rows: Vec<AnyElement> = Vec::new();
@@ -675,8 +847,17 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         .into_element(cx),
         shadcn::CardContent::new([
             buttons,
+            cx.text(format!("validate: {script_summary}")),
+            cx.text(status_line),
+            cx.text(format!(
+                "pack_after_run={}",
+                if pack_after_run { "true" } else { "false" }
+            )),
             apply_row,
+            pack_row,
             cx.text(loaded_line),
+            cx.text(out_dir_line),
+            cx.text(pack_line),
             cx.text(format!("Library: {} scripts", scripts.len())),
             split,
             cx.text(format!("Script text bytes={}", script_text.len())),
@@ -831,7 +1012,36 @@ fn on_command(
             apply_pick_to_loaded_script(app, window, st);
             app.request_redraw(window);
         }
-        CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN => {
+        CMD_OPEN_VIEWER_URL => {
+            let url = app
+                .models()
+                .read(&st.viewer_url, |v| v.clone())
+                .unwrap_or_default();
+            if url.trim().is_empty() {
+                push_log(app, &st.log_lines, "open viewer refused (empty url)");
+                return;
+            }
+            app.push_effect(Effect::OpenUrl { url });
+        }
+        CMD_COPY_PACK_PATH => {
+            let Some(path) = app
+                .models()
+                .read(&st.last_pack_path, |v| v.clone())
+                .ok()
+                .flatten()
+            else {
+                push_log(app, &st.log_lines, "copy pack path refused (no pack yet)");
+                return;
+            };
+            app.push_effect(Effect::ClipboardSetText {
+                text: path.to_string(),
+            });
+        }
+        CMD_PACK_LAST_BUNDLE => {
+            let _ = pack_last_bundle(app, st);
+            app.request_redraw(window);
+        }
+        CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN | CMD_SCRIPT_RUN_AND_PACK => {
             if !require_session_selected(app, st) {
                 app.request_redraw(window);
                 return;
@@ -845,11 +1055,38 @@ fn on_command(
                 app.request_redraw(window);
                 return;
             };
-            let ty = if cmd.as_str() == CMD_SCRIPT_RUN {
-                "script.run"
-            } else {
-                "script.push"
+            if let Err(err) = validate_script_json_value(&script_value) {
+                push_log(app, &st.log_lines, &format!("script invalid: {err}"));
+                app.request_redraw(window);
+                return;
+            }
+
+            let ty = match cmd.as_str() {
+                CMD_SCRIPT_RUN | CMD_SCRIPT_RUN_AND_PACK => "script.run",
+                _ => "script.push",
             };
+
+            if cmd.as_str() == CMD_SCRIPT_RUN_AND_PACK {
+                let _ = app
+                    .models_mut()
+                    .update(&st.script_pack_after_run, |v| *v = true);
+            } else {
+                let _ = app
+                    .models_mut()
+                    .update(&st.script_pack_after_run, |v| *v = false);
+            }
+            let _ = app.models_mut().update(&st.script_last_stage, |v| {
+                *v = Some(UiScriptStageV1::Queued)
+            });
+            let _ = app
+                .models_mut()
+                .update(&st.script_last_step_index, |v| *v = None);
+            let _ = app
+                .models_mut()
+                .update(&st.script_last_reason, |v| *v = None);
+            let _ = app
+                .models_mut()
+                .update(&st.script_last_bundle_dir, |v| *v = None);
             st.client.send_type_payload(
                 ty,
                 serde_json::json!({
@@ -1084,6 +1321,54 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                 if !message_matches_selected_session(app, st, &msg) {
                     continue;
                 }
+                if let Ok(parsed) = serde_json::from_value::<UiScriptResultV1>(msg.payload.clone())
+                {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.script_last_stage, |v| *v = Some(parsed.stage.clone()));
+                    let _ = app
+                        .models_mut()
+                        .update(&st.script_last_step_index, |v| *v = parsed.step_index);
+                    let _ = app.models_mut().update(&st.script_last_reason, |v| {
+                        *v = parsed.reason.map(Into::into);
+                    });
+                    let _ = app.models_mut().update(&st.script_last_bundle_dir, |v| {
+                        *v = parsed.last_bundle_dir.clone().map(Into::into);
+                    });
+
+                    if let Some(out_dir) = app
+                        .models()
+                        .read(&st.target_out_dir, |v| v.clone())
+                        .ok()
+                        .flatten()
+                        .map(|s| s.to_string())
+                    {
+                        if let Some(rel) = parsed.last_bundle_dir.as_deref() {
+                            if let Some(abs) = resolve_bundle_dir_abs(&out_dir, rel) {
+                                let _ = app.models_mut().update(&st.last_bundle_dir_abs, |v| {
+                                    *v = Some(abs.into());
+                                });
+                            }
+                        }
+                    }
+
+                    if matches!(
+                        parsed.stage,
+                        UiScriptStageV1::Passed | UiScriptStageV1::Failed
+                    ) {
+                        let pack_after = app
+                            .models()
+                            .read(&st.script_pack_after_run, |v| *v)
+                            .unwrap_or(false);
+                        if pack_after {
+                            if pack_last_bundle(app, st).is_ok() {
+                                let _ = app
+                                    .models_mut()
+                                    .update(&st.script_pack_after_run, |v| *v = false);
+                            }
+                        }
+                    }
+                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app
                         .models_mut()
@@ -1093,6 +1378,42 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
             "bundle.dumped" => {
                 if !message_matches_selected_session(app, st, &msg) {
                     continue;
+                }
+                if let Some(out_dir) = msg.payload.get("out_dir").and_then(|v| v.as_str()) {
+                    let _ = app.models_mut().update(&st.target_out_dir, |v| {
+                        *v = Some(Arc::<str>::from(out_dir.to_string()));
+                    });
+                }
+                if let (Some(out_dir), Some(dir)) = (
+                    msg.payload.get("out_dir").and_then(|v| v.as_str()),
+                    msg.payload.get("dir").and_then(|v| v.as_str()),
+                ) {
+                    if let Some(abs) = resolve_bundle_dir_abs(out_dir, dir) {
+                        let _ = app.models_mut().update(&st.last_bundle_dir_abs, |v| {
+                            *v = Some(Arc::<str>::from(abs));
+                        });
+                    }
+                }
+                let stage = app
+                    .models()
+                    .read(&st.script_last_stage, |v| v.clone())
+                    .ok()
+                    .flatten();
+                let pack_after = app
+                    .models()
+                    .read(&st.script_pack_after_run, |v| *v)
+                    .unwrap_or(false);
+                if pack_after
+                    && matches!(
+                        stage,
+                        Some(UiScriptStageV1::Passed) | Some(UiScriptStageV1::Failed)
+                    )
+                {
+                    if pack_last_bundle(app, st).is_ok() {
+                        let _ = app
+                            .models_mut()
+                            .update(&st.script_pack_after_run, |v| *v = false);
+                    }
                 }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
@@ -1174,6 +1495,157 @@ fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
     st.client
         .set_default_session_id(selected.as_ref().map(|s| s.to_string()));
     st.applied_session_id = selected;
+}
+
+fn script_steps_len(script_text: &str) -> Option<usize> {
+    let v: serde_json::Value = serde_json::from_str(script_text).ok()?;
+    v.get("steps").and_then(|v| v.as_array()).map(|a| a.len())
+}
+
+fn script_summary_line(script_text: &str) -> (String, bool) {
+    let v: serde_json::Value = match serde_json::from_str(script_text) {
+        Ok(v) => v,
+        Err(err) => return (format!("parse_error: {err}"), false),
+    };
+
+    let schema = match validate_script_json_value(&v) {
+        Ok(schema) => schema,
+        Err(err) => return (format!("invalid: {err}"), false),
+    };
+
+    let steps = v.get("steps").and_then(|v| v.as_array()).map(|a| a.len());
+    let steps = steps
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| "<missing>".to_string());
+    (format!("ok schema_version={schema} steps={steps}"), true)
+}
+
+fn validate_script_json_value(script: &serde_json::Value) -> Result<u32, String> {
+    let schema_version = script
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| "missing schema_version".to_string())?;
+    let schema_version = schema_version.min(u32::MAX as u64) as u32;
+
+    match schema_version {
+        1 => {
+            let parsed: UiActionScriptV1 =
+                serde_json::from_value(script.clone()).map_err(|e| e.to_string())?;
+            if parsed.schema_version != 1 {
+                return Err("schema_version mismatch".to_string());
+            }
+            Ok(1)
+        }
+        2 => {
+            let parsed: UiActionScriptV2 =
+                serde_json::from_value(script.clone()).map_err(|e| e.to_string())?;
+            if parsed.schema_version != 2 {
+                return Err("schema_version mismatch".to_string());
+            }
+            Ok(2)
+        }
+        other => Err(format!("unsupported schema_version: {other}")),
+    }
+}
+
+fn resolve_bundle_dir_abs(out_dir: &str, dir: &str) -> Option<String> {
+    let dir = dir.trim();
+    if dir.is_empty() {
+        return None;
+    }
+    if is_abs_path(dir) {
+        return Some(dir.to_string());
+    }
+
+    let out_dir = out_dir.trim();
+    if out_dir.is_empty() {
+        return Some(dir.to_string());
+    }
+    let base = PathBuf::from(out_dir);
+    Some(base.join(dir).to_string_lossy().to_string())
+}
+
+fn is_abs_path(s: &str) -> bool {
+    if s.starts_with('/') || s.starts_with('\\') {
+        return true;
+    }
+    let bytes = s.as_bytes();
+    bytes.len() >= 3 && bytes[1] == b':' && (bytes[2] == b'\\' || bytes[2] == b'/')
+}
+
+fn pack_last_bundle(app: &mut App, st: &mut State) -> Result<PathBuf, String> {
+    let Some(bundle_dir) = app
+        .models()
+        .read(&st.last_bundle_dir_abs, |v| v.clone())
+        .ok()
+        .flatten()
+    else {
+        let msg = "pack refused (no bundle dir yet)".to_string();
+        push_log(app, &st.log_lines, &msg);
+        return Err(msg);
+    };
+
+    let out_dir = app
+        .models()
+        .read(&st.target_out_dir, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "target/fret-diag".to_string());
+
+    let repo_root = repo_root_from_script_paths(&st.script_paths);
+    let bundle_dir_abs = PathBuf::from(bundle_dir.as_ref());
+
+    let pack_dir = repo_root.join(".fret").join("diag").join("packs");
+    let _ = std::fs::create_dir_all(&pack_dir);
+    let bundle_name = bundle_dir_abs
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+    let out_path = pack_dir.join(format!("{bundle_name}-{}.zip", now_unix_ms()));
+
+    let args = vec![
+        "--dir".to_string(),
+        out_dir,
+        "--pack-out".to_string(),
+        out_path.to_string_lossy().to_string(),
+        "--include-all".to_string(),
+        "pack".to_string(),
+        bundle_dir_abs.to_string_lossy().to_string(),
+    ];
+
+    match fret_diag::diag_cmd(args) {
+        Ok(()) => {
+            let _ = app.models_mut().update(&st.last_pack_path, |v| {
+                *v = Some(Arc::<str>::from(out_path.to_string_lossy().to_string()))
+            });
+            push_log(app, &st.log_lines, "pack ok");
+            Ok(out_path)
+        }
+        Err(err) => {
+            let msg = format!("pack failed: {err}");
+            push_log(app, &st.log_lines, &msg);
+            Err(msg)
+        }
+    }
+}
+
+fn repo_root_from_script_paths(paths: &script_studio::ScriptPaths) -> PathBuf {
+    paths
+        .workspace_tools_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn now_unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis().min(u128::from(u64::MAX)) as u64)
+        .unwrap_or(0)
 }
 
 fn push_log(app: &mut App, model: &Model<Vec<Arc<str>>>, line: &str) {

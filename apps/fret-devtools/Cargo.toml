@@ -25,5 +25,6 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "icons-lucide"] }
+fret-diag = { path = "../../crates/fret-diag" }
 fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
 fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["client-native", "server-native"] }

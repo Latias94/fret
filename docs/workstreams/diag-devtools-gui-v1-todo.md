@@ -60,14 +60,14 @@ Conventions:
 ### M3: Script Studio (authoring UX)
 
 - [ ] Schema-aware script editor:
-  - [ ] validate schema version,
+  - [x] validate schema version (v1/v2) on push/run,
   - [ ] step palette (v1 steps + v2 intent steps),
   - [ ] structured editor for selector/predicate.
 - [ ] Pick-to-fill UX:
   - [x] select a JSON pointer (e.g. `/steps/3/target`) and apply pick result into the editor (equivalent of `diag pick-apply`).
 - [ ] Script library ergonomics:
   - [x] fork/copy a script into `.fret/diag/scripts/` (avoid editing workspace scripts by default),
-  - [ ] “Run this script” button produces a shareable zip by default.
+  - [x] “Run this script” can produce a shareable zip (Run & Pack / Pack last bundle).
 
 ### M4: WebSocket transport (enables web runner)
 
