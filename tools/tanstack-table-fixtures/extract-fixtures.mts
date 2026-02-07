@@ -689,6 +689,10 @@ type FixtureSnapshot = {
         parent_id: string | null
         child_ids: string[]
       }[]
+      flat_columns?: {
+        all: string[]
+        visible: string[]
+      }
       leaf_columns: {
         all: string[]
         visible: string[]
@@ -711,6 +715,10 @@ type FixtureSnapshot = {
         row_model: RowModelSnapshot
       }
       cells: NonNullable<NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["cells"]>
+    }
+    flat_columns?: {
+      all: string[]
+      visible: string[]
     }
     column_sizing?: {
       total_size: number
@@ -4781,6 +4789,10 @@ function snapshotColumnPinning(
             right_leaf_headers,
             cells,
           },
+          flat_columns: {
+            all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+          },
           core_model: {
             column_tree: snapshotColumnTree(table.getAllColumns()),
             leaf_columns: {
@@ -4963,6 +4975,10 @@ function snapshotColumnPinning(
 
       return {
         column_tree: snapshotColumnTree(table.getAllColumns()),
+        flat_columns: {
+          all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+          visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+        },
         leaf_columns: {
           all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
           visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),

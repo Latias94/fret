@@ -654,7 +654,7 @@ Rules:
   → `Table::{column_tree,ordered_columns,column}` + `CoreModelSnapshot.column_tree/leaf_columns` (`headers_cells.json`).
 - **Aligned**: `getVisibleLeafColumns` (+ left/center/right variants)
   → `CoreModelSnapshot.leaf_columns.{visible,left_visible,center_visible,right_visible}` (`headers_cells.json`).
-- **Partial**: `getVisibleFlatColumns` (may need a dedicated “flat column” snapshot helper).
+- **Aligned**: `getVisibleFlatColumns/getAllFlatColumns` → `Table::{visible_flat_columns,all_flat_columns}` (gated via `visibility_ordering.json`).
 
 **Headers**
 
@@ -743,7 +743,7 @@ Legend:
 | `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
 | `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
-| `getVisibleFlatColumns/getAllFlatColumns` | derive via column tree snapshot; may need `visible_flat_columns` helper | Partial | N/A |
+| `getVisibleFlatColumns/getAllFlatColumns` | `Table::{visible_flat_columns,all_flat_columns}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |
 | `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | currently not first-class; upstream built-ins often yield empty/null (fixture captures) | Partial | `faceting.json` |
 | `getState` | state is external (`TableState` owned by consumers) | Partial | state conversion + presence gates |

@@ -185,6 +185,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -532,6 +544,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -888,6 +912,17 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -1212,6 +1247,17 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -1538,6 +1584,17 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "c",
@@ -1886,6 +1943,17 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -2229,6 +2297,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -2605,6 +2685,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -2983,6 +3075,16 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "b"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -3302,6 +3404,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -3684,6 +3798,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "c",
@@ -4063,6 +4189,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",
@@ -4447,6 +4585,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "c",
@@ -4836,6 +4986,17 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "c",
@@ -5179,6 +5340,18 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
           "leaf_columns": {
             "all": [
               "a",

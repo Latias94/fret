@@ -814,15 +814,87 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn is_column_visible(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
-        Some(super::is_column_visible(
-            &self.state.column_visibility,
-            &col.id,
-        ))
+
+        fn is_visible<TData>(
+            col: &super::ColumnDef<TData>,
+            visibility: &super::ColumnVisibilityState,
+        ) -> bool {
+            if !col.columns.is_empty() {
+                return col.columns.iter().any(|c| is_visible(c, visibility));
+            }
+
+            super::is_column_visible(visibility, &col.id)
+        }
+
+        Some(is_visible(col, &self.state.column_visibility))
     }
 
     pub fn column_can_hide(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
         Some(self.options.enable_hiding && col.enable_hiding)
+    }
+
+    /// TanStack-aligned: `table.getAllFlatColumns()`.
+    ///
+    /// This returns the full column tree in a pre-order DFS flattening (`column`, then its
+    /// descendants). It does **not** apply `columnOrder` reordering, matching upstream semantics.
+    pub fn all_flat_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        fn push<'a, TData>(
+            cols: &'a [super::ColumnDef<TData>],
+            out: &mut Vec<&'a super::ColumnDef<TData>>,
+        ) {
+            for col in cols {
+                out.push(col);
+                if !col.columns.is_empty() {
+                    push(col.columns.as_slice(), out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push(self.column_tree.as_slice(), &mut out);
+        out
+    }
+
+    /// TanStack-aligned: `table.getVisibleFlatColumns()`.
+    ///
+    /// Visibility rules match TanStack:
+    /// - leaf columns consult `state.column_visibility` (default visible),
+    /// - group columns are visible if any descendant is visible.
+    pub fn visible_flat_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        fn is_visible<TData>(
+            col: &super::ColumnDef<TData>,
+            visibility: &super::ColumnVisibilityState,
+        ) -> bool {
+            if !col.columns.is_empty() {
+                return col.columns.iter().any(|c| is_visible(c, visibility));
+            }
+
+            super::is_column_visible(visibility, &col.id)
+        }
+
+        fn push<'a, TData>(
+            cols: &'a [super::ColumnDef<TData>],
+            visibility: &super::ColumnVisibilityState,
+            out: &mut Vec<&'a super::ColumnDef<TData>>,
+        ) {
+            for col in cols {
+                if is_visible(col, visibility) {
+                    out.push(col);
+                }
+                if !col.columns.is_empty() {
+                    push(col.columns.as_slice(), visibility, out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push(
+            self.column_tree.as_slice(),
+            &self.state.column_visibility,
+            &mut out,
+        );
+        out
     }
 
     pub fn hideable_columns(&self) -> Vec<&super::ColumnDef<TData>> {

@@ -37,7 +37,15 @@ struct LeafColumnsExpect {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct FlatColumnsExpect {
+    all: Vec<String>,
+    visible: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct CoreModelExpect {
+    #[serde(default)]
+    flat_columns: Option<FlatColumnsExpect>,
     leaf_columns: LeafColumnsExpect,
 }
 
@@ -615,5 +623,29 @@ fn tanstack_v8_visibility_ordering_parity() {
             "snapshot {} core_model.leaf_columns.right_visible mismatch",
             snap.id
         );
+
+        if let Some(expected) = snap.expect.core_model.flat_columns.as_ref() {
+            let all_flat: Vec<String> = table
+                .all_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+            let visible_flat: Vec<String> = table
+                .visible_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+
+            assert_eq!(
+                all_flat, expected.all,
+                "snapshot {} core_model.flat_columns.all mismatch",
+                snap.id
+            );
+            assert_eq!(
+                visible_flat, expected.visible,
+                "snapshot {} core_model.flat_columns.visible mismatch",
+                snap.id
+            );
+        }
     }
 }

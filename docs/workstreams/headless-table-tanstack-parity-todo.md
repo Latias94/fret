@@ -693,6 +693,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
+  - Covered: `getAllFlatColumns/getVisibleFlatColumns` inventory surface (including group column visibility semantics).
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::{all_flat_columns,visible_flat_columns,is_column_visible}`).
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` (`core_model.flat_columns`).
   - Covered: controlled-hook noop semantics (`onColumnVisibilityChange` ignores updater).
     - Fixture snapshots: `visord_toggle_column_a_off_on_column_visibility_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnVisibilityChange`)
