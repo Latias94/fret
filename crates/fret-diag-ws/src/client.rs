@@ -4,6 +4,11 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+#[cfg(feature = "client-wasm")]
+use wasm_bindgen::JsCast as _;
+#[cfg(feature = "client-wasm")]
+use wasm_bindgen::prelude::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClientKindV1 {
     NativeApp,
@@ -21,7 +26,7 @@ impl ClientKindV1 {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct DevtoolsWsClientConfig {
     pub ws_url: String,
     pub token: String,
@@ -44,9 +49,16 @@ impl DevtoolsWsClientConfig {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct DevtoolsWsClient {
     state: Arc<State>,
+    #[cfg(feature = "client-wasm")]
+    wasm: Option<WasmInner>,
+}
+
+impl std::fmt::Debug for DevtoolsWsClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DevtoolsWsClient").finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug)]
@@ -55,9 +67,89 @@ struct State {
     inbox: Mutex<VecDeque<DiagTransportMessageV1>>,
 }
 
+#[cfg(feature = "client-wasm")]
+struct WasmInner {
+    ws: web_sys::WebSocket,
+    _on_open: Closure<dyn FnMut(web_sys::Event)>,
+    _on_message: Closure<dyn FnMut(web_sys::MessageEvent)>,
+    _on_error: Closure<dyn FnMut(web_sys::ErrorEvent)>,
+    _on_close: Closure<dyn FnMut(web_sys::CloseEvent)>,
+}
+
 impl DevtoolsWsClient {
+    #[cfg(feature = "client-native")]
     pub fn connect_native(cfg: DevtoolsWsClientConfig) -> Result<Self, String> {
         Self::connect_native_inner(cfg)
+    }
+
+    #[cfg(feature = "client-wasm")]
+    pub fn connect_wasm(cfg: DevtoolsWsClientConfig) -> Result<Self, String> {
+        let state = Arc::new(State {
+            outbox: Mutex::new(VecDeque::new()),
+            inbox: Mutex::new(VecDeque::new()),
+        });
+
+        let ws_url =
+            append_token_query_param_simple(&cfg.ws_url, &cfg.token, "fret_devtools_token");
+        let ws = web_sys::WebSocket::new(&ws_url).map_err(|_| "WebSocket::new failed")?;
+
+        let state_open = Arc::clone(&state);
+        let cfg_open = cfg.clone();
+        let ws_open = ws.clone();
+        let on_open = Closure::wrap(Box::new(move |_e: web_sys::Event| {
+            let hello = DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "hello".to_string(),
+                session_id: None,
+                request_id: Some(1),
+                payload: serde_json::json!({
+                    "client_kind": cfg_open.client_kind.as_str(),
+                    "client_version": cfg_open.client_version,
+                    "capabilities": cfg_open.capabilities,
+                }),
+            };
+            if let Ok(text) = serde_json::to_string(&hello) {
+                let _ = ws_open.send_with_str(&text);
+            }
+
+            flush_wasm_outbox(&ws_open, &state_open);
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        ws.set_onopen(Some(on_open.as_ref().unchecked_ref()));
+
+        let state_message = Arc::clone(&state);
+        let on_message = Closure::wrap(Box::new(move |e: web_sys::MessageEvent| {
+            let Some(text) = e.data().as_string() else {
+                return;
+            };
+            let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) else {
+                return;
+            };
+            if let Ok(mut inbox) = state_message.inbox.lock() {
+                inbox.push_back(msg);
+            }
+        }) as Box<dyn FnMut(web_sys::MessageEvent)>);
+        ws.set_onmessage(Some(on_message.as_ref().unchecked_ref()));
+
+        let on_error = Closure::wrap(Box::new(move |_e: web_sys::ErrorEvent| {
+            // Best-effort: errors are surfaced via close/reconnect at higher layers.
+        }) as Box<dyn FnMut(web_sys::ErrorEvent)>);
+        ws.set_onerror(Some(on_error.as_ref().unchecked_ref()));
+
+        let on_close = Closure::wrap(Box::new(move |_e: web_sys::CloseEvent| {
+            // Best-effort: callers can re-create the client to reconnect.
+        }) as Box<dyn FnMut(web_sys::CloseEvent)>);
+        ws.set_onclose(Some(on_close.as_ref().unchecked_ref()));
+
+        Ok(Self {
+            state,
+            wasm: Some(WasmInner {
+                ws,
+                _on_open: on_open,
+                _on_message: on_message,
+                _on_error: on_error,
+                _on_close: on_close,
+            }),
+        })
     }
 
     pub fn try_recv(&self) -> Option<DiagTransportMessageV1> {
@@ -67,6 +159,11 @@ impl DevtoolsWsClient {
     pub fn send(&self, msg: DiagTransportMessageV1) {
         if let Ok(mut outbox) = self.state.outbox.lock() {
             outbox.push_back(msg);
+        }
+
+        #[cfg(feature = "client-wasm")]
+        if let Some(wasm) = self.wasm.as_ref() {
+            flush_wasm_outbox(&wasm.ws, &self.state);
         }
     }
 
@@ -176,7 +273,11 @@ impl DevtoolsWsClient {
             }
         });
 
-        Ok(Self { state })
+        Ok(Self {
+            state,
+            #[cfg(feature = "client-wasm")]
+            wasm: None,
+        })
     }
 }
 
@@ -191,4 +292,101 @@ fn append_token_query_param(url: &str, token: &str, key: &str) -> String {
         url.query_pairs_mut().append_pair(key, token);
     }
     url.to_string()
+}
+
+#[cfg(feature = "client-wasm")]
+fn append_token_query_param_simple(url: &str, token: &str, key: &str) -> String {
+    if url.contains(&format!("{key}=")) {
+        return url.to_string();
+    }
+    if url.contains('?') {
+        format!("{url}&{key}={token}")
+    } else {
+        format!("{url}?{key}={token}")
+    }
+}
+
+#[cfg(feature = "client-wasm")]
+fn flush_wasm_outbox(ws: &web_sys::WebSocket, state: &Arc<State>) {
+    if ws.ready_state() != web_sys::WebSocket::OPEN {
+        return;
+    }
+
+    let Ok(mut outbox) = state.outbox.lock() else {
+        return;
+    };
+    while let Some(msg) = outbox.pop_front() {
+        let Ok(text) = serde_json::to_string(&msg) else {
+            continue;
+        };
+        let _ = ws.send_with_str(&text);
+    }
+}
+
+#[cfg(feature = "client-wasm")]
+pub fn devtools_ws_config_from_window_query() -> (Option<String>, Option<String>) {
+    let Some(window) = web_sys::window() else {
+        return (None, None);
+    };
+
+    let location = window.location();
+    let search = location.search().unwrap_or_default();
+    let hash = location.hash().unwrap_or_default();
+
+    fn read_from_params(params: &web_sys::UrlSearchParams) -> (Option<String>, Option<String>) {
+        let ws_url = params.get("fret_devtools_ws");
+        let token = params.get("fret_devtools_token");
+        (ws_url, token)
+    }
+
+    fn parse_query_params(query: &str) -> Option<web_sys::UrlSearchParams> {
+        let query = query.trim();
+        if query.is_empty() {
+            return None;
+        }
+        let query = query.trim_start_matches('?');
+        web_sys::UrlSearchParams::new_with_str(query).ok()
+    }
+
+    fn parse_hash_query_params(hash: &str) -> Option<web_sys::UrlSearchParams> {
+        let hash = hash.trim();
+        if hash.is_empty() {
+            return None;
+        }
+
+        let hash = hash.trim_start_matches('#');
+        let query = hash.split_once('?').map(|(_, q)| q).unwrap_or(hash);
+        parse_query_params(query)
+    }
+
+    let mut ws_url = None;
+    let mut token = None;
+
+    if let Some(params) = parse_query_params(&search) {
+        let (u, t) = read_from_params(&params);
+        ws_url = ws_url.or(u);
+        token = token.or(t);
+    }
+
+    if let Some(params) = parse_hash_query_params(&hash) {
+        let (u, t) = read_from_params(&params);
+        ws_url = ws_url.or(u);
+        token = token.or(t);
+    }
+
+    if ws_url.is_none() || token.is_none() {
+        let ws_global =
+            js_sys::Reflect::get(window.as_ref(), &JsValue::from_str("__FRET_DEVTOOLS_WS"))
+                .ok()
+                .and_then(|v| v.as_string());
+        let token_global =
+            js_sys::Reflect::get(window.as_ref(), &JsValue::from_str("__FRET_DEVTOOLS_TOKEN"))
+                .ok()
+                .and_then(|v| v.as_string());
+
+        ws_url = ws_url.or(ws_global);
+        token = token.or(token_global);
+    }
+
+    (ws_url, token)
 }

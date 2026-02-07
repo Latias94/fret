@@ -331,6 +331,7 @@ They can evolve, but treat them as sticky unless we have strong evidence.
    - query string on web: `?fret_devtools_token=...`.
 4. **Web runner configuration**:
    - primary: query string `?fret_devtools_ws=ws://127.0.0.1:7331&fret_devtools_token=...`,
+   - hash-routing friendly: also accept query params from `location.hash` (e.g. `#/route?fret_devtools_ws=...`),
    - optional override: `window.__FRET_DEVTOOLS_WS` / `window.__FRET_DEVTOOLS_TOKEN` globals for dev servers.
 5. **Protocol naming**:
    - message `type`: dot-separated (`inspect.set`, `script.run`, `bundle.dumped`),

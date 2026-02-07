@@ -72,19 +72,20 @@ Conventions:
 ### M4: WebSocket transport (enables web runner)
 
 - [ ] Implement WS server (DevTools side):
-  - [ ] binds to `127.0.0.1`,
-  - [ ] requires a capability token,
+  - [x] binds to `127.0.0.1`,
+  - [x] requires a capability token,
   - [ ] supports multiple clients (session ids).
 - [ ] Implement WS client bridge in diagnostics service:
-  - [ ] add `FRET_DEVTOOLS_WS=ws://127.0.0.1:<port>` (name TBD) to enable it,
-  - [ ] wasm32 client via `web_sys::WebSocket`,
-  - [ ] native client via a non-blocking reader thread + queue (avoid blocking the frame loop).
-  - [ ] web runner config: support query string and/or `window.__FRET_DEVTOOLS_WS` globals (name TBD).
-- [ ] Map protocol commands to existing in-app operations:
-  - [ ] inspect config updates,
-  - [ ] pick arm + pick result,
-  - [ ] script push + script progress + script result,
-  - [ ] bundle dump + screenshot request.
+  - [x] add `FRET_DEVTOOLS_WS=ws://127.0.0.1:<port>` (name TBD) to enable it,
+  - [x] wasm32 client via `web_sys::WebSocket`,
+  - [x] native client via a non-blocking reader thread + queue (avoid blocking the frame loop).
+  - [x] web runner config: support query string and/or `window.__FRET_DEVTOOLS_WS` globals (name TBD).
+ - [ ] Map protocol commands to existing in-app operations:
+  - [x] inspect config updates,
+  - [x] pick arm + pick result,
+  - [x] script push + script progress + script result,
+  - [x] bundle dump,
+  - [ ] screenshot request.
 
 ### M5: Artifacts for web runner
 

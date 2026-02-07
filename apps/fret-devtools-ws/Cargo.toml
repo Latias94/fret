@@ -11,6 +11,5 @@ documentation.workspace = true
 publish = false
 
 [dependencies]
-fret-diag-ws = { path = "../../crates/fret-diag-ws" }
+fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["server-native"] }
 uuid.workspace = true
-

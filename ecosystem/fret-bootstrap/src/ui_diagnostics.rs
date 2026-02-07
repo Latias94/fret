@@ -59,7 +59,7 @@ pub struct UiDiagnosticsConfig {
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
+        let mut devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
             .ok()
             .filter(|v| !v.is_empty())
             .or_else(|| {
@@ -69,9 +69,17 @@ impl Default for UiDiagnosticsConfig {
                     .and_then(|v| v.parse::<u16>().ok())
                     .map(|port| format!("ws://127.0.0.1:{port}/"))
             });
-        let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
+        let mut devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
             .ok()
             .filter(|v| !v.is_empty());
+
+        #[cfg(all(target_arch = "wasm32", feature = "diagnostics-ws"))]
+        {
+            let (qs_ws_url, qs_token) =
+                fret_diag_ws::client::devtools_ws_config_from_window_query();
+            devtools_ws_url = devtools_ws_url.or(qs_ws_url);
+            devtools_token = devtools_token.or(qs_token);
+        }
 
         let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
             || out_dir_env.is_some()
@@ -311,6 +319,7 @@ impl UiDiagnosticsService {
             .is_some_and(active_script_needs_semantics_snapshot)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;
@@ -336,6 +345,11 @@ impl UiDiagnosticsService {
         };
         self.exit_last_mtime = Some(current_mtime);
         triggered
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn poll_exit_trigger(&mut self) -> bool {
+        false
     }
 
     pub fn redact_text(&self) -> bool {
@@ -879,28 +893,46 @@ impl UiDiagnosticsService {
 
                             let bytes = serde_json::to_vec_pretty(&req).ok();
                             if let Some(bytes) = bytes {
-                                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
-                                    let _ = std::fs::create_dir_all(parent);
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    if let Some(parent) = self.cfg.screenshot_request_path.parent()
+                                    {
+                                        let _ = std::fs::create_dir_all(parent);
+                                    }
+                                    let write_ok =
+                                        std::fs::write(&self.cfg.screenshot_request_path, bytes)
+                                            .is_ok()
+                                            && touch_file(&self.cfg.screenshot_trigger_path)
+                                                .is_ok();
+                                    if write_ok {
+                                        state = Some(ScreenshotWaitState {
+                                            step_index,
+                                            remaining_frames: timeout_frames,
+                                            request_id,
+                                            window_ffi,
+                                            last_result_trigger_stamp: None,
+                                        });
+                                    } else {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason =
+                                            Some("screenshot_request_write_failed".to_string());
+                                        active.screenshot_wait = None;
+                                        output.request_redraw = true;
+                                    }
                                 }
-                                let write_ok =
-                                    std::fs::write(&self.cfg.screenshot_request_path, bytes)
-                                        .is_ok()
-                                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
-                                if write_ok {
-                                    state = Some(ScreenshotWaitState {
-                                        step_index,
-                                        remaining_frames: timeout_frames,
-                                        request_id,
-                                        window_ffi,
-                                        last_result_trigger_stamp: None,
-                                    });
-                                } else {
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let _ = bytes;
                                     force_dump_label = Some(format!(
-                                        "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                        "script-step-{step_index:04}-capture_screenshot-unsupported-wasm"
                                     ));
                                     stop_script = true;
                                     failure_reason =
-                                        Some("screenshot_request_write_failed".to_string());
+                                        Some("screenshots_not_supported_wasm".to_string());
                                     active.screenshot_wait = None;
                                     output.request_redraw = true;
                                 }
@@ -2334,6 +2366,7 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn ensure_ready_file(&mut self) {
         if self.ready_written {
             return;
@@ -2358,6 +2391,11 @@ impl UiDiagnosticsService {
             let _ = f.flush();
         }
 
+        self.ready_written = true;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn ensure_ready_file(&mut self) {
         self.ready_written = true;
     }
 
@@ -2885,6 +2923,7 @@ impl UiDiagnosticsService {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
         if !self.is_enabled() {
             return None;
@@ -2919,10 +2958,24 @@ impl UiDiagnosticsService {
         self.dump_bundle(None)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        if let Some(label) = self.pending_force_dump_label.take() {
+            return self.dump_bundle(Some(&label));
+        }
+
+        None
+    }
+
     fn request_force_dump(&mut self, label: String) {
         self.pending_force_dump_label = Some(sanitize_label(&label));
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_script_trigger(&mut self) {
         let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
             if let Some(dir) = self.cfg.script_trigger_path.parent() {
@@ -2995,6 +3048,10 @@ impl UiDiagnosticsService {
         });
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn poll_script_trigger(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -3010,7 +3067,6 @@ impl UiDiagnosticsService {
         }
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
-
         if write_json(dir.join("bundle.json"), &bundle).is_err() {
             return None;
         }
@@ -3034,6 +3090,40 @@ impl UiDiagnosticsService {
                 }),
             },
         );
+
+        Some(dir)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        let ts = unix_ms_now();
+        let mut dir_name = ts.to_string();
+        if let Some(label) = label {
+            if !label.is_empty() {
+                dir_name = format!("{dir_name}-{label}");
+            }
+        }
+
+        let dir = self.cfg.out_dir.join(dir_name);
+        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
+        self.last_dump_dir = Some(dir.clone());
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dumped".to_string(),
+                session_id: None,
+                request_id: None,
+                payload: serde_json::json!({
+                    "exported_unix_ms": ts,
+                    "dir": display_path(&self.cfg.out_dir, &dir),
+                    "bundle": bundle,
+                }),
+            },
+        );
+
         Some(dir)
     }
 
@@ -3180,6 +3270,7 @@ impl UiDiagnosticsService {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_pick_trigger(&mut self) {
         let modified =
             match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
@@ -3217,6 +3308,10 @@ impl UiDiagnosticsService {
         self.pick_armed_run_id = Some(self.next_pick_run_id());
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn poll_pick_trigger(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_inspect_trigger(&mut self) {
         let modified =
             match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
@@ -3265,6 +3360,9 @@ impl UiDiagnosticsService {
         self.inspect_enabled = cfg.enabled;
         self.inspect_consume_clicks = cfg.consume_clicks;
     }
+
+    #[cfg(target_arch = "wasm32")]
+    fn poll_inspect_trigger(&mut self) {}
 
     fn resolve_pending_pick_for_window(
         &mut self,
@@ -3381,12 +3479,18 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn read_touch_stamp(path: &Path) -> Option<u64> {
     let bytes = std::fs::read(path).ok()?;
     let text = std::str::from_utf8(&bytes).ok()?;
     text.lines()
         .rev()
         .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_touch_stamp(_path: &Path) -> Option<u64> {
+    None
 }
 
 #[derive(Debug, Clone)]
@@ -9457,6 +9561,7 @@ fn key_to_u64(key: NodeId) -> u64 {
     key.data().as_ffi()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Error> {
     let Some(parent) = path.parent() else {
         return Ok(());
@@ -9464,6 +9569,11 @@ fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Err
     std::fs::create_dir_all(parent)?;
     let bytes = serde_json::to_vec_pretty(value).unwrap_or_default();
     std::fs::write(path, bytes)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn write_json<T: Serialize>(_path: PathBuf, _value: &T) -> Result<(), std::io::Error> {
+    Ok(())
 }
 
 fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
@@ -9493,6 +9603,7 @@ fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
     s.push_str(suffix);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {
     let path = out_dir.join("latest.txt");
     let Some(parent) = path.parent() else {
@@ -9503,6 +9614,12 @@ fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io
     std::fs::write(path, rel.to_string_lossy().as_bytes())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn write_latest_pointer(_out_dir: &Path, _export_dir: &Path) -> Result<(), std::io::Error> {
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -9518,6 +9635,12 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn touch_file(_path: &Path) -> Result<(), std::io::Error> {
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
@@ -9532,6 +9655,11 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn screenshot_request_completed(_path: &Path, _request_id: &str, _window_ffi: u64) -> bool {
+    false
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -10958,8 +11086,8 @@ fn duration_millis_u64(duration: std::time::Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-fn instant_to_unix_ms(instant: std::time::Instant) -> Option<u64> {
-    let now_instant = std::time::Instant::now();
+fn instant_to_unix_ms(instant: fret_core::time::Instant) -> Option<u64> {
+    let now_instant = fret_core::time::Instant::now();
     let now_unix_ms = unix_ms_now();
 
     if instant >= now_instant {

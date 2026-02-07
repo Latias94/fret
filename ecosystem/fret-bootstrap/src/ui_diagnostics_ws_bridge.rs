@@ -26,7 +26,11 @@ impl UiDiagnosticsWsBridge {
         }
 
         let mut cfg = DevtoolsWsClientConfig::with_defaults(ws_url.to_string(), token.to_string());
-        cfg.client_kind = ClientKindV1::NativeApp;
+        cfg.client_kind = if cfg!(target_arch = "wasm32") {
+            ClientKindV1::WebApp
+        } else {
+            ClientKindV1::NativeApp
+        };
         cfg.capabilities = vec![
             "inspect".to_string(),
             "pick".to_string(),
@@ -34,9 +38,11 @@ impl UiDiagnosticsWsBridge {
             "bundles".to_string(),
         ];
 
-        let Ok(client) = DevtoolsWsClient::connect_native(cfg) else {
-            return None;
-        };
+        #[cfg(target_arch = "wasm32")]
+        let client = DevtoolsWsClient::connect_wasm(cfg).ok()?;
+        #[cfg(not(target_arch = "wasm32"))]
+        let client = DevtoolsWsClient::connect_native(cfg).ok()?;
+
         self.client = Some(client);
         self.client.as_ref()
     }

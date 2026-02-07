@@ -11,7 +11,7 @@ documentation.workspace = true
 publish = false
 
 [features]
-default = ["client-native", "server-native"]
+default = []
 client-native = ["dep:tungstenite", "dep:url"]
 server-native = ["dep:tungstenite", "dep:url"]
 client-wasm = ["dep:web-sys", "dep:js-sys", "dep:wasm-bindgen", "dep:wasm-bindgen-futures"]
@@ -27,5 +27,4 @@ url = { version = "2.5.7", optional = true }
 js-sys = { version = "0.3", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
-web-sys = { version = "0.3", optional = true, features = ["CloseEvent", "ErrorEvent", "MessageEvent", "WebSocket", "Window", "Location"] }
-
+web-sys = { version = "0.3", optional = true, features = ["CloseEvent", "ErrorEvent", "Event", "MessageEvent", "WebSocket", "Window", "Location", "UrlSearchParams"] }
