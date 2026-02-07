@@ -35,11 +35,11 @@ Status legend:
 
 ## Phase 2 - Search validation and stabilization
 
-- `[ ]` Define canonical `SearchMap` representation (stable + duplicates preserved).
-- `[ ]` Add per-route `validate_search(parent_search, raw_search)` hook.
-- `[ ]` Define error handling policy:
+- `[x]` Define canonical `SearchMap` representation (stable + duplicates preserved).
+- `[x]` Add per-route `validate_search(parent_search, raw_search)` hook.
+- `[x]` Define error handling policy:
   - “throw” vs “recover with raw search” (TanStack has both)
-- `[ ]` Add tests:
+- `[x]` Add tests:
   - parent -> child accumulation
   - error path behavior
 
@@ -68,4 +68,3 @@ Status legend:
 - `[ ]` Add an app-level reference integration example:
   - window-scoped router state + navigation commands
   - query prefetch tied to route matches
-

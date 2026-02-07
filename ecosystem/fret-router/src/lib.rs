@@ -14,6 +14,7 @@ mod query;
 #[cfg(feature = "query-integration")]
 mod query_integration;
 mod route_tree;
+mod search;
 
 pub use alias::{AliasResolveError, QueryKeyAlias, RouteAliasRule, RouteAliasTable};
 pub use base_path::{apply_base_path, normalize_base_path, strip_base_path};
@@ -35,8 +36,11 @@ pub use query_integration::{
     route_change_matches, route_query_key, route_query_key_with,
 };
 pub use route_tree::{
-    RouteAmbiguity, RouteMatch, RouteMatchResult, RouteNode, RouteTree, RouteTreeDiagnostics,
-    RouteTreeError,
+    RouteAmbiguity, RouteMatch, RouteMatchResult, RouteMatchResultWithSearch, RouteMatchWithSearch,
+    RouteNode, RouteSearchValidationFailure, RouteTree, RouteTreeDiagnostics, RouteTreeError,
+};
+pub use search::{
+    RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,
 };
 
 #[cfg(all(

@@ -1,5 +1,8 @@
 use crate::path::PathSpecificity;
-use crate::{PathParam, PathPattern, PathPatternError, RouteLocation};
+use crate::{
+    PathParam, PathPattern, PathPatternError, RouteLocation, RouteSearchTable, SearchMap,
+    SearchValidationError, SearchValidationMode,
+};
 
 #[derive(Debug)]
 pub enum RouteTreeError {
@@ -143,6 +146,59 @@ impl<R> RouteTree<R> {
 
         out
     }
+
+    pub fn match_routes_with_search<'a>(
+        &'a self,
+        location: &RouteLocation,
+        search_table: &RouteSearchTable<R>,
+        mode: SearchValidationMode,
+    ) -> Result<RouteMatchResultWithSearch<'a, R>, RouteSearchValidationFailure>
+    where
+        R: std::hash::Hash + Eq,
+    {
+        let base = self.match_routes(location);
+
+        let canonical_location = base.location.canonicalized();
+        let mut accumulated = SearchMap::from_location(&canonical_location);
+
+        let mut matches = Vec::with_capacity(base.matches.len());
+        for (index, entry) in base.matches.into_iter().enumerate() {
+            let mut error: Option<SearchValidationError> = None;
+
+            if let Some(validator) = search_table.validator_for(entry.route) {
+                match validator(&canonical_location, &accumulated) {
+                    Ok(next) => {
+                        accumulated = next;
+                    }
+                    Err(err) => {
+                        if mode == SearchValidationMode::Strict {
+                            return Err(RouteSearchValidationFailure {
+                                match_index: index,
+                                matched_path: entry.matched_path,
+                                error: err,
+                            });
+                        }
+                        error = Some(err);
+                    }
+                }
+            }
+
+            matches.push(RouteMatchWithSearch {
+                route: entry.route,
+                pattern: entry.pattern,
+                matched_path: entry.matched_path,
+                params: entry.params,
+                search: accumulated.clone(),
+                search_error: error,
+            });
+        }
+
+        Ok(RouteMatchResultWithSearch {
+            location: canonical_location,
+            matches,
+            is_not_found: base.is_not_found,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -170,6 +226,42 @@ pub struct RouteMatchResult<'a, R> {
     pub matches: Vec<RouteMatch<'a, R>>,
     pub is_not_found: bool,
 }
+
+#[derive(Debug, Clone)]
+pub struct RouteMatchWithSearch<'a, R> {
+    pub route: &'a R,
+    pub pattern: &'a PathPattern,
+    pub matched_path: String,
+    pub params: Vec<PathParam>,
+    pub search: SearchMap,
+    pub search_error: Option<SearchValidationError>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RouteMatchResultWithSearch<'a, R> {
+    pub location: RouteLocation,
+    pub matches: Vec<RouteMatchWithSearch<'a, R>>,
+    pub is_not_found: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct RouteSearchValidationFailure {
+    pub match_index: usize,
+    pub matched_path: String,
+    pub error: SearchValidationError,
+}
+
+impl std::fmt::Display for RouteSearchValidationFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "search validation failed at match {} ('{}'): {}",
+            self.match_index, self.matched_path, self.error
+        )
+    }
+}
+
+impl std::error::Error for RouteSearchValidationFailure {}
 
 #[derive(Debug, Default, Clone)]
 pub struct RouteTreeDiagnostics {
@@ -387,7 +479,9 @@ fn shape_segment(segment: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{RouteNode, RouteTree};
-    use crate::RouteLocation;
+    use crate::{
+        RouteLocation, RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode,
+    };
 
     #[test]
     fn nested_matches_return_chain_with_accumulated_params() {
@@ -528,5 +622,129 @@ mod tests {
         let diagnostics = tree.diagnostics();
         assert_eq!(diagnostics.ambiguities.len(), 1);
         assert_eq!(diagnostics.ambiguities[0].shape_key, "/users/:");
+    }
+
+    #[test]
+    fn search_validation_accumulates_through_match_chain() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Gallery,
+        }
+
+        fn validate_root(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Ok(search.clone().with("lang", Some("en".to_string())))
+        }
+
+        fn validate_gallery(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            let lang = search.first("lang").unwrap_or("en");
+            Ok(search
+                .clone()
+                .with("title", Some(format!("gallery:{lang}"))))
+        }
+
+        let tree = RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Gallery, "gallery").unwrap()]),
+        );
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, validate_root);
+        search_table.insert(RouteId::Gallery, validate_gallery);
+
+        let result = tree
+            .match_routes_with_search(
+                &RouteLocation::parse("/gallery?lang=zh"),
+                &search_table,
+                SearchValidationMode::Strict,
+            )
+            .expect("validation should succeed");
+
+        assert_eq!(result.matches.len(), 2);
+        assert_eq!(result.matches[0].search.first("lang"), Some("en"));
+        assert_eq!(result.matches[1].search.first("title"), Some("gallery:en"));
+    }
+
+    #[test]
+    fn search_validation_lenient_mode_records_error_and_continues() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Child,
+        }
+
+        fn bad_validate(
+            _location: &RouteLocation,
+            _search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Err(SearchValidationError::new("bad search"))
+        }
+
+        fn ok_validate(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Ok(search.clone().with("ok", Some("1".to_string())))
+        }
+
+        let tree = RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Child, "child").unwrap()]),
+        );
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, bad_validate);
+        search_table.insert(RouteId::Child, ok_validate);
+
+        let result = tree
+            .match_routes_with_search(
+                &RouteLocation::parse("/child"),
+                &search_table,
+                SearchValidationMode::Lenient,
+            )
+            .expect("lenient mode should not fail");
+
+        assert!(result.matches[0].search_error.is_some());
+        assert!(result.matches[1].search_error.is_none());
+        assert_eq!(result.matches[1].search.first("ok"), Some("1"));
+    }
+
+    #[test]
+    fn search_validation_strict_mode_fails_fast() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+        }
+
+        fn bad_validate(
+            _location: &RouteLocation,
+            _search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Err(SearchValidationError::new("bad search"))
+        }
+
+        let tree = RouteTree::new(RouteNode::new(RouteId::Root, "/").unwrap());
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, bad_validate);
+
+        let err = tree
+            .match_routes_with_search(
+                &RouteLocation::parse("/"),
+                &search_table,
+                SearchValidationMode::Strict,
+            )
+            .expect_err("strict mode should fail");
+
+        assert_eq!(err.match_index, 0);
+        assert_eq!(err.error.message(), "bad search");
     }
 }
