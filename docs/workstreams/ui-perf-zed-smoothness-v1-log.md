@@ -6331,3 +6331,17 @@ Resize probe deltas (worst-frame maxima; r15 -> r16):
   - `max_layout`: `8871us -> 8723us` (`-1.7%`)
   - `max_solve`: `2413us -> 2306us` (`-4.4%`)
   - `max_paint`: `6317us -> 6570us` (`+4.0%`)
+
+Stability sample (same commit, repeated runs):
+- `target/fret-diag-resize-probes-gate-r17/summary.json`: `pass=true`
+- `target/fret-diag-resize-probes-gate-r18/summary.json`: `pass=true`
+- drag-jitter worst-frame maxima:
+  - `r16`: `max_total=15186us`
+  - `r17`: `max_total=15407us`
+  - `r18`: `max_total=15552us`
+
+Attribution (drag-jitter worst frame in r16):
+- Bundle: `target/fret-diag-resize-probes-gate-r16/1770462385120-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Snapshot: `frame_id=2337`, `tick_id=1794`
+- Layout hotspots are dominated by `Scroll` nodes in `fret-ui-shadcn` `scroll_area.rs` (exclusive layout time).
+- Paint time is dominated by `paint_text_prepare_time_us` with `reason_width_changed` (wrap recompute under width jitter).

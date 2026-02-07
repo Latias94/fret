@@ -25,12 +25,15 @@ Conventions:
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
+    - Evidence: perf log entry `2026-02-07 11:15` (r16 worst bundle + snapshot pointers).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
+  - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
 ## Milestones
