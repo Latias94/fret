@@ -1,0 +1,651 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "pinning_grouped_rows",
+  "data": [
+    {
+      "id": 1,
+      "role": 1,
+      "team": 10,
+      "score": 5
+    },
+    {
+      "id": 2,
+      "role": 2,
+      "team": 20,
+      "score": 7
+    },
+    {
+      "id": 3,
+      "role": 1,
+      "team": 20,
+      "score": 1
+    },
+    {
+      "id": 4,
+      "role": 2,
+      "team": 10,
+      "score": 3
+    },
+    {
+      "id": 5,
+      "role": 1,
+      "team": 10,
+      "score": 2
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "pinning_grouped_rows_baseline_page_0",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 1
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 2,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "row_pinning": {
+          "top": [],
+          "center": [
+            "role:1"
+          ],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": false,
+          "is_some_top_rows_pinned": false,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    },
+    {
+      "id": "pinning_grouped_rows_action_pin_group_role_1_top",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 1
+        }
+      },
+      "actions": [
+        {
+          "type": "pinRow",
+          "row_id": "role:1",
+          "position": "top"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 2,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 450,
+          "left_total_size": 0,
+          "center_total_size": 450,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 1
+          },
+          "grouping": [
+            "role"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [
+              "role:1"
+            ],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "row_pinning": {
+          "top": [
+            "role:1"
+          ],
+          "center": [],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    },
+    {
+      "id": "pinning_grouped_rows_state_page_1_pinned_role_1",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ],
+        "pagination": {
+          "pageIndex": 1,
+          "pageSize": 1
+        },
+        "rowPinning": {
+          "top": [
+            "role:1"
+          ],
+          "bottom": []
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:2"
+          ],
+          "flat": [
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:2"
+          ],
+          "flat": [
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 2,
+        "can_previous_page": true,
+        "can_next_page": false,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "row_pinning": {
+          "top": [
+            "role:1"
+          ],
+          "center": [
+            "role:2"
+          ],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    }
+  ]
+}

@@ -138,9 +138,21 @@ Upstream:
 
 Fret status:
 
-- Leaf row pinning is parity-gated; grouped interactions are partially gated.
-- Capability gap to close: pin/group rows as first-class and align `getCenterRows` semantics under
-  grouping.
+- Row pinning behavior (including `keepPinnedRows` × filtering/sorting/pagination) is parity-gated.
+- Grouping × row pinning interactions are parity-gated for leaf row ids, including `keepPinnedRows`
+  semantics over grouped parents’ expansion state.
+- RowId-based addressing is supported (lookup + state import/export) so consumers are not forced to
+  depend on a numeric `RowKey` fast path.
+
+Remaining pinning-specific parity work (capability not weaker than TanStack):
+
+- Add dedicated parity fixtures for `row.pin(position, includeLeafRows, includeParentRows)` on
+  hierarchical/tree data (and grouped models), so the include-leaf/include-parent expansion rules are
+  locked down.
+- Pinning grouped rows by id (e.g. `role:1`) is parity-gated, including `getTop/getCenter/getBottom`
+  ordering outcomes under grouping + pagination.
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
 
 ---
 

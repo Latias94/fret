@@ -15,6 +15,7 @@ type CaseId =
   | "visibility_ordering"
   | "pinning"
   | "pinning_tree"
+  | "pinning_grouped_rows"
   | "column_pinning"
   | "faceting"
   | "column_sizing"
@@ -223,6 +224,9 @@ type SnapshotId =
   | "pinning_tree_keep_false_never_surfaces_child_row"
   | "pinning_tree_action_pin_root_includes_leaf_rows"
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
+  | "pinning_grouped_rows_baseline_page_0"
+  | "pinning_grouped_rows_action_pin_group_role_1_top"
+  | "pinning_grouped_rows_state_page_1_pinned_role_1"
   | "column_pinning_default_can_pin"
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
@@ -844,6 +848,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "visibility_ordering" &&
         v !== "pinning" &&
         v !== "pinning_tree" &&
+        v !== "pinning_grouped_rows" &&
         v !== "column_pinning" &&
         v !== "faceting" &&
         v !== "column_sizing" &&
@@ -866,7 +871,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1176,6 +1181,20 @@ async function main(): Promise<void> {
       },
     ]
   } else if (case_id === "grouping") {
+    const rows: { id: number; role: number; team: number; score: number }[] = [
+      { id: 1, role: 1, team: 10, score: 5 },
+      { id: 2, role: 2, team: 20, score: 7 },
+      { id: 3, role: 1, team: 20, score: 1 },
+      { id: 4, role: 2, team: 10, score: 3 },
+      { id: 5, role: 1, team: 10, score: 2 },
+    ]
+    data = rows
+    columns = [
+      { id: "role", accessorFn: (row: any) => row.role },
+      { id: "team", accessorFn: (row: any) => row.team },
+      { id: "score", accessorFn: (row: any) => row.score },
+    ]
+  } else if (case_id === "pinning_grouped_rows") {
     const rows: { id: number; role: number; team: number; score: number }[] = [
       { id: 1, role: 1, team: 10, score: 5 },
       { id: 2, role: 2, team: 20, score: 7 },
@@ -1768,7 +1787,10 @@ async function main(): Promise<void> {
             getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
           }
         : {}),
-      ...(case_id === "grouping" || case_id === "grouping_aggregation_fns" || case_id === "row_id_state_ops"
+      ...(case_id === "grouping" ||
+      case_id === "grouping_aggregation_fns" ||
+      case_id === "row_id_state_ops" ||
+      case_id === "pinning_grouped_rows"
         ? {
             getGroupedRowModel:
               options.__getGroupedRowModel === "pre_grouped"
@@ -5015,6 +5037,72 @@ function snapshotColumnPinning(
           },
         ],
       ),
+    ]
+  } else if (case_id === "pinning_grouped_rows") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const baseOptions: TanStackOptions = { enableRowPinning: true, keepPinnedRows: true }
+
+    snapshots = [
+      mk("pinning_grouped_rows_baseline_page_0", baseOptions, {
+        grouping: ["role"],
+        pagination: { pageIndex: 0, pageSize: 1 },
+      }),
+      mkActions(
+        "pinning_grouped_rows_action_pin_group_role_1_top",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "role:1",
+            position: "top",
+          },
+        ],
+      ),
+      mk("pinning_grouped_rows_state_page_1_pinned_role_1", baseOptions, {
+        grouping: ["role"],
+        pagination: { pageIndex: 1, pageSize: 1 },
+        rowPinning: { top: ["role:1"], bottom: [] },
+      }),
     ]
   } else if (case_id === "column_pinning") {
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {

@@ -132,7 +132,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - `getRow(id, searchAll?)` id lookup across core/pre-pagination/current models,
     - grouped row ids (string ids like `role:1`),
     - id-keyed feature state surfaces (pin/select/expand keyed by `RowId` strings).
-- [~] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
+- [x] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
   - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
     can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
   - Planned (staged):
@@ -148,7 +148,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       - Done (fixture parity gate): core/pre-pagination/final `rowsById` semantics (custom RowId + grouped ids + lookup parity).
         - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json`
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs`
-    - [~] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+    - [x] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
       - Done (partial): grouped rows now carry TanStack-style ids (`col:value` with `>` parent chain),
         and id 鈫?rowKey lookup can resolve grouped ids.
         - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
@@ -157,7 +157,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       - Done: row partition APIs now have RowId surfaces (`top_row_ids` / `center_row_ids` / `bottom_row_ids`)
         that resolve grouped ids via the grouped row model.
       - Remaining: continue the non-option capability inventory workstream (`HTP-base-004`, `HTP-cap-010`).
-    - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+    - [x] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
@@ -470,6 +470,19 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `pinning_action_reset_row_pinning_default_true_clears`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_row_pinning`)
+- [ ] HTP-rowpin-040 Gate `row.pin(position, includeLeafRows, includeParentRows)` semantics.
+  - Note: tree-only include-leaf/include-parent semantics are already fixture-gated via
+    `pinning_tree_action_pin_root_includes_leaf_rows` and
+    `pinning_tree_action_pin_grandchild_includes_parent_rows`.
+  - Goal: extend coverage to grouped row models and ensure ordering/dedupe semantics stay TanStack-compatible.
+  - Deliverable: fixture(s) that pin grouped rows with include-leaf/include-parent flags and assert
+    the resulting `rowPinning` state and top/center/bottom partition outcomes.
+- [x] HTP-rowpin-050 Gate pinning grouped rows by id (e.g. `role:1`) under grouping.
+  - Parity-gated:
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
+  - Covered: `getTopRows`/`getCenterRows`/`getBottomRows` ordering under grouping + pagination when pinning
+    grouped root rows by id.
 - [~] HTP-expand-010 Align expanded state shape (`true | Record<RowId, boolean>`) and behaviors.
   - Done (parity-gated): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`
