@@ -2340,7 +2340,10 @@ impl<H: UiHost> UiTree<H> {
                             .is_some()
                     });
 
-                if defer_escape_overlay_dismiss && !stopped_by_dismissible_root_hook {
+                if defer_escape_overlay_dismiss
+                    && !stopped_by_dismissible_root_hook
+                    && (!stop_propagation_requested || !focus_requested)
+                {
                     if let Event::KeyDown {
                         key: fret_core::KeyCode::Escape,
                         repeat: false,
