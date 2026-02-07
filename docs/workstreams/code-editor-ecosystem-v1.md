@@ -557,7 +557,7 @@ Evidence anchors:
 
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
   - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
-  - Known gaps: not pixel-accurate wrapping; cell-width heuristic remains as a fallback when caret stops are unavailable.
+  - Known gaps: not pixel-accurate wrapping; cell-width heuristic remains as a fallback when caret stops are unavailable (e.g. before the first paint). Row geometry caching is shifted across single-line edits to reduce fallback churn.
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 

@@ -267,6 +267,167 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
 }
 
 #[test]
+fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
+    let handle = CodeEditorHandle::new("aaaaaa\nbbbbbb\ncccccc");
+    handle.set_soft_wrap_cols(Some(4));
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        assert_eq!(
+            st.display_map.row_count(),
+            6,
+            "3 lines * 2 wrapped rows each"
+        );
+
+        // Seed geometry for the second and third logical lines (rows 2..6).
+        for row in 2..6 {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.row_geom_cache.insert(
+                row,
+                (
+                    RowGeom {
+                        row_range: range.clone(),
+                        blob: fret_core::TextBlobId::default(),
+                        caret_stops: vec![(0, Px(0.0))],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache_queue.push_back((row, 1));
+        }
+
+        // Capture the original ranges so we can assert on the shifted values after the edit.
+        (2..6)
+            .map(|row| {
+                (
+                    row,
+                    st.row_geom_cache.get(&row).unwrap().0.row_range.clone(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let at = 6; // End of the first logical line.
+        let edit = Edit::Insert {
+            at,
+            text: "zzzz".to_string(),
+        };
+        let caret = at + 4;
+        input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            edit,
+            Selection {
+                anchor: caret,
+                focus: caret,
+            },
+        )
+        .expect("edit must apply");
+        assert_eq!(
+            st.display_map.row_count(),
+            7,
+            "inserting four chars grows the first line from 2 -> 3 wrapped rows"
+        );
+    }
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.row_geom_cache.len(),
+        4,
+        "unaffected lines keep row geometry cached"
+    );
+
+    for (old_row, old_range) in before {
+        let new_row = old_row + 1;
+        let (geom, _) = st
+            .row_geom_cache
+            .get(&new_row)
+            .expect("shifted row present");
+        assert_eq!(
+            geom.row_range,
+            (old_range.start + 4)..(old_range.end + 4),
+            "byte ranges shift by the inserted text length"
+        );
+    }
+}
+
+#[test]
+fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
+    let handle = CodeEditorHandle::new("hello\nworld\nagain");
+
+    let before = {
+        let mut st = handle.state.borrow_mut();
+        assert_eq!(st.display_map.row_count(), 3);
+
+        for row in 1..3 {
+            let range = st.display_map.display_row_byte_range(&st.buffer, row);
+            st.row_geom_cache.insert(
+                row,
+                (
+                    RowGeom {
+                        row_range: range.clone(),
+                        blob: fret_core::TextBlobId::default(),
+                        caret_stops: vec![(0, Px(0.0))],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache_queue.push_back((row, 1));
+        }
+        (1..3)
+            .map(|row| {
+                (
+                    row,
+                    st.row_geom_cache.get(&row).unwrap().0.row_range.clone(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+
+    {
+        let mut st = handle.state.borrow_mut();
+        let edit = Edit::Insert {
+            at: 0,
+            text: "123".to_string(),
+        };
+        input::apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            edit,
+            Selection {
+                anchor: 3,
+                focus: 3,
+            },
+        )
+        .expect("edit must apply");
+        assert_eq!(
+            st.display_map.row_count(),
+            3,
+            "non-wrapping edits keep row count stable"
+        );
+    }
+
+    let st = handle.state.borrow();
+    assert_eq!(st.row_geom_cache.len(), 2);
+    for (row, old_range) in before {
+        let (geom, _) = st.row_geom_cache.get(&row).expect("row present");
+        assert_eq!(
+            geom.row_range,
+            (old_range.start + 3)..(old_range.end + 3),
+            "byte ranges shift by the inserted text length"
+        );
+    }
+}
+
+#[test]
 fn row_text_cache_stats_tracks_hits_and_misses() {
     let handle = CodeEditorHandle::new("hello\nworld");
     handle.reset_cache_stats();

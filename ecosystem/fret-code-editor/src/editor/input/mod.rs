@@ -1,6 +1,8 @@
 //! Input, editing, and command handling for the code editor surface.
 
 use super::*;
+use std::collections::{HashMap, VecDeque};
+use std::ops::Range;
 
 #[cfg(feature = "syntax")]
 use super::paint::invalidate_syntax_row_cache_for_delta;
@@ -568,6 +570,14 @@ pub(super) fn apply_and_record_edit(
     edit: Edit,
     next_selection: Selection,
 ) -> Option<()> {
+    let (edit_start, edit_old_end, edit_byte_delta, edit_is_single_line) =
+        edit_cache_shift_params(&st.buffer, &edit);
+    let before_wrap_cols = st.display_wrap_cols;
+    let before_line = st
+        .buffer
+        .line_index_at_byte(edit_start.min(st.buffer.len_bytes()));
+    let before_line_rows = st.display_map.line_display_row_range(before_line);
+
     if !st.selection.is_caret() {
         st.undo_group = None;
     }
@@ -594,11 +604,34 @@ pub(super) fn apply_and_record_edit(
     let _ = delta;
     st.selection = next_selection;
     st.caret_preferred_x = None;
+
+    let can_shift_row_geom_cache = edit_is_single_line
+        && before_wrap_cols == st.display_wrap_cols
+        && delta.lines.old_count == 1
+        && delta.lines.new_count == 1
+        && delta.lines.start == before_line;
+    if can_shift_row_geom_cache {
+        let after_line_rows = st.display_map.line_display_row_range(before_line);
+        if after_line_rows.start == before_line_rows.start {
+            shift_row_geom_cache_for_single_line_edit(
+                st,
+                before_line_rows,
+                after_line_rows,
+                edit_old_end,
+                edit_byte_delta,
+            );
+        } else {
+            st.row_geom_cache_tick = 0;
+            st.row_geom_cache.clear();
+            st.row_geom_cache_queue.clear();
+        }
+    } else {
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
     st.row_geom_cache_rev = st.buffer.revision();
     st.row_geom_cache_wrap_cols = st.display_wrap_cols;
-    st.row_geom_cache_tick = 0;
-    st.row_geom_cache.clear();
-    st.row_geom_cache_queue.clear();
 
     let (buffer_tx, inverse_selection, coalesce_key) = {
         let group = st.undo_group.as_ref().expect("undo group must exist");
@@ -616,6 +649,98 @@ pub(super) fn apply_and_record_edit(
     .coalesce_key(coalesce_key);
     st.undo.record_or_coalesce(record);
     Some(())
+}
+
+fn edit_cache_shift_params(buf: &TextBuffer, edit: &Edit) -> (usize, usize, isize, bool) {
+    let (start, old_end, delta, inserted_text) = match edit {
+        Edit::Insert { at, text } => (*at, *at, text.len() as isize, text.as_str()),
+        Edit::Delete { range } => (
+            range.start,
+            range.end,
+            -((range.end.saturating_sub(range.start)) as isize),
+            "",
+        ),
+        Edit::Replace { range, text } => (
+            range.start,
+            range.end,
+            text.len() as isize - (range.end.saturating_sub(range.start) as isize),
+            text.as_str(),
+        ),
+    };
+
+    let inserted_is_single_line = !inserted_text.contains('\n');
+    let start_line = buf.line_index_at_byte(start.min(buf.len_bytes()));
+    let end_line = buf.line_index_at_byte(old_end.min(buf.len_bytes()));
+    let is_single_line = inserted_is_single_line && start_line == end_line;
+    (start, old_end, delta, is_single_line)
+}
+
+fn shift_row_geom_cache_for_single_line_edit(
+    st: &mut CodeEditorState,
+    before_line_rows: std::ops::Range<usize>,
+    after_line_rows: std::ops::Range<usize>,
+    edit_old_end: usize,
+    edit_byte_delta: isize,
+) {
+    let row_delta = after_line_rows.len() as isize - before_line_rows.len() as isize;
+
+    let old_cache = std::mem::take(&mut st.row_geom_cache);
+    let old_queue = std::mem::take(&mut st.row_geom_cache_queue);
+
+    let mut new_cache = HashMap::with_capacity(old_cache.len());
+    for (row, (mut geom, tick)) in old_cache {
+        if before_line_rows.contains(&row) {
+            continue;
+        }
+
+        if row >= before_line_rows.end {
+            geom.row_range =
+                shift_range_for_single_line_edit(geom.row_range, edit_old_end, edit_byte_delta);
+        }
+        let new_row = if row >= before_line_rows.end {
+            shift_usize(row, row_delta)
+        } else {
+            row
+        };
+        new_cache.insert(new_row, (geom, tick));
+    }
+
+    let mut new_queue = VecDeque::with_capacity(old_queue.len());
+    for (row, tick) in old_queue {
+        if before_line_rows.contains(&row) {
+            continue;
+        }
+        let new_row = if row >= before_line_rows.end {
+            shift_usize(row, row_delta)
+        } else {
+            row
+        };
+        new_queue.push_back((new_row, tick));
+    }
+
+    st.row_geom_cache = new_cache;
+    st.row_geom_cache_queue = new_queue;
+}
+
+fn shift_usize(value: usize, delta: isize) -> usize {
+    if delta >= 0 {
+        value.saturating_add(delta as usize)
+    } else {
+        value.saturating_sub((-delta) as usize)
+    }
+}
+
+fn shift_range_for_single_line_edit(
+    range: Range<usize>,
+    edit_old_end: usize,
+    delta: isize,
+) -> Range<usize> {
+    if range.end <= edit_old_end || delta == 0 {
+        return range;
+    }
+    let start = shift_usize(range.start, delta);
+    let end = shift_usize(range.end, delta);
+    start..end.max(start)
 }
 
 pub(super) fn undo(st: &mut CodeEditorState) -> bool {

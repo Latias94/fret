@@ -104,6 +104,35 @@ impl DisplayMap {
         self.wrap_cols
     }
 
+    /// Return the first display-row index for a logical line.
+    ///
+    /// When wrapping is disabled, this is equal to `line`.
+    pub fn line_first_display_row(&self, line: usize) -> usize {
+        if self.line_to_first_row.is_empty() {
+            return 0;
+        }
+        let line = line.min(self.line_to_first_row.len().saturating_sub(1));
+        *self.line_to_first_row.get(line).unwrap_or(&0)
+    }
+
+    /// Return the display-row range that corresponds to a single logical line.
+    ///
+    /// When wrapping is disabled, this is always `line..(line + 1)` (clamped to the display-row
+    /// count).
+    pub fn line_display_row_range(&self, line: usize) -> Range<usize> {
+        if self.line_to_first_row.is_empty() || self.row_to_line.is_empty() {
+            return 0..0;
+        }
+        let line = line.min(self.line_to_first_row.len().saturating_sub(1));
+        let start = self.line_first_display_row(line);
+        let end = self
+            .line_to_first_row
+            .get(line + 1)
+            .copied()
+            .unwrap_or_else(|| self.row_to_line.len());
+        start..end.max(start)
+    }
+
     pub fn display_row_line(&self, display_row: usize) -> usize {
         if self.row_to_line.is_empty() {
             return 0;
