@@ -2453,9 +2453,20 @@ impl<H: UiHost> UiTree<H> {
                 .iter()
                 .position(|h| h.exclusive_time < record.exclusive_time)
                 .unwrap_or(self.debug_layout_hotspots.len());
-            self.debug_layout_hotspots.insert(idx, record);
+            self.debug_layout_hotspots.insert(idx, record.clone());
             if self.debug_layout_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
                 self.debug_layout_hotspots.truncate(MAX_LAYOUT_HOTSPOTS);
+            }
+
+            let idx = self
+                .debug_layout_inclusive_hotspots
+                .iter()
+                .position(|h| h.inclusive_time < record.inclusive_time)
+                .unwrap_or(self.debug_layout_inclusive_hotspots.len());
+            self.debug_layout_inclusive_hotspots.insert(idx, record);
+            if self.debug_layout_inclusive_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
+                self.debug_layout_inclusive_hotspots
+                    .truncate(MAX_LAYOUT_HOTSPOTS);
             }
         }
 

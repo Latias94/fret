@@ -4141,6 +4141,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub layout_hotspots: Vec<UiLayoutHotspotV1>,
     #[serde(default)]
+    pub layout_inclusive_hotspots: Vec<UiLayoutHotspotV1>,
+    #[serde(default)]
     pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
     #[serde(default)]
     pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
@@ -4422,6 +4424,11 @@ impl UiTreeDebugSnapshotV1 {
                 .collect(),
             layout_hotspots: ui
                 .debug_layout_hotspots()
+                .iter()
+                .map(UiLayoutHotspotV1::from_hotspot)
+                .collect(),
+            layout_inclusive_hotspots: ui
+                .debug_layout_inclusive_hotspots()
                 .iter()
                 .map(UiLayoutHotspotV1::from_hotspot)
                 .collect(),

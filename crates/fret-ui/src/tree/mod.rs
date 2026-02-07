@@ -1593,6 +1593,7 @@ pub struct UiTree<H: UiHost> {
     debug_paint_widget_exclusive_started: Option<Instant>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_inclusive_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_stack: Vec<DebugLayoutStackFrame>,
     debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
     debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
@@ -2026,6 +2027,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_paint_widget_exclusive_started: None,
             debug_layout_engine_solves: Vec::new(),
             debug_layout_hotspots: Vec::new(),
+            debug_layout_inclusive_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
@@ -2389,6 +2391,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_layout_hotspots.clear();
+        self.debug_layout_inclusive_hotspots.clear();
         self.debug_layout_stack.clear();
         self.debug_widget_measure_hotspots.clear();
         self.debug_widget_measure_stack.clear();
@@ -3176,6 +3179,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layout_hotspots.as_slice()
+    }
+
+    pub fn debug_layout_inclusive_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_inclusive_hotspots.as_slice()
     }
 
     pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
