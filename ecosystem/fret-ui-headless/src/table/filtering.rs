@@ -369,6 +369,7 @@ pub fn filter_row_model<'a, TData>(
     let mut out_root_rows: Vec<RowIndex> = Vec::new();
     let mut out_flat_rows: Vec<RowIndex> = Vec::new();
     let mut out_rows_by_key: HashMap<RowKey, RowIndex> = HashMap::new();
+    let mut out_rows_by_id: HashMap<super::RowId, RowIndex> = HashMap::new();
     let mut out_arena: Vec<super::Row<'a, TData>> = Vec::new();
 
     fn recurse<'a, TData>(
@@ -378,6 +379,7 @@ pub fn filter_row_model<'a, TData>(
         original: RowIndex,
         out_flat_rows: &mut Vec<RowIndex>,
         out_rows_by_key: &mut HashMap<RowKey, RowIndex>,
+        out_rows_by_id: &mut HashMap<super::RowId, RowIndex>,
         out_arena: &mut Vec<super::Row<'a, TData>>,
     ) -> Option<RowIndex> {
         let row = source.row(original)?;
@@ -391,6 +393,7 @@ pub fn filter_row_model<'a, TData>(
                 *child,
                 out_flat_rows,
                 out_rows_by_key,
+                out_rows_by_id,
                 out_arena,
             ) {
                 included_children.push(child_new);
@@ -405,6 +408,7 @@ pub fn filter_row_model<'a, TData>(
 
         let new_index = out_arena.len();
         out_arena.push(super::Row {
+            id: row.id.clone(),
             key: row.key,
             original: row.original,
             index: row.index,
@@ -415,6 +419,7 @@ pub fn filter_row_model<'a, TData>(
         });
         out_flat_rows.push(new_index);
         out_rows_by_key.insert(row.key, new_index);
+        out_rows_by_id.insert(row.id.clone(), new_index);
 
         for &child in &included_children {
             if let Some(child_row) = out_arena.get_mut(child) {
@@ -437,6 +442,7 @@ pub fn filter_row_model<'a, TData>(
             root,
             &mut out_flat_rows,
             &mut out_rows_by_key,
+            &mut out_rows_by_id,
             &mut out_arena,
         ) {
             out_root_rows.push(new_root);
@@ -447,6 +453,7 @@ pub fn filter_row_model<'a, TData>(
         root_rows: out_root_rows,
         flat_rows: out_flat_rows,
         rows_by_key: out_rows_by_key,
+        rows_by_id: out_rows_by_id,
         arena: out_arena,
     }
 }

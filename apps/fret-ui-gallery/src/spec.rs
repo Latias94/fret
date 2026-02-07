@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::docs;
+use fret_kit::mvu::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
@@ -56,37 +57,20 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
 
 #[cfg(target_arch = "wasm32")]
 fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    fn find_key_value(raw: &str, key: &str) -> Option<String> {
-        let raw = raw.trim();
-        if raw.is_empty() {
-            return None;
-        }
+    let location = fret_router::web::current_location()?;
 
-        for part in raw.split('&') {
-            let (k, v) = part.split_once('=').unwrap_or((part, ""));
-            if k.trim() == key {
-                let v = v.trim();
-                if v.is_empty() {
-                    return None;
-                }
-                return Some(v.to_string());
-            }
-        }
-        None
-    }
-
-    let window = web_sys::window()?;
-    let location = window.location();
-    let search = location.search().ok().unwrap_or_default();
-    let hash = location.hash().ok().unwrap_or_default();
-
-    let search = search.strip_prefix('?').unwrap_or(search.as_str());
-    let hash = hash.strip_prefix('#').unwrap_or(hash.as_str());
-
-    let id = find_key_value(search, "page")
-        .or_else(|| find_key_value(hash, "page"))
-        .or_else(|| find_key_value(search, "start_page"))
-        .or_else(|| find_key_value(hash, "start_page"))?;
+    let id = fret_router::first_query_value_from_search_or_hash(
+        &location.search,
+        &location.hash,
+        "page",
+    )
+    .or_else(|| {
+        fret_router::first_query_value_from_search_or_hash(
+            &location.search,
+            &location.hash,
+            "start_page",
+        )
+    })?;
 
     ui_gallery_start_page_from_id(&id)
 }
@@ -387,6 +371,20 @@ pub(crate) const CMD_APP_SETTINGS_APPLY: &str = "ui_gallery.app.settings.apply";
 pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings.write_project";
 pub(crate) const CMD_APP_TOGGLE_PREFERENCES_ENABLED: &str =
     "ui_gallery.app.preferences.toggle_enabled";
+
+pub(crate) const CMD_MENU_BAR_OS_AUTO: &str = "ui_gallery.menu_bar.os.auto";
+pub(crate) const CMD_MENU_BAR_OS_ON: &str = "ui_gallery.menu_bar.os.on";
+pub(crate) const CMD_MENU_BAR_OS_OFF: &str = "ui_gallery.menu_bar.os.off";
+
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_AUTO: &str = "ui_gallery.menu_bar.in_window.auto";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_ON: &str = "ui_gallery.menu_bar.in_window.on";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_OFF: &str = "ui_gallery.menu_bar.in_window.off";
+
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_ADD: &str = "ui_gallery.debug.recent.add";
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_CLEAR: &str = "ui_gallery.debug.recent.clear";
+pub(crate) const CMD_GALLERY_DEBUG_WINDOW_OPEN: &str = "ui_gallery.debug.window.open";
+pub(crate) const CMD_GALLERY_RECENT_OPEN_PREFIX: &str = "ui_gallery.recent.open.";
+pub(crate) const CMD_GALLERY_WINDOW_ACTIVATE_PREFIX: &str = "ui_gallery.window.activate.";
 
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
@@ -1840,36 +1838,26 @@ pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     by_command.get(command).copied()
 }
 
-struct DataGridCommands {
-    by_row: Vec<CommandId>,
-    row_by_command: HashMap<Arc<str>, u64>,
-}
-
-fn data_grid_commands() -> &'static DataGridCommands {
-    static COMMANDS: OnceLock<DataGridCommands> = OnceLock::new();
-    COMMANDS.get_or_init(|| {
-        let mut by_row: Vec<CommandId> = Vec::with_capacity(DATA_GRID_ROWS);
-        let mut row_by_command: HashMap<Arc<str>, u64> = HashMap::with_capacity(DATA_GRID_ROWS);
-
-        for row in 0..DATA_GRID_ROWS {
-            let cmd = CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"));
-            row_by_command.insert(cmd.0.clone(), row as u64);
-            by_row.push(cmd);
-        }
-
-        DataGridCommands {
-            by_row,
-            row_by_command,
-        }
-    })
+fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
+    let lock = ROUTER.get_or_init(|| {
+        Mutex::new(KeyedMessageRouter::new(
+            CMD_DATA_GRID_ROW_PREFIX.to_string(),
+        ))
+    });
+    let mut guard = lock
+        .lock()
+        .expect("ui-gallery data-grid row router lock poisoned");
+    f(&mut guard)
 }
 
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
-    data_grid_commands().by_row.get(row).cloned()
+    let row = u64::try_from(row).ok()?;
+    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
 }
 
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    data_grid_commands().row_by_command.get(command).copied()
+    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
 }
 
 pub(crate) fn page_meta(

@@ -5,7 +5,6 @@
 
 use fret_core::{Color, Edges, Px};
 use fret_ui::Theme;
-use fret_ui::theme::CubicBezier;
 
 pub(crate) fn plain_container_background(theme: &Theme) -> Color {
     theme
@@ -42,32 +41,69 @@ pub(crate) fn max_width(theme: &Theme) -> Px {
     Px(240.0)
 }
 
+pub(crate) fn rich_container_background(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.rich-tooltip.container.color")
+        .or_else(|| theme.color_by_key("md.sys.color.surface-container"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.surface-container"))
+}
+
+pub(crate) fn rich_container_shadow_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.rich-tooltip.container.shadow-color")
+        .or_else(|| theme.color_by_key("md.sys.color.shadow"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
+}
+
+pub(crate) fn rich_container_elevation(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.rich-tooltip.container.elevation")
+        .unwrap_or(Px(3.0))
+}
+
+pub(crate) fn rich_container_shape_radius(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.rich-tooltip.container.shape")
+        .unwrap_or(Px(12.0))
+}
+
+pub(crate) fn rich_container_padding(theme: &Theme) -> Edges {
+    let _ = theme;
+    Edges {
+        left: Px(16.0),
+        right: Px(16.0),
+        top: Px(12.0),
+        bottom: Px(12.0),
+    }
+}
+
+pub(crate) fn rich_text_gap(theme: &Theme) -> Px {
+    let _ = theme;
+    Px(4.0)
+}
+
+pub(crate) fn rich_subhead_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.rich-tooltip.subhead.color")
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+}
+
+pub(crate) fn rich_supporting_text_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("md.comp.rich-tooltip.supporting-text.color")
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+}
+
 pub(crate) fn shadow_color(theme: &Theme) -> Color {
     theme
         .color_by_key("md.sys.color.shadow")
         .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
 }
 
-pub(crate) fn open_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(100)
-}
-
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
     theme
         .duration_ms_by_key("md.sys.motion.duration.short1")
         .unwrap_or(50)
-}
-
-pub(crate) fn easing(theme: &Theme) -> CubicBezier {
-    theme
-        .easing_by_key("md.sys.motion.easing.emphasized")
-        .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
-        .unwrap_or(CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        })
 }

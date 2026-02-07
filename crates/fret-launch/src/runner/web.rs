@@ -1636,6 +1636,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
 
         self.scene.clear();
+        let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
+            .is_some_and(|v| !v.is_empty())
+            || std::env::var_os("FRET_RENDER_TEXT_DEBUG").is_some_and(|v| !v.is_empty());
+        if render_text_diag_enabled {
+            gfx.renderer.begin_text_diagnostics_frame();
+        }
         self.driver.render(WinitRenderContext {
             app: &mut self.app,
             services: &mut gfx.renderer,
@@ -1698,6 +1704,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 viewport_size: gfx.surface_state.size(),
             },
         );
+        if render_text_diag_enabled {
+            self.app
+                .set_global(gfx.renderer.text_diagnostics_snapshot(self.frame_id));
+        }
 
         let mut submit: Vec<wgpu::CommandBuffer> = engine.command_buffers;
         submit.push(cmd);

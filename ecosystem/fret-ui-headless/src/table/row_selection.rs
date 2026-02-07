@@ -374,6 +374,7 @@ pub fn select_rows_fn<'a, TData>(
     let mut out_root_rows: Vec<RowIndex> = Vec::new();
     let mut out_flat_rows: Vec<RowIndex> = Vec::new();
     let mut out_rows_by_key: HashMap<RowKey, RowIndex> = HashMap::new();
+    let mut out_rows_by_id: HashMap<super::RowId, RowIndex> = HashMap::new();
     let mut out_arena: Vec<super::Row<'a, TData>> = Vec::new();
 
     fn recurse<'a, TData>(
@@ -383,6 +384,7 @@ pub fn select_rows_fn<'a, TData>(
         out_root_rows: &mut Vec<RowIndex>,
         out_flat_rows: &mut Vec<RowIndex>,
         out_rows_by_key: &mut HashMap<RowKey, RowIndex>,
+        out_rows_by_id: &mut HashMap<super::RowId, RowIndex>,
         out_arena: &mut Vec<super::Row<'a, TData>>,
         parent_new: Option<RowIndex>,
         is_root: bool,
@@ -393,6 +395,7 @@ pub fn select_rows_fn<'a, TData>(
         if selected {
             let new_index = out_arena.len();
             out_arena.push(super::Row {
+                id: row.id.clone(),
                 key: row.key,
                 original: row.original,
                 index: row.index,
@@ -403,6 +406,7 @@ pub fn select_rows_fn<'a, TData>(
             });
             out_flat_rows.push(new_index);
             out_rows_by_key.insert(row.key, new_index);
+            out_rows_by_id.insert(row.id.clone(), new_index);
             if is_root {
                 out_root_rows.push(new_index);
             }
@@ -416,6 +420,7 @@ pub fn select_rows_fn<'a, TData>(
                     out_root_rows,
                     out_flat_rows,
                     out_rows_by_key,
+                    out_rows_by_id,
                     out_arena,
                     Some(new_index),
                     false,
@@ -436,6 +441,7 @@ pub fn select_rows_fn<'a, TData>(
                     out_root_rows,
                     out_flat_rows,
                     out_rows_by_key,
+                    out_rows_by_id,
                     out_arena,
                     None,
                     false,
@@ -453,6 +459,7 @@ pub fn select_rows_fn<'a, TData>(
             &mut out_root_rows,
             &mut out_flat_rows,
             &mut out_rows_by_key,
+            &mut out_rows_by_id,
             &mut out_arena,
             None,
             true,
@@ -463,6 +470,7 @@ pub fn select_rows_fn<'a, TData>(
         root_rows: out_root_rows,
         flat_rows: out_flat_rows,
         rows_by_key: out_rows_by_key,
+        rows_by_id: out_rows_by_id,
         arena: out_arena,
     }
 }

@@ -596,6 +596,8 @@ impl<H: UiHost> UiTree<H> {
             && !any_root_needs_layout_or_bounds
             && !any_view_cache_root_needs_layout
             && !any_pending_barrier_needs_layout
+            && self.invalidated_paint_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
         {
             self.pending_barrier_relayouts.retain(|&root| {
                 self.nodes

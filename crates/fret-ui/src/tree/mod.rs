@@ -1567,6 +1567,8 @@ pub struct UiTree<H: UiHost> {
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
     replaying_pending_shortcut: bool,
+    alt_menu_bar_arm_key: Option<KeyCode>,
+    alt_menu_bar_canceled: bool,
     observed_in_layout: ObservationIndex,
     observed_in_paint: ObservationIndex,
     observed_globals_in_layout: GlobalObservationIndex,
@@ -2002,6 +2004,8 @@ impl<H: UiHost> Default for UiTree<H> {
             suppress_text_input_until_key_up: None,
             pending_shortcut: PendingShortcut::default(),
             replaying_pending_shortcut: false,
+            alt_menu_bar_arm_key: None,
+            alt_menu_bar_canceled: false,
             observed_in_layout: ObservationIndex::default(),
             observed_in_paint: ObservationIndex::default(),
             observed_globals_in_layout: GlobalObservationIndex::default(),
@@ -4207,7 +4211,9 @@ impl<H: UiHost> UiTree<H> {
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
-        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 
@@ -4221,6 +4227,9 @@ impl<H: UiHost> UiTree<H> {
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 

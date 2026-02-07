@@ -12,7 +12,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
     TextWrap, Transform2D,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnPressablePointerDown, PointerDownCx, PressablePointerDownResult};
 use fret_ui::element::{
@@ -21,13 +21,14 @@ use fret_ui::element::{
     TextProps, VisualTransformProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{GlobalElementId, Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot_with,
 };
 
 use crate::foundation::floating_label;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
@@ -960,21 +961,6 @@ impl TextField {
                 )]
             })
         })
-    }
-}
-
-fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
-    let resolved = cx
-        .app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
-        });
-
-    match resolved {
-        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
     }
 }
 

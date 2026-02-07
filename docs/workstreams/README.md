@@ -10,8 +10,13 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/localization-i18n-v1.md`
+- `docs/workstreams/localization-i18n-v1-todo.md`
 - `docs/workstreams/state-management-v1.md`
 - `docs/workstreams/state-management-v1-todo.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1-todo.md`
+- `docs/workstreams/imui-state-integration-v1.md`
 - `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
 - `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
@@ -57,3 +62,5 @@ Active workstreams:
 - `docs/workstreams/execution-concurrency-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`
+- `docs/workstreams/router-v1.md`
+- `docs/workstreams/router-v1-todo.md`

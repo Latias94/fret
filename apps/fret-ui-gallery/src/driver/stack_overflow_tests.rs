@@ -122,7 +122,9 @@ fn nav_to_datatable_does_not_stack_overflow_without_gc_sweep() {
 
     let cmd = CommandId::new(CMD_NAV_DATA_TABLE);
     eprintln!("nav: data_table");
-    assert!(UiGalleryDriver::handle_nav_command(&mut app, &state, &cmd));
+    assert!(UiGalleryDriver::handle_nav_command(
+        &mut app, &mut state, window, &cmd
+    ));
 
     app.set_frame_id(FrameId(2));
     eprintln!("frame2: data_table");
@@ -155,7 +157,9 @@ fn nav_to_datatable_does_not_stack_overflow_with_immediate_gc_sweep() {
 
     let cmd = CommandId::new(CMD_NAV_DATA_TABLE);
     eprintln!("nav: data_table");
-    assert!(UiGalleryDriver::handle_nav_command(&mut app, &state, &cmd));
+    assert!(UiGalleryDriver::handle_nav_command(
+        &mut app, &mut state, window, &cmd
+    ));
 
     app.set_frame_id(FrameId(2));
     eprintln!("frame2: data_table (gc sweep)");
@@ -224,7 +228,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
     let cmd_nav = CommandId::new(CMD_NAV_DATA_TABLE);
     eprintln!("nav: data_table");
     assert!(UiGalleryDriver::handle_nav_command(
-        &mut app, &state, &cmd_nav
+        &mut app, &mut state, window, &cmd_nav,
     ));
 
     app.set_frame_id(FrameId(2));
@@ -341,7 +345,7 @@ fn nav_to_datatable_repro_on_small_stack() {
             let cmd_nav = CommandId::new(CMD_NAV_DATA_TABLE);
             eprintln!("nav: data_table (small stack)");
             assert!(UiGalleryDriver::handle_nav_command(
-                &mut app, &state, &cmd_nav
+                &mut app, &mut state, window, &cmd_nav,
             ));
 
             app.set_frame_id(FrameId(2));

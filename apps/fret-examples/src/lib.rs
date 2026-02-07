@@ -1,4 +1,4 @@
-#[cfg(not(target_arch = "wasm32"))]
+﻿#[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
@@ -65,9 +65,13 @@ pub mod ime_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_editor_proof_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod imui_floating_windows_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod imui_hello_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
 pub mod imui_node_graph_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod imui_response_signals_demo;
 pub mod inf_lines_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -106,15 +110,10 @@ pub mod tags_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod todo_foreign_iced_style_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod todo_interop_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod todo_interop_kit_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod todo_mvu_demo;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod todo_mvu_interop_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
 pub mod workspace_shell_demo;

@@ -65,6 +65,8 @@ pub use fret_core::{
     ImageEncoding, TransferFunction, YuvMatrix,
 };
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
+pub use fret_i18n;
+pub use fret_i18n_fluent;
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
     TextBoundaryMode, format_chord, format_sequence,
@@ -79,7 +81,8 @@ pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, P
 pub use menu::{
     ItemAnchor, ItemSelector, ItemSelectorTyped, Menu, MenuBar, MenuBarConfig, MenuBarError,
     MenuBarFileV1, MenuBarFileV2, MenuBarPatch, MenuBarPatchOp, MenuFileV1, MenuFileV2, MenuItem,
-    MenuItemFileV1, MenuItemFileV2, MenuRole, MenuTarget, SystemMenuType,
+    MenuItemFileV1, MenuItemFileV2, MenuItemToggle, MenuItemToggleKind, MenuRole, MenuTarget,
+    SystemMenuType,
 };
 pub use model::{
     Model, ModelChangedDebugInfo, ModelCreatedDebugInfo, ModelCx, ModelHost, ModelId, ModelStore,

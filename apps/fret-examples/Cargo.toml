@@ -23,7 +23,7 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "ui-app-driver", "ui-app-command-palette", "ui-assets", "diagnostics"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-docking = { path = "../../ecosystem/fret-docking", features = ["imui"] }
-fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn", features = ["state-query"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
 fret-imui = { path = "../../ecosystem/fret-imui" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }

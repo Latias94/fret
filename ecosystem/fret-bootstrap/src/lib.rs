@@ -49,9 +49,6 @@ use fret_app::config_files::LayeredConfigPaths;
 use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
 use fret_icons::IconRegistry;
 
-#[cfg(feature = "preload-icon-svgs")]
-mod icon_preload;
-
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
     #[error(transparent)]
@@ -73,8 +70,7 @@ pub fn apply_settings(
     config: &mut fret_launch::WinitRunnerConfig,
     settings: &SettingsFileV1,
 ) {
-    app.set_global(settings.clone());
-    app.set_global(settings.docking_interaction_settings());
+    fret_app::settings::apply_settings_globals(app, settings);
     config.text_font_families = settings.fonts.clone();
 }
 
@@ -108,8 +104,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         });
 
         self.inner = self.inner.init_app(move |app| {
-            app.set_global(settings.clone());
-            app.set_global(settings.docking_interaction_settings());
+            fret_app::settings::apply_settings_globals(app, &settings);
             fret_app::sync_os_menu_bar(app);
         });
 
@@ -133,8 +128,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         });
 
         self.inner = self.inner.init_app(move |app| {
-            app.set_global(settings.clone());
-            app.set_global(settings.docking_interaction_settings());
+            fret_app::settings::apply_settings_globals(app, &settings);
             fret_app::sync_os_menu_bar(app);
         });
 
@@ -349,8 +343,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Register an icon pack (e.g. `fret_icons_lucide::register_icons`) into the global `IconRegistry`.
     pub fn register_icon_pack(mut self, register: fn(&mut IconRegistry)) -> Self {
         self.inner = self.inner.init_app(move |app| {
-            app.with_global_mut(IconRegistry::default, |icons, _app| {
+            app.with_global_mut(IconRegistry::default, |icons, app| {
                 register(icons);
+                let frozen =
+                    icons.freeze_or_default_with_context("fret_bootstrap.register_icon_pack");
+                app.set_global(frozen);
             });
         });
         self
@@ -378,7 +375,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.on_gpu_ready_hooks
             .push(Box::new(|app, _context, renderer| {
                 let services = renderer as &mut dyn fret_core::UiServices;
-                icon_preload::preload_icon_svgs(app, services);
+                fret_ui_kit::declarative::icon::preload_icon_svgs(app, services);
             }));
         self
     }

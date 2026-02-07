@@ -177,6 +177,12 @@ Undo/redo:
 
 - Adopt ADR 0192 retained windowed hosts for composable per-row subtrees (when needed).
 
+## Evidence anchors (implementation)
+
+- Ecosystem split (buffer/view/surface): `ecosystem/fret-code-editor-buffer/src/lib.rs`, `ecosystem/fret-code-editor-view/src/lib.rs`, `ecosystem/fret-code-editor/src/lib.rs`.
+- Windowed surface + per-row text shaping/caching (no monolithic document blob): `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditor::into_element`), `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_row`, `cached_row_text`, `cached_row_syntax_spans`, `materialize_row_rich_text`).
+- Harness + regression tests: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`, `PAGE_CODE_EDITOR_TORTURE`), `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture`), `ecosystem/fret-code-editor/src/editor/tests/mod.rs`.
+
 ## License Notes
 
 Zed is licensed under copyleft terms (AGPL/GPL files are present in `repo-ref/zed`), and key editor crates declare GPL-compatible licenses in their manifests. This ADR treats Zed/GPUI only as a behavioral/architectural reference. Implementations in Fret must be original and must not copy Zed source code.

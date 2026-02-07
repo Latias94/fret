@@ -1,4 +1,4 @@
-# ADR 0189: Foreign UI Embedding via Isolated Surfaces
+﻿# ADR 0189: Foreign UI Embedding via Isolated Surfaces
 
 Date: 2026-01-21  
 Status: Proposed  
@@ -8,7 +8,7 @@ Owners: Fret team
 
 Fret targets editor-grade applications and explicitly supports embedding engine viewports and other GPU-produced content via `RenderTargetId` + `SceneOp::ViewportSurface` (ADR 0007) and viewport input forwarding (ADR 0025 / ADR 0147).
 
-As the ecosystem grows, users will ask for “using Fret together with other UI ecosystems” (e.g. Iced, egui, engine debug UIs, custom wgpu renderers). The high-risk failure mode is to attempt to merge two widget trees into a single semantics/focus/IME/invalidation model, which tends to:
+As the ecosystem grows, users will ask for 鈥渦sing Fret together with other UI ecosystems鈥?(e.g. Iced, egui, engine debug UIs, custom wgpu renderers). The high-risk failure mode is to attempt to merge two widget trees into a single semantics/focus/IME/invalidation model, which tends to:
 
 - bloat kernel contracts (`crates/*`) with policy and third-party semantics,
 - create unclear ownership boundaries for focus, IME composition, and accessibility,
@@ -23,14 +23,14 @@ Fret supports **foreign UI integration only via isolated embedding surfaces**:
 - Foreign UI is rendered into an app-owned offscreen render target (`ViewportRenderTarget`).
 - Fret composites that target into the UI scene via `ViewportSurface`.
 - Pointer/keyboard input can be forwarded to the embedded surface using `ViewportInputEvent`, with explicit mapping and capture rules.
-- **Focus/IME/a11y are not shared across runtimes**. The embedded foreign UI is treated as an isolated surface from the perspective of Fret’s semantics tree and input routing.
+- **Focus/IME/a11y are not shared across runtimes**. The embedded foreign UI is treated as an isolated surface from the perspective of Fret鈥檚 semantics tree and input routing.
 
 Any ergonomics helpers to reduce boilerplate must live in ecosystem crates (e.g. `fret-kit`, `fret-ui-kit`), not in kernel crates.
 
 ## Goals
 
 - Provide a safe, stable interop story that does not compromise kernel boundaries.
-- Make the “Tier A” integration path (engine viewports / GPU-heavy panels) the default for foreign UI.
+- Make the 鈥淭ier A鈥?integration path (engine viewports / GPU-heavy panels) the default for foreign UI.
 - Keep room for future improvements (better tooling, more helpers) without changing the kernel contract.
 
 ## Non-goals
@@ -39,7 +39,7 @@ Any ergonomics helpers to reduce boilerplate must live in ecosystem crates (e.g.
 - Providing a universal bridge for IME composition or text selection across runtimes.
 - Guaranteeing perfect behavioral parity between foreign UI frameworks.
 
-## Contract (What “Supported” Means)
+## Contract (What 鈥淪upported鈥?Means)
 
 ### Supported (Isolated embedding)
 
@@ -52,19 +52,19 @@ Any ergonomics helpers to reduce boilerplate must live in ecosystem crates (e.g.
 **Input**
 
 - Fret forwards viewport-mapped events as `ViewportInputEvent` (window + mapping + UV + px).
-- The host may translate those events into the foreign UI’s input model.
+- The host may translate those events into the foreign UI鈥檚 input model.
 - Pointer capture may be used to continue forwarding move/up outside the surface bounds (ADR 0049 / ADR 0168).
 
 **Boundaries**
 
-- Fret’s semantics snapshot may expose the embedded surface as a single semantic node (e.g. `SemanticsRole::Viewport`) with a label/test id, but does not attempt to expose the foreign UI’s internal accessibility tree.
+- Fret鈥檚 semantics snapshot may expose the embedded surface as a single semantic node (e.g. `SemanticsRole::Viewport`) with a label/test id, but does not attempt to expose the foreign UI鈥檚 internal accessibility tree.
 - Fret does not guarantee foreign UI focus/IME correctness; foreign UI may implement its own focus within the embedded surface if needed.
 
 ### Not supported (Widget tree mixing)
 
 These are explicitly out of scope for the kernel:
 
-- sharing the foreign UI’s internal hit-testing as part of Fret’s hit test,
+- sharing the foreign UI鈥檚 internal hit-testing as part of Fret鈥檚 hit test,
 - merging two accessibility trees into one snapshot,
 - unified keyboard focus traversal across runtimes,
 - unified text input/IME composition across runtimes.
@@ -74,8 +74,8 @@ These are explicitly out of scope for the kernel:
 Use a golden-path driver hook surface and keep the embedding policy centralized:
 
 - Use `UiAppDriver::viewport_input(...)` to forward viewport input into a single handler.
-- Use `UiAppDriver::record_engine_frame(...)` (ADR 0038) to record the foreign UI’s GPU pass into the offscreen target.
-- Use `fret-ui-kit`’s declarative `viewport_surface_panel` to present the target in UI.
+- Use `UiAppDriver::record_engine_frame(...)` (ADR 0038) to record the foreign UI鈥檚 GPU pass into the offscreen target.
+- Use `fret-ui-kit`鈥檚 declarative `viewport_surface_panel` to present the target in UI.
 - Prefer `fret-kit` helpers to reduce boilerplate without changing kernel contracts.
 
 ### `fret-kit` helper surface
@@ -96,7 +96,7 @@ It provides two integration styles (both keep semantics/focus/IME isolated):
    - The app registers it per window using `set_foreign_ui(app, window, ui)`.
    - Driver wiring is one call: `EmbeddedViewportForeignUiAppDriverExt::drive_embedded_viewport_foreign()` (or MVU variant).
 
-This design keeps the “interop contract” explicit (render target + input forwarding) and allows adapters for
+This design keeps the 鈥渋nterop contract鈥?explicit (render target + input forwarding) and allows adapters for
 other ecosystems (Iced/egui/custom wgpu passes) without pulling their semantics or layout models into the kernel.
 ## Alternatives Considered
 
@@ -104,7 +104,7 @@ other ecosystems (Iced/egui/custom wgpu passes) without pulling their semantics 
 
 Pros:
 
-- “Feels native” if it worked perfectly.
+- 鈥淔eels native鈥?if it worked perfectly.
 
 Cons:
 
@@ -141,5 +141,5 @@ Deferred (not a replacement for the core embedding story).
 - Viewport tool capture and overlays: `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`, `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`
 - Ecosystem helpers: `ecosystem/fret-kit/src/interop/embedded_viewport.rs`
 - Examples:
-  - `apps/fret-examples/src/todo_interop_kit_demo.rs` (host-recorded embedded surface)
-  - `apps/fret-examples/src/todo_foreign_iced_style_demo.rs` (foreign UI hosted per-window)
+  - `apps/fret-examples/src/imui_editor_proof_demo.rs` (host-recorded embedded surface)
+  - `ecosystem/fret-kit/src/interop/embedded_viewport.rs` (`EmbeddedViewportForeignUi`, `set_foreign_ui`, `drive_embedded_viewport_foreign`)

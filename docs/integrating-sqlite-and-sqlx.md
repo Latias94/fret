@@ -49,6 +49,12 @@ Treat a DB read like any other “resource”:
 - returns a typed value `T`,
 - cached behind `QueryClient`, observable via `Model<QueryState<T>>`.
 
+Lifecycle reminder (ADR 1164 semantics):
+
+- `stale_time` gates freshness only,
+- `cache_time` controls retention/GC,
+- automatic refresh should be explicit (`invalidate`/`refetch`/polling), not implied by `stale_time`.
+
 ### Example: load a list of todos
 
 ```rust
@@ -72,7 +78,8 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
         .0
         .clone();
 
-    let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &());
+    const TODOS_NS: &str = "my_app.db.todos.v1";
+    let key = QueryKey::<Vec<TodoRow>>::new(TODOS_NS, &());
     let policy = QueryPolicy {
         retry: QueryRetryPolicy::exponential(
             3,
@@ -124,6 +131,28 @@ The easiest building blocks are:
 
 - `fret_executor::Executors::spawn_future_to_inbox(...)`
 - `fret_executor::Inbox + InboxDrainer`
+
+### Canonical invalidation pattern (recommended)
+
+Use this as the default contract for SQLx + `fret-query`:
+
+1. Run mutation in background.
+2. Send `MutationCommitted` to inbox.
+3. At driver boundary apply, call `invalidate_namespace("my_app.db.todos.v1")`.
+4. On next render, active `use_query(...)` handles refetch because data is stale.
+
+This keeps read keys stable and avoids key churn.
+
+```rust
+const TODOS_NS: &str = "my_app.db.todos.v1";
+
+fn on_mutation_committed(app: &mut fret_app::App, window: fret_core::AppWindowId) {
+    let _ = fret_query::with_query_client(app, |client, _app| {
+        client.invalidate_namespace(TODOS_NS);
+    });
+    app.request_redraw(window);
+}
+```
 
 Important constraint: inbox drainers apply messages through `InboxDrainHost`, which is intentionally
 **not** a full `UiHost` surface. This means mutation completion should typically update a *model*
@@ -234,14 +263,17 @@ cx.with_state(|| 0u64, |last_epoch| {
     if *last_epoch != epoch {
         *last_epoch = epoch;
         let _ = fret_query::with_query_client(cx.app, |client, _app| {
-            client.invalidate_namespace("my_app.db.todos.v1");
+            client.invalidate_namespace(TODOS_NS);
         });
         cx.app.request_redraw(cx.window);
     }
 });
 
-let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &());
+let key = QueryKey::<Vec<TodoRow>>::new(TODOS_NS, &());
 ```
+
+In practice, prefer direct invalidation on mutation completion first. Add `db_epoch` only when you
+need to fan out invalidation triggers from multiple non-query subsystems.
 
 ## 3) Transactions and consistency
 

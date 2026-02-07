@@ -309,6 +309,33 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             *last_to = to.clone();
             true
         }
+        (
+            GraphOp::SetStickyNoteText {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetStickyNoteText { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetStickyNoteRect {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetStickyNoteRect { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetStickyNoteColor {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetStickyNoteColor { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
         _ => false,
     }
 }
@@ -353,6 +380,9 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetGroupRect { from, to, .. } => from == to,
         GraphOp::SetGroupTitle { from, to, .. } => from == to,
         GraphOp::SetGroupColor { from, to, .. } => from == to,
+        GraphOp::SetStickyNoteText { from, to, .. } => from == to,
+        GraphOp::SetStickyNoteRect { from, to, .. } => from == to,
+        GraphOp::SetStickyNoteColor { from, to, .. } => from == to,
 
         GraphOp::AddNode { .. }
         | GraphOp::RemoveNode { .. }

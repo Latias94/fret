@@ -1,7 +1,7 @@
 use super::{ColumnResizeDirection, ColumnResizeMode, GroupedColumnMode};
 
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TableOptions {
     /// Enables/disables pinning features globally (TanStack `enablePinning`).
     pub enable_pinning: bool,

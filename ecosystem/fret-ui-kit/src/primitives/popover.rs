@@ -370,7 +370,7 @@ pub fn popover_request_with_anchor(
     if let Some(anchor) = anchor
         && anchor != trigger
     {
-        request.dismissable_branches.push(anchor);
+        request = request.add_dismissable_branch(anchor);
     }
     request
 }

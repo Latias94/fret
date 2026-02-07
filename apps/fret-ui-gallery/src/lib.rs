@@ -1,5 +1,6 @@
 mod docs;
 mod driver;
+mod harness;
 mod spec;
 
 mod ui;

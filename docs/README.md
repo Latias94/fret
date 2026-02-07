@@ -25,6 +25,7 @@ contracts early to avoid large rewrites later.
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`

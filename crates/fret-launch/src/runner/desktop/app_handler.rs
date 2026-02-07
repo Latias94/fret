@@ -882,6 +882,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         scale_factor = scale_factor,
                     );
                     let _render_guard = render_span.enter();
+                    let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
+                        .is_some_and(|v| !v.is_empty())
+                        || std::env::var_os("FRET_RENDER_TEXT_DEBUG")
+                            .is_some_and(|v| !v.is_empty());
+                    if render_text_diag_enabled {
+                        renderer.begin_text_diagnostics_frame();
+                    }
                     self.driver.render(WinitRenderContext {
                         app: &mut self.app,
                         services: renderer as &mut dyn fret_core::UiServices,
@@ -1013,6 +1020,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 viewport_size: state.surface.size(),
                             },
                         );
+                        if render_text_diag_enabled {
+                            self.app
+                                .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
+                        }
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
                             .is_some_and(|v| !v.is_empty());

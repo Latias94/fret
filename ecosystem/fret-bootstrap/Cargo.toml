@@ -28,7 +28,7 @@ ui-app-driver = [
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
-diagnostics = ["tracing", "dep:fret-canvas", "fret-launch/diag-screenshots"]
+diagnostics = ["tracing", "dep:fret-canvas", "dep:fret-query", "fret-launch/diag-screenshots"]
 
 [dependencies]
 thiserror.workspace = true
@@ -48,6 +48,7 @@ fret-render = { path = "../../crates/fret-render" }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
 fret-canvas = { path = "../fret-canvas", optional = true }
+fret-query = { path = "../fret-query", optional = true }
 
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }

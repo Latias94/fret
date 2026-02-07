@@ -1,10 +1,18 @@
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
+    TextBlobId,
 };
-use fret_runtime::CommandId;
-use fret_runtime::{DragSession, DragSessionId, Effect};
+use fret_runtime::ui_host::{
+    CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
+};
+use fret_runtime::{
+    ClipboardToken, CommandId, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect,
+    FrameId, ModelHost, ModelStore, TickId, TimerToken,
+};
 use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
+use std::any::{Any, TypeId};
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use crate::core::{
@@ -62,6 +70,7 @@ mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod is_valid_connection_conformance;
 mod measured_output_store_conformance;
+mod measured_port_anchor_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
 mod node_resize_preview_conformance;
@@ -69,33 +78,31 @@ mod node_sizing_conformance;
 mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
 mod op_batching_determinism_conformance;
+mod overlay_blackboard_conformance;
 mod overlay_group_rename_conformance;
 mod overlay_invalidation_conformance;
 mod overlay_menu_searcher_conformance;
 mod overlay_minimap_controls_conformance;
+mod overlay_symbol_rename_conformance;
 mod overlay_toolbars_conformance;
 mod perf_cache;
 mod perf_cache_prune_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
+mod portal_measured_geometry_conformance;
+mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;
 mod threshold_zoom_conformance;
+mod translate_extent_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
-
-mod harness;
-use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, make_test_graph_two_nodes,
-    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
-    make_test_graph_two_nodes_with_size, read_node_pos,
-};
 
 use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
 use super::NodeGraphCanvas;
@@ -1600,6 +1607,7 @@ fn read_node_pos(
         .flatten()
         .unwrap_or_default()
 }
+
 #[test]
 fn distance_sq_point_to_rect_is_zero_inside_and_positive_outside() {
     let rect = Rect::new(

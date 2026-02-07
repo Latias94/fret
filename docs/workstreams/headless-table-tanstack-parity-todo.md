@@ -69,6 +69,62 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ---
 
+## M0.5 — Capability parity contract (API inventory)
+
+Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstream public API surfaces
+(table/row/column/header/cell) and mapping them to Fret equivalents.
+
+- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
+  - Evidence target: expand “Capability Inventory” in `docs/workstreams/headless-table-tanstack-parity.md`
+    with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
+  - Source of truth:
+    - Core: `repo-ref/table/packages/table-core/src/core/*`
+    - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
+    - Glue/types: `repo-ref/table/packages/table-core/src/types.ts`
+  - Deliverables:
+    - A minimal list of “must-have” APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
+    - A second list of “capability parity” APIs that must exist to avoid being weaker than upstream.
+- [~] HTP-cap-020 Add “capability smoke” gates (compile-time + runtime).
+  - Done (compile-time, smoke): a minimal API-call coverage gate exists.
+    - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
+  - Done (runtime, smoke): RowId-based state resolution and pinning-by-id helpers are covered.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
+  - Remaining (runtime): extend beyond “leaf-only” to cover:
+    - `getRow(id, searchAll?)` id lookup across core/pre-pagination/current models,
+    - grouped row ids (string ids like `role:1`),
+    - id-keyed feature state surfaces (pin/select/expand keyed by `RowId` strings).
+- [~] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
+  - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
+    can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
+  - Planned (staged):
+    - [x] HTP-id-011 Introduce `RowId` type (likely `Arc<str>`) and plumb through state shapes where required.
+      - Done (engine scaffolding): `RowId` and `RowModel.rows_by_id`.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    - [x] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
+      - Done: `TableBuilder::get_row_id` is plumbed and the default RowId strategy matches TanStack (index-path).
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    - [~] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
+      - Done (engine scaffolding): `rows_by_id` is carried through the main row model pipeline for leaf rows.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+      - Remaining (gate): add a fixture-backed gate that asserts `rowsById` semantics beyond smoke coverage.
+    - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+      - Done (partial): grouped rows now carry TanStack-style ids (`col:value` with `>` parent chain),
+        and id → rowKey lookup can resolve grouped ids.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_key_for_id` grouped fallback)
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
+    - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+      - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
+      - Remaining: apply the same pattern across selection/expanding updaters and add grouped-row coverage.
+    - [ ] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
+  - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
+    still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
+
+---
+
 ## M1 — Core types (columns/headers/rows/cells)
 
 - [~] HTP-core-010 Add TanStack-like column tree representation (nested columns).
@@ -111,6 +167,8 @@ ColumnDef keys referenced by upstream feature implementations:
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_state_roundtrip_parity.rs`
   - Covered (as of current gates): sorting, columnFilters, globalFilter (any), pagination, rowSelection,
     grouping, expanded, rowPinning, columnPinning, columnOrder, columnVisibility, columnSizing, columnSizingInfo.
+  - Limitation (to remove under `HTP-id-015`): row-keyed maps currently assume numeric row ids, which is not
+    sufficient for grouped ids (`role:1`) or caller-provided string row ids.
   - Remaining: lossless “presence” (omitted vs explicit default) semantics, and cross-feature interactions that require
     additional option gates/behavior parity.
 - [x] HTP-state-021 Add fixtures that assert state-shape parity for:
@@ -286,6 +344,14 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
+- [~] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
+  - Parity-gated (leaf-row pinning semantics): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Covered: `keepPinnedRows` now respects grouping parents’ expansion state (TanStack’s
+    `row.getIsAllParentsExpanded()` behavior) for leaf pinned rows.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::pinned_row_keys`).
+  - Note: TanStack’s `getCenterRows()` returns grouped “root rows” (string IDs like `role:1`). Until grouping is fully
+    integrated into the main `RowModel` pipeline, we do not parity-gate `row_pinning.center` under grouping.
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -422,6 +488,25 @@ ColumnDef keys referenced by upstream feature implementations:
     - Fixture snapshots: `visord_set_column_order_on_column_order_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnOrderChange`)
 
+### UI integration notes (workstream hygiene)
+
+- [x] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows + grouped path).
+  - Done (initial integration): when row pinning is active, `ecosystem/fret-ui-kit` now computes
+     top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
+     and pagination interactions match the engine contract.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+   - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
+     surfaces pinned rows outside pagination by reordering the flattened visible list into
+     `top + center(page slice) + bottom`.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+- [ ] HTP-ui-rowpin-020 Decide grouped-mode pinning policy and align remaining semantics.
+  - Topics:
+    - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
+    - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
+- [ ] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
+  - Goal: keep header/body column splits (`left/center/right`) and column start/after offsets stable so pinned columns
+    cannot drift and cause misalignment in the UI gallery.
+
 ---
 
 ## M6.5 — Faceting parity
@@ -438,7 +523,13 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M7 — Engine memoization parity + perf gates
 
-- [ ] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+- [~] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+  - Done (first building block, unit-gated): a TanStack-aligned dependency snapshot + memo cache for
+    “filtered + sorted root row order”:
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
+    - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
+  - Remaining: lift this pattern across the full derived row model pipeline (core/filtered/sorted/expanded/paginated),
+    plus a stable external cache surface for rebuild-each-frame callers.
 - [ ] HTP-memo-020 Provide an integration pattern for “rebuild each frame” while retaining memo cache.
   - Candidate designs:
     - external cache passed into a pure “compute” API, or
@@ -481,4 +572,4 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` | `grouping` | `ColumnGrouping` (grouped model + flat row ordering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
-| (todo) `.../auto_reset.json` | `auto_reset` | auto-reset semantics across features (`autoResetAll`, `autoResetPageIndex`, etc.) | (todo) `.../tanstack_v8_auto_reset_parity.rs` | Open |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |

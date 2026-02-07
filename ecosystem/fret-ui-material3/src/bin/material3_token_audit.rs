@@ -715,7 +715,11 @@ fn extract_md_keys_from_material_web_sassvars(
                     // `md.comp.date-picker.modal.header.headline`). To keep `--check` strict while still
                     // allowing these derived keys, also treat the group key as "known" when we see a
                     // typography leaf.
-                    for leaf in ["font", "line-height", "size", "tracking", "weight", "type"] {
+                    //
+                    // Important: do NOT treat `.size` as a typography leaf here. Many non-typography
+                    // keys use `.size` (e.g. icon sizes), and adding their parent keys would produce
+                    // noisy "missing injection" reports that are not meaningful for Fret's token model.
+                    for leaf in ["font", "line-height", "tracking", "weight", "type"] {
                         if let Some(base) = key.strip_suffix(&format!(".{leaf}")) {
                             out.insert(base.to_string());
                         }

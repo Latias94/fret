@@ -43,6 +43,8 @@ Conventions:
   - [x] `menu_select`
   - [x] `drag_to`
   - [x] `set_slider_value`
+- [x] Add a cross-platform keyboard utility step `press_shortcut` (schema v2) with `primary`/`cmd_or_ctrl` aliases for `Ctrl/Cmd` mappings.
+- [x] Add a shortcut-focused repro script (`tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json`) to gate global command shortcuts.
 - [x] Decide location:
   - [x] v2 schema in runtime (`fret-bootstrap`).
 - [x] Add at least one “slider drag” demo script that is robust to DPI and window size (`tools/diag-scripts/ui-gallery-slider-set-value.json`).

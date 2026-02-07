@@ -589,6 +589,20 @@ fn subpixel_bin_y(pos: f32) -> (i32, u8) {
 
 const TEXT_ATLAS_MAX_PAGES: usize = 2;
 
+#[derive(Debug, Default, Clone, Copy)]
+struct GlyphAtlasFramePerf {
+    hits: u64,
+    misses: u64,
+    inserts: u64,
+    evict_glyphs: u64,
+    evict_pages: u64,
+    out_of_space: u64,
+    too_large: u64,
+    pending_uploads: u64,
+    pending_upload_bytes: u64,
+    upload_bytes: u64,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct GlyphAtlasEntry {
     page: u16,
@@ -653,6 +667,8 @@ struct GlyphAtlas {
     pages: Vec<GlyphAtlasPage>,
     glyphs: HashMap<GlyphKey, GlyphAtlasEntry>,
     revision: u64,
+    used_px: u64,
+    perf_frame: GlyphAtlasFramePerf,
     perf: GlyphAtlasPerfStats,
 }
 
@@ -722,7 +738,38 @@ impl GlyphAtlas {
             pages,
             glyphs: HashMap::new(),
             revision: 0,
+            used_px: 0,
+            perf_frame: GlyphAtlasFramePerf::default(),
             perf: GlyphAtlasPerfStats::default(),
+        }
+    }
+
+    fn begin_frame_diagnostics(&mut self) {
+        self.perf_frame = GlyphAtlasFramePerf::default();
+    }
+
+    fn diagnostics_snapshot(&self) -> fret_core::RendererGlyphAtlasPerfSnapshot {
+        let pages = self.pages.len() as u32;
+        let capacity_px = u64::from(self.width)
+            .saturating_mul(u64::from(self.height))
+            .saturating_mul(u64::from(pages.max(1)));
+        fret_core::RendererGlyphAtlasPerfSnapshot {
+            width: self.width,
+            height: self.height,
+            pages,
+            entries: self.glyphs.len() as u64,
+            used_px: self.used_px,
+            capacity_px,
+            frame_hits: self.perf_frame.hits,
+            frame_misses: self.perf_frame.misses,
+            frame_inserts: self.perf_frame.inserts,
+            frame_evict_glyphs: self.perf_frame.evict_glyphs,
+            frame_evict_pages: self.perf_frame.evict_pages,
+            frame_out_of_space: self.perf_frame.out_of_space,
+            frame_too_large: self.perf_frame.too_large,
+            frame_pending_uploads: self.perf_frame.pending_uploads,
+            frame_pending_upload_bytes: self.perf_frame.pending_upload_bytes,
+            frame_upload_bytes: self.perf_frame.upload_bytes,
         }
     }
 
@@ -743,6 +790,7 @@ impl GlyphAtlas {
         self.perf.resets = self.perf.resets.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         self.glyphs.clear();
+        self.used_px = 0;
         for page in &mut self.pages {
             page.allocator = etagere::BucketedAtlasAllocator::new(etagere::Size::new(
                 self.width as i32,
@@ -768,7 +816,11 @@ impl GlyphAtlas {
     }
 
     fn get(&mut self, key: GlyphKey, epoch: u64) -> Option<GlyphAtlasEntry> {
-        let hit = self.glyphs.get_mut(&key)?;
+        let Some(hit) = self.glyphs.get_mut(&key) else {
+            self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
+            return None;
+        };
+        self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
         hit.last_used_epoch = epoch;
         let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
         self.pages[idx].last_used_epoch = epoch;
@@ -833,6 +885,13 @@ impl GlyphAtlas {
             return false;
         };
 
+        let pad = self.padding_px;
+        let w_pad = victim_entry.w.saturating_add(pad.saturating_mul(2));
+        let h_pad = victim_entry.h.saturating_add(pad.saturating_mul(2));
+        self.used_px = self
+            .used_px
+            .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
+
         let page_idx = (victim_entry.page as usize).min(self.pages.len().saturating_sub(1));
         self.pages[page_idx]
             .allocator
@@ -840,6 +899,7 @@ impl GlyphAtlas {
         self.glyphs.remove(&victim_key);
         self.perf.evicted_glyphs = self.perf.evicted_glyphs.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
+        self.perf_frame.evict_glyphs = self.perf_frame.evict_glyphs.saturating_add(1);
         true
     }
 
@@ -876,16 +936,24 @@ impl GlyphAtlas {
             .iter()
             .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
             .collect();
+        let pad = self.padding_px;
         self.perf.evicted_pages = self.perf.evicted_pages.saturating_add(1);
         self.perf.evicted_page_glyphs = self
             .perf
             .evicted_page_glyphs
             .saturating_add(keys_to_remove.len() as u64);
         for k in keys_to_remove {
-            self.glyphs.remove(&k);
+            if let Some(entry) = self.glyphs.remove(&k) {
+                let w_pad = entry.w.saturating_add(pad.saturating_mul(2));
+                let h_pad = entry.h.saturating_add(pad.saturating_mul(2));
+                self.used_px = self
+                    .used_px
+                    .saturating_sub(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
+            }
         }
 
         self.revision = self.revision.saturating_add(1);
+        self.perf_frame.evict_pages = self.perf_frame.evict_pages.saturating_add(1);
         true
     }
 
@@ -932,6 +1000,10 @@ impl GlyphAtlas {
 
                 self.perf.uploads = self.perf.uploads.saturating_add(1);
                 self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
+                self.perf_frame.upload_bytes = self
+                    .perf_frame
+                    .upload_bytes
+                    .saturating_add(bytes.len() as u64);
 
                 queue.write_texture(
                     wgpu::TexelCopyTextureInfo {
@@ -970,17 +1042,20 @@ impl GlyphAtlas {
         epoch: u64,
     ) -> Result<GlyphAtlasEntry, GlyphAtlasInsertError> {
         if let Some(hit) = self.glyphs.get_mut(&key) {
+            self.perf_frame.hits = self.perf_frame.hits.saturating_add(1);
             hit.last_used_epoch = epoch;
             let idx = (hit.page as usize).min(self.pages.len().saturating_sub(1));
             self.pages[idx].last_used_epoch = epoch;
             return Ok(*hit);
         }
+        self.perf_frame.misses = self.perf_frame.misses.saturating_add(1);
 
         let pad = self.padding_px;
         let w_pad = w.saturating_add(pad.saturating_mul(2));
         let h_pad = h.saturating_add(pad.saturating_mul(2));
         if w == 0 || h == 0 || w_pad == 0 || h_pad == 0 || w_pad > self.width || h_pad > self.height
         {
+            self.perf_frame.too_large = self.perf_frame.too_large.saturating_add(1);
             return Err(GlyphAtlasInsertError::TooLarge);
         }
 
@@ -1014,6 +1089,18 @@ impl GlyphAtlas {
                 });
                 page.last_used_epoch = epoch;
 
+                self.perf_frame.inserts = self.perf_frame.inserts.saturating_add(1);
+                self.perf_frame.pending_uploads = self.perf_frame.pending_uploads.saturating_add(1);
+                self.perf_frame.pending_upload_bytes =
+                    self.perf_frame.pending_upload_bytes.saturating_add(
+                        u64::from(w)
+                            .saturating_mul(u64::from(h))
+                            .saturating_mul(u64::from(bytes_per_pixel)),
+                    );
+                self.used_px = self
+                    .used_px
+                    .saturating_add(u64::from(w_pad).saturating_mul(u64::from(h_pad)));
+
                 let entry = GlyphAtlasEntry {
                     page: page_index as u16,
                     alloc_id: allocation.id,
@@ -1035,9 +1122,11 @@ impl GlyphAtlas {
             if self.evict_lru_unreferenced_page() {
                 continue;
             }
+            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
             return Err(GlyphAtlasInsertError::OutOfSpace);
         }
 
+        self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
         Err(GlyphAtlasInsertError::OutOfSpace)
     }
 }
@@ -1251,6 +1340,14 @@ pub struct TextSystem {
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
     font_bytes_by_blob_id: HashMap<u64, Arc<[u8]>>,
     font_face_key_by_fontique: HashMap<(u64, u32), FontFaceKey>,
+
+    perf_frame_cache_resets: u64,
+    perf_frame_blob_cache_hits: u64,
+    perf_frame_blob_cache_misses: u64,
+    perf_frame_blobs_created: u64,
+    perf_frame_shape_cache_hits: u64,
+    perf_frame_shape_cache_misses: u64,
+    perf_frame_shapes_created: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1574,6 +1671,44 @@ impl TextSystem {
         )
     }
 
+    pub fn begin_frame_diagnostics(&mut self) {
+        self.perf_frame_cache_resets = 0;
+        self.perf_frame_blob_cache_hits = 0;
+        self.perf_frame_blob_cache_misses = 0;
+        self.perf_frame_blobs_created = 0;
+        self.perf_frame_shape_cache_hits = 0;
+        self.perf_frame_shape_cache_misses = 0;
+        self.perf_frame_shapes_created = 0;
+        self.mask_atlas.begin_frame_diagnostics();
+        self.color_atlas.begin_frame_diagnostics();
+        self.subpixel_atlas.begin_frame_diagnostics();
+    }
+
+    pub fn diagnostics_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextPerfSnapshot {
+        fret_core::RendererTextPerfSnapshot {
+            frame_id,
+            font_stack_key: self.font_stack_key,
+            font_db_revision: self.font_db_revision,
+            blobs_live: self.blobs.len() as u64,
+            blob_cache_entries: self.blob_cache.len() as u64,
+            shape_cache_entries: self.shape_cache.len() as u64,
+            measure_cache_buckets: self.measure_cache.len() as u64,
+            frame_cache_resets: self.perf_frame_cache_resets,
+            frame_blob_cache_hits: self.perf_frame_blob_cache_hits,
+            frame_blob_cache_misses: self.perf_frame_blob_cache_misses,
+            frame_blobs_created: self.perf_frame_blobs_created,
+            frame_shape_cache_hits: self.perf_frame_shape_cache_hits,
+            frame_shape_cache_misses: self.perf_frame_shape_cache_misses,
+            frame_shapes_created: self.perf_frame_shapes_created,
+            mask_atlas: self.mask_atlas.diagnostics_snapshot(),
+            color_atlas: self.color_atlas.diagnostics_snapshot(),
+            subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),
+        }
+    }
+
     pub fn set_text_quality_settings(&mut self, settings: TextQualitySettings) -> bool {
         let next = TextQualityState::new(settings);
         if next == self.quality {
@@ -1606,6 +1741,7 @@ impl TextSystem {
                 self.font_db_revision,
                 &self.common_fallback_config,
             );
+            self.perf_frame_cache_resets = self.perf_frame_cache_resets.saturating_add(1);
             self.blobs.clear();
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
@@ -1775,6 +1911,14 @@ impl TextSystem {
             text_pin_subpixel: vec![Vec::new(); 3],
             font_bytes_by_blob_id: HashMap::new(),
             font_face_key_by_fontique: HashMap::new(),
+
+            perf_frame_cache_resets: 0,
+            perf_frame_blob_cache_hits: 0,
+            perf_frame_blob_cache_misses: 0,
+            perf_frame_blobs_created: 0,
+            perf_frame_shape_cache_hits: 0,
+            perf_frame_shape_cache_misses: 0,
+            perf_frame_shapes_created: 0,
         }
     }
 
@@ -1884,6 +2028,7 @@ impl TextSystem {
         }
 
         self.font_stack_key = new_key;
+        self.perf_frame_cache_resets = self.perf_frame_cache_resets.saturating_add(1);
         self.blobs.clear();
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
@@ -2213,6 +2358,7 @@ impl TextSystem {
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
+                self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
                 blob.ref_count = blob.ref_count.saturating_add(1);
                 return (id, blob.shape.metrics);
             }
@@ -2220,6 +2366,7 @@ impl TextSystem {
             self.blob_cache.remove(&key);
             self.blob_key_by_id.remove(&id);
         }
+        self.perf_frame_blob_cache_misses = self.perf_frame_blob_cache_misses.saturating_add(1);
 
         let resolved_spans = spans.and_then(|spans| resolve_spans_for_text(text.as_ref(), spans));
         let paint_palette = resolved_spans.as_ref().map(|spans| {
@@ -2230,8 +2377,11 @@ impl TextSystem {
 
         let shape_key = TextShapeKey::from_blob_key(&key);
         let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
+            self.perf_frame_shape_cache_hits = self.perf_frame_shape_cache_hits.saturating_add(1);
             shape.clone()
         } else {
+            self.perf_frame_shape_cache_misses =
+                self.perf_frame_shape_cache_misses.saturating_add(1);
             let shape = {
                 let input = match spans {
                     Some(spans) => TextInputRef::Attributed {
@@ -2436,6 +2586,7 @@ impl TextSystem {
                     caret_stops: Arc::from(first_line_caret_stops),
                 })
             };
+            self.perf_frame_shapes_created = self.perf_frame_shapes_created.saturating_add(1);
             self.shape_cache.insert(shape_key.clone(), shape.clone());
             shape
         };
@@ -2452,6 +2603,7 @@ impl TextSystem {
             decorations: Arc::from(decorations),
             ref_count: 1,
         });
+        self.perf_frame_blobs_created = self.perf_frame_blobs_created.saturating_add(1);
         self.blob_cache.insert(key.clone(), id);
         self.blob_key_by_id.insert(id, key);
         (id, metrics)

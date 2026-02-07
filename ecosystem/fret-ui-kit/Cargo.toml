@@ -32,6 +32,14 @@ default = []
 # Optional integration helpers for immediate-mode authoring frontends (`fret-imui` via `UiWriter`).
 imui = ["dep:fret-authoring"]
 
+# Optional state adapter naming convention (v1):
+# - `state-selector`: selector-based derived-state adapters
+# - `state-query`: query-based async-state adapters
+# - `state`: umbrella feature enabling both
+state-selector = []
+state-query = []
+state = ["state-selector", "state-query"]
+
 # Headless drag-and-drop policy toolbox integration.
 dnd = ["dep:fret-dnd"]
 

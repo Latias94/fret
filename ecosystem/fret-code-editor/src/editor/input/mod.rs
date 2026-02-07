@@ -80,6 +80,55 @@ pub(super) fn insert_text_with_kind(
     Some(())
 }
 
+pub(super) fn apply_pointer_down_selection(
+    st: &mut CodeEditorState,
+    row: usize,
+    caret: usize,
+    click_count: u8,
+    shift: bool,
+) {
+    st.preedit = None;
+
+    let caret = st
+        .buffer
+        .clamp_to_char_boundary_left(caret.min(st.buffer.len_bytes()));
+
+    match click_count {
+        2 => {
+            let (start, end) =
+                select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+            st.selection = Selection {
+                anchor: start,
+                focus: end,
+            };
+        }
+        3 => {
+            let start = st
+                .display_map
+                .display_point_to_byte(&st.buffer, DisplayPoint::new(row, 0));
+            let line = st.buffer.line_index_at_byte(start);
+            if let Some(range) = st.buffer.line_byte_range_including_newline(line) {
+                st.selection = Selection {
+                    anchor: range.start,
+                    focus: range.end,
+                };
+            }
+        }
+        _ => {
+            if shift {
+                st.selection.focus = caret;
+            } else {
+                st.selection = Selection {
+                    anchor: caret,
+                    focus: caret,
+                };
+            }
+        }
+    }
+
+    st.caret_preferred_x = None;
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn handle_key_down(
     host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -321,7 +370,7 @@ pub(super) fn delete_word_backward(st: &mut CodeEditorState) {
         return;
     }
 
-    let prev = move_word_left_in_buffer(&st.buffer, caret, st.text_boundary_mode).min(caret);
+    let prev = move_word_left_in_buffer(&st.buffer, caret, st.active_text_boundary_mode).min(caret);
     if prev == caret {
         return;
     }
@@ -357,7 +406,7 @@ pub(super) fn delete_word_forward(st: &mut CodeEditorState) {
     }
 
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let next = move_word_right_in_buffer(&st.buffer, caret, st.text_boundary_mode)
+    let next = move_word_right_in_buffer(&st.buffer, caret, st.active_text_boundary_mode)
         .max(caret)
         .min(st.buffer.len_bytes());
     if next == caret {
@@ -645,7 +694,7 @@ pub(super) fn redo(st: &mut CodeEditorState) -> bool {
 }
 
 pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
-    let mode = st.text_boundary_mode;
+    let mode = st.active_text_boundary_mode;
     st.undo_group = None;
     st.caret_preferred_x = None;
 

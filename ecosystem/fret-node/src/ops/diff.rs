@@ -174,11 +174,27 @@ fn diff_nodes(
                 });
             }
             if node_from.parent != node_to.parent {
-                tx.ops.push(GraphOp::SetNodeParent {
-                    id: *id,
-                    from: node_from.parent,
-                    to: node_to.parent,
-                });
+                if let Some(group_id) = node_from.parent
+                    && from.groups.contains_key(&group_id)
+                    && !to.groups.contains_key(&group_id)
+                {
+                    // Group diffs are emitted before node diffs. When a parent group is removed,
+                    // `RemoveGroup` detaches the child node to `None`, so the node parent change
+                    // must be expressed relative to that intermediate state.
+                    if node_to.parent.is_some() {
+                        tx.ops.push(GraphOp::SetNodeParent {
+                            id: *id,
+                            from: None,
+                            to: node_to.parent,
+                        });
+                    }
+                } else {
+                    tx.ops.push(GraphOp::SetNodeParent {
+                        id: *id,
+                        from: node_from.parent,
+                        to: node_to.parent,
+                    });
+                }
             }
             if node_from.extent != node_to.extent {
                 tx.ops.push(GraphOp::SetNodeExtent {
@@ -275,8 +291,10 @@ fn diff_ports(
                 && port_from.capacity == port_to.capacity;
 
             if !structural_equal {
+                let mut removed_edge_ids: Vec<EdgeId> = Vec::new();
                 if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_port_op(from, *id) {
                     if let GraphOp::RemovePort { edges, .. } = &op {
+                        removed_edge_ids = edges.iter().map(|(id, _)| *id).collect();
                         removed_edges_by_cascade.extend(edges.iter().map(|(id, _)| *id));
                     }
                     tx.ops.push(op);
@@ -285,6 +303,32 @@ fn diff_ports(
                     id: *id,
                     port: port_to.clone(),
                 });
+
+                // Restore the port ordering for the owning node. `RemovePort` detaches the port id
+                // from `node.ports`, but `AddPort` does not implicitly re-attach it.
+                if let Some(node_to) = to.nodes.get(&port_to.node) {
+                    let mut from_ports = node_to.ports.clone();
+                    from_ports.retain(|p| p != id);
+                    if from_ports != node_to.ports {
+                        tx.ops.push(GraphOp::SetNodePorts {
+                            id: port_to.node,
+                            from: from_ports,
+                            to: node_to.ports.clone(),
+                        });
+                    }
+                }
+
+                // `RemovePort` cascades to incident edges. If those edges still exist in `to`,
+                // re-add them to keep the patch apply-safe (edge diffing compares `from` vs `to`,
+                // not the intermediate state created by the removal).
+                for edge_id in removed_edge_ids {
+                    if let Some(edge_to) = to.edges.get(&edge_id) {
+                        tx.ops.push(GraphOp::AddEdge {
+                            id: edge_id,
+                            edge: edge_to.clone(),
+                        });
+                    }
+                }
                 continue;
             }
 
@@ -477,14 +521,25 @@ fn diff_groups(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 fn diff_sticky_notes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     for (id, note_to) in &to.sticky_notes {
         if let Some(note_from) = from.sticky_notes.get(id) {
-            if serde_json::to_value(note_from).ok() != serde_json::to_value(note_to).ok() {
-                tx.ops.push(GraphOp::RemoveStickyNote {
+            if note_from.text != note_to.text {
+                tx.ops.push(GraphOp::SetStickyNoteText {
                     id: *id,
-                    note: note_from.clone(),
+                    from: note_from.text.clone(),
+                    to: note_to.text.clone(),
                 });
-                tx.ops.push(GraphOp::AddStickyNote {
+            }
+            if note_from.rect != note_to.rect {
+                tx.ops.push(GraphOp::SetStickyNoteRect {
                     id: *id,
-                    note: note_to.clone(),
+                    from: note_from.rect,
+                    to: note_to.rect,
+                });
+            }
+            if note_from.color != note_to.color {
+                tx.ops.push(GraphOp::SetStickyNoteColor {
+                    id: *id,
+                    from: note_from.color.clone(),
+                    to: note_to.color.clone(),
                 });
             }
         } else {

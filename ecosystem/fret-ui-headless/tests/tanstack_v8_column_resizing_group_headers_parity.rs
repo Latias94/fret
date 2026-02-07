@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnId, ColumnSizingRegion, RowKey, Table, TableState, TanStackTableOptions,
-    TanStackTableState, begin_column_resize, drag_column_resize, end_column_resize,
-    resolved_column_size,
+    ColumnDef, ColumnId, ColumnSizingRegion, RowId, RowKey, Table, TableState,
+    TanStackTableOptions, TanStackTableState, begin_column_resize, drag_column_resize,
+    end_column_resize, resolved_column_size,
 };
 use serde::Deserialize;
 
@@ -277,6 +277,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                     let table = Table::builder(&data)
                         .columns(columns.clone())
                         .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                         .state(state.clone())
                         .options(options)
                         .build();
@@ -472,6 +473,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .build();
 

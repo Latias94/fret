@@ -21,6 +21,15 @@ pub struct WorkspaceMenuCommands {
     pub quit_app: Option<CommandId>,
 
     pub command_palette: Option<CommandId>,
+    pub switch_locale: Option<CommandId>,
+    /// Optional override for the top-level "File" menu title.
+    pub file_menu_title: Option<Arc<str>>,
+    /// Optional override for the top-level "Edit" menu title.
+    pub edit_menu_title: Option<Arc<str>>,
+    /// Optional override for the top-level "View" menu title.
+    pub view_menu_title: Option<Arc<str>>,
+    /// Optional override for the top-level "Window" menu title.
+    pub window_menu_title: Option<Arc<str>>,
 
     pub open: Option<CommandId>,
     pub save: Option<CommandId>,
@@ -68,6 +77,11 @@ impl Default for WorkspaceMenuCommands {
             quit_app: None,
 
             command_palette: None,
+            switch_locale: None,
+            file_menu_title: None,
+            edit_menu_title: None,
+            view_menu_title: None,
+            window_menu_title: None,
 
             open: None,
             save: None,
@@ -113,6 +127,7 @@ fn push_command(items: &mut Vec<MenuItem>, command: Option<CommandId>) {
         items.push(MenuItem::Command {
             command,
             when: None,
+            toggle: None,
         });
     }
 }
@@ -197,6 +212,7 @@ fn build_app_menu(cmds: &WorkspaceMenuCommands) -> Option<Menu> {
     Some(Menu {
         title,
         role: Some(MenuRole::App),
+        mnemonic: None,
         items,
     })
 }
@@ -219,6 +235,11 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         show_all: _,
         quit_app: _,
         command_palette,
+        switch_locale,
+        file_menu_title,
+        edit_menu_title,
+        view_menu_title,
+        window_menu_title,
         open,
         save,
         save_as,
@@ -250,6 +271,16 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     push_command(&mut file_items, open);
     push_command(&mut file_items, save);
     push_command(&mut file_items, save_as);
+    if !file_items.is_empty() {
+        push_separator(&mut file_items);
+        file_items.push(MenuItem::Submenu {
+            title: Arc::from("Recent"),
+            when: None,
+            items: vec![MenuItem::Label {
+                title: Arc::from("No recent items"),
+            }],
+        });
+    }
     if quit.is_some() && !file_items.is_empty() {
         file_items.push(MenuItem::Separator);
     }
@@ -270,12 +301,8 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     push_command(&mut edit_items, select_all);
 
     let mut view_items = Vec::new();
-    if let Some(cp) = command_palette {
-        view_items.push(MenuItem::Command {
-            command: cp,
-            when: None,
-        });
-    }
+    push_command(&mut view_items, command_palette);
+    push_command(&mut view_items, switch_locale);
 
     let mut menus = Vec::new();
     if let Some(app_menu) = app_menu {
@@ -283,72 +310,86 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     }
     if !file_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("File"),
+            title: file_menu_title.unwrap_or_else(|| Arc::from("File")),
             role: Some(MenuRole::File),
+            mnemonic: Some('f'),
             items: file_items,
         });
     }
     if !edit_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("Edit"),
+            title: edit_menu_title.unwrap_or_else(|| Arc::from("Edit")),
             role: Some(MenuRole::Edit),
+            mnemonic: Some('e'),
             items: edit_items,
         });
     }
     if !view_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("View"),
+            title: view_menu_title.unwrap_or_else(|| Arc::from("View")),
             role: Some(MenuRole::View),
+            mnemonic: Some('v'),
             items: view_items,
         });
     }
 
     menus.push(Menu {
-        title: Arc::from("Window"),
+        title: window_menu_title.unwrap_or_else(|| Arc::from("Window")),
         role: Some(MenuRole::Window),
+        mnemonic: Some('w'),
         items: vec![
             MenuItem::Command {
                 command: next_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: prev_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_LEFT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_RIGHT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: close_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: next_pane,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: prev_pane,
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Submenu {
@@ -358,18 +399,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: split_right,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_left,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_up,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_down,
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -380,10 +425,12 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: move_active_tab_next_pane,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: move_active_tab_prev_pane,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Separator,
                     MenuItem::Command {
@@ -391,24 +438,28 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
                         ),
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -419,18 +470,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN),
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -441,23 +496,114 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: resize_pane_right,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_left,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_up,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_down,
                         when: None,
+                        toggle: None,
                     },
                 ],
+            },
+            MenuItem::Separator,
+            MenuItem::Submenu {
+                title: Arc::from("Windows"),
+                when: None,
+                items: vec![MenuItem::Label {
+                    title: Arc::from("Window list not implemented"),
+                }],
             },
         ],
     });
 
     MenuBar { menus }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_default_menu_includes_locale_switch_command_in_view_menu() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.command_palette = Some(CommandId::new("app.command_palette"));
+        cmds.switch_locale = Some(CommandId::new("app.locale.switch_next"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+        let view_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::View))
+            .expect("view menu should be present");
+
+        assert!(
+            view_menu.items.iter().any(|item| {
+                matches!(
+                    item,
+                    MenuItem::Command { command, .. }
+                        if command == &CommandId::new("app.locale.switch_next")
+                )
+            }),
+            "view menu should contain locale switch command"
+        );
+    }
+
+    #[test]
+    fn workspace_default_menu_uses_custom_view_title_when_provided() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.command_palette = Some(CommandId::new("app.command_palette"));
+        cmds.view_menu_title = Some(Arc::from("视图"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+        let view_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::View))
+            .expect("view menu should be present");
+
+        assert_eq!(view_menu.title.as_ref(), "视图");
+    }
+
+    #[test]
+    fn workspace_default_menu_uses_custom_file_edit_window_titles_when_provided() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.open = Some(CommandId::new("app.open"));
+        cmds.undo = Some(CommandId::new("edit.undo"));
+        cmds.file_menu_title = Some(Arc::from("文件"));
+        cmds.edit_menu_title = Some(Arc::from("编辑"));
+        cmds.window_menu_title = Some(Arc::from("窗口"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+
+        let file_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::File))
+            .expect("file menu should be present");
+        assert_eq!(file_menu.title.as_ref(), "文件");
+
+        let edit_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::Edit))
+            .expect("edit menu should be present");
+        assert_eq!(edit_menu.title.as_ref(), "编辑");
+
+        let window_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::Window))
+            .expect("window menu should be present");
+        assert_eq!(window_menu.title.as_ref(), "窗口");
+    }
 }

@@ -354,7 +354,11 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.symbols.get(id) else {
                 return Err(ApplyError::MissingSymbol { id: *id });
             };
-            if current.name != symbol.name {
+            if current.name != symbol.name
+                || current.ty != symbol.ty
+                || current.default_value != symbol.default_value
+                || current.meta != symbol.meta
+            {
                 return Err(ApplyError::RemoveSymbolMismatch { id: *id });
             }
             graph.symbols.remove(id);
@@ -397,7 +401,10 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.groups.get(id) else {
                 return Err(ApplyError::MissingGroup { id: *id });
             };
-            if current.title != group.title {
+            if current.title != group.title
+                || current.rect != group.rect
+                || current.color != group.color
+            {
                 return Err(ApplyError::RemoveGroupMismatch { id: *id });
             }
 
@@ -445,10 +452,29 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.sticky_notes.get(id) else {
                 return Err(ApplyError::MissingStickyNote { id: *id });
             };
-            if current.text != note.text {
+            if current.text != note.text || current.rect != note.rect || current.color != note.color
+            {
                 return Err(ApplyError::RemoveStickyNoteMismatch { id: *id });
             }
             graph.sticky_notes.remove(id);
+        }
+        GraphOp::SetStickyNoteText { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.text = to.clone();
+        }
+        GraphOp::SetStickyNoteRect { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.rect = *to;
+        }
+        GraphOp::SetStickyNoteColor { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.color = to.clone();
         }
     }
     Ok(())

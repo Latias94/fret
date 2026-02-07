@@ -1347,11 +1347,16 @@ let _id = controller.show(host, acx.window, m3::Snackbar::new("Saved").action("U
 pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
 ## Material 3 Tooltip (MVP)
 
-This page validates a Material 3 plain tooltip surface:
+This page validates Material 3 tooltip surfaces (plain + rich):
 
 - Radix-aligned delay group + hover intent + safe-hover corridor (via `fret-ui-kit`)
-- deterministic open/close motion driven by `md.sys.motion.*` (duration + cubic-bezier)
-- token-driven container/text styling via `md.comp.plain-tooltip.*`
+- deterministic open/close motion driven by `md.sys.motion.spring.*` (fast spatial/effects springs)
+- token-driven container/text styling via `md.comp.{plain,rich}-tooltip.*`
+
+Notes:
+
+- In Fret, `OverlayKind::Tooltip` is click-through, so rich tooltip actions are currently out of
+  scope.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
@@ -1360,7 +1365,16 @@ use fret_ui_material3 as m3;
 
 m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+
+    let plain = m3::PlainTooltip::new(trigger, "Plain tooltip text").into_element(cx);
+    let rich = m3::RichTooltip::new(
+        m3::Button::new("Hover me (rich)").into_element(cx),
+        "Supporting text",
+    )
+    .title("Title")
+    .into_element(cx);
+
+    [plain, rich]
 })
 ```
 "#;
@@ -1460,6 +1474,13 @@ pub(crate) const DOC_RESIZABLE: &str = r#"
 
 Resizable panel groups are runtime-owned drag surfaces (splitter handles).
 
+Upstream shadcn/ui docs examples:
+
+- Demo (nested groups)
+- Vertical
+- Handle (`with_handle(true)` in Fret; approximated chrome)
+- RTL (via a direction provider)
+
 This page validates:
 
 - fraction model (`Model<Vec<f32>>`) persistence
@@ -1468,13 +1489,24 @@ This page validates:
 
 pub(crate) const USAGE_RESIZABLE: &str = r#"
 ```rust
-let fractions = app.models_mut().insert(vec![0.3, 0.7]);
+let h = app.models_mut().insert(vec![0.5, 0.5]);
+let v = app.models_mut().insert(vec![0.25, 0.75]);
 
-let group = shadcn::ResizablePanelGroup::new(fractions).entries(vec![
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-    shadcn::ResizableHandle::new().into(),
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-]);
+let nested = shadcn::ResizablePanelGroup::new(v)
+    .axis(fret_core::Axis::Vertical)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+    ]);
+
+let group = shadcn::ResizablePanelGroup::new(h)
+    .axis(fret_core::Axis::Horizontal)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([nested]).into(),
+    ]);
 ```
 "#;
 
@@ -1753,21 +1785,39 @@ pub(crate) const DOC_SLIDER: &str = r#"
 Slider is a pointer-driven control with support for:
 
 - single value
-- multi-thumb range (`min_steps_between_thumbs`)
+- range / multiple thumbs (`step` + `min_steps_between_thumbs`)
 - `orientation` (horizontal / vertical)
 - direction-aware mapping (`dir` + `inverted`, Radix-aligned)
 - `on_value_commit` (Radix `onValueCommit`)
 
-This page uses `Slider::new_controllable` to keep demo state local to the subtree.
+Upstream shadcn/ui docs examples:
+
+- Range
+- Multiple Thumbs
+- Vertical
+- Controlled
+- Disabled
+- RTL
+
+This page demonstrates both uncontrolled (`Slider::new_controllable`) and controlled (`Slider::new(model)`) usage.
 "#;
 
 pub(crate) const USAGE_SLIDER: &str = r#"
 ```rust
-let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+// Uncontrolled (state in element subtree):
+let slider = shadcn::Slider::new_controllable(cx, None, || vec![33.0])
     .range(0.0, 100.0)
+    .step(1.0)
     .on_value_commit(|_host, _cx, _values| {
         // Called on pointer up and keyboard commits.
     })
+    .into_element(cx);
+
+// Controlled (state in the model store):
+let values = app.models_mut().insert(vec![0.3, 0.7]);
+let slider = shadcn::Slider::new(values)
+    .range(0.0, 1.0)
+    .step(0.1)
     .into_element(cx);
 ```
 "#;

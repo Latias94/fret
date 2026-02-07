@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TanStackTableOptions, TanStackTableState,
+    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
     contains_ascii_case_insensitive,
 };
 use serde::Deserialize;
@@ -174,6 +174,7 @@ fn tanstack_v8_selection_tree_parity() {
             let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .get_sub_rows(|row, _idx| {
                     if row.sub_rows.is_empty() {
                         None
@@ -241,6 +242,7 @@ fn tanstack_v8_selection_tree_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .get_sub_rows(|row, _idx| {
                 if row.sub_rows.is_empty() {
                     None

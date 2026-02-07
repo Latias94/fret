@@ -64,3 +64,26 @@ jobs:
 
       - name: Nextest (fret-gizmo f64-math)
         run: cargo nextest run -p fret-gizmo --features f64-math
+
+  wasm_smoke:
+    name: Wasm Compile Smoke (imui facade)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (from rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.92"
+          targets: wasm32-unknown-unknown
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cargo check (wasm32-unknown-unknown)
+        run: >-
+          cargo check
+          -p fret-authoring -p fret-imui -p fret-ui-kit --features imui
+          --target wasm32-unknown-unknown

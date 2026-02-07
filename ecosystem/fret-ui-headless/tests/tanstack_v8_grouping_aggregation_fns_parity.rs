@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    BuiltInAggregationFn, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, Table,
+    BuiltInAggregationFn, ColumnDef, GroupedRowKind, GroupedRowModel, RowId, RowKey, Table,
     TanStackTableOptions, TanStackTableState, TanStackValue,
 };
 use serde::{Deserialize, de::Deserializer};
@@ -266,6 +266,7 @@ fn tanstack_v8_grouping_aggregation_fns_parity() {
         let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options);
 
