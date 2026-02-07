@@ -48,7 +48,7 @@ Related plan:
 
 - [x] Re-audit `crates/fret` default features to ensure they stay “portable by default”.
 - [x] Consider whether `fret-code-editor-view` should remain a standalone crate (keep: buffer/view are reusable seams).
-- [ ] Add a short “merge vs split” candidate list to the crate survey notes and revisit quarterly.
+- [x] Add a short “merge vs split” candidate list to the crate survey notes and revisit quarterly.
 
 ## Validation checklist (run at each milestone)
 
