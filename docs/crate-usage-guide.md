@@ -252,6 +252,8 @@ consistent inbox + cancellation vocabulary.
 - memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
 - optional UI sugar (`ElementContext::use_selector(...)`) to keep view code readable.
 
+**Feature note:** enable `fret-selector/ui` to use `ElementContext` helpers.
+
 **Use it when:** you need stable derived values (counts, filtered views, projections) without
 introducing “tick models” or storing every derived value in the model store.
 
@@ -269,6 +271,8 @@ computations.
 
 **Async fetch:** install a `FutureSpawnerHandle` global and use `use_query_async` /
 `use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
+
+**Feature note:** enable `fret-query/ui` to use `ElementContext` helpers like `cx.use_query_async(...)`.
 
 ### `fret-canvas`
 

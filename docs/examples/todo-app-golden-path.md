@@ -58,7 +58,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-kit = { path = "../../ecosystem/fret-kit" }
-fret-selector = { path = "../../ecosystem/fret-selector" } # optional
+fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
 ```
 

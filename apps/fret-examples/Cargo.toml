@@ -44,7 +44,7 @@ fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }
 fret-executor = { path = "../../ecosystem/fret-executor" }
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
-fret-selector = { path = "../../ecosystem/fret-selector" }
+fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] }
 bytemuck.workspace = true
 glam.workspace = true
 serde_json.workspace = true

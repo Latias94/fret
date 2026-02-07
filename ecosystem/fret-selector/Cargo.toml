@@ -10,7 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = ["ui"]
+default = []
 ui = ["dep:fret-runtime", "dep:fret-ui"]
 
 [dependencies]

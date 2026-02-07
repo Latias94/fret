@@ -61,7 +61,7 @@ edition = "2024"
 anyhow = "1"
 fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
 fret-query = {{ path = "{fret_query_path}", features = ["ui"] }}
-fret-selector = {{ path = "{fret_selector_path}" }}
+fret-selector = {{ path = "{fret_selector_path}", features = ["ui"] }}
 [workspace]
 "#
     )
