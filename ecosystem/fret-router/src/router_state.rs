@@ -11,6 +11,14 @@ const DEFAULT_MAX_REDIRECT_HOPS: usize = 4;
 const REDIRECT_LOOP_REASON: &str = "redirect loop detected";
 const REDIRECT_HOP_LIMIT_REASON: &str = "redirect hop limit exceeded";
 
+#[derive(Debug, Clone)]
+pub struct RoutePrefetchIntent<R> {
+    pub route: R,
+    pub namespace: &'static str,
+    pub location: RouteLocation,
+    pub extra: Option<&'static str>,
+}
+
 pub trait HistoryAdapter {
     fn current(&self) -> &RouteLocation;
     fn refresh(&mut self) {}
@@ -98,6 +106,68 @@ impl RouterGuardDecision {
 
 pub type RouterGuardFn<R> =
     Arc<dyn for<'a> Fn(&RouterGuardContext<'a, R>) -> RouterGuardDecision + Send + Sync>;
+
+#[derive(Debug, Clone)]
+pub struct RouteHookContext<'a, R> {
+    pub cause: RouterTransitionCause,
+    pub from: &'a RouteLocation,
+    pub to: &'a RouteLocation,
+    pub from_state: &'a RouterState<R>,
+    pub next_state: &'a RouterState<R>,
+    pub match_index: usize,
+    pub matched: &'a RouteMatchSnapshot<R>,
+}
+
+pub type RouteBeforeLoadFn<R> =
+    Arc<dyn for<'a> Fn(&RouteHookContext<'a, R>) -> RouterGuardDecision + Send + Sync>;
+
+pub type RouteLoaderFn<R> =
+    Arc<dyn for<'a> Fn(&RouteHookContext<'a, R>) -> Vec<RoutePrefetchIntent<R>> + Send + Sync>;
+
+#[derive(Clone)]
+pub struct RouteHooksTable<R> {
+    hooks: std::collections::HashMap<R, RouteHooks<R>>,
+}
+
+impl<R> Default for RouteHooksTable<R> {
+    fn default() -> Self {
+        Self {
+            hooks: std::collections::HashMap::new(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct RouteHooks<R> {
+    pub before_load: Option<RouteBeforeLoadFn<R>>,
+    pub loader: Option<RouteLoaderFn<R>>,
+}
+
+impl<R> Default for RouteHooks<R> {
+    fn default() -> Self {
+        Self {
+            before_load: None,
+            loader: None,
+        }
+    }
+}
+
+impl<R> RouteHooksTable<R>
+where
+    R: Eq + Hash,
+{
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(&mut self, route: R, hooks: RouteHooks<R>) -> Option<RouteHooks<R>> {
+        self.hooks.insert(route, hooks)
+    }
+
+    pub fn hooks_for(&self, route: &R) -> Option<&RouteHooks<R>> {
+        self.hooks.get(route)
+    }
+}
 
 #[derive(Debug, Clone)]
 enum RouterGuardResolution {
@@ -257,6 +327,8 @@ pub struct Router<R, H> {
     state: RouterState<R>,
     events: Vec<RouterEvent<R>>,
     guard: Option<RouterGuardFn<R>>,
+    route_hooks: RouteHooksTable<R>,
+    prefetch_intents: Vec<RoutePrefetchIntent<R>>,
     max_redirect_hops: usize,
 }
 
@@ -265,23 +337,76 @@ where
     R: Clone + Hash + Eq,
     H: HistoryAdapter,
 {
+    fn route_before_load_decision(
+        &self,
+        cause: RouterTransitionCause,
+        from: &RouteLocation,
+        to: &RouteLocation,
+        next_state: &RouterState<R>,
+    ) -> RouterGuardDecision {
+        for (match_index, matched) in next_state.matches.iter().enumerate() {
+            let Some(hooks) = self.route_hooks.hooks_for(&matched.route) else {
+                continue;
+            };
+
+            let Some(before_load) = hooks.before_load.as_ref() else {
+                continue;
+            };
+
+            let ctx = RouteHookContext {
+                cause,
+                from,
+                to,
+                from_state: &self.state,
+                next_state,
+                match_index,
+                matched,
+            };
+
+            match before_load(&ctx) {
+                RouterGuardDecision::Allow => {}
+                other => return other,
+            }
+        }
+
+        RouterGuardDecision::Allow
+    }
+
+    fn collect_loader_intents(
+        &mut self,
+        from_state: &RouterState<R>,
+        transition: &RouterTransition,
+    ) {
+        let to = &transition.to;
+        for (match_index, matched) in self.state.matches.iter().enumerate() {
+            let Some(hooks) = self.route_hooks.hooks_for(&matched.route) else {
+                continue;
+            };
+
+            let Some(loader) = hooks.loader.as_ref() else {
+                continue;
+            };
+
+            let ctx = RouteHookContext {
+                cause: transition.cause,
+                from: &transition.from,
+                to,
+                from_state,
+                next_state: &self.state,
+                match_index,
+                matched,
+            };
+
+            self.prefetch_intents.extend(loader(&ctx));
+        }
+    }
+
     fn resolve_guard_chain(
         &self,
         original_action: NavigationAction,
         from: &RouteLocation,
         initial_target: RouteLocation,
     ) -> Result<RouterGuardResolution, RouteSearchValidationFailure> {
-        let Some(guard) = self.guard.as_ref() else {
-            return Ok(RouterGuardResolution::Allow {
-                cause: RouterTransitionCause::Navigate {
-                    action: original_action,
-                },
-                action: original_action,
-                to: initial_target,
-                redirect_chain: Vec::new(),
-            });
-        };
-
         let mut redirect_chain = Vec::<RouteLocation>::new();
         let mut seen = std::collections::HashSet::<String>::new();
         let mut current_action = original_action;
@@ -317,7 +442,47 @@ where
                 next_state: &next_state,
             };
 
-            match guard(&ctx) {
+            if let Some(guard) = self.guard.as_ref() {
+                match guard(&ctx) {
+                    RouterGuardDecision::Allow => {}
+                    RouterGuardDecision::Block { reason } => {
+                        return Ok(RouterGuardResolution::Block {
+                            cause: current_cause,
+                            action: current_action,
+                            attempted: current_target,
+                            redirect_chain,
+                            reason,
+                        });
+                    }
+                    RouterGuardDecision::Redirect {
+                        action: redirect_action,
+                        to: redirect_to,
+                    } => {
+                        if redirect_chain.len() >= self.max_redirect_hops {
+                            let mut chain = redirect_chain.clone();
+                            chain.push(current_target.clone());
+                            return Ok(RouterGuardResolution::Block {
+                                cause: current_cause,
+                                action: current_action,
+                                attempted: current_target,
+                                redirect_chain: chain,
+                                reason: RouterBlockReason::new(REDIRECT_HOP_LIMIT_REASON),
+                            });
+                        }
+
+                        redirect_chain.push(current_target);
+                        current_action = normalize_redirect_action(redirect_action);
+                        current_cause = RouterTransitionCause::Redirect {
+                            action: current_action,
+                        };
+                        current_target = redirect_to.canonicalized();
+                        continue;
+                    }
+                }
+            }
+
+            match self.route_before_load_decision(current_cause, from, &current_target, &next_state)
+            {
                 RouterGuardDecision::Allow => {
                     return Ok(RouterGuardResolution::Allow {
                         cause: current_cause,
@@ -368,6 +533,7 @@ where
         from: RouteLocation,
         redirect_chain: Vec<RouteLocation>,
     ) -> Result<RouterUpdate, RouteSearchValidationFailure> {
+        let from_state = self.state.clone();
         self.history.refresh();
         let to = self.history.current().clone();
 
@@ -391,6 +557,7 @@ where
             transition: transition.clone(),
             state: self.state.clone(),
         });
+        self.collect_loader_intents(&from_state, &transition);
 
         Ok(RouterUpdate::Changed(transition))
     }
@@ -417,6 +584,8 @@ where
             state,
             events: Vec::new(),
             guard: None,
+            route_hooks: RouteHooksTable::new(),
+            prefetch_intents: Vec::new(),
             max_redirect_hops: DEFAULT_MAX_REDIRECT_HOPS,
         })
     }
@@ -435,6 +604,18 @@ where
 
     pub fn set_guard(&mut self, guard: Option<RouterGuardFn<R>>) {
         self.guard = guard;
+    }
+
+    pub fn route_hooks(&self) -> &RouteHooksTable<R> {
+        &self.route_hooks
+    }
+
+    pub fn route_hooks_mut(&mut self) -> &mut RouteHooksTable<R> {
+        &mut self.route_hooks
+    }
+
+    pub fn take_prefetch_intents(&mut self) -> Vec<RoutePrefetchIntent<R>> {
+        std::mem::take(&mut self.prefetch_intents)
     }
 
     pub fn max_redirect_hops(&self) -> usize {
@@ -456,6 +637,7 @@ where
             return Ok(RouterUpdate::NoChange);
         }
 
+        let from_state = self.state.clone();
         let next_state = RouterState::from_match_result(self.tree.match_routes_with_search(
             &next_location,
             self.search_table.as_ref(),
@@ -470,6 +652,7 @@ where
             transition: transition.clone(),
             state: self.state.clone(),
         });
+        self.collect_loader_intents(&from_state, &transition);
 
         Ok(RouterUpdate::Changed(transition))
     }
@@ -649,12 +832,12 @@ fn normalize_redirect_action(action: NavigationAction) -> NavigationAction {
 
 #[cfg(test)]
 mod tests {
-    use super::{Router, RouterGuardDecision};
+    use super::{RouteHooks, Router, RouterBlockReason, RouterGuardDecision, RouterUpdate};
     use crate::{
         MemoryHistory, NavigationAction, RouteLocation, RouteNode, RouteSearchTable, RouteTree,
         SearchMap, SearchValidationError, SearchValidationMode,
     };
-    use std::sync::Arc;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn router_navigate_updates_state_and_transition() {
@@ -1136,6 +1319,216 @@ mod tests {
         let events = router.take_events();
         assert_eq!(events.len(), 1);
         assert!(matches!(events[0], super::RouterEvent::Blocked { .. }));
+    }
+
+    #[test]
+    fn route_before_load_runs_root_to_leaf_and_can_block() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let calls = Arc::new(Mutex::new(Vec::<RouteId>::new()));
+
+        let root_calls = calls.clone();
+        router.route_hooks_mut().insert(
+            RouteId::Root,
+            RouteHooks {
+                before_load: Some(Arc::new(move |ctx| {
+                    root_calls.lock().expect("lock").push(ctx.matched.route);
+                    RouterGuardDecision::Allow
+                })),
+                loader: None,
+            },
+        );
+
+        let settings_calls = calls.clone();
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: Some(Arc::new(move |ctx| {
+                    settings_calls.lock().expect("lock").push(ctx.matched.route);
+                    RouterGuardDecision::Block {
+                        reason: RouterBlockReason::new("blocked by before_load"),
+                    }
+                })),
+                loader: None,
+            },
+        );
+
+        let update = router
+            .navigate(
+                NavigationAction::Push,
+                Some(RouteLocation::parse("/settings")),
+            )
+            .expect("navigate should succeed");
+        assert!(matches!(update, RouterUpdate::Blocked(_)));
+        assert_eq!(router.state().location.to_url(), "/");
+
+        let calls = calls.lock().expect("lock").clone();
+        assert_eq!(calls, vec![RouteId::Root, RouteId::Settings]);
+    }
+
+    #[test]
+    fn route_before_load_can_redirect() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+            Login,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![
+                    RouteNode::new(RouteId::Settings, "settings").unwrap(),
+                    RouteNode::new(RouteId::Login, "login").unwrap(),
+                ]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: Some(Arc::new(|ctx| {
+                    if ctx.to.path == "/settings" {
+                        RouterGuardDecision::redirect_replace(RouteLocation::parse("/login"))
+                    } else {
+                        RouterGuardDecision::Allow
+                    }
+                })),
+                loader: None,
+            },
+        );
+
+        let update = router
+            .navigate(
+                NavigationAction::Push,
+                Some(RouteLocation::parse("/settings")),
+            )
+            .expect("navigate should succeed");
+        assert!(matches!(update, RouterUpdate::Changed(_)));
+        assert_eq!(router.state().location.to_url(), "/login");
+
+        let transition = router
+            .state()
+            .last_transition
+            .as_ref()
+            .expect("transition should exist");
+        assert!(matches!(
+            transition.cause,
+            super::RouterTransitionCause::Redirect {
+                action: NavigationAction::Replace
+            }
+        ));
+        assert_eq!(transition.redirect_chain.len(), 1);
+        assert_eq!(transition.redirect_chain[0].to_url(), "/settings");
+    }
+
+    #[test]
+    fn route_loader_collects_prefetch_intents_with_context() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let observed = Arc::new(Mutex::new(Vec::<(usize, RouteId, String, String)>::new()));
+
+        let root_observed = observed.clone();
+        router.route_hooks_mut().insert(
+            RouteId::Root,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(move |ctx| {
+                    root_observed.lock().expect("lock").push((
+                        ctx.match_index,
+                        ctx.matched.route,
+                        ctx.from_state.location.to_url(),
+                        ctx.next_state.location.to_url(),
+                    ));
+                    vec![super::RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "fret.router.test.root.v1",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let settings_observed = observed.clone();
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(move |ctx| {
+                    settings_observed.lock().expect("lock").push((
+                        ctx.match_index,
+                        ctx.matched.route,
+                        ctx.from_state.location.to_url(),
+                        ctx.next_state.location.to_url(),
+                    ));
+                    vec![super::RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "fret.router.test.settings.v1",
+                        location: ctx.to.clone(),
+                        extra: Some("scope"),
+                    }]
+                })),
+            },
+        );
+
+        let update = router
+            .navigate(
+                NavigationAction::Push,
+                Some(RouteLocation::parse("/settings")),
+            )
+            .expect("navigate should succeed");
+        assert!(matches!(update, RouterUpdate::Changed(_)));
+
+        let intents = router.take_prefetch_intents();
+        assert_eq!(intents.len(), 2);
+        assert!(router.take_prefetch_intents().is_empty());
+
+        let observed = observed.lock().expect("lock").clone();
+        assert_eq!(observed.len(), 2);
+        assert_eq!(observed[0].0, 0);
+        assert_eq!(observed[0].1, RouteId::Root);
+        assert_eq!(observed[0].2, "/");
+        assert_eq!(observed[0].3, "/settings");
+        assert_eq!(observed[1].0, 1);
+        assert_eq!(observed[1].1, RouteId::Settings);
+        assert_eq!(observed[1].2, "/");
+        assert_eq!(observed[1].3, "/settings");
     }
 
     #[test]
