@@ -326,6 +326,33 @@ mod tests {
     use super::*;
 
     #[test]
+    fn move_word_right_distinguishes_unicode_word_and_identifier_for_apostrophe() {
+        let text = "can't";
+        assert_eq!(
+            move_word_right(text, 0, TextBoundaryMode::UnicodeWord),
+            text.len(),
+            "UnicodeWord should treat \"can't\" as a single word"
+        );
+        assert_eq!(
+            move_word_right(text, 0, TextBoundaryMode::Identifier),
+            3,
+            "Identifier should split \"can't\" around the apostrophe"
+        );
+    }
+
+    #[test]
+    fn select_word_range_identifier_uses_xid_continue() {
+        assert_eq!(
+            select_word_range("αβγ δ", 1, TextBoundaryMode::Identifier),
+            (0, "αβγ".len())
+        );
+        assert_eq!(
+            select_word_range("a_b c", 1, TextBoundaryMode::Identifier),
+            (0, "a_b".len())
+        );
+    }
+
+    #[test]
     fn select_word_range_prefers_previous_word_when_clicking_whitespace_after_word() {
         let text = "foo bar";
         let idx = "foo".len();

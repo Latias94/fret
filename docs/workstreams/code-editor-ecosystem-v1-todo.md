@@ -99,8 +99,8 @@ Legend:
 
 ### Tests
 
-- [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
-- [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
+- [x] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
+- [x] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
 - Note: expanded coverage in `crates/fret-ui/src/text_edit.rs` (mixed Latin/CJK/emoji; identifier punctuation).
 - [x] Word navigation + deletion respect the active boundary mode across `SelectableText` / `TextInput` / `TextArea` (Ctrl/Alt+Arrow, Ctrl/Alt+Backspace/Delete; command path parity).
 - [x] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
