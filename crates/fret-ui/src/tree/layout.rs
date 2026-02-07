@@ -533,6 +533,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
+            self.debug_stats.layout_engine_child_rect_queries = 0;
+            self.debug_stats.layout_engine_child_rect_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
             self.debug_stats.layout_collect_roots_time = Duration::default();
             self.debug_stats
@@ -2417,9 +2419,33 @@ impl<H: UiHost> UiTree<H> {
                 parent.child_inclusive_time += inclusive_time;
             }
             let element = self.nodes.get(node).and_then(|n| n.element);
+            let element_kind = self.window.and_then(|window| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| record.instance.kind_name())
+            });
+            let element_path = if self.debug_enabled {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window.and_then(|window| {
+                        element.and_then(|element| {
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.debug_path_for_element(element)
+                            })
+                        })
+                    })
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
             let record = super::UiDebugLayoutHotspot {
                 node,
                 element,
+                element_kind,
+                element_path,
                 widget_type,
                 inclusive_time,
                 exclusive_time,
@@ -2429,9 +2455,20 @@ impl<H: UiHost> UiTree<H> {
                 .iter()
                 .position(|h| h.exclusive_time < record.exclusive_time)
                 .unwrap_or(self.debug_layout_hotspots.len());
-            self.debug_layout_hotspots.insert(idx, record);
+            self.debug_layout_hotspots.insert(idx, record.clone());
             if self.debug_layout_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
                 self.debug_layout_hotspots.truncate(MAX_LAYOUT_HOTSPOTS);
+            }
+
+            let idx = self
+                .debug_layout_inclusive_hotspots
+                .iter()
+                .position(|h| h.inclusive_time < record.inclusive_time)
+                .unwrap_or(self.debug_layout_inclusive_hotspots.len());
+            self.debug_layout_inclusive_hotspots.insert(idx, record);
+            if self.debug_layout_inclusive_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
+                self.debug_layout_inclusive_hotspots
+                    .truncate(MAX_LAYOUT_HOTSPOTS);
             }
         }
 

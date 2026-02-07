@@ -1160,8 +1160,30 @@ impl WindowElementState {
         frame_id: FrameId,
         element: GlobalElementId,
     ) {
-        if let Some(entry) = self.debug_identity.entries.get_mut(&element) {
+        // Keep debug paths stable across view-cache reuse frames.
+        //
+        // During cache-hit frames we may only "touch" a subset of elements for GC bookkeeping.
+        // If we only bump the leaf entry, ancestor identity segments can be pruned (based on
+        // `gc_lag_frames`), causing `debug_path_for_element()` to fail even though the element is
+        // still alive in the UI tree.
+        //
+        // Touch the full ancestor chain, but stop early if we've already touched this chain on
+        // the current frame.
+        let mut cur = element;
+        let mut guard = 0usize;
+        while guard < 256 {
+            guard += 1;
+            let Some(entry) = self.debug_identity.entries.get_mut(&cur) else {
+                break;
+            };
+            if entry.last_seen_frame == frame_id {
+                break;
+            }
             entry.last_seen_frame = frame_id;
+            let Some(parent) = entry.parent else {
+                break;
+            };
+            cur = parent;
         }
     }
 
