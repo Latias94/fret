@@ -231,13 +231,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (expects `core_model`)
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
-- [ ] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
-  - Target capabilities (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
-  - Fret mapping: snapshot-friendly `HeaderSnapshot` lists + `HeaderGroupSnapshot` reversal helpers.
-  - Rationale: “UI gallery table rows/columns misalignment” class bugs often come from consumers re-deriving
-    header inventories inconsistently from header groups. Treat these as engine-provided obligations.
-  - Planned parity gate: extend `headers_cells.json` (or add a dedicated `headers_inventory.json`) and assert via
-    `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (or a new gate).
+- [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
+  - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
+  - Fret mapping: snapshot-friendly header lists + footer groups as reversed header groups.
+  - Parity-gated by fixtures:
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
+  - Evidence (engine surfaces): `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    (`Table::{flat_headers,leaf_headers,footer_groups}` + pin-family variants).
 
 ---
 
