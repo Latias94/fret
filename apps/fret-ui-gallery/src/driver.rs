@@ -43,13 +43,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
 
-#[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::harness::{
-    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
-};
+use crate::harness::UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::harness::UiGalleryCodeEditorHandlesStore;
 use crate::spec::*;
 use crate::ui;
 
@@ -125,7 +124,6 @@ struct PendingTaffyDumpRequest {
     filename_tag: Arc<str>,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
@@ -147,7 +145,6 @@ struct UiGalleryDebugWindowService {
 
 const DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER: TimerToken = TimerToken(0x7569_6761_6c6c_6572);
 
-#[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone)]
 struct UiGalleryHarnessModelIds {
     selected_page: Model<Arc<str>>,
@@ -1055,7 +1052,6 @@ impl UiGalleryDriver {
             last_config_files_status_seq: 0,
         };
 
-        #[cfg(not(target_arch = "wasm32"))]
         app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
             store.per_window.insert(
                 window,
@@ -3035,64 +3031,70 @@ pub fn build_app() -> App {
         menu_bar: UiGalleryDriver::build_menu_bar(&app),
     });
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
-                let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
-                let ids = store.per_window.get(&window)?;
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc: &mut UiDiagnosticsService, _app| {
+        svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
+            let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+            let ids = store.per_window.get(&window)?;
 
-                let selected_page = app.models().get_cloned(&ids.selected_page)?;
-                let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
-                let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
-                let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
-                let text_input = app.models().get_cloned(&ids.text_input)?;
-                let text_area = app.models().get_cloned(&ids.text_area)?;
+            let selected_page = app.models().get_cloned(&ids.selected_page)?;
+            let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
+            let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
+            let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+            let text_input = app.models().get_cloned(&ids.text_input)?;
+            let text_area = app.models().get_cloned(&ids.text_area)?;
 
-                let torture = app
-                    .global::<UiGalleryCodeEditorHandlesStore>()
-                    .and_then(|store| store.per_window.get(&window))
-                    .map(|handle| {
-                        let text = handle.with_buffer(|b| b.text_string());
-                        let selection = handle.selection();
-                        let anchor = selection.anchor.min(text.len()) as u64;
-                        let caret = selection.caret().min(text.len()) as u64;
-                        serde_json::json!({
-                            "schema_version": 1,
-                            "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
-                            "text_len_bytes": text.len() as u64,
-                            "selection": { "anchor": anchor, "caret": caret },
+            let torture: Option<serde_json::Value> = {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    app.global::<UiGalleryCodeEditorHandlesStore>()
+                        .and_then(|store| store.per_window.get(&window))
+                        .map(|handle| {
+                            let text = handle.with_buffer(|b| b.text_string());
+                            let selection = handle.selection();
+                            let anchor = selection.anchor.min(text.len()) as u64;
+                            let caret = selection.caret().min(text.len()) as u64;
+                            serde_json::json!({
+                                "schema_version": 1,
+                                "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                                "text_len_bytes": text.len() as u64,
+                                "selection": { "anchor": anchor, "caret": caret },
+                            })
                         })
-                    });
+                }
 
-                let mut out = serde_json::Map::new();
-                out.insert("schema_version".to_string(), serde_json::json!(1));
-                out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
-                out.insert(
-                    "selected_page".to_string(),
-                    serde_json::Value::String(selected_page.to_string()),
-                );
-                out.insert(
-                    "code_editor".to_string(),
-                    serde_json::json!({
-                        "syntax_rust": syntax_rust,
-                        "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
-                        "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
-                        "torture": torture,
-                    }),
-                );
-                out.insert(
-                    "text_widgets".to_string(),
-                    serde_json::json!({
-                        "text_input_chars": text_input.chars().count(),
-                        "text_area_chars": text_area.chars().count(),
-                    }),
-                );
+                #[cfg(target_arch = "wasm32")]
+                {
+                    None
+                }
+            };
 
-                Some(serde_json::Value::Object(out))
-            })));
-        });
-    }
+            let mut out = serde_json::Map::new();
+            out.insert("schema_version".to_string(), serde_json::json!(1));
+            out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
+            out.insert(
+                "selected_page".to_string(),
+                serde_json::Value::String(selected_page.to_string()),
+            );
+            out.insert(
+                "code_editor".to_string(),
+                serde_json::json!({
+                    "syntax_rust": syntax_rust,
+                    "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
+                    "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                    "torture": torture,
+                }),
+            );
+            out.insert(
+                "text_widgets".to_string(),
+                serde_json::json!({
+                    "text_input_chars": text_input.chars().count(),
+                    "text_area_chars": text_area.chars().count(),
+                }),
+            );
+
+            Some(serde_json::Value::Object(out))
+        })));
+    });
 
     app
 }
@@ -3179,14 +3181,12 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            context
-                .app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    svc.record_model_changes(context.window, changed);
-                });
-        }
+        context.app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| {
+                svc.record_model_changes(context.window, changed);
+            },
+        );
         context
             .state
             .ui
@@ -3198,14 +3198,12 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            context
-                .app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                    svc.record_global_changes(app, context.window, changed);
-                });
-        }
+        context.app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
+                svc.record_global_changes(app, context.window, changed);
+            },
+        );
         context
             .state
             .ui
@@ -3895,7 +3893,6 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
             }
             Event::WindowFocusChanged(focused) => {
-                #[cfg(not(target_arch = "wasm32"))]
                 app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
                     if *focused {
                         store.focused_window = Some(window);
@@ -3907,7 +3904,6 @@ impl WinitAppDriver for UiGalleryDriver {
                 Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
             }
             Event::WindowCloseRequested => {
-                #[cfg(not(target_arch = "wasm32"))]
                 app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
                     store.per_window.remove(&window);
                     if store.focused_window == Some(window) {
@@ -3943,15 +3939,14 @@ impl WinitAppDriver for UiGalleryDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let (inspection_active, diag_enabled) = app
-                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    (svc.wants_inspection_active(window), svc.is_enabled())
-                });
-            state.ui.set_inspection_active(inspection_active);
-            state.ui.set_debug_enabled(diag_enabled);
-        }
+        let (inspection_active, diag_enabled) = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, _app| {
+                (svc.wants_inspection_active(window), svc.is_enabled())
+            },
+        );
+        state.ui.set_inspection_active(inspection_active);
+        state.ui.set_debug_enabled(diag_enabled);
 
         scene.clear();
         let mut frame =
@@ -4004,10 +3999,10 @@ impl WinitAppDriver for UiGalleryDriver {
             }
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let semantics_snapshot = state.ui.semantics_snapshot();
-            let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.drive_script_for_window(
                     app,
@@ -4017,89 +4012,83 @@ impl WinitAppDriver for UiGalleryDriver {
                     semantics_snapshot,
                     element_runtime,
                 )
-            });
+            },
+        );
 
-            for effect in drive.effects {
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            // Script-driven events bypass the winit event loop, so we must apply any generated
+            // command effects (e.g. Tab => focus traversal) before we record snapshots.
+            //
+            // Keep non-command effects queued for the runner to handle after `render` returns.
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                self.handle_command(
+                                    WinitCommandContext {
+                                        app,
+                                        services,
+                                        window,
+                                        state,
+                                    },
+                                    command,
+                                );
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
                 app.push_effect(effect);
             }
 
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-
-            let mut injected_any = false;
-            for event in drive.events {
-                injected_any = true;
-                state.ui.dispatch_event(app, services, &event);
-            }
-
-            if injected_any {
-                // Script-driven events bypass the winit event loop, so we must apply any generated
-                // command effects (e.g. Tab => focus traversal) before we record snapshots.
-                //
-                // Keep non-command effects queued for the runner to handle after `render` returns.
-                let mut deferred_effects: Vec<Effect> = Vec::new();
-                loop {
-                    let effects = app.flush_effects();
-                    if effects.is_empty() {
-                        break;
-                    }
-
-                    let mut applied_any_command = false;
-                    for effect in effects {
-                        match effect {
-                            Effect::Command { window: w, command } => {
-                                if w.is_none() || w == Some(window) {
-                                    self.handle_command(
-                                        WinitCommandContext {
-                                            app,
-                                            services,
-                                            window,
-                                            state,
-                                        },
-                                        command,
-                                    );
-                                    applied_any_command = true;
-                                } else {
-                                    deferred_effects.push(Effect::Command { window: w, command });
-                                }
-                            }
-                            other => deferred_effects.push(other),
-                        }
-                    }
-
-                    if !applied_any_command {
-                        break;
-                    }
-                }
-                for effect in deferred_effects {
-                    app.push_effect(effect);
-                }
-
-                state.ui.request_semantics_snapshot();
-                let mut frame = fret_ui::UiFrameCx::new(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    scale_factor,
-                );
-                frame.layout_all();
-            }
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
         }
 
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.record_snapshot(
                     app,
@@ -4114,8 +4103,8 @@ impl WinitAppDriver for UiGalleryDriver {
                 if svc.is_enabled() {
                     app.push_effect(Effect::RequestAnimationFrame(window));
                 }
-            });
-        }
+            },
+        );
     }
 
     fn window_create_spec(
