@@ -211,6 +211,7 @@ The workstream blocks on explicitly confirming these v1 decisions:
 - Ecosystem split (buffer/view/surface): `ecosystem/fret-code-editor-buffer/src/lib.rs`, `ecosystem/fret-code-editor-view/src/lib.rs`, `ecosystem/fret-code-editor/src/lib.rs`.
 - Windowed surface + per-row text shaping/caching (no monolithic document blob): `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditor::into_element`), `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_row`, `cached_row_text`, `cached_row_syntax_spans`, `materialize_row_rich_text`).
 - Harness + regression tests: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`, `PAGE_CODE_EDITOR_TORTURE`), `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture`), `ecosystem/fret-code-editor/src/editor/tests/mod.rs`.
+- Soft-wrap regression gates (diag scripts + checks): `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json`, `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json`, `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low`, `check_bundle_for_ui_gallery_code_editor_torture_marker_*`).
 
 ## License Notes
 

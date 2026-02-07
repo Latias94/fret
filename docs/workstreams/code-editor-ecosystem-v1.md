@@ -3,6 +3,12 @@
 Status: Active (workstream document; normative contracts live in ADRs)
 Last updated: 2026-02-07
 
+Recent changes (2026-02-07):
+
+- Diagnostics: add a strict (0-allowed) soft-wrap geometry fallback gate for the code editor torture harness, covering pointer hit-testing, caret rects, and vertical caret moves.
+- Editor paint: when caret stops are unavailable, prefer renderer-provided `TextService::caret_x` over the monospace `cell_w` heuristic (keeps caret X pixel-aligned with shaped glyph runs).
+- Editor perf/correctness: shift the per-row geometry cache across single-line edits in soft-wrap mode (reduces “first paint” geometry churn and avoids unnecessary fallback spikes).
+
 Recent changes (2026-02-04):
 
 - Editor paint: anchor caret Y to the actual row text blob baseline (fixes caret drifting above glyphs in mixed-font / rich-span lines).
@@ -557,7 +563,7 @@ Evidence anchors:
 
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
   - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
-  - Known gaps: not pixel-accurate wrapping; cell-width heuristic remains as a fallback when caret stops are unavailable (e.g. before the first paint). Row geometry caching is shifted across single-line edits to reduce fallback churn.
+  - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 

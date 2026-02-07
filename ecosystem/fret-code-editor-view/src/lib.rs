@@ -2,6 +2,8 @@
 //!
 //! v1 is intentionally minimal: "display rows" are logical lines split by `\n` and columns are
 //! counted as Unicode scalar values (not graphemes, not rendered cells).
+//!
+//! See ADR 0200 for the normative buffer/view/surface split and v1 rollout constraints.
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
