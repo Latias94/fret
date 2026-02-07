@@ -168,6 +168,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-platform-web/README.md`
     - `crates/fret-platform-web/src/lib.rs`
 
+- [x] BU-FR-plat-053 Convert `crates/fret-platform-web` module roots to `mod.rs` where a directory is the intended owner.
+  - Candidates: `wasm.rs` → `wasm/mod.rs`, `native.rs` → `native/mod.rs`.
+  - Goal: avoid ambiguous `foo.rs` / `foo/` splits and enable incremental internal splits without crate-root churn.
+  - Evidence:
+    - `crates/fret-platform-web/src/wasm/mod.rs`
+    - `crates/fret-platform-web/src/native/mod.rs`
+
 - [x] BU-FR-runner-060 Add a module ownership map for `crates/fret-runner-winit` and document the intended public surface.
   - Goal: make runner glue discoverable without dragging policy/renderer responsibilities into the wrong layer.
   - Evidence:
