@@ -85,7 +85,7 @@ Conventions:
   - [x] pick arm + pick result,
   - [x] script push + script progress + script result,
   - [x] bundle dump,
-  - [ ] screenshot request.
+  - [x] screenshot request.
 
 ### M5: Artifacts for web runner
 

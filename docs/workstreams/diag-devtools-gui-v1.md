@@ -300,6 +300,22 @@ These commands must map directly to existing in-app operations (no new semantics
 - `bundle.dump` -> emits `bundle.dumped` event (includes bundle id/path/handle)
 - `screenshot.request` -> emits `screenshot.result` event
 
+#### `screenshot.request` / `screenshot.result` (v1)
+
+This is a convenience command for capturing a renderer screenshot outside of a script run.
+
+- Request payload:
+  - `label` (optional): bundle dump label (ensures a fresh bundle exists).
+  - `timeout_frames` (optional, default `300`): how long the app waits for the runner to complete the capture.
+  - `window` / `window_ffi` (optional): target a specific app window; if omitted, the first active window is used.
+- Response event (`screenshot.result`):
+  - `status`: `completed` | `timeout` | `disabled` | `unsupported` | `failed`
+  - `request_id`: a stable string (also echoed in `screenshots.result.json` entries)
+  - `entry`: best-effort completed entry parsed from `screenshots.result.json` (native only)
+
+Web runner note: as of 2026-02-07, screenshot readback is runner-owned and only implemented for the native runner.
+On wasm/web targets, `screenshot.result` returns `status=unsupported` with `reason=screenshots_not_supported_wasm`.
+
 Tooling-side-only operations (do not require app support):
 
 - `pack.create` (zip a bundle + `_root/` artifacts when available)

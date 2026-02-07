@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use fret_diag_protocol::{
@@ -16,6 +17,8 @@ use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
+
+static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1000);
 
 #[derive(Clone)]
 struct WsState {
@@ -166,6 +169,41 @@ impl FretDevtoolsMcp {
     }
 
     #[tool(
+        description = "Request a screenshot capture and wait for screenshot.result (returns JSON text)."
+    )]
+    async fn fret_diag_screenshot_request(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<ScreenshotRequestToolV1>,
+    ) -> Result<String, String> {
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+        let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
+        let timeout_frames = params.0.timeout_frames.unwrap_or(300);
+
+        let request_id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "screenshot.request".to_string(),
+            session_id: Some(session_id.clone()),
+            request_id: Some(request_id),
+            payload: serde_json::json!({
+                "label": label,
+                "timeout_frames": timeout_frames,
+            }),
+        });
+
+        let msg = self
+            .wait_for_type_session_request_id(
+                "screenshot.result",
+                &session_id,
+                request_id,
+                params.0.timeout_ms,
+            )
+            .await
+            .ok_or_else(|| "timeout waiting for screenshot.result".to_string())?;
+        Ok(serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()))
+    }
+
+    #[tool(
         description = "Run a script (schema v1/v2) and wait for a passed/failed script.result (returns JSON text)."
     )]
     async fn fret_diag_run_script_json(
@@ -230,6 +268,28 @@ impl FretDevtoolsMcp {
         }
     }
 
+    async fn wait_for_type_session_request_id(
+        &self,
+        ty: &str,
+        session_id: &str,
+        request_id: u64,
+        timeout_ms: u64,
+    ) -> Option<DiagTransportMessageV1> {
+        let start = tokio::time::Instant::now();
+        loop {
+            if let Some(msg) = self
+                .pop_next_of_type_session_request_id(ty, session_id, request_id)
+                .await
+            {
+                return Some(msg);
+            }
+            if start.elapsed() > Duration::from_millis(timeout_ms) {
+                return None;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
+
     async fn pop_next_of_type_and_session(
         &self,
         ty: &str,
@@ -239,6 +299,21 @@ impl FretDevtoolsMcp {
         let pos = inbox
             .iter()
             .position(|m| m.r#type == ty && m.session_id.as_deref() == Some(session_id))?;
+        Some(inbox.remove(pos)?)
+    }
+
+    async fn pop_next_of_type_session_request_id(
+        &self,
+        ty: &str,
+        session_id: &str,
+        request_id: u64,
+    ) -> Option<DiagTransportMessageV1> {
+        let mut inbox = self.inbox.lock().await;
+        let pos = inbox.iter().position(|m| {
+            m.r#type == ty
+                && m.session_id.as_deref() == Some(session_id)
+                && m.request_id == Some(request_id)
+        })?;
         Some(inbox.remove(pos)?)
     }
 
@@ -306,6 +381,17 @@ struct RunScriptJsonRequestV1 {
     session_id: Option<String>,
     /// JSON text for a `UiActionScriptV1` or `UiActionScriptV2` payload.
     script_json: String,
+    timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct ScreenshotRequestToolV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    label: Option<String>,
+    #[serde(default)]
+    timeout_frames: Option<u32>,
     timeout_ms: u64,
 }
 

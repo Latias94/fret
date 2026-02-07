@@ -23,6 +23,7 @@ const CMD_INSPECT_ENABLE: &str = "fret.devtools.inspect_enable";
 const CMD_INSPECT_DISABLE: &str = "fret.devtools.inspect_disable";
 const CMD_PICK_ARM: &str = "fret.devtools.pick_arm";
 const CMD_BUNDLE_DUMP: &str = "fret.devtools.bundle_dump";
+const CMD_SCREENSHOT_REQUEST: &str = "fret.devtools.screenshot_request";
 const CMD_SCRIPT_PUSH: &str = "fret.devtools.script_push";
 const CMD_SCRIPT_RUN: &str = "fret.devtools.script_run";
 
@@ -47,6 +48,7 @@ struct State {
     last_pick_json: Model<String>,
     last_script_result_json: Model<String>,
     last_bundle_json: Model<String>,
+    last_screenshot_json: Model<String>,
     log_lines: Model<Vec<Arc<str>>>,
 
     client: DevtoolsWsClient,
@@ -109,6 +111,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_pick_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
+    let last_screenshot_json = app.models_mut().insert(String::new());
     let log_lines = app.models_mut().insert(Vec::<Arc<str>>::new());
 
     let mut client_cfg =
@@ -135,6 +138,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_pick_json,
         last_script_result_json,
         last_bundle_json,
+        last_screenshot_json,
         log_lines,
         client,
         applied_session_id: None,
@@ -174,6 +178,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
+    cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
 
     let theme = Theme::global(&*cx.app).clone();
@@ -296,6 +301,12 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
                             .size(shadcn::ButtonSize::Sm)
                             .disabled(!has_session)
                             .on_click(CMD_BUNDLE_DUMP)
+                            .into_element(cx),
+                        shadcn::Button::new("Screenshot")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .disabled(!has_session)
+                            .on_click(CMD_SCREENSHOT_REQUEST)
                             .into_element(cx),
                     ]
                 },
@@ -466,6 +477,11 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .models()
         .read(&st.last_bundle_json, |v| v.clone())
         .unwrap_or_default();
+    let screenshot = cx
+        .app
+        .models()
+        .read(&st.last_screenshot_json, |v| v.clone())
+        .unwrap_or_default();
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -473,6 +489,7 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
             shadcn::TabsItem::new("pick", "Pick", [text_blob(cx, pick)]),
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
+            shadcn::TabsItem::new("screenshot", "Screenshot", [text_blob(cx, screenshot)]),
         ])
         .into_element(cx);
 
@@ -560,6 +577,17 @@ fn on_command(
             }
             st.client
                 .send_type_payload("bundle.dump", serde_json::json!({ "label": "devtools" }));
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+        CMD_SCREENSHOT_REQUEST => {
+            if !require_session_selected(app, st) {
+                app.request_redraw(window);
+                return;
+            }
+            st.client.send_type_payload(
+                "screenshot.request",
+                serde_json::json!({ "label": "devtools", "timeout_frames": 300 }),
+            );
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN => {
@@ -678,6 +706,16 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                 }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
+                }
+            }
+            "screenshot.result" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_screenshot_json, |v| *v = text);
                 }
             }
             _ => {}

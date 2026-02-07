@@ -229,6 +229,8 @@ pub struct UiDiagnosticsService {
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
+    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    devtools_screenshot_wait: Option<DevtoolsScreenshotWaitState>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
@@ -962,6 +964,20 @@ impl UiDiagnosticsService {
                                 );
 
                             if completed {
+                                let bundle_dir_name = self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .and_then(|p| p.file_name())
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.to_string());
+                                self.emit_screenshot_result(
+                                    None,
+                                    &state.request_id,
+                                    state.window_ffi,
+                                    bundle_dir_name.as_deref(),
+                                    "completed",
+                                    None,
+                                );
                                 active.screenshot_wait = None;
                                 active.next_step = active.next_step.saturating_add(1);
                                 output.request_redraw = true;
@@ -969,6 +985,20 @@ impl UiDiagnosticsService {
                                 force_dump_label = Some(format!(
                                     "script-step-{step_index:04}-capture_screenshot-timeout"
                                 ));
+                                let bundle_dir_name = self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .and_then(|p| p.file_name())
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.to_string());
+                                self.emit_screenshot_result(
+                                    None,
+                                    &state.request_id,
+                                    state.window_ffi,
+                                    bundle_dir_name.as_deref(),
+                                    "timeout",
+                                    Some("capture_screenshot_timeout"),
+                                );
                                 stop_script = true;
                                 failure_reason = Some("capture_screenshot_timeout".to_string());
                                 active.screenshot_wait = None;
@@ -2758,6 +2788,8 @@ impl UiDiagnosticsService {
             return;
         }
 
+        self.drive_devtools_screenshot_for_window(app, window, scale_factor);
+
         let last_pointer_position = self
             .per_window
             .get(&window)
@@ -3224,6 +3256,32 @@ impl UiDiagnosticsService {
                     self.request_force_dump("devtools".to_string());
                 }
             }
+            "screenshot.request" => {
+                let label = msg
+                    .payload
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let timeout_frames = msg
+                    .payload
+                    .get("timeout_frames")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(300)
+                    .min(u32::MAX as u64) as u32;
+                let window_ffi = msg
+                    .payload
+                    .get("window")
+                    .and_then(|v| v.as_u64())
+                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
+
+                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
+                    request_id: msg.request_id,
+                    label,
+                    timeout_frames,
+                    window_ffi,
+                });
+                self.devtools_screenshot_wait = None;
+            }
             "script.push" | "script.run" => {
                 let script_value = msg
                     .payload
@@ -3268,6 +3326,245 @@ impl UiDiagnosticsService {
             }
             _ => {}
         }
+    }
+
+    fn drive_devtools_screenshot_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let window_ffi = window.data().as_ffi();
+
+        if let Some(mut state) = self.devtools_screenshot_wait.take() {
+            if state.window_ffi != window_ffi {
+                self.devtools_screenshot_wait = Some(state);
+                return;
+            }
+
+            let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+            let completed = trigger_stamp.is_some()
+                && trigger_stamp != state.last_result_trigger_stamp
+                && screenshot_request_completed(
+                    &self.cfg.screenshot_result_path,
+                    &state.request_id,
+                    state.window_ffi,
+                );
+
+            if completed {
+                self.emit_screenshot_result(
+                    state.transport_request_id,
+                    &state.request_id,
+                    state.window_ffi,
+                    Some(&state.bundle_dir_name),
+                    "completed",
+                    None,
+                );
+            } else if state.remaining_frames == 0 {
+                self.emit_screenshot_result(
+                    state.transport_request_id,
+                    &state.request_id,
+                    state.window_ffi,
+                    Some(&state.bundle_dir_name),
+                    "timeout",
+                    Some("capture_screenshot_timeout"),
+                );
+            } else {
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                state.last_result_trigger_stamp = trigger_stamp;
+                self.devtools_screenshot_wait = Some(state);
+                app.request_redraw(window);
+            }
+
+            return;
+        }
+
+        let Some(pending) = self.pending_devtools_screenshot.take() else {
+            return;
+        };
+
+        if pending.window_ffi.is_some_and(|w| w != window_ffi) {
+            self.pending_devtools_screenshot = Some(pending);
+            return;
+        }
+
+        let request_id = format!(
+            "devtools-screenshot-window-{window_ffi}-tick-{tick}-frame-{frame}",
+            tick = app.tick_id().0,
+            frame = app.frame_id().0
+        );
+
+        if !self.cfg.screenshots_enabled {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "disabled",
+                Some("screenshots_disabled"),
+            );
+            return;
+        }
+
+        let label = pending
+            .label
+            .as_deref()
+            .map(sanitize_label)
+            .unwrap_or_else(|| "devtools-screenshot".to_string());
+
+        self.dump_bundle(Some(&label));
+
+        let bundle_dir_name = self
+            .last_dump_dir
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        if bundle_dir_name.is_empty() {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "failed",
+                Some("no_last_dump_dir"),
+            );
+            return;
+        }
+
+        let req = serde_json::json!({
+            "schema_version": 1,
+            "out_dir": self.cfg.out_dir.to_string_lossy(),
+            "bundle_dir_name": bundle_dir_name.clone(),
+            "request_id": request_id.clone(),
+            "windows": [{
+                "window": window_ffi,
+                "tick_id": app.tick_id().0,
+                "frame_id": app.frame_id().0,
+                "scale_factor": scale_factor as f64,
+            }]
+        });
+
+        let bytes = serde_json::to_vec_pretty(&req).ok();
+        if let Some(bytes) = bytes {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let write_ok = std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
+                if write_ok {
+                    self.devtools_screenshot_wait = Some(DevtoolsScreenshotWaitState {
+                        remaining_frames: pending.timeout_frames,
+                        request_id,
+                        window_ffi,
+                        last_result_trigger_stamp: None,
+                        transport_request_id: pending.request_id,
+                        bundle_dir_name,
+                    });
+                    app.request_redraw(window);
+                } else {
+                    self.emit_screenshot_result(
+                        pending.request_id,
+                        &request_id,
+                        window_ffi,
+                        Some(&bundle_dir_name),
+                        "failed",
+                        Some("screenshot_request_write_failed"),
+                    );
+                }
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = bytes;
+                self.emit_screenshot_result(
+                    pending.request_id,
+                    &request_id,
+                    window_ffi,
+                    Some(&bundle_dir_name),
+                    "unsupported",
+                    Some("screenshots_not_supported_wasm"),
+                );
+            }
+        } else {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                Some(&bundle_dir_name),
+                "failed",
+                Some("screenshot_request_serialize_failed"),
+            );
+        }
+    }
+
+    fn emit_screenshot_result(
+        &mut self,
+        transport_request_id: Option<u64>,
+        request_id: &str,
+        window_ffi: u64,
+        bundle_dir_name: Option<&str>,
+        status: &str,
+        reason: Option<&str>,
+    ) {
+        let bundle_dir_name = bundle_dir_name
+            .map(|s| s.to_string())
+            .or_else(|| {
+                self.last_dump_dir
+                    .as_ref()
+                    .and_then(|p| p.file_name())
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_default();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let entry =
+            screenshot_request_entry(&self.cfg.screenshot_result_path, request_id, window_ffi);
+        #[cfg(target_arch = "wasm32")]
+        let entry: Option<serde_json::Value> = None;
+
+        let screenshots_dir = if bundle_dir_name.is_empty() {
+            None
+        } else {
+            Some(display_path(
+                &self.cfg.out_dir,
+                &self
+                    .cfg
+                    .out_dir
+                    .join("screenshots")
+                    .join(bundle_dir_name.clone()),
+            ))
+        };
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "screenshot.result".to_string(),
+                session_id: None,
+                request_id: transport_request_id,
+                payload: serde_json::json!({
+                    "schema_version": 1,
+                    "status": status,
+                    "reason": reason,
+                    "request_id": request_id,
+                    "window": window_ffi,
+                    "bundle_dir_name": bundle_dir_name,
+                    "screenshots_dir": screenshots_dir,
+                    "entry": entry,
+                }),
+            },
+        );
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -4148,6 +4445,24 @@ impl PendingScript {
             steps: script.steps,
         })
     }
+}
+
+#[derive(Debug, Clone)]
+struct PendingDevtoolsScreenshotRequest {
+    request_id: Option<u64>,
+    label: Option<String>,
+    timeout_frames: u32,
+    window_ffi: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+struct DevtoolsScreenshotWaitState {
+    remaining_frames: u32,
+    request_id: String,
+    window_ffi: u64,
+    last_result_trigger_stamp: Option<u64>,
+    transport_request_id: Option<u64>,
+    bundle_dir_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -9655,6 +9970,24 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn screenshot_request_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    let completed = root.get("completed")?.as_array()?;
+    completed
+        .iter()
+        .find(|entry| {
+            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
+        .cloned()
 }
 
 #[cfg(target_arch = "wasm32")]
