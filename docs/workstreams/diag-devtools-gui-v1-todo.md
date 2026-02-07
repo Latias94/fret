@@ -113,12 +113,13 @@ Conventions:
 
 ### M7: MCP server adapter (AI-friendly tooling API)
 
-- [ ] Add `apps/fret-devtools-mcp` using `rmcp` (stdio transport first).
+- [x] Add `apps/fret-devtools-mcp` using `rmcp` (stdio transport first).
 - [ ] Expose a minimal tool set (names TBD):
   - [ ] `fret_diag_connect` (connect/select session; choose transport: filesystem vs WS),
-  - [ ] `fret_diag_inspect_set` (on/off/toggle + consume_clicks),
-  - [ ] `fret_diag_pick` (arm + wait + return selector JSON),
+  - [x] `fret_diag_inspect_set` (on/off/toggle + consume_clicks),
+  - [x] `fret_diag_pick` (arm + wait + return selector JSON),
   - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),
+  - [x] `fret_diag_run_script_json` (minimal: run a v1/v2 script JSON and wait for pass/fail),
   - [ ] `fret_diag_pack` / `fret_diag_latest` / `fret_diag_compare`.
 - [ ] (Optional) Expose key artifacts as resources:
   - [ ] latest `bundle.json`,
