@@ -6,7 +6,8 @@ use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_router::{
     MemoryHistory, NavigationAction, RouteHooks, RouteLocation, RouteNode, RouteSearchTable,
-    RouteTree, Router, SearchValidationMode, prefetch_intent_query_key, route_query_key,
+    RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchValidationMode,
+    prefetch_intent_query_key, route_query_key,
 };
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
@@ -346,19 +347,24 @@ fn on_command(
     };
 
     let update = match msg {
-        RouterQueryDemoMsg::NavigateRoot => st
-            .router
-            .navigate(NavigationAction::Replace, Some(RouteLocation::parse("/"))),
-        RouterQueryDemoMsg::NavigateSettings => st.router.navigate(
+        RouterQueryDemoMsg::NavigateRoot => st.router.navigate_with_prefetch_intents(
+            NavigationAction::Replace,
+            Some(RouteLocation::parse("/")),
+        ),
+        RouterQueryDemoMsg::NavigateSettings => st.router.navigate_with_prefetch_intents(
             NavigationAction::Push,
             Some(RouteLocation::parse("/settings")),
         ),
-        RouterQueryDemoMsg::NavigateUser => st.router.navigate(
+        RouterQueryDemoMsg::NavigateUser => st.router.navigate_with_prefetch_intents(
             NavigationAction::Push,
             Some(RouteLocation::parse("/users/42")),
         ),
-        RouterQueryDemoMsg::Back => st.router.navigate(NavigationAction::Back, None),
-        RouterQueryDemoMsg::Forward => st.router.navigate(NavigationAction::Forward, None),
+        RouterQueryDemoMsg::Back => st
+            .router
+            .navigate_with_prefetch_intents(NavigationAction::Back, None),
+        RouterQueryDemoMsg::Forward => st
+            .router
+            .navigate_with_prefetch_intents(NavigationAction::Forward, None),
         RouterQueryDemoMsg::ClearLog => {
             let _ = app.models_mut().update(&st.prefetch_log, |v| v.clear());
             app.request_redraw(window);
@@ -371,12 +377,13 @@ fn on_command(
         return;
     };
 
+    let RouterUpdateWithPrefetchIntents { update, intents } = update;
+
     if !update.changed() {
         app.request_redraw(window);
         return;
     }
 
-    let intents = st.router.take_prefetch_intents();
     if intents.is_empty() {
         app.request_redraw(window);
         return;
