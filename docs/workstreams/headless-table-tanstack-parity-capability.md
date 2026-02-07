@@ -674,18 +674,19 @@ Rules:
 
 - **Aligned**: `getIsAllColumnsVisible/getIsSomeColumnsVisible` → `Table::{is_all_columns_visible,is_some_columns_visible}`
   (`visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`).
-- **Partial**: `getToggleAllColumnsVisibilityHandler` (we expose the state transition, but not a JS-style handler surface)
-  → `Table::toggled_all_columns_visible(visible)` (fixture-gated by `visibility_ordering.json`).
+- **Aligned**: `toggleAllColumnsVisible` → `Table::toggled_all_columns_visible(visible)` (`visibility_ordering.json`).
+- **Partial**: `getToggleAllColumnsVisibilityHandler` (we expose the state transition, but not a JS-style handler surface).
 - **Aligned**: `resetColumnVisibility` / `resetColumnOrder` → `Table::{reset_column_visibility,reset_column_order}` (`resets.json`).
 
 **Selection/expanding**
 
 - **Aligned**: `getIsAllRowsSelected/getIsSomeRowsSelected/getIsAllPageRowsSelected/getIsSomePageRowsSelected`
   → `Table::{is_all_rows_selected,is_some_rows_selected,is_all_page_rows_selected,is_some_page_rows_selected}` (`selection.json`, `selection_tree.json`).
-- **Partial**: `getToggleAllRowsSelectedHandler/toggleAllRowsSelected`
-  → `Table::toggled_all_rows_selected(value)` (selection fixtures cover outcomes; handler mapping is Rust-native).
-- **Partial**: `getToggleAllRowsExpandedHandler/toggleAllRowsExpanded`
-  → `Table::toggled_all_rows_expanded(value)` (expanding fixtures cover outcomes; handler mapping is Rust-native).
+- **Aligned**: `toggleAllRowsSelected` / `toggleAllPageRowsSelected`
+  → `Table::{toggled_all_rows_selected,toggled_all_page_rows_selected}` (`selection.json`, `selection_tree.json`).
+- **Partial**: `getToggleAllRowsSelectedHandler` / `getToggleAllPageRowsSelectedHandler` (JS-style handler surfaces).
+- **Aligned**: `toggleAllRowsExpanded` → `Table::toggled_all_rows_expanded(value)` (`expanding.json`).
+- **Partial**: `getToggleAllRowsExpandedHandler` (JS-style handler surface).
 
 **Pinning**
 
