@@ -712,10 +712,30 @@ impl<H: UiHost> UiTree<H> {
                 crate::declarative::frame::element_record_for_node(app, window, node)
                     .map(|record| record.instance.kind_name())
             });
+            let element_path = if self.debug_enabled {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window.and_then(|window| {
+                        element.and_then(|element| {
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.debug_path_for_element(element)
+                            })
+                            .flatten()
+                        })
+                    })
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
             let record = UiDebugPaintWidgetHotspot {
                 node,
                 element,
                 element_kind,
+                element_path,
                 widget_type,
                 inclusive_time,
                 exclusive_time,
