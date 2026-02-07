@@ -171,6 +171,75 @@ Exit criteria (v1):
 - A “refactor hazards” list exists for `crates/fret-ui`, and each hazard has at least one gate.
 - Module layout hygiene improvements land without widening the public contract surface.
 
+#### Fret UI refactor hazards (v1)
+
+This list is meant to keep `crates/fret-ui` refactors fearless: each hazard should have at least one
+executable gate (unit/integration/diag) that fails when behavior drifts.
+
+1. **Layout recursion / stack safety**
+   - Failure mode: infinite layout loops, unbounded recursion, stack overflows.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/stack_safety.rs`
+     - `crates/fret-ui/src/declarative/tests/layout.rs`
+
+2. **Overlay dismissal + outside-press semantics**
+   - Failure mode: click-through, missed outside-press, escape dismissal drift, focus-loss surprises.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/outside_press.rs`
+     - `crates/fret-ui/src/tree/tests/escape_dismiss.rs`
+
+3. **Pointer occlusion + capture arbitration**
+   - Failure mode: wrong recipient gets pointer events; occlusion layers regress; capture leaks.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+     - `crates/fret-ui/src/tree/tests/window_input_arbitration_snapshot.rs`
+
+4. **Hit testing correctness + cache reuse policy**
+   - Failure mode: stale hit paths, incorrect reuse of hit-test caches, “ghost” interactions.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/hit_test.rs`
+     - `crates/fret-ui/src/tree/tests/hit_test_cache_reuse_policy.rs`
+
+5. **Focus scopes + traversal availability**
+   - Failure mode: focus trap/restore drift, traversal gating mismatches, unexpected focus loss.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/focus_scope.rs`
+     - `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
+     - `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
+
+6. **Text input + IME snapshot correctness**
+   - Failure mode: preedit ranges drift, composition state leaks, snapshot contract breaks.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/platform_text_input.rs`
+     - `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
+
+7. **Scroll + virtual list invalidation classification**
+   - Failure mode: scroll changes force full relayout/paint unexpectedly, overscan drift, jank.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
+     - `crates/fret-ui/src/tree/tests/scroll_into_view.rs`
+     - `crates/fret-ui/src/declarative/tests/virtual_list.rs`
+
+8. **View cache / paint cache correctness**
+   - Failure mode: cached subtrees fail to invalidate or invalidate too broadly.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/view_cache.rs`
+     - `crates/fret-ui/src/tree/tests/paint_cache.rs`
+     - `crates/fret-ui/src/declarative/tests/view_cache.rs`
+
+9. **Dispatch phases + command availability snapshots**
+   - Failure mode: input routing order changes, command gating drifts, post-dispatch snapshots regress.
+   - Gates:
+     - `crates/fret-ui/src/tree/tests/dispatch_phase.rs`
+     - `crates/fret-ui/src/tree/tests/window_input_context_snapshot.rs`
+
+10. **Cross-frame identity + GC liveness**
+    - Failure mode: element identity becomes unstable; state leaks or is dropped unexpectedly.
+    - Gates:
+      - `crates/fret-ui/src/declarative/tests/identity.rs`
+      - `crates/fret-ui/src/declarative/tests/element_state_gc.rs`
+      - `crates/fret-ui/src/tree/tests/gc_liveness.rs`
+
 ### M3 — Renderer closure (GPU-first, predictable, inspectable)
 
 Outcome: rendering + text pipelines are refactorable without “mystery regressions”.

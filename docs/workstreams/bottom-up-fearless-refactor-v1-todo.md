@@ -64,8 +64,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M2 — UI runtime closure
 
-- [ ] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
+- [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
   - Must include: layout recursion hazards, overlay dismissal drift, IME key arbitration, view-cache reuse drift.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
 
 - [ ] BU-FR-ui-021 Link the “closure targets” in this program doc to the existing P0 closure tracker and keep them in sync.
   - Primary: `docs/workstreams/foundation-closure-p0.md`, `docs/workstreams/foundation-closure-p0-todo.md`
