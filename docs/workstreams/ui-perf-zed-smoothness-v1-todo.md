@@ -21,6 +21,8 @@ Conventions:
 
 - [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
+  - Companion probe (width jitter / live-drag approximation):
+    `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
