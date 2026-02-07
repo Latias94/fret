@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use fret_diag_protocol::{
-    UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiInspectConfigV1,
-    UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+    UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1, UiKeyModifiersV1,
+    UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1, UiScriptResultV1,
+    UiScriptStageV1, UiSelectorV1,
 };
 
 #[derive(Debug, Clone)]
@@ -9422,6 +9422,7 @@ mod tests {
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot, Size,
     };
+    use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
 
     #[test]
