@@ -19,6 +19,32 @@ Legend:
 - **Partial**: implemented, but lacks option/edge-case parity coverage.
 - **Missing**: no equivalent capability surface yet.
 
+Last updated: 2026-02-07
+
+---
+
+## Capability gap snapshot (what can still make us weaker)
+
+This section is intentionally short and action-oriented. It is the “capability parity”
+definition-of-done for `HTP-cap-010` / `HTP-base-004`.
+
+**P0 (must close; consumers will re-implement and drift):**
+
+- **Core snapshot completeness**: `CoreModelSnapshot` is still “structure + ids” heavy.
+  - Gap: lacks a first-class, versioned inventory of column/header/cell capabilities that UI consumers typically
+    query on instances (e.g. `getCanResize`, `getIsPlaceholder`, pin-family splits).
+  - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
+- **Memo/perf guardrails for rebuild-each-frame**:
+  - Gap: we do not yet have a documented + tested integration pattern for “rebuild per frame, keep memo cache”.
+  - Tracking: `HTP-memo-020` + `HTP-perf-010`.
+
+**P1 (should close to match upstream ergonomics without copying the JS API):**
+
+- **State JSON spec**: a written, enforceable spec for omitted-vs-explicit defaults and normalization rules.
+  - Tracking: `HTP-state-010` / `HTP-state-011`.
+- **Inventory completeness**: convert the raw upstream instance member dump into an explicit checklist with status + evidence.
+  - Tracking: `HTP-cap-010` / `HTP-base-004`.
+
 ---
 
 ## Consumer-driven “must-have” surface (WIP)
@@ -31,6 +57,8 @@ we are not weaker than upstream while keeping the Rust surface idiomatic.
   - Currently calls into: `Table::{core_row_model,pre_pagination_row_model,grouped_row_model,top_row_keys,center_row_keys,bottom_row_keys}`
     plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
 - `fret-ui-shadcn` DataTable: (TODO) identify the minimal required engine surface once it is wired to `fret-ui-headless`.
+  - Note: current `fret-ui-shadcn` `DataTable*` recipes primarily mutate `TableState` directly
+    (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`) and rely on `fret-ui-kit` for rendering.
 
 ---
 
