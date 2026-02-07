@@ -4,6 +4,7 @@
 //! - `app_handler`: winit `ApplicationHandler` glue (window creation + event dispatch entrypoints).
 //! - `gfx_init`: async GPU adoption + font seeding + canvas DPI sizing.
 //! - `render_loop`: per-frame driving and fixed-point effect/event draining.
+//! - `effects`: `Effect` draining and side-effect integration.
 //! - `streaming_images`: streaming image updates, including YUV conversion paths.
 //! - `ime_mount`: DOM mounting helpers for IME overlays.
 
@@ -16,6 +17,7 @@ mod dispatcher;
 use dispatcher::WebDispatcher;
 
 mod app_handler;
+mod effects;
 mod gfx_init;
 mod ime_mount;
 mod render_loop;
