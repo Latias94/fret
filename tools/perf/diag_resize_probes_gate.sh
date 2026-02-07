@@ -35,7 +35,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 out_dir="target/fret-diag-resize-probes-gate-$(date +%s)"
-baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json"
+baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json"
 launch_bin="target/release/fret-ui-gallery"
 timeout_ms=300000
 repeat=7
@@ -112,9 +112,23 @@ if ! "${cmd[@]}" > "$out_dir/stdout.json" 2> "$out_dir/stderr.log"; then
   rc=$?
 fi
 
+check_file="$out_dir/check.perf_thresholds.json"
+failures_count=""
 pass=true
+
 if [[ "$rc" -ne 0 ]]; then
   pass=false
+fi
+
+if [[ ! -f "$check_file" ]]; then
+  pass=false
+else
+  failures_count="$(jq -r '.failures | length' "$check_file" 2>/dev/null || true)"
+  if [[ -z "$failures_count" ]]; then
+    pass=false
+  elif [[ "$failures_count" != "0" ]]; then
+    pass=false
+  fi
 fi
 
 jq -n \
@@ -122,6 +136,8 @@ jq -n \
   --arg baseline "$baseline" \
   --arg launch_bin "$launch_bin" \
   --argjson pass "$pass" \
+  --arg check_file "$check_file" \
+  --arg failures_count "${failures_count:-}" \
   --arg stdout "$out_dir/stdout.json" \
   --arg stderr "$out_dir/stderr.log" \
   --arg repeat "$repeat" \
@@ -134,12 +150,19 @@ jq -n \
     launch_bin: $launch_bin,
     repeat: ($repeat | tonumber),
     warmup_frames: ($warmup_frames | tonumber),
+    check: {
+      perf_thresholds: $check_file,
+      failures: (if ($failures_count | length) == 0 then null else ($failures_count | tonumber) end)
+    },
     stdout: $stdout,
     stderr: $stderr
   }' > "$out_dir/summary.json"
 
 if [[ "$pass" != "true" ]]; then
   echo "[gate] FAIL (rc=$rc). See: $out_dir/summary.json" >&2
+  if [[ "$rc" -eq 0 ]]; then
+    exit 1
+  fi
   exit "$rc"
 fi
 
