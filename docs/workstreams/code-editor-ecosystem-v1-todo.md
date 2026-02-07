@@ -144,7 +144,7 @@ Evidence anchors:
 ### Text preparation + caching
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
-- [~] Define row cache keys and budgets (viewport-bounded, LRU-ish) (row text + syntax spans are bounded; text system cache/telemetry alignment pending).
+- [x] Define row cache keys and budgets (viewport-bounded, LRU-ish) (implemented; remaining work is tightening cache telemetry attribution across the renderer/canvas layers).
 - [x] Replace the code editor monospace "cell width" heuristic with cached renderer caret stops for pointer hit-testing, caret, and selection geometry (keep the heuristic as a fallback until every backend implements caret stops).
 - [x] Make vertical caret movement preserve a pixel `preferred_x` (per-row caret stops), not the last display column.
 - [x] Draw selection using `TextService::selection_rects` when a row has a `TextBlobId` (fallback to caret stops / cell width).

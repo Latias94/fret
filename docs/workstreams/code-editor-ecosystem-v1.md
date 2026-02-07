@@ -476,8 +476,14 @@ Evidence anchors:
   - caret + selection (mouse + keyboard),
   - clipboard copy/paste (best-effort),
   - IME preedit (inline underline) + cursor-area reporting (best-effort).
-- [~] Define row cache keys and budgets (text blobs + shaping caches + token spans).
-- [~] Define selection/caret painting layers (paint-only where possible).
+- [x] Define row cache keys and budgets (text blobs + shaping caches + token spans).
+  - Key: `(buffer_revision, display_wrap_cols, display_row_index)`; caches reset on revision or wrap-mode changes.
+  - Budget: derived from `viewport_rows + 2*overscan + 128`, clamped to `[256, 8192]`, and applied consistently to:
+    - per-row editor-local caches (row text, row geometry, syntax spans),
+    - and the `CanvasCachePolicy.text` shaping cache for prepared row blobs.
+- [x] Define selection/caret painting layers (paint-only where possible).
+  - Layering: text → selection highlights → IME preedit underline/range highlight → caret (plus optional debug overlays).
+  - Keep theme-only changes paint-only by expressing selection/preedit as paint decorations on top of prepared row text.
 - [x] Implement inline IME preedit rendering (underline + optional range highlight).
 - [x] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
 - [x] Cancel inline preedit deterministically on selection/navigation actions (v1 policy).
@@ -487,6 +493,8 @@ Evidence anchors:
 Evidence anchors:
 
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor` row painting + input + per-canvas text cache policy)
+- `ecosystem/fret-code-editor/src/editor/mod.rs` (cache budgets derived from viewport + overscan; exported cache stats)
+- `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (row text/syntax/geom caches + eviction; paint layer ordering)
 - `crates/fret-ui/src/element.rs` (`TextInputRegionProps`, `ElementKind::TextInputRegion`)
 - `crates/fret-ui/src/declarative/host_widget/event/text_input_region.rs` (IME/TextInput forwarding)
 - `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (pointer up/cancel support)
