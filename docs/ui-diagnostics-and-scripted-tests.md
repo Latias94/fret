@@ -15,6 +15,8 @@ Scope note:
   how to author stable, selector-driven repros).
 - For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
   `docs/debugging-ui-with-inspector-and-scripts.md`.
+- For the planned **DevTools GUI** that wraps these same contracts (inspect/pick/scripts/bundles) with a user-facing UI,
+  see: `docs/workstreams/diag-devtools-gui-v1.md`.
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
