@@ -111,6 +111,8 @@ Baseline fact (quick reference):
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+   - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
+     long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
    - Fret experiment knob (default-off): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
    - Latest evidence (see perf log entries on 2026-02-07):
      - Bucketing remains **inconsistent**: bucket=2px can reduce `drag-jitter`, but `resize-stress` tends to regress;

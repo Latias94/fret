@@ -6772,3 +6772,162 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `15618`
 - bundle: `target/fret-diag-resize-probes-wrap-bucket4-r1/1770473161988-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-08 00:00:46 (commit `9eb647bd6`)
+
+Change:
+- A/B: baseline word-wrap (shape-once disabled by default)
+
+Suite:
+- `ui-resize-probes`
+
+Command:
+```powershell
+cargo run -q -p fretboard -- diag perf ui-resize-probes --dir target/fret-diag-resize-probes-shape-once-gated-off-r1 --timeout-ms 300000 --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-resize-probes-shape-once-gated-off-r1/stdout.json`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15559 | 16155 | 16155 | 9820 | 2242 | 87 | 6248 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16495 | 16653 | 16653 | 9564 | 2301 | 94 | 7504 | 0 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-resize-probes-shape-once-gated-off-r1/1770479445297-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-resize-probes-shape-once-gated-off-r1/1770479445297-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 3241 | 3241 | 18 | 18 | 18 | 18 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 3604 | 3604 | 18 | 18 | 18 | 18 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `16653`
+- bundle: `target/fret-diag-resize-probes-shape-once-gated-off-r1/1770479441960-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-08 00:00:57 (commit `9eb647bd6`)
+
+Change:
+- A/B: enable shape-once word wrap (FRET_TEXT_WORD_WRAP_SHAPE_ONCE=1)
+
+Suite:
+- `ui-resize-probes`
+
+Command:
+```powershell
+cargo run -q -p fretboard -- diag perf ui-resize-probes --dir target/fret-diag-resize-probes-shape-once-gated-on-r1 --timeout-ms 300000 --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_TEXT_WORD_WRAP_SHAPE_ONCE=1 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-resize-probes-shape-once-gated-on-r1/stdout.json`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 14904 | 15023 | 15023 | 9646 | 2299 | 82 | 5374 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15919 | 16094 | 16094 | 9592 | 2212 | 93 | 6472 | 0 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-resize-probes-shape-once-gated-on-r1/1770479535304-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-resize-probes-shape-once-gated-on-r1/1770479535304-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 2466 | 2466 | 18 | 18 | 18 | 18 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 2478 | 2478 | 18 | 18 | 18 | 18 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `16094`
+- bundle: `target/fret-diag-resize-probes-shape-once-gated-on-r1/1770479528118-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-08 00:01:07 (commit `10e7d97fc`)
+
+Change:
+- Default: enable shape-once word wrap for long paragraphs (>=256B), env override available.
+
+Suite:
+- `ui-resize-probes`
+
+Command:
+```powershell
+cargo run -q -p fretboard -- diag perf ui-resize-probes --dir target/fret-diag-resize-probes-shape-once-default-r2 --timeout-ms 300000 --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-resize-probes-shape-once-default-r2/stdout.json`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15154 | 15271 | 15271 | 9464 | 2313 | 83 | 5765 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15969 | 16483 | 16483 | 9524 | 2275 | 101 | 6858 | 0 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-resize-probes-shape-once-default-r2/1770479958969-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-resize-probes-shape-once-default-r2/1770479958969-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Text prepare signals (worst frame in each bundle; p95/max):
+| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 2711 | 2711 | 18 | 18 | 18 | 18 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 2719 | 2719 | 18 | 18 | 18 | 18 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `16483`
+- bundle: `target/fret-diag-resize-probes-shape-once-default-r2/1770479944429-ui-gallery-window-resize-stress-steady/bundle.json`

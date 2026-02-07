@@ -39,6 +39,10 @@ Conventions:
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
+  - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
+    - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
+    - Knob: `FRET_TEXT_WORD_WRAP_SHAPE_ONCE` (`1`/`0`) overrides the default threshold behavior.
+    - Evidence: perf log entries appended for the A/B run and the default behavior (2026-02-07, `ui-resize-probes`).
   - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
     - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off.
     - Evidence (still mixed): perf log entries on `2026-02-07` show bucketing is not consistently positive:
