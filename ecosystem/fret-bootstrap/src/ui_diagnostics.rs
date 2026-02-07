@@ -59,27 +59,33 @@ pub struct UiDiagnosticsConfig {
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let mut devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
-            .ok()
-            .filter(|v| !v.is_empty())
-            .or_else(|| {
-                std::env::var("FRET_DEVTOOLS_WS_PORT")
-                    .ok()
-                    .filter(|v| !v.is_empty())
-                    .and_then(|v| v.parse::<u16>().ok())
-                    .map(|port| format!("ws://127.0.0.1:{port}/"))
-            });
-        let mut devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
-            .ok()
-            .filter(|v| !v.is_empty());
+        let (devtools_ws_url, devtools_token) = {
+            let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
+                .ok()
+                .filter(|v| !v.is_empty())
+                .or_else(|| {
+                    std::env::var("FRET_DEVTOOLS_WS_PORT")
+                        .ok()
+                        .filter(|v| !v.is_empty())
+                        .and_then(|v| v.parse::<u16>().ok())
+                        .map(|port| format!("ws://127.0.0.1:{port}/"))
+                });
+            let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
+                .ok()
+                .filter(|v| !v.is_empty());
 
-        #[cfg(all(target_arch = "wasm32", feature = "diagnostics-ws"))]
-        {
-            let (qs_ws_url, qs_token) =
-                fret_diag_ws::client::devtools_ws_config_from_window_query();
-            devtools_ws_url = devtools_ws_url.or(qs_ws_url);
-            devtools_token = devtools_token.or(qs_token);
-        }
+            #[cfg(all(target_arch = "wasm32", feature = "diagnostics-ws"))]
+            {
+                let (qs_ws_url, qs_token) =
+                    fret_diag_ws::client::devtools_ws_config_from_window_query();
+                (devtools_ws_url.or(qs_ws_url), devtools_token.or(qs_token))
+            }
+
+            #[cfg(not(all(target_arch = "wasm32", feature = "diagnostics-ws")))]
+            {
+                (devtools_ws_url, devtools_token)
+            }
+        };
 
         let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
             || out_dir_env.is_some()
@@ -3379,7 +3385,6 @@ impl UiDiagnosticsService {
                 state.remaining_frames = state.remaining_frames.saturating_sub(1);
                 state.last_result_trigger_stamp = trigger_stamp;
                 self.devtools_screenshot_wait = Some(state);
-                app.request_redraw(window);
             }
 
             return;
@@ -3484,7 +3489,6 @@ impl UiDiagnosticsService {
                         transport_request_id: pending.request_id,
                         bundle_dir_name,
                     });
-                    app.request_redraw(window);
                 } else {
                     self.emit_screenshot_result(
                         pending.request_id,
