@@ -19,6 +19,7 @@ fret-platform = { path = "../fret-platform", optional = true }
 fret-platform-native = { path = "../fret-platform-native", optional = true }
 fret-platform-web = { path = "../fret-platform-web", optional = true }
 fret-runner-winit = { path = "../fret-runner-winit", optional = true }
+fret-runner-web = { path = "../fret-runner-web", optional = true }
 fret-launch = { path = "../fret-launch", optional = true }
 fret-fonts = { path = "../fret-fonts", optional = true }
 
@@ -37,11 +38,13 @@ platform-native = ["dep:fret-platform-native", "platform-contracts"]
 platform-web = ["dep:fret-platform-web", "core", "runtime"]
 
 runner-winit = ["dep:fret-runner-winit"]
+runner-web = ["dep:fret-runner-web"]
 launch = ["dep:fret-launch"]
 
 # Convenience bundles (optional).
 native-wgpu = ["launch", "runner-winit", "platform-native", "render", "runtime", "app", "ui"]
-web = ["launch", "runner-winit", "platform-web", "render", "runtime", "app", "ui", "fonts"]
+web = ["launch", "runner-web", "platform-web", "render", "runtime", "app", "ui", "fonts"]
+web-winit = ["launch", "runner-winit", "platform-web", "render", "runtime", "app", "ui", "fonts"]
 
 # Preferred aliases (keep bundle intent clear).
 desktop = ["native-wgpu"]

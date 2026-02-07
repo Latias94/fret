@@ -60,6 +60,11 @@ pub mod runner_winit {
     pub use fret_runner_winit::*;
 }
 
+#[cfg(feature = "runner-web")]
+pub mod runner_web {
+    pub use fret_runner_web::*;
+}
+
 #[cfg(feature = "launch")]
 pub mod launch {
     pub use fret_launch::*;

@@ -979,6 +979,7 @@ dependencies = [
  "fret-platform-native",
  "fret-platform-web",
  "fret-render",
+ "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "fret-ui",
@@ -1358,6 +1359,7 @@ dependencies = [
  "fret-platform-native",
  "fret-platform-web",
  "fret-render",
+ "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
  "getrandom 0.3.4",
@@ -1535,7 +1537,10 @@ dependencies = [
 name = "fret-runner-web"
 version = "0.1.0"
 dependencies = [
+ "fret-core",
  "fret-platform-web",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1546,8 +1551,6 @@ dependencies = [
  "fret-a11y-accesskit",
  "fret-core",
  "tracing",
- "wasm-bindgen",
- "web-sys",
  "windows-sys 0.61.2",
  "winit",
 ]
