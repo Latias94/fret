@@ -382,6 +382,8 @@ pub(crate) const CMD_GALLERY_DEBUG_RECENT_CLEAR: &str = "ui_gallery.debug.recent
 pub(crate) const CMD_GALLERY_DEBUG_WINDOW_OPEN: &str = "ui_gallery.debug.window.open";
 pub(crate) const CMD_GALLERY_RECENT_OPEN_PREFIX: &str = "ui_gallery.recent.open.";
 pub(crate) const CMD_GALLERY_WINDOW_ACTIVATE_PREFIX: &str = "ui_gallery.window.activate.";
+pub(crate) const CMD_GALLERY_PAGE_BACK: &str = "ui_gallery.page.back";
+pub(crate) const CMD_GALLERY_PAGE_FORWARD: &str = "ui_gallery.page.forward";
 
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";

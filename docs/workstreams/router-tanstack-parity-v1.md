@@ -175,3 +175,4 @@ Unify under a trait:
 - `ecosystem/fret-router/src/history.rs` (portable history)
 - `ecosystem/fret-router/src/web.rs` + `ecosystem/fret-router/tests/web_wasm.rs` (web adapters)
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
+- `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; route-driven query effects; page back/forward)

@@ -74,6 +74,11 @@ fn route_location_for_page(page: &Arc<str>) -> RouteLocation {
         .with_query_value("source", Some("nav".to_string()))
 }
 
+fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
+    let page = location.query_value("page")?;
+    page_spec(page).is_some().then_some(Arc::<str>::from(page))
+}
+
 fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, MemoryHistory> {
     let tree = Arc::new(RouteTree::new(
         RouteNode::new(UiGalleryRouteId::Root, "/")
@@ -116,7 +121,16 @@ fn apply_page_route_side_effects_via_router(
 ) {
     let current_route = route_location_for_page(&current_page);
     let update = router.navigate(action, Some(current_route.canonicalized()));
+    apply_page_router_update_side_effects(app, window, current_page, router, update);
+}
 
+fn apply_page_router_update_side_effects(
+    app: &mut App,
+    window: AppWindowId,
+    current_page: Arc<str>,
+    router: &mut Router<UiGalleryRouteId, MemoryHistory>,
+    update: Result<RouterUpdate, fret_router::RouteSearchValidationFailure>,
+) {
     let Ok(update) = update else {
         return;
     };
@@ -623,6 +637,17 @@ impl UiGalleryDriver {
                             ],
                         },
                     ],
+                },
+                MenuItem::Separator,
+                MenuItem::Command {
+                    command: CommandId::new(CMD_GALLERY_PAGE_BACK),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_GALLERY_PAGE_FORWARD),
+                    when: None,
+                    toggle: None,
                 },
                 MenuItem::Separator,
                 MenuItem::Submenu {
@@ -1158,6 +1183,62 @@ impl UiGalleryDriver {
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
+        if matches!(
+            command.as_str(),
+            CMD_GALLERY_PAGE_BACK | CMD_GALLERY_PAGE_FORWARD
+        ) {
+            let action = if command.as_str() == CMD_GALLERY_PAGE_BACK {
+                NavigationAction::Back
+            } else {
+                NavigationAction::Forward
+            };
+            let update = state.page_router.navigate(action, None);
+
+            let next_page = page_from_gallery_location(&state.page_router.state().location)
+                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+            let next_page_for_selected = next_page.clone();
+            let next_page_for_tabs = next_page.clone();
+
+            let _ = app
+                .models_mut()
+                .update(&state.selected_page, |v| *v = next_page_for_selected);
+            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                if !tabs
+                    .iter()
+                    .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
+                {
+                    tabs.push(next_page_for_tabs.clone());
+                }
+            });
+
+            let cmd: Arc<str> = Arc::from(format!(
+                "{}{}",
+                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                next_page_for_tabs.as_ref()
+            ));
+            state
+                .workspace_tab_close_by_command
+                .insert(cmd, next_page_for_tabs);
+
+            apply_page_router_update_side_effects(
+                app,
+                window,
+                next_page.clone(),
+                &mut state.page_router,
+                update,
+            );
+
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from(format!(
+                    "gallery.page_history.{}({})",
+                    action,
+                    next_page.as_ref()
+                ));
+            });
+
+            return true;
+        }
+
         let Some(page) = page_id_for_nav_command(command.as_str()) else {
             return false;
         };
@@ -3058,6 +3139,18 @@ pub fn build_app() -> App {
         CommandMeta::new("Menu Bar (In-window): Off")
             .with_category("Settings")
             .with_keywords(["menu", "menubar", "in-window", "off"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_PAGE_BACK),
+        CommandMeta::new("Page Back")
+            .with_category("Gallery")
+            .with_keywords(["gallery", "page", "back", "history", "navigate"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_PAGE_FORWARD),
+        CommandMeta::new("Page Forward")
+            .with_category("Gallery")
+            .with_keywords(["gallery", "page", "forward", "history", "navigate"]),
     );
     app.commands_mut().register(
         CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),

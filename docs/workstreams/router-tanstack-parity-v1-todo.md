@@ -77,3 +77,5 @@ Status legend:
 - `[x]` Add an app-level reference integration example:
   - window-scoped router state + navigation commands
   - query prefetch tied to route matches
+- `[x]` Wire UI Gallery page history navigation:
+  - add `Back`/`Forward` commands driven by the router history stack
