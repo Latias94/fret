@@ -87,7 +87,7 @@ P0 (core behavior parity, highest user-visible risk):
 P1 (capability breadth parity):
 
 - HTP-id-014/015: promote grouped/string RowId through remaining feature paths and state conversions.
-- HTP-filt-080/090: complete `getCanFilter` option-gate + controlled filtering hook parity surfaces.
+- HTP-filt-090/100: complete `getCanFilter` option-gate + controlled filtering hook parity surfaces.
 - HTP-state-020: lossless omitted-vs-explicit-default JSON round-trip semantics.
 
 P2 (engineering guardrails for sustained parity):
@@ -126,16 +126,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Deliverables:
     - A minimal list of 鈥渕ust-have鈥?APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
     - A second list of 鈥渃apability parity鈥?APIs that must exist to avoid being weaker than upstream.
-- [~] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
+- [x] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
   - Done (runtime, smoke): RowId-based state resolution and pinning-by-id helpers are covered.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
-  - Remaining (runtime): extend beyond 鈥渓eaf-only鈥?to cover:
-    - `getRow(id, searchAll?)` id lookup across core/pre-pagination/current models,
-    - grouped row ids (string ids like `role:1`),
-    - id-keyed feature state surfaces (pin/select/expand keyed by `RowId` strings).
+  - Note: deeper runtime semantics are validated by dedicated fixture parity gates (not the smoke gate),
+    e.g. `tanstack_v8_row_id_lookup_parity.rs`, `tanstack_v8_row_id_state_ops_parity.rs`,
+    and `tanstack_v8_pinning_grouped_rows_parity.rs`.
 - [x] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
   - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
     can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
@@ -276,7 +275,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): `enableFilters` + `enableGlobalFilter` gate global filtering application in `filtered_row_model`.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
-  - Remaining: wire gates into 鈥渃an filter鈥?UI surfaces and controlled state hooks.
+  - Remaining: wire gates into TanStack-style instance helper surfaces (`getCanFilter`/`getCanGlobalFilter`)
+    and controlled state hook parity (`onColumnFiltersChange` / `onGlobalFilterChange`).
 - [x] HTP-filt-030 Implement filterFn registry parity (`filterFns`):
   - built-ins, custom, and `auto` selection based on first known value.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
@@ -304,6 +304,26 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
   - Fixture snapshot: `filtering_fns_global_filter_default_excludes_bool` in `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
   - Hook surface: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`TableBuilder::get_column_can_global_filter`)
+- [~] HTP-filt-090 Add TanStack-like filtering helper surfaces (capability parity, consumer-facing).
+  - Target: consumers should not re-implement TanStack logic for:
+    - `column.getCanFilter()`
+    - `column.getFilterValue()`
+    - `column.getIsFiltered()`
+    - `column.getFilterIndex()`
+    - `column.setFilterValue(updater)` (table-scoped helper that returns an updater for `TableState.column_filters`)
+    - `column.getCanGlobalFilter()`
+  - Done (helper surfaces): `Table::{column_can_filter,column_filter_value,column_is_filtered,column_filter_index,column_can_global_filter}`
+    and `Table::column_filters_updater_set_value(..)` exist.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
+  - Remaining: add a small fixture parity case if TanStack behavior differs from naive state inspection
+    (e.g. enable flags + `autoRemove` interactions + empty-data behavior).
+- [~] HTP-filt-100 Add global filtering helper surface + controlled hook parity.
+  - Done (helper surface): `Table::global_filter_updater_set_value(..)` exists and is smoke-gated.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
+  - Remaining: `onGlobalFilterChange` noop semantics (fixture marker-driven, like other controlled hooks).
+  - Gate: extend `filtering_fns.json` (or add a dedicated fixture) to assert controlled-hook outcomes.
 
 ---
 
@@ -588,6 +608,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `column_pinning_action_reset_column_pinning_default_true_clears`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_column_pinning`)
+- [ ] HTP-colpin-030 Expose TanStack-like leaf-column split helpers (`getLeft/Center/RightLeafColumns`).
+  - Target: consumer-facing helper surfaces (no re-derivation in UI layer):
+    - `table.left_leaf_columns()` / `table.center_leaf_columns()` / `table.right_leaf_columns()`
+  - Notes:
+    - Must respect visibility + ordering + pinning (and nested/group columns where relevant).
+    - Must align with the cell split contract already parity-gated by `column_pinning.json`.
+  - Gate: add a small fixture parity assertion or a dedicated gate asserting the leaf split output directly.
 - [x] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
@@ -636,6 +663,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
   - Done (UI parity gate): retained path now has a dedicated regression test covering pin/unpin + resize + center-overflow alignment.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow`)
+- [ ] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
+  - Target: catch real consumer regressions that manifest as non-uniform row widths / misaligned columns in the demo.
+  - Preferred harness: `fretboard diag` script with a deterministic table scenario (pinning + sizing + visibility + scroll).
+  - Deliverable: a `tools/diag-scripts/*.json` script + a short doc note in the workstream for how to run it.
 
 ---
 

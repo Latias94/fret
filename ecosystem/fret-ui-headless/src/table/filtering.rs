@@ -88,6 +88,60 @@ pub fn set_column_filter_value_tanstack<TData>(
     }
 }
 
+pub(crate) fn column_filters_updater_set_value_tanstack<TData>(
+    data: &[TData],
+    column: &ColumnDef<TData>,
+    filter_fns: &HashMap<Arc<str>, FilterFnDef>,
+    value: Value,
+) -> super::Updater<ColumnFiltersState> {
+    let column_id = column.id.clone();
+    let auto_remove_behavior = resolve_filter_fn_for_column(data, column, filter_fns);
+
+    super::Updater::Func(Arc::new(move |old| {
+        let mut next = old.clone();
+        let existing_index = next
+            .iter()
+            .position(|f| f.column.as_ref() == column_id.as_ref());
+
+        let should_remove = match auto_remove_behavior.as_ref() {
+            None => is_json_filter_value_empty(&value),
+            Some(ResolvedFilterBehavior::BuiltIn(builtin)) => {
+                should_auto_remove_built_in_filter(*builtin, &value)
+            }
+            Some(ResolvedFilterBehavior::Custom) => is_json_filter_value_empty(&value),
+        };
+
+        if should_remove {
+            if let Some(i) = existing_index {
+                next.remove(i);
+            }
+            return next;
+        }
+
+        let entry = ColumnFilter {
+            column: column_id.clone(),
+            value: value.clone(),
+        };
+
+        match existing_index {
+            Some(i) => {
+                if let Some(existing) = next.get_mut(i) {
+                    *existing = entry;
+                }
+            }
+            None => next.push(entry),
+        }
+
+        next
+    }))
+}
+
+pub(crate) fn global_filter_updater_set_value_tanstack(
+    value: GlobalFilterState,
+) -> super::Updater<GlobalFilterState> {
+    super::Updater::Value(value)
+}
+
 pub fn evaluate_row_filter_state<'a, TData>(
     row_model: &RowModel<'a, TData>,
     columns: &[ColumnDef<TData>],

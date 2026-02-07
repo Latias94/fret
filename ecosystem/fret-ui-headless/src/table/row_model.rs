@@ -1794,6 +1794,115 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    pub fn column_can_filter(&self, column_id: &str) -> Option<bool> {
+        fn column_has_filter_value_source<TData>(col: &super::ColumnDef<TData>) -> bool {
+            if col.filter_fn.is_some() || col.filter_fn_with_meta.is_some() {
+                return true;
+            }
+            col.filtering_fn.is_some() && col.sort_value.is_some()
+        }
+
+        let col = self.column(column_id)?;
+        Some(
+            self.options.enable_filters
+                && self.options.enable_column_filters
+                && col.enable_column_filter
+                && column_has_filter_value_source(col),
+        )
+    }
+
+    pub fn column_filter_value(&self, column_id: &str) -> Option<&serde_json::Value> {
+        self.column(column_id)?;
+        self.state
+            .column_filters
+            .iter()
+            .find(|f| f.column.as_ref() == column_id)
+            .map(|f| &f.value)
+    }
+
+    pub fn column_is_filtered(&self, column_id: &str) -> Option<bool> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .column_filters
+                .iter()
+                .any(|f| f.column.as_ref() == column_id),
+        )
+    }
+
+    /// TanStack-aligned: `column.getFilterIndex()`.
+    ///
+    /// Returns `-1` when the column is not currently filtered. Returns `None` when the column id
+    /// does not exist.
+    pub fn column_filter_index(&self, column_id: &str) -> Option<i32> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .column_filters
+                .iter()
+                .position(|f| f.column.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
+    /// TanStack-aligned: `column.setFilterValue(value)` as a state updater.
+    pub fn column_filters_updater_set_value(
+        &self,
+        column_id: &str,
+        value: serde_json::Value,
+    ) -> Option<super::Updater<super::ColumnFiltersState>> {
+        let col = self.column(column_id)?;
+        Some(super::filtering::column_filters_updater_set_value_tanstack(
+            self.data,
+            col,
+            &self.filter_fns,
+            value,
+        ))
+    }
+
+    /// TanStack-aligned: `table.setGlobalFilter(value)` as a state updater.
+    pub fn global_filter_updater_set_value(
+        &self,
+        value: super::GlobalFilterState,
+    ) -> super::Updater<super::GlobalFilterState> {
+        super::filtering::global_filter_updater_set_value_tanstack(value)
+    }
+
+    /// TanStack-aligned: `column.getCanGlobalFilter()`.
+    pub fn column_can_global_filter(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_filters
+            && self.options.enable_global_filter
+            && col.enable_global_filter)
+        {
+            return Some(false);
+        }
+
+        let first_row_original = self
+            .pre_filtered_row_model()
+            .flat_rows()
+            .first()
+            .and_then(|&i| self.pre_filtered_row_model().row(i))
+            .map(|r| r.original);
+
+        let can_global_filter = match self.get_column_can_global_filter.as_deref() {
+            Some(f) => first_row_original.is_some_and(|first| f(col, first)),
+            None => match first_row_original {
+                Some(first) => match col.sort_value.as_ref() {
+                    Some(get_value) => matches!(
+                        (get_value)(first),
+                        super::TanStackValue::String(_) | super::TanStackValue::Number(_)
+                    ),
+                    None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
+                },
+                None => false,
+            },
+        };
+
+        Some(can_global_filter)
+    }
+
     /// TanStack-aligned: `table.resetGrouping(defaultState?)`.
     pub fn reset_grouping(&self, default_state: bool) -> super::GroupingState {
         if default_state {

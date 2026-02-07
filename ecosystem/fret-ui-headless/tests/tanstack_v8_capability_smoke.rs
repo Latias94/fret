@@ -1,9 +1,8 @@
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, FilterFnDef, RowId, RowKey,
+    ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, RowId, RowKey,
     RowPinPosition, Table, TableState, TanStackTableState, TanStackValue,
-    set_column_filter_value_tanstack, toggle_sorting_handler_tanstack,
+    toggle_sorting_handler_tanstack,
 };
-use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -89,16 +88,34 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     assert!(!sorting.is_empty());
 
     // Column filter state transition (TanStack-style `column.setFilterValue` behavior).
-    let mut column_filters = table.state().column_filters.clone();
-    let filter_fns: HashMap<Arc<str>, FilterFnDef> = HashMap::new();
-    set_column_filter_value_tanstack(
-        &mut column_filters,
-        &data,
-        col_a,
-        &filter_fns,
-        serde_json::json!(10),
-    );
-    assert!(!column_filters.is_empty());
+    assert_eq!(table.column_can_filter("a"), Some(true));
+    assert_eq!(table.column_is_filtered("a"), Some(false));
+    assert_eq!(table.column_filter_index("a"), Some(-1));
+
+    let updater = table
+        .column_filters_updater_set_value("a", serde_json::json!(10))
+        .expect("column exists");
+    let next_filters = updater.apply(&table.state().column_filters);
+    assert!(!next_filters.is_empty());
+
+    let mut next_state = TableState::default();
+    next_state.column_filters = next_filters;
+    let table_with_filter = Table::builder(&data)
+        .columns(table.columns().to_vec())
+        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+        .state(next_state)
+        .build();
+    assert!(table_with_filter.column_filter_value("a").is_some());
+    assert_eq!(table_with_filter.column_filter_index("a"), Some(0));
+    assert_eq!(table_with_filter.column_is_filtered("a"), Some(true));
+
+    // Global filtering helper surfaces.
+    assert_eq!(table.column_can_global_filter("a"), Some(true));
+    let next_global_filter = table
+        .global_filter_updater_set_value(Some(serde_json::json!("ap")))
+        .apply(&table.state().global_filter);
+    assert!(next_global_filter.is_some());
 
     // Row/cell split snapshots.
     let _ = table.row_cells(RowKey(1)).expect("row exists");
