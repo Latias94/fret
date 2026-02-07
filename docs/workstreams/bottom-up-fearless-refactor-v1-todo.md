@@ -82,6 +82,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-core/src/scene/mod.rs`
 
+- [x] BU-FR-core-018 Convert `fret-core` input module to a directory subsystem (`input/mod.rs`).
+  - Goal: enable incremental internal splits of pointer/key/IME/viewport input normalization without crate-root churn.
+  - Evidence:
+    - `crates/fret-core/src/input/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
