@@ -175,6 +175,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-platform-web/src/wasm/mod.rs`
     - `crates/fret-platform-web/src/native/mod.rs`
 
+- [x] BU-FR-plat-054 Split `crates/fret-platform-web` wasm implementation into focused submodules.
+  - Goal: keep `WebPlatformServices` as a small facade while enabling incremental refactors of IME/timers/file dialogs with minimal churn.
+  - Evidence:
+    - `crates/fret-platform-web/src/wasm/mod.rs`
+    - `crates/fret-platform-web/src/wasm/ime.rs`
+    - `crates/fret-platform-web/src/wasm/timers.rs`
+    - `crates/fret-platform-web/src/wasm/file_dialog.rs`
+
 - [x] BU-FR-runner-060 Add a module ownership map for `crates/fret-runner-winit` and document the intended public surface.
   - Goal: make runner glue discoverable without dragging policy/renderer responsibilities into the wrong layer.
   - Evidence:
