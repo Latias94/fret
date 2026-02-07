@@ -41,6 +41,8 @@ enum FixtureAction {
         column_id: String,
         value: serde_json::Value,
     },
+    #[serde(rename = "setGlobalFilterValue")]
+    SetGlobalFilterValue { value: serde_json::Value },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -153,9 +155,21 @@ fn tanstack_v8_filtering_fns_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         if !snap.actions.is_empty() {
+            let on_column_filters_change_mode = snap
+                .options
+                .get("__onColumnFiltersChange")
+                .and_then(|v| v.as_str());
+            let on_global_filter_change_mode = snap
+                .options
+                .get("__onGlobalFilterChange")
+                .and_then(|v| v.as_str());
+
             for action in &snap.actions {
                 match action {
                     FixtureAction::SetColumnFilterValue { column_id, value } => {
+                        if on_column_filters_change_mode == Some("noop") {
+                            continue;
+                        }
                         let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
                             panic!("unknown action column_id: {}", column_id);
                         };
@@ -166,6 +180,12 @@ fn tanstack_v8_filtering_fns_parity() {
                             &filter_fns,
                             value.clone(),
                         );
+                    }
+                    FixtureAction::SetGlobalFilterValue { value } => {
+                        if on_global_filter_change_mode == Some("noop") {
+                            continue;
+                        }
+                        state.global_filter = Some(value.clone());
                     }
                 }
             }
@@ -179,6 +199,11 @@ fn tanstack_v8_filtering_fns_parity() {
                 assert_eq!(
                     state.column_filters, expected_state.column_filters,
                     "snapshot {} next_state.column_filters mismatch",
+                    snap.id
+                );
+                assert_eq!(
+                    state.global_filter, expected_state.global_filter,
+                    "snapshot {} next_state.global_filter mismatch",
                     snap.id
                 );
             }

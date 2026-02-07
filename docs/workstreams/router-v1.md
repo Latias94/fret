@@ -70,7 +70,7 @@ Default (no extra feature):
 Current v1 baseline implementation in `fret-router` includes:
 
 - `PathPattern` with static/param/wildcard segments
-- `RouteTable` with ordered match + fallback resolution
+- `RouteTable` with specificity-first match + fallback resolution
 - `RouteLocation` parse/format helpers with canonical query ordering
 - `MemoryHistory` with explicit `push/replace/back/forward` duplicate-navigation no-op semantics
 - base-path helpers for sub-path deployments (`apply/strip/normalize`)

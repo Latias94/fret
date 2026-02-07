@@ -1,6 +1,6 @@
 # Router v1 (Tracking)
 
-Last updated: 2026-02-06
+Last updated: 2026-02-07
 
 This file tracks concrete work for:
 
@@ -49,13 +49,28 @@ Status legend:
     - `ecosystem/fret-router/src/path.rs`
     - `ecosystem/fret-router/src/location.rs`
     - `ecosystem/fret-router/src/query.rs`
+- `[x]` Ensure path params do not decode `+` as space.
+  - Evidence:
+    - `ecosystem/fret-router/src/query.rs`
+    - `ecosystem/fret-router/src/path.rs`
+    - `ecosystem/fret-router/src/hash.rs`
+- `[x]` Ensure fragments do not double-encode `%` sequences.
+  - Evidence:
+    - `ecosystem/fret-router/src/location.rs`
+    - `ecosystem/fret-router/src/web.rs`
+- `[x]` Prefer more-specific route patterns over insertion order.
+  - Evidence:
+    - `ecosystem/fret-router/src/path.rs`
 - `[x]` Define duplicate navigation semantics for same-destination transitions.
   - Evidence:
     - `ecosystem/fret-router/src/history.rs`
-- `[ ]` Define malformed query behavior:
+- `[~]` Define malformed query behavior:
   - invalid percent encoding
   - duplicated keys
   - unknown keys
+  - Evidence:
+    - invalid percent encoding: `ecosystem/fret-router/src/query.rs`
+    - duplicated keys: `ecosystem/fret-router/src/query.rs`
 - `[x]` Add redirect/alias mapping for legacy links and migration compatibility.
   - Evidence:
     - `ecosystem/fret-router/src/alias.rs`

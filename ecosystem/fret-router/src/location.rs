@@ -1,7 +1,8 @@
 use crate::base_path::{apply_base_path, strip_base_path};
 use crate::path::{PathParam, PathPattern, normalize_path};
 use crate::query::{
-    QueryPair, encode_component, format_query_pairs, parse_query_pairs, query_values,
+    QueryPair, decode_path_component, encode_component, format_query_pairs, parse_query_pairs,
+    query_values,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,7 +35,7 @@ impl RouteLocation {
         if let Some((before_hash, after_hash)) = path_part.split_once('#') {
             path_part = before_hash;
             if !after_hash.is_empty() {
-                fragment = Some(after_hash.to_string());
+                fragment = Some(decode_path_component(after_hash));
             }
         }
 
@@ -194,6 +195,14 @@ mod tests {
         assert_eq!(location.query_value("tab"), Some("profile"));
         assert_eq!(location.fragment.as_deref(), Some("section-1"));
         assert_eq!(location.to_url(), "/users/42?lang=zh&tab=profile#section-1");
+    }
+
+    #[test]
+    fn route_location_decodes_and_reencodes_fragment() {
+        let location = RouteLocation::parse("/docs#section%201");
+
+        assert_eq!(location.fragment.as_deref(), Some("section 1"));
+        assert_eq!(location.to_url(), "/docs#section%201");
     }
 
     #[test]

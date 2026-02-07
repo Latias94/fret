@@ -10,6 +10,10 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/workspace-crate-boundaries-v1.md`
+- `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+- `docs/workstreams/diag-devtools-gui-v1.md`
+- `docs/workstreams/diag-devtools-gui-v1-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
 - `docs/workstreams/localization-i18n-v1.md`
@@ -78,3 +82,5 @@ Active workstreams:
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`
 - `docs/workstreams/router-v1.md`
 - `docs/workstreams/router-v1-todo.md`
+- `docs/workstreams/router-tanstack-parity-v1.md`
+- `docs/workstreams/router-tanstack-parity-v1-todo.md`

@@ -1,0 +1,348 @@
+---
+title: Diagnostics DevTools GUI v1
+status: draft
+date: 2026-02-07
+scope: diagnostics, automation, devtools, web-runner
+---
+
+# Diagnostics DevTools GUI v1
+
+This workstream defines a user-facing Diagnostics DevTools GUI for Fret apps.
+
+The key goal is to make the existing diagnostics workflow (bundles, inspect/pick, scripted repros, gates)
+available with **low-friction, real-time UX** for app/component authors — without weakening Fret’s layering
+and “contract-first” philosophy.
+
+Related foundations:
+
+- Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
+- Inspect + pick UX: `docs/debugging-ui-with-inspector-and-scripts.md`
+- Debugging playbook: `docs/debugging-playbook.md`
+- Base contract ADR: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
+- Semantics contract ADR: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+- CLI tooling baseline: `apps/fretboard/src/diag/*`
+- In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Offline viewer: `tools/fret-bundle-viewer`
+- UI prototype (rough): `docs/devtool.html`
+
+## Problem statement
+
+Today, diagnostics are powerful but CLI-first:
+
+- authors can run scripts (`tools/diag-scripts/*.json`) and collect bundles (`bundle.json`),
+- authors can pick stable selectors and apply them (`pick`, `pick-apply`),
+- tooling can gate regressions (stale paint/scene, pixels-changed, perf thresholds, footprint limits).
+
+The missing piece for “everyday use” is a **DevTools GUI** that:
+
+- feels like a modern editor devtools (inspect overlay + live state),
+- makes script authoring and selector management fast (pick-to-fill, library browsing),
+- makes artifacts navigable (latest bundle, pack/share, open in viewer),
+- supports **web runner** from day 1 (browser targets cannot rely on filesystem triggers).
+
+## Goals (v1)
+
+1. **Real-time inspect workflow**
+   - Toggle inspect on/off, arm pick, capture selector JSON, copy and apply it to script steps quickly.
+2. **Script Studio**
+   - Browse `tools/diag-scripts/`, fork/edit scripts, validate schema, run and see progress + failures.
+3. **Run + gate UX**
+   - First-class UI for running `run/suite/repro/perf/matrix/compare` and showing evidence outputs.
+4. **Artifacts + sharing**
+   - Latest bundle list, pack zip, open offline bundle viewer, surface triage and evidence files.
+5. **Web runner support**
+   - A transport that works when the target app runs in the browser (no filesystem access).
+
+## Non-goals (v1)
+
+- Remote debugging across machines (LAN/WAN) as a supported product feature.
+- A fully stabilized public “DevTools protocol” (we will version it, but treat it as workspace-internal).
+- Replacing `fretboard` CLI workflows; the GUI should complement them and reuse the same contracts.
+
+## Architecture overview
+
+### Key principle: keep bundles as the portable “source of truth”
+
+Real-time UI is for iteration speed, but **the shareable unit remains the bundle**:
+
+- deterministic scripts should still be able to emit `bundle.json`,
+- regression gates should still produce evidence JSON files,
+- offline inspection should still flow through `tools/fret-bundle-viewer`.
+
+### v1 decisions (lock early; avoid churn)
+
+These are v1 defaults we should treat as “sticky”:
+
+- **Default left-panel tree is the Semantics tree** (`SemanticsSnapshot`).
+  - Rationale: stable selectors (`test_id`) and alignment with inspect/pick/scripts.
+  - Layout/element trees can exist as secondary views, but scripts should not depend on them.
+- **Minimize live traffic**:
+  - Live transport sends only a minimal tree skeleton and small hover/focus summaries.
+  - Expensive details are fetched on-demand for the selected node (“inspect-on-demand”).
+- **Selected node detail refresh uses low-frequency polling** (e.g. ~1Hz), not per-frame push.
+- **Virtualize the tree UI** (target 50k+ semantics nodes) and keep filtering/search cheap.
+- **Backpressure is allowed** for hover spam: drop intermediate hover events under load.
+
+### UI skeleton (prototype-driven)
+
+This repo contains a rough DevTools UI prototype at `docs/devtool.html`. It is not a contract, but it
+is a useful starting point for agreeing on the user-facing information architecture:
+
+- Top toolbar:
+  - inspect/pick toggle,
+  - refresh/reconnect,
+  - node filter/search,
+  - basic live perf badges (FPS, frame time).
+- Left: a virtualized tree (expand/collapse, hover highlight, selection).
+- Center: viewport preview and/or live overlay explanation (selection bounds, label).
+- Right: inspector tabs with a stable, discoverable layout:
+  - `layout` (box model + computed geometry + layout engine fields),
+  - `style` (applied classes/tokens + raw style dump),
+  - `attributes` (performance counters, text/value summaries, debug flags).
+- Footer: connection/session status (transport + endpoint), diagnostics settings shortcuts.
+
+Important: the production DevTools should dogfood Fret’s own docking panels and code editor, but
+the IA above is a good “v1 default” to converge on.
+
+### Split into three layers: protocol, transport, and tooling UX
+
+1) **Protocol crate**: `crates/fret-diag-protocol`
+
+- Owns JSON-serializable types:
+  - selectors, predicates, script steps (schema v1/v2),
+  - pick/inspect results,
+  - run progress and failures,
+  - minimal “live inspect” event payloads.
+- Must be usable from native + wasm32.
+- Versioning rules:
+  - every message includes `schema_version`,
+  - unknown fields must be ignored by default (forward compatibility).
+
+2) **Tooling client crate**: `crates/fret-diag`
+
+- Owns “devtools client” workflows:
+  - file-trigger transport helpers (touch/write/wait),
+  - pack/share helpers,
+  - bundle stats/gates/compare (moved from `apps/fretboard/src/diag/*`),
+  - JSON parsing + validation utilities for scripts.
+- This is the “engine” used by both:
+  - `fretboard` CLI (thin wrapper),
+  - `fret-devtools` GUI (primary UX).
+
+3) **GUI app**: `apps/fret-devtools`
+
+- A Fret app that dogfoods editor-grade UI:
+  - docking panels, script editor, selectors browser, artifacts list, run timeline.
+- Uses `crates/fret-diag` for operations and `crates/fret-diag-protocol` for types.
+
+### Optional (but recommended): MCP surface for AI-driven testing
+
+To make diagnostics automation easy for AI agents and IDE-integrated assistants, we add an MCP server
+adapter built on the official Rust MCP SDK (`rmcp`).
+
+This MCP adapter should not invent new capabilities. It should expose a *small* set of tools that
+map directly to the same operations the GUI/CLI perform (inspect, pick, run script, pack artifacts,
+compare bundles), and (optionally) expose common artifacts as MCP resources.
+
+Recommended packaging:
+
+- A dedicated binary `apps/fret-devtools-mcp` (headless) for automation and CI.
+- Optionally, the GUI can embed/launch the MCP server for convenience.
+
+### Transport strategy (v1)
+
+We support two transports with the same protocol payloads:
+
+#### A) Native filesystem transport (existing; keep)
+
+- Works via `FRET_DIAG_DIR` files:
+  - `script.json` + `script.touch`
+  - `script.result.json`
+  - `pick.touch` + `pick.result.json`
+  - `inspect.json` + `inspect.touch`
+  - `screenshots.request.json` + `screenshots.touch` + `screenshots.result.json`
+- This remains the “most deterministic” and CI-friendly path.
+
+#### B) WebSocket transport (new; required for web runner)
+
+Browser targets cannot be controlled via file triggers, so we add a WebSocket-based transport.
+
+Recommended topology (enables web runner immediately):
+
+- **DevTools GUI hosts a local WS server** on `127.0.0.1:<port>`.
+- The target app (native or web) connects as a WS client.
+  - Web runner can connect to localhost via browser WebSocket APIs.
+  - Native runner can use a lightweight client (non-blocking).
+
+Why WS (instead of HTTP streaming):
+
+- we need bidirectional, low-latency commands + events,
+- SSE/HTTP streaming is one-way and would require a second channel for commands anyway.
+
+HTTP endpoints may still be used (optional) for:
+
+- downloading packed zips or large artifacts,
+- serving the offline bundle viewer for convenience.
+
+MCP integration note:
+
+- MCP is a *tooling API* between an AI client and our DevTools, not the runtime transport between DevTools and the app.
+- The MCP server should call into `crates/fret-diag` and use whatever app transport is available (filesystem or WS).
+
+### Security / safety (local-only defaults)
+
+The WS server should be “safe-by-default” for local dev:
+
+- bind to loopback only (`127.0.0.1`),
+- require a session token (capability string) to connect,
+- optionally enforce an Origin allowlist for browser clients.
+
+## Lessons from React DevTools (what to copy, not what to clone)
+
+The React DevTools architecture is a good reference model for keeping “live devtools” fast and usable:
+
+- **Minimize bridge traffic**:
+  - send only the minimum data required to render the tree,
+  - request expensive details (props/state) on-demand when a node is selected.
+- **Use patch/operations streams** instead of resending full trees.
+- **Poll selected details** at a low frequency rather than pushing every update (reduces churn during scroll).
+- **Dehydrate large values** and fill in deep paths on-demand (avoid expensive serialization).
+- **Virtualize large trees** (flattened list with depth/weight).
+
+For Fret DevTools v1, we should adopt the same principles:
+
+- live transport should prioritize small, frequent messages (tree skeleton + hover/focus summaries),
+- full evidence remains bundle-based (`capture_bundle` + offline viewer),
+- detailed per-node debug data should be “inspect-on-demand”, not “stream everything”.
+
+## Protocol outline (WS + MCP)
+
+This section defines the *transport protocol* used by WebSocket and MCP adapters.
+
+Note: script files already have their own `schema_version` (v1/v2) as documented in
+`docs/ui-diagnostics-and-scripted-tests.md`. Do not conflate script schema versions with transport protocol versions.
+
+### Message envelope
+
+All messages are JSON objects with a stable envelope:
+
+- `schema_version`: protocol version (start at `1`).
+- `type`: string message kind (e.g. `hello`, `inspect.set`, `script.run`).
+- `session_id`: string identifier (optional in the first `hello`).
+- `request_id`: u64 (optional; required for request/response pairs).
+- `payload`: message-specific object.
+
+Rules:
+
+- Requests that expect a response must include `request_id`.
+- Responses must echo the same `request_id`.
+- Push events must omit `request_id` (or set it to null).
+- Unknown `type` must be ignored (or answered with `error.unsupported_type`).
+
+### Handshake and capability negotiation
+
+The first client message must be `hello`:
+
+- client provides:
+  - `client_kind`: `native_app` | `web_app` | `tooling`,
+  - `client_version`: semver-ish string (best effort),
+  - `capabilities`: feature flags (e.g. `inspect`, `pick`, `scripts`, `screenshots`, `bundles`).
+- server responds with `hello_ack` including:
+  - `session_id`,
+  - server capabilities,
+  - auth/limits (max message size, rate hints).
+
+### Error model
+
+Errors are normal messages (never out-of-band):
+
+- `type: "error"`
+- `payload` includes:
+  - `code`: stable string (e.g. `error.unauthorized`, `error.timeout`, `error.invalid_payload`),
+  - `message`: human-readable,
+  - `details`: optional structured JSON.
+
+### Minimal command set (v1)
+
+These commands must map directly to existing in-app operations (no new semantics):
+
+- `inspect.set` / `inspect.status`
+- `pick.arm` / `pick.wait` (or `pick.once`) -> emits `pick.result` event
+- `script.push` / `script.run` -> emits `script.progress` events + final `script.result`
+- `bundle.dump` -> emits `bundle.dumped` event (includes bundle id/path/handle)
+- `screenshot.request` -> emits `screenshot.result` event
+
+Tooling-side-only operations (do not require app support):
+
+- `pack.create` (zip a bundle + `_root/` artifacts when available)
+- `bundle.latest` (native filesystem transport only)
+- `bundle.compare` / `bundle.stats` / `gates.run`
+
+### Live inspect payloads (keep minimal)
+
+For real-time UX, we push only the minimum stable summary required by the UI:
+
+- `inspect.hover`:
+  - window id, node id, selector JSON string, role, optional test_id, bounds, z/root hints.
+- `inspect.focus`:
+  - same shape as hover, plus focus-specific flags.
+- `overlay.summary`:
+  - barrier root id, count of blocking roots, topmost interactive root hints.
+
+Full evidence remains bundle-based (`capture_bundle`).
+
+## UX model (v1)
+
+DevTools is organized around the author’s loop:
+
+1) **Inspect**
+   - Toggle inspect, arm pick, show selector/path/role/test_id, copy JSON.
+2) **Scripts**
+   - Script library (`tools/diag-scripts`), fork/new, schema validation, pick-to-fill targets.
+3) **Run**
+   - Run script/suite, show per-step progress, failures, gates, and evidence file links.
+4) **Artifacts**
+   - Latest bundles, pack zip, open bundle viewer, show screenshots + triage.
+
+The GUI should treat `test_id` as the primary “stable handle” for scripts, and guide users to add `test_id`
+at recipe/component authoring time (`ecosystem/*`) when selectors are unstable.
+
+## Refactor plan (high level)
+
+1. Extract `apps/fretboard/src/diag/*` into `crates/fret-diag` (CLI becomes a thin wrapper).
+2. Extract script + selector + result types into `crates/fret-diag-protocol` and reuse them in:
+   - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+   - `crates/fret-diag`
+   - `apps/fret-devtools`
+3. Add a WS transport:
+   - server in `apps/fret-devtools` (or a shared library),
+   - client/bridge in `fret-bootstrap` diagnostics service (native + wasm32).
+4. Keep filesystem transport fully working and deterministic.
+
+## Open questions (must decide early)
+
+1. **WS topology**: “DevTools hosts server (recommended)” vs “app hosts server”.
+2. **Port discovery**: fixed default vs random free port + printed URL vs env-driven.
+3. **Auth**: capability token in env vs printed once vs file-based handshake.
+4. **Artifact storage for web runner**: in-memory only vs optional IndexedDB.
+5. **Live data scope**: what is the minimal set of “real-time inspect” payloads we push (keep bundles as the heavy unit).
+6. **Web runner configuration**: how the browser learns the WS endpoint + token:
+   - query string (e.g. `?fret_devtools_ws=...&fret_devtools_token=...`),
+   - `window.__FRET_DEVTOOLS_WS` / `window.__FRET_DEVTOOLS_TOKEN` globals,
+   - a dev-server injected snippet.
+7. **MCP integration shape**:
+   - dedicated headless MCP server vs GUI-embedded,
+   - tool list size (few high-level tools vs many granular tools),
+   - which artifacts are exposed as MCP resources vs returned as paths/JSON.
+8. **Protocol naming**:
+   - env var names (`FRET_DEVTOOLS_WS`, token var),
+   - query string key names for web runner,
+   - message `type` naming conventions (dot-separated vs snake_case).
+9. **Limits / backpressure**:
+   - max message size,
+   - event rate limits (hover spam),
+   - whether the server drops intermediate hover events under load.
+10. **Tree strategy (live)**:
+   - semantics tree vs layout tree vs element tree as the default left-panel tree,
+   - whether we stream “operations” patches vs periodic snapshots,
+   - whether we add a string table / binary encoding for perf (or start with JSON and upgrade later).
