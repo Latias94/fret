@@ -131,6 +131,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/input/viewport_input_event_tests.rs`
     - `crates/fret-core/src/input/mod.rs`
 
+- [x] BU-FR-core-026 Convert `fret-runtime` menubar model + patching + wire formats into a directory subsystem.
+  - Goal: split the large `menu.rs` into focused submodules without widening the public contract surface.
+  - Evidence:
+    - `crates/fret-runtime/src/menu/mod.rs`
+    - `crates/fret-runtime/src/menu/model.rs`
+    - `crates/fret-runtime/src/menu/patch.rs`
+    - `crates/fret-runtime/src/menu/apply.rs`
+    - `crates/fret-runtime/src/menu/wire.rs`
+    - `crates/fret-runtime/src/menu/tests.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
