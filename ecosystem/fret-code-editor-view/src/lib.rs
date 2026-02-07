@@ -10,6 +10,13 @@ use fret_runtime::TextBoundaryMode;
 use fret_text_nav as text_nav;
 use std::ops::Range;
 
+mod folds;
+
+pub use folds::{
+    FoldSpan, FoldSpanError, folded_byte_to_col, folded_col_count, folded_col_to_byte,
+    validate_fold_spans,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DisplayPoint {
     pub row: usize,
