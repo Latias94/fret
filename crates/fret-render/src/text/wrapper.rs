@@ -658,6 +658,14 @@ fn wrap_word_range(
         );
     }
 
+    if spans.is_none() {
+        if let Some(out) =
+            wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
+        {
+            return out;
+        }
+    }
+
     let mut lines: Vec<ShapedLineLayout> = Vec::new();
     let mut line_ranges: Vec<Range<usize>> = Vec::new();
 
@@ -735,6 +743,204 @@ fn wrap_word_range(
     }
 
     (line_ranges, lines)
+}
+
+fn wrap_word_range_plain_shape_once(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> Option<(Vec<Range<usize>>, Vec<ShapedLineLayout>)> {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+    if start >= end {
+        return None;
+    }
+
+    // Shape the whole slice once and slice the shaped clusters/glyphs into per-line layouts.
+    // This avoids per-line shaping during resize-drag width jitter (which can dominate frame time).
+    let slice = &text[start..end];
+    let full = shaper.shape_single_line(TextInputRef::plain(slice, base), scale);
+
+    // Be conservative: only enable this path for LTR text. RTL runs can reorder visual clusters
+    // and make glyph slicing ambiguous without additional mapping.
+    if full.clusters.iter().any(|c| c.is_rtl) || full.glyphs.iter().any(|g| g.is_rtl) {
+        return None;
+    }
+
+    if full.width <= max_width_px + 0.5 {
+        return Some((vec![start..end], vec![full]));
+    }
+
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut line_start_byte: usize = 0;
+    let mut cluster_idx: usize = 0;
+    let mut glyph_idx: usize = 0;
+
+    while line_start_byte < slice.len() && cluster_idx < full.clusters.len() {
+        while cluster_idx < full.clusters.len()
+            && full.clusters[cluster_idx].text_range.end <= line_start_byte
+        {
+            cluster_idx = cluster_idx.saturating_add(1);
+        }
+        while glyph_idx < full.glyphs.len()
+            && full.glyphs[glyph_idx].text_range.end <= line_start_byte
+        {
+            glyph_idx = glyph_idx.saturating_add(1);
+        }
+        if cluster_idx >= full.clusters.len() {
+            break;
+        }
+
+        let line_start_x = full.clusters[cluster_idx].x0;
+        let cut_end = wrap_word_cut_end_from(
+            slice,
+            &full.clusters,
+            cluster_idx,
+            line_start_byte,
+            line_start_x,
+            max_width_px,
+        );
+
+        let mut line_end_byte = clamp_to_char_boundary(slice, cut_end.min(slice.len()));
+        if line_end_byte <= line_start_byte {
+            line_end_byte =
+                first_cluster_end(&slice[line_start_byte..], &full.clusters[cluster_idx..])
+                    .saturating_add(line_start_byte);
+            line_end_byte = clamp_to_char_boundary(slice, line_end_byte.min(slice.len()));
+        }
+        if line_end_byte <= line_start_byte {
+            let first = slice[line_start_byte..]
+                .chars()
+                .next()
+                .map(|c| c.len_utf8())
+                .unwrap_or(0);
+            line_end_byte = clamp_to_char_boundary(
+                slice,
+                line_start_byte
+                    .saturating_add(first.max(1))
+                    .min(slice.len()),
+            );
+        }
+        if line_end_byte <= line_start_byte {
+            break;
+        }
+
+        let mut cluster_end_idx = cluster_idx;
+        while cluster_end_idx < full.clusters.len()
+            && full.clusters[cluster_end_idx].text_range.start < line_end_byte
+        {
+            cluster_end_idx = cluster_end_idx.saturating_add(1);
+        }
+
+        let mut line_clusters: Vec<ShapedCluster> = Vec::new();
+        line_clusters.extend(full.clusters[cluster_idx..cluster_end_idx].iter().map(|c| {
+            ShapedCluster {
+                text_range: (c.text_range.start.saturating_sub(line_start_byte))
+                    ..(c.text_range.end.saturating_sub(line_start_byte)),
+                x0: c.x0 - line_start_x,
+                x1: c.x1 - line_start_x,
+                is_rtl: false,
+            }
+        }));
+
+        let mut line_glyphs: Vec<ParleyGlyph> = Vec::new();
+        while glyph_idx < full.glyphs.len() {
+            let g = &full.glyphs[glyph_idx];
+            if g.text_range.start >= line_end_byte {
+                break;
+            }
+            if g.text_range.end <= line_start_byte {
+                glyph_idx = glyph_idx.saturating_add(1);
+                continue;
+            }
+            let mut g2 = g.clone();
+            g2.x -= line_start_x;
+            g2.text_range = (g2.text_range.start.saturating_sub(line_start_byte))
+                ..(g2.text_range.end.saturating_sub(line_start_byte));
+            g2.is_rtl = false;
+            line_glyphs.push(g2);
+            glyph_idx = glyph_idx.saturating_add(1);
+        }
+
+        let line_width = line_clusters.last().map(|c| c.x1.max(0.0)).unwrap_or(0.0);
+
+        lines.push(ShapedLineLayout {
+            width: line_width,
+            ascent: full.ascent,
+            descent: full.descent,
+            baseline: full.baseline,
+            line_height: full.line_height,
+            glyphs: line_glyphs,
+            clusters: line_clusters,
+        });
+        line_ranges.push((start + line_start_byte)..(start + line_end_byte));
+
+        line_start_byte = line_end_byte;
+        cluster_idx = cluster_end_idx;
+    }
+
+    if line_ranges.is_empty() || lines.is_empty() {
+        return None;
+    }
+    Some((line_ranges, lines))
+}
+
+fn wrap_word_cut_end_from(
+    text: &str,
+    clusters: &[ShapedCluster],
+    cluster_idx: usize,
+    line_start_byte: usize,
+    line_start_x: f32,
+    max_width_px: f32,
+) -> usize {
+    let mut last_candidate: usize = line_start_byte;
+    let mut last_fit_end: usize = line_start_byte;
+    let mut first_non_whitespace: Option<usize> = None;
+    let mut prev_ch: char = '\0';
+
+    for c in clusters.iter().skip(cluster_idx) {
+        if c.text_range.start >= text.len() {
+            continue;
+        }
+
+        let w = c.x1 - line_start_x;
+        if w > max_width_px + 0.5 {
+            break;
+        }
+
+        last_fit_end = last_fit_end.max(c.text_range.end.min(text.len()));
+
+        let Some(ch) = text[c.text_range.start..].chars().next() else {
+            continue;
+        };
+
+        if ch != ' ' && first_non_whitespace.is_none() {
+            first_non_whitespace = Some(c.text_range.start);
+        }
+
+        if first_non_whitespace.is_some() {
+            if is_word_char(ch) {
+                if prev_ch == ' ' && ch != ' ' {
+                    last_candidate = c.text_range.start;
+                }
+            } else if ch != ' ' {
+                last_candidate = c.text_range.start;
+            }
+        }
+
+        prev_ch = ch;
+    }
+
+    if last_candidate > line_start_byte {
+        return last_candidate;
+    }
+
+    last_fit_end
 }
 
 fn wrap_word_range_measure_only(
