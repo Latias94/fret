@@ -3118,6 +3118,7 @@ impl UiDiagnosticsService {
                 request_id: None,
                 payload: serde_json::json!({
                     "exported_unix_ms": ts,
+                    "out_dir": self.cfg.out_dir.to_string_lossy(),
                     "dir": display_path(&self.cfg.out_dir, &dir),
                 }),
             },
@@ -3150,6 +3151,7 @@ impl UiDiagnosticsService {
                 request_id: None,
                 payload: serde_json::json!({
                     "exported_unix_ms": ts,
+                    "out_dir": self.cfg.out_dir.to_string_lossy(),
                     "dir": display_path(&self.cfg.out_dir, &dir),
                     "bundle": bundle,
                 }),

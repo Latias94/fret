@@ -50,6 +50,7 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
    - First-class UI for running `run/suite/repro/perf/matrix/compare` and showing evidence outputs.
 4. **Artifacts + sharing**
    - Latest bundle list, pack zip, open offline bundle viewer, surface triage and evidence files.
+   - Prefer emitting an explicit `out_dir` in `bundle.dumped` payloads so tooling can compute absolute paths reliably.
 5. **Web runner support**
    - A transport that works when the target app runs in the browser (no filesystem access).
 
