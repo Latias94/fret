@@ -820,15 +820,17 @@ impl WebImeBridge {
                 let Ok(input) = e.dyn_into::<InputEvent>() else {
                     return;
                 };
-                match dom_state
+
+                let disposition = dom_state
                     .borrow_mut()
-                    .beforeinput_disposition(input.is_composing())
-                {
+                    .beforeinput_disposition(input.is_composing());
+                match disposition {
                     DomInputDisposition::IgnoreComposing => return,
                     DomInputDisposition::IgnoreSuppressed => {
                         // If a command path already handled the edit (or a composition commit was
                         // already emitted via `compositionend`), prevent the DOM mutation so we
                         // don't get a follow-up `input` that would double-insert (ADR 0195).
+                        dom_state.borrow_mut().on_beforeinput_handled();
                         input.prevent_default();
                         textarea.set_value("");
                         #[cfg(debug_assertions)]
@@ -877,6 +879,7 @@ impl WebImeBridge {
                 }
 
                 if let Some(text) = sanitize_text_input(&data) {
+                    dom_state.borrow_mut().on_beforeinput_handled();
                     input.prevent_default();
                     textarea.set_value("");
                     queue.borrow_mut().push(Event::TextInput(text));

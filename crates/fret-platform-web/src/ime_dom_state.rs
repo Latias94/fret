@@ -21,6 +21,7 @@ pub enum DomInputDisposition {
 pub struct WebImeDomState {
     composing: bool,
     suppress_next_input: bool,
+    ignore_next_input: bool,
 }
 
 impl fmt::Debug for WebImeDomState {
@@ -28,6 +29,7 @@ impl fmt::Debug for WebImeDomState {
         f.debug_struct("WebImeDomState")
             .field("composing", &self.composing)
             .field("suppress_next_input", &self.suppress_next_input)
+            .field("ignore_next_input", &self.ignore_next_input)
             .finish()
     }
 }
@@ -58,9 +60,14 @@ impl WebImeDomState {
         self.suppress_next_input = true;
     }
 
+    pub fn on_beforeinput_handled(&mut self) {
+        self.ignore_next_input = true;
+    }
+
     pub fn on_ime_disabled(&mut self) {
         self.composing = false;
         self.suppress_next_input = false;
+        self.ignore_next_input = false;
     }
 
     pub fn beforeinput_disposition(&mut self, dom_is_composing: bool) -> DomInputDisposition {
@@ -78,6 +85,10 @@ impl WebImeDomState {
         if self.composing {
             return DomInputDisposition::IgnoreComposing;
         }
+        if self.ignore_next_input {
+            self.ignore_next_input = false;
+            return DomInputDisposition::IgnoreSuppressed;
+        }
         if self.suppress_next_input {
             self.suppress_next_input = false;
             return DomInputDisposition::IgnoreSuppressed;
@@ -91,11 +102,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn beforeinput_processed_insert_suppresses_followup_input() {
+        let mut st = WebImeDomState::default();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::Process
+        );
+        st.on_beforeinput_handled();
+        assert_eq!(
+            st.input_disposition(),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
     fn beforeinput_suppression_does_not_affect_followup_input_disposition() {
         let mut st = WebImeDomState::default();
         st.on_shortcut_suppressed();
         assert_eq!(
             st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        st.on_beforeinput_handled();
+        assert_eq!(
+            st.input_disposition(),
             DomInputDisposition::IgnoreSuppressed
         );
         assert_eq!(st.input_disposition(), DomInputDisposition::Process);
@@ -108,6 +139,11 @@ mod tests {
         st.on_composition_end();
         assert_eq!(
             st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        st.on_beforeinput_handled();
+        assert_eq!(
+            st.input_disposition(),
             DomInputDisposition::IgnoreSuppressed
         );
         assert_eq!(st.input_disposition(), DomInputDisposition::Process);
