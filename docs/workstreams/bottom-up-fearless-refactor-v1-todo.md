@@ -87,6 +87,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-core/src/input/mod.rs`
 
+- [x] BU-FR-core-019 Extract `DockOp` application out of `dock/mod.rs` into a dedicated submodule.
+  - Goal: keep the dock graph module focused on core mutation primitives while isolating the large op match.
+  - Evidence:
+    - `crates/fret-core/src/dock/apply.rs`
+    - `crates/fret-core/src/dock/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
