@@ -27,6 +27,8 @@ Conventions:
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
     - Evidence: perf log entry `2026-02-07 11:15` (r16 worst bundle + snapshot pointers).
+  - [x] Quantize logical window sizes in the runner to reduce float-noise resize churn (commit `74dc38bd9`).
+    - Evidence: perf log entry `2026-02-07 11:50`.
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus

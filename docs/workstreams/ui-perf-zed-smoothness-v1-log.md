@@ -6345,3 +6345,47 @@ Attribution (drag-jitter worst frame in r16):
 - Snapshot: `frame_id=2337`, `tick_id=1794`
 - Layout hotspots are dominated by `Scroll` nodes in `fret-ui-shadcn` `scroll_area.rs` (exclusive layout time).
 - Paint time is dominated by `paint_text_prepare_time_us` with `reason_width_changed` (wrap recompute under width jitter).
+
+## 2026-02-07 11:50 — perf(runner): quantize logical window sizes
+
+Problem:
+- During interactive resize, `winit` logical size values can include small float noise. If the runner forwards those
+  values directly, we can end up scheduling extra relayout/repaint work even when the effective size change is below
+  a meaningful threshold.
+
+Change (commit `74dc38bd9`):
+- Quantize logical window sizes before emitting `Event::WindowResized` (winit mapping).
+- Quantize logical bounds used for the per-frame `gpu_frame_prepare` viewport bounds.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r20
+```
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r2 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r20/summary.json`).
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r2/check.perf_thresholds.json`).
+
+Notes:
+- A single r19 run showed an outlier `resize-stress max_total=18891us` (still under threshold), but the subsequent r20
+  re-run returned to the ~15ms range.
