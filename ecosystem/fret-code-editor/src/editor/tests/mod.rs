@@ -369,6 +369,91 @@ fn caret_rect_offsets_for_preedit_cursor() {
 }
 
 #[test]
+fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
+    let handle = CodeEditorHandle::new("abc");
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        st.preedit = None;
+        st.row_geom_cache.insert(
+            0,
+            (
+                RowGeom {
+                    row_range: 0..3,
+                    blob: fret_core::TextBlobId::default(),
+                    caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    preedit: Some(RowPreeditMapping {
+                        insert_at: 0,
+                        preedit_len: 2,
+                    }),
+                },
+                1,
+            ),
+        );
+    }
+
+    let st = handle.state.borrow();
+    let rect =
+        caret_rect_for_selection(&st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+    assert_eq!(rect.origin.x, Px(10.0), "fallback col (1) * cell_w (10px)");
+}
+
+#[test]
+fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
+    let handle = CodeEditorHandle::new("abc");
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.preedit = None;
+        st.row_geom_cache.insert(
+            0,
+            (
+                RowGeom {
+                    row_range: 0..3,
+                    blob: fret_core::TextBlobId::default(),
+                    caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    caret_rect_top: None,
+                    caret_rect_height: None,
+                    preedit: Some(RowPreeditMapping {
+                        insert_at: 0,
+                        preedit_len: 2,
+                    }),
+                },
+                1,
+            ),
+        );
+    }
+
+    let st = handle.state.borrow();
+    let caret = caret_for_pointer(
+        &st,
+        0,
+        bounds,
+        fret_core::Point::new(Px(15.0), Px(5.0)),
+        Px(10.0),
+    );
+    assert_eq!(
+        caret, 1,
+        "expected fallback monospace hit-test (x=15 -> col 1)"
+    );
+}
+
+#[test]
 fn preedit_rich_text_inserts_and_underlines() {
     let preedit = PreeditState {
         text: "世界".to_string(),

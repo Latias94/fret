@@ -542,6 +542,7 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
     let next_row = next_row.min(max_row);
     let next = if let Some((geom, _)) = st.row_geom_cache.get(&next_row)
         && !geom.caret_stops.is_empty()
+        && geom.preedit.is_some() == st.preedit.is_some()
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
         let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);

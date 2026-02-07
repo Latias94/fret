@@ -193,6 +193,7 @@ pub(super) fn caret_for_pointer(
     let local_x = Px(position.x.0 - bounds.origin.x.0);
     if let Some((geom, _)) = st.row_geom_cache.get(&row)
         && !geom.caret_stops.is_empty()
+        && geom.preedit.is_some() == st.preedit.is_some()
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, local_x);
         let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
@@ -240,7 +241,10 @@ pub(super) fn caret_rect_for_selection(
             caret_h = h;
         }
 
-        if !geom.caret_stops.is_empty() && caret >= geom.row_range.start {
+        if !geom.caret_stops.is_empty()
+            && caret >= geom.row_range.start
+            && geom.preedit.is_some() == st.preedit.is_some()
+        {
             let mut local = caret.saturating_sub(geom.row_range.start);
             if let Some(preedit) = st.preedit.as_ref()
                 && geom.preedit.is_some()
@@ -291,7 +295,10 @@ pub(super) fn caret_x_for_buffer_byte_in_row(
     caret: usize,
 ) -> Option<Px> {
     let (geom, _) = st.row_geom_cache.get(&row)?;
-    if geom.caret_stops.is_empty() || caret < geom.row_range.start {
+    if geom.caret_stops.is_empty()
+        || caret < geom.row_range.start
+        || geom.preedit.is_some() != st.preedit.is_some()
+    {
         return None;
     }
 
