@@ -67,6 +67,9 @@ Status legend:
 - `[x]` Add transition-based invalidate/prefetch planning:
   - input: `RouterTransition`
   - output: list of namespaces + keys to prefetch
+- `[ ]` Add route-level hook surface (ADR 1169):
+  - `before_load` (per-route middleware)
+  - `loader` (prefetch intents)
 - `[ ]` Add race/cancellation tests for rapid route changes.
 
 ## Phase 5 - App adoption

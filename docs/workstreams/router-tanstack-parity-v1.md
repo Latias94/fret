@@ -12,6 +12,7 @@ References:
 
 - TanStack Router concepts (in-repo snapshot): `repo-ref/router`
 - ADR 1168: `docs/adr/1168-router-transitions-and-guards-v1.md`
+- ADR 1169: `docs/adr/1169-router-route-hooks-and-query-seam-v1.md`
 
 ## Why this exists
 
