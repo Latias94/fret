@@ -24,7 +24,7 @@ wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
 fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
-fret-render = { path = "../fret-render" }
+fret-render = { package = "fret-render-wgpu", path = "../fret-render-wgpu" }
 fret-runner-winit = { path = "../fret-runner-winit" }
 bytemuck.workspace = true
 thiserror.workspace = true

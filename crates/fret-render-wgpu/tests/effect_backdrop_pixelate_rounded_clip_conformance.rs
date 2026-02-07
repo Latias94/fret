@@ -2,7 +2,7 @@ use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -18,14 +18,14 @@ fn read_texture_rgba8(
     let buffer_size = padded_bytes_per_row as u64 * height as u64;
 
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("effect_filter_content_pixelate_rounded_clip_conformance readback buffer"),
+        label: Some("effect_backdrop_pixelate_rounded_clip_conformance readback buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("effect_filter_content_pixelate_rounded_clip_conformance readback encoder"),
+        label: Some("effect_backdrop_pixelate_rounded_clip_conformance readback encoder"),
     });
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -89,7 +89,7 @@ fn render_and_readback(
 ) -> Vec<u8> {
     let format = wgpu::TextureFormat::Rgba8Unorm;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("effect_filter_content_pixelate_rounded_clip_conformance output"),
+        label: Some("effect_backdrop_pixelate_rounded_clip_conformance output"),
         size: wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -155,7 +155,7 @@ fn push_bounds_stripes(scene: &mut Scene, bounds: Rect, order_base: u32) {
 }
 
 #[test]
-fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
+fn gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -167,19 +167,16 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_intermediate_budget_bytes(u64::MAX);
 
-    let size = (73u32, 69u32);
+    let size = (64u32, 64u32);
     let bounds = Rect::new(
-        Point::new(Px(19.0), Px(13.0)),
-        Size::new(Px(37.0), Px(31.0)),
+        Point::new(Px(16.0), Px(16.0)),
+        Size::new(Px(32.0), Px(32.0)),
     );
 
     let mut without_effect = Scene::default();
     without_effect.push(SceneOp::Quad {
         order: DrawOrder(0),
-        rect: Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(size.0 as f32), Px(size.1 as f32)),
-        ),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
         background: Color {
             r: 0.0,
             g: 1.0,
@@ -190,16 +187,15 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
     });
+    push_bounds_stripes(&mut without_effect, bounds, 1);
     without_effect.push(SceneOp::PushClipRRect {
         rect: bounds,
-        corner_radii: Corners::all(Px(15.0)),
+        corner_radii: Corners::all(Px(14.0)),
     });
-    push_bounds_stripes(&mut without_effect, bounds, 1);
-    without_effect.push(SceneOp::PopClip);
-    // Foreground marker: should remain visible regardless of effect.
+    // Foreground marker: should remain visible regardless of effect order.
     without_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
-        rect: Rect::new(Point::new(Px(33.0), Px(31.0)), Size::new(Px(8.0), Px(8.0))),
+        rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
         background: Color {
             r: 1.0,
             g: 1.0,
@@ -210,14 +206,12 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
     });
+    without_effect.push(SceneOp::PopClip);
 
     let mut with_effect = Scene::default();
     with_effect.push(SceneOp::Quad {
         order: DrawOrder(0),
-        rect: Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(size.0 as f32), Px(size.1 as f32)),
-        ),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
         background: Color {
             r: 0.0,
             g: 1.0,
@@ -228,22 +222,20 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
     });
+    push_bounds_stripes(&mut with_effect, bounds, 1);
     with_effect.push(SceneOp::PushClipRRect {
         rect: bounds,
-        corner_radii: Corners::all(Px(15.0)),
+        corner_radii: Corners::all(Px(14.0)),
     });
     with_effect.push(SceneOp::PushEffect {
         bounds,
-        mode: EffectMode::FilterContent,
-        chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 6 }]),
+        mode: EffectMode::Backdrop,
+        chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 4 }]),
         quality: EffectQuality::Auto,
     });
-    push_bounds_stripes(&mut with_effect, bounds, 1);
-    with_effect.push(SceneOp::PopEffect);
-    with_effect.push(SceneOp::PopClip);
     with_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
-        rect: Rect::new(Point::new(Px(33.0), Px(31.0)), Size::new(Px(8.0), Px(8.0))),
+        rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
         background: Color {
             r: 1.0,
             g: 1.0,
@@ -254,6 +246,8 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
     });
+    with_effect.push(SceneOp::PopEffect);
+    with_effect.push(SceneOp::PopClip);
 
     let direct = render_and_readback(&ctx, &mut renderer, &without_effect, size);
     let pixelated = render_and_readback(&ctx, &mut renderer, &with_effect, size);
@@ -267,8 +261,8 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
     );
 
     // Inside bounds but outside the rounded clip: unchanged (no leakage into corners).
-    let corner_outside_clip = pixel_rgba(&direct, size.0, 20, 14);
-    let corner_outside_clip_pixelated = pixel_rgba(&pixelated, size.0, 20, 14);
+    let corner_outside_clip = pixel_rgba(&direct, size.0, 17, 17);
+    let corner_outside_clip_pixelated = pixel_rgba(&pixelated, size.0, 17, 17);
     assert_eq!(
         corner_outside_clip, corner_outside_clip_pixelated,
         "pixels outside the rounded clip (but inside effect bounds) must remain unchanged"
@@ -276,9 +270,9 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
 
     // Inside bounds near stripes: pixelation should affect at least some pixels.
     let mut any_changed = false;
-    for x in 26u32..50u32 {
-        let inside = pixel_rgba(&direct, size.0, x, 28);
-        let inside_pixelated = pixel_rgba(&pixelated, size.0, x, 28);
+    for x in 20u32..44u32 {
+        let inside = pixel_rgba(&direct, size.0, x, 32);
+        let inside_pixelated = pixel_rgba(&pixelated, size.0, x, 32);
         if inside != inside_pixelated {
             any_changed = true;
             break;
@@ -289,10 +283,10 @@ fn gpu_filter_content_pixelate_respects_rounded_clip_stack_on_composite() {
         "expected pixelate to affect at least one pixel inside the rounded clip"
     );
 
-    // Foreground quad must remain on top (PopEffect is a sequence point).
-    let fg = pixel_rgba(&pixelated, size.0, 37, 35);
+    // Foreground marker must remain on top (PushEffect is a sequence point).
+    let fg = pixel_rgba(&pixelated, size.0, 32, 40);
     assert!(
         fg[0] > 200 && fg[1] > 200 && fg[2] > 200 && fg[3] > 200,
-        "foreground quad should remain visible on top of the filtered content"
+        "foreground quad should remain visible on top of the backdrop pixelate"
     );
 }

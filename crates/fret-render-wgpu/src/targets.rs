@@ -1,11 +1,6 @@
 use fret_core::RenderTargetId;
+use fret_render_core::RenderTargetColorSpace;
 use slotmap::SlotMap;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RenderTargetColorSpace {
-    Srgb,
-    Linear,
-}
 
 pub struct RenderTargetDescriptor {
     pub view: wgpu::TextureView,

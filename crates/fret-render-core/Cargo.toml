@@ -1,5 +1,5 @@
 [package]
-name = "fret-render"
+name = "fret-render-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,4 +10,5 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
-fret-render-wgpu = { path = "../fret-render-wgpu" }
+serde.workspace = true
+

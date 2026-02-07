@@ -2,7 +2,7 @@ use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -18,14 +18,14 @@ fn read_texture_rgba8(
     let buffer_size = padded_bytes_per_row as u64 * height as u64;
 
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("effect_backdrop_blur_conformance readback buffer"),
+        label: Some("effect_backdrop_color_adjust_conformance readback buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("effect_backdrop_blur_conformance readback encoder"),
+        label: Some("effect_backdrop_color_adjust_conformance readback encoder"),
     });
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -89,7 +89,7 @@ fn render_and_readback(
 ) -> Vec<u8> {
     let format = wgpu::TextureFormat::Rgba8Unorm;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("effect_backdrop_blur_conformance output"),
+        label: Some("effect_backdrop_color_adjust_conformance output"),
         size: wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -121,8 +121,15 @@ fn render_and_readback(
     read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
 }
 
+fn is_grayish(px: [u8; 4]) -> bool {
+    let r = px[0] as i32;
+    let g = px[1] as i32;
+    let b = px[2] as i32;
+    (r - g).abs() <= 12 && (g - b).abs() <= 12 && (r - b).abs() <= 12
+}
+
 #[test]
-fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
+fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -137,14 +144,14 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
     let size = (64u32, 64u32);
     let mut base = Scene::default();
 
-    // Left half white, right half black: sharp edge at x=32.
+    // Left half red, right half blue: hard edge at x=32.
     base.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
         background: Color {
             r: 1.0,
-            g: 1.0,
-            b: 1.0,
+            g: 0.0,
+            b: 0.0,
             a: 1.0,
         },
         border: Edges::all(Px(0.0)),
@@ -157,7 +164,7 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
         background: Color {
             r: 0.0,
             g: 0.0,
-            b: 0.0,
+            b: 1.0,
             a: 1.0,
         },
         border: Edges::all(Px(0.0)),
@@ -165,7 +172,6 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
         corner_radii: Default::default(),
     });
 
-    // Foreground marker quad, used to assert ordering around the PushEffect boundary.
     let foreground = SceneOp::Quad {
         order: DrawOrder(2),
         rect: Rect::new(
@@ -173,8 +179,8 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
             Size::new(Px(12.0), Px(12.0)),
         ),
         background: Color {
-            r: 1.0,
-            g: 0.0,
+            r: 0.0,
+            g: 1.0,
             b: 0.0,
             a: 1.0,
         },
@@ -190,9 +196,10 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
     with_effect.push(SceneOp::PushEffect {
         bounds: Rect::new(Point::new(Px(24.0), Px(0.0)), Size::new(Px(16.0), Px(64.0))),
         mode: EffectMode::Backdrop,
-        chain: EffectChain::from_steps(&[EffectStep::GaussianBlur {
-            radius_px: Px(4.0),
-            downsample: 2,
+        chain: EffectChain::from_steps(&[EffectStep::ColorAdjust {
+            saturation: 0.0,
+            brightness: 0.0,
+            contrast: 1.0,
         }]),
         quality: EffectQuality::Auto,
     });
@@ -200,28 +207,32 @@ fn gpu_backdrop_blur_is_scissored_and_preserves_ordering() {
     with_effect.push(SceneOp::PopEffect);
 
     let direct = render_and_readback(&ctx, &mut renderer, &without_effect, size);
-    let blurred = render_and_readback(&ctx, &mut renderer, &with_effect, size);
+    let adjusted = render_and_readback(&ctx, &mut renderer, &with_effect, size);
 
     // Outside bounds: unchanged.
     let outside = pixel_rgba(&direct, size.0, 8, 32);
-    let outside_blurred = pixel_rgba(&blurred, size.0, 8, 32);
+    let outside_adjusted = pixel_rgba(&adjusted, size.0, 8, 32);
     assert_eq!(
-        outside, outside_blurred,
+        outside, outside_adjusted,
         "pixels outside effect bounds must remain unchanged"
     );
 
-    // Inside bounds near an edge: backdrop blur should affect the pixel.
-    let inside = pixel_rgba(&direct, size.0, 32, 32);
-    let inside_blurred = pixel_rgba(&blurred, size.0, 32, 32);
+    // Inside bounds: desaturation should make colors grayish.
+    let inside_direct = pixel_rgba(&direct, size.0, 28, 32);
+    let inside_adjusted = pixel_rgba(&adjusted, size.0, 28, 32);
     assert_ne!(
-        inside, inside_blurred,
-        "pixels inside effect bounds near an edge should be affected by blur"
+        inside_direct, inside_adjusted,
+        "pixels inside effect bounds should be affected by color adjustment"
+    );
+    assert!(
+        is_grayish(inside_adjusted),
+        "desaturated pixel should be roughly gray (r≈g≈b)"
     );
 
     // Foreground quad must remain on top (PushEffect is a sequence point).
-    let fg = pixel_rgba(&blurred, size.0, 32, 56);
+    let fg = pixel_rgba(&adjusted, size.0, 32, 56);
     assert!(
-        fg[0] > 200 && fg[1] < 40 && fg[2] < 40 && fg[3] > 200,
-        "foreground quad should remain visible on top of the backdrop blur"
+        fg[1] > 200 && fg[0] < 40 && fg[2] < 40 && fg[3] > 200,
+        "foreground quad should remain visible on top of the adjusted backdrop"
     );
 }

@@ -1,8 +1,6 @@
-use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
-use fret_core::scene::{
-    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
-};
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_core::geometry::{Edges, Point, Px, Rect, Size};
+use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -18,14 +16,14 @@ fn read_texture_rgba8(
     let buffer_size = padded_bytes_per_row as u64 * height as u64;
 
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("effect_backdrop_blur_rounded_clip_conformance readback buffer"),
+        label: Some("postprocess_scissor_conformance readback buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("effect_backdrop_blur_rounded_clip_conformance readback encoder"),
+        label: Some("postprocess_scissor_conformance readback encoder"),
     });
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -89,7 +87,7 @@ fn render_and_readback(
 ) -> Vec<u8> {
     let format = wgpu::TextureFormat::Rgba8Unorm;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("effect_backdrop_blur_rounded_clip_conformance output"),
+        label: Some("postprocess_scissor_conformance output"),
         size: wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -111,7 +109,12 @@ fn render_and_readback(
             format,
             target_view: &view,
             scene,
-            clear: ClearColor(wgpu::Color::TRANSPARENT),
+            clear: ClearColor(wgpu::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            }),
             scale_factor: 1.0,
             viewport_size: size,
         },
@@ -122,7 +125,7 @@ fn render_and_readback(
 }
 
 #[test]
-fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
+fn gpu_scissored_blur_preserves_outside_region() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -135,61 +138,12 @@ fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
     renderer.set_intermediate_budget_bytes(u64::MAX);
 
     let size = (64u32, 64u32);
-    let bounds = Rect::new(
-        Point::new(Px(16.0), Px(16.0)),
-        Size::new(Px(32.0), Px(32.0)),
-    );
+    let mut scene = Scene::default();
 
-    let mut base = Scene::default();
-
-    // Green background for outside-region invariance.
-    base.push(SceneOp::Quad {
+    // Left half white, right half black: sharp edge at x=32.
+    scene.push(SceneOp::Quad {
         order: DrawOrder(0),
-        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Color {
-            r: 0.0,
-            g: 1.0,
-            b: 0.0,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: Default::default(),
-    });
-
-    // Vertical 1px stripes inside the effect bounds: alternating red/blue.
-    for i in 0..32u32 {
-        let x = 16.0 + i as f32;
-        let is_red = (i % 2) == 0;
-        let bg = if is_red {
-            Color {
-                r: 1.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            }
-        } else {
-            Color {
-                r: 0.0,
-                g: 0.0,
-                b: 1.0,
-                a: 1.0,
-            }
-        };
-        base.push(SceneOp::Quad {
-            order: DrawOrder(1 + i),
-            rect: Rect::new(Point::new(Px(x), Px(16.0)), Size::new(Px(1.0), Px(32.0))),
-            background: bg,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Default::default(),
-        });
-    }
-
-    // Foreground marker quad, used to assert ordering around the PushEffect boundary.
-    let foreground = SceneOp::Quad {
-        order: DrawOrder(100),
-        rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
         background: Color {
             r: 1.0,
             g: 1.0,
@@ -199,72 +153,38 @@ fn gpu_backdrop_blur_respects_rounded_clip_stack_on_writeback() {
         border: Edges::all(Px(0.0)),
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
-    };
-
-    let mut without_effect = base.clone();
-    without_effect.push(SceneOp::PushClipRRect {
-        rect: bounds,
-        corner_radii: Corners::all(Px(14.0)),
     });
-    without_effect.push(foreground);
-    without_effect.push(SceneOp::PopClip);
-
-    let mut with_effect = base;
-    with_effect.push(SceneOp::PushClipRRect {
-        rect: bounds,
-        corner_radii: Corners::all(Px(14.0)),
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Default::default(),
     });
-    with_effect.push(SceneOp::PushEffect {
-        bounds,
-        mode: EffectMode::Backdrop,
-        chain: EffectChain::from_steps(&[EffectStep::GaussianBlur {
-            radius_px: Px(4.0),
-            downsample: 2,
-        }]),
-        quality: EffectQuality::Auto,
-    });
-    with_effect.push(foreground);
-    with_effect.push(SceneOp::PopEffect);
-    with_effect.push(SceneOp::PopClip);
 
-    let direct = render_and_readback(&ctx, &mut renderer, &without_effect, size);
-    let blurred = render_and_readback(&ctx, &mut renderer, &with_effect, size);
+    let direct = render_and_readback(&ctx, &mut renderer, &scene, size);
 
-    // Outside effect bounds: unchanged.
+    renderer.set_debug_blur_radius(2);
+    renderer.set_debug_blur_scissor(Some((24, 0, 16, 64)));
+    let blurred = render_and_readback(&ctx, &mut renderer, &scene, size);
+
     let outside = pixel_rgba(&direct, size.0, 8, 32);
     let outside_blurred = pixel_rgba(&blurred, size.0, 8, 32);
     assert_eq!(
         outside, outside_blurred,
-        "pixels outside effect bounds must remain unchanged"
+        "pixels outside scissor must remain unchanged"
     );
 
-    // Inside bounds but outside the rounded clip: should remain unchanged (no leakage).
-    let corner_outside_clip = pixel_rgba(&direct, size.0, 17, 17);
-    let corner_outside_clip_blurred = pixel_rgba(&blurred, size.0, 17, 17);
-    assert_eq!(
-        corner_outside_clip, corner_outside_clip_blurred,
-        "pixels outside the rounded clip (but inside effect bounds) must remain unchanged"
-    );
-
-    // Inside bounds near stripes: blur should affect at least some pixels.
-    let mut any_changed = false;
-    for x in (20u32..44u32).step_by(2) {
-        let inside = pixel_rgba(&direct, size.0, x, 32);
-        let inside_blurred = pixel_rgba(&blurred, size.0, x, 32);
-        if inside != inside_blurred {
-            any_changed = true;
-            break;
-        }
-    }
-    assert!(
-        any_changed,
-        "expected blur to affect at least one pixel inside the rounded clip"
-    );
-
-    // Foreground quad must remain on top (PushEffect is a sequence point).
-    let fg = pixel_rgba(&blurred, size.0, 32, 40);
-    assert!(
-        fg[0] > 200 && fg[1] > 200 && fg[2] > 200 && fg[3] > 200,
-        "foreground quad should remain visible on top of the backdrop blur"
+    let inside = pixel_rgba(&direct, size.0, 32, 32);
+    let inside_blurred = pixel_rgba(&blurred, size.0, 32, 32);
+    assert_ne!(
+        inside, inside_blurred,
+        "pixels inside scissor near an edge should be affected by blur"
     );
 }

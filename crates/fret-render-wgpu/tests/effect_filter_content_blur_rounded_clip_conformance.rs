@@ -2,7 +2,7 @@ use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(

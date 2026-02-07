@@ -1,6 +1,6 @@
 use fret_core::geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
-use fret_render::{
+use fret_render_wgpu::{
     ClearColor, RenderSceneParams, RenderTargetColorSpace, RenderTargetDescriptor, Renderer,
     WgpuContext,
 };

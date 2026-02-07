@@ -2,7 +2,7 @@ use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
     Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -18,14 +18,14 @@ fn read_texture_rgba8(
     let buffer_size = padded_bytes_per_row as u64 * height as u64;
 
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("effect_backdrop_color_adjust_conformance readback buffer"),
+        label: Some("effect_filter_content_pixelate_conformance readback buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("effect_backdrop_color_adjust_conformance readback encoder"),
+        label: Some("effect_filter_content_pixelate_conformance readback encoder"),
     });
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -89,7 +89,7 @@ fn render_and_readback(
 ) -> Vec<u8> {
     let format = wgpu::TextureFormat::Rgba8Unorm;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("effect_backdrop_color_adjust_conformance output"),
+        label: Some("effect_filter_content_pixelate_conformance output"),
         size: wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -121,15 +121,8 @@ fn render_and_readback(
     read_texture_rgba8(&ctx.device, &ctx.queue, &texture, size)
 }
 
-fn is_grayish(px: [u8; 4]) -> bool {
-    let r = px[0] as i32;
-    let g = px[1] as i32;
-    let b = px[2] as i32;
-    (r - g).abs() <= 12 && (g - b).abs() <= 12 && (r - b).abs() <= 12
-}
-
 #[test]
-fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
+fn gpu_filter_content_pixelate_is_scissored_and_preserves_outside_content() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -144,40 +137,9 @@ fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
     let size = (64u32, 64u32);
     let mut base = Scene::default();
 
-    // Left half red, right half blue: hard edge at x=32.
     base.push(SceneOp::Quad {
         order: DrawOrder(0),
-        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
-        background: Color {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: Default::default(),
-    });
-    base.push(SceneOp::Quad {
-        order: DrawOrder(1),
-        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
-        background: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 1.0,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: Default::default(),
-    });
-
-    let foreground = SceneOp::Quad {
-        order: DrawOrder(2),
-        rect: Rect::new(
-            Point::new(Px(26.0), Px(48.0)),
-            Size::new(Px(12.0), Px(12.0)),
-        ),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
         background: Color {
             r: 0.0,
             g: 1.0,
@@ -187,52 +149,116 @@ fn gpu_backdrop_color_adjust_is_scissored_and_preserves_ordering() {
         border: Edges::all(Px(0.0)),
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
+    });
+
+    let outside_marker = SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: Rect::new(Point::new(Px(4.0), Px(0.0)), Size::new(Px(8.0), Px(64.0))),
+        background: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Default::default(),
+    };
+
+    let push_stripes = |scene: &mut Scene| {
+        for i in 0..16u32 {
+            let x = 24.0 + i as f32;
+            let is_red = (i % 2) == 0;
+            let bg = if is_red {
+                Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }
+            } else {
+                Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 1.0,
+                    a: 1.0,
+                }
+            };
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(10 + i),
+                rect: Rect::new(Point::new(Px(x), Px(0.0)), Size::new(Px(1.0), Px(64.0))),
+                background: bg,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Default::default(),
+            });
+        }
+    };
+
+    let foreground = SceneOp::Quad {
+        order: DrawOrder(100),
+        rect: Rect::new(
+            Point::new(Px(26.0), Px(48.0)),
+            Size::new(Px(12.0), Px(12.0)),
+        ),
+        background: Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Default::default(),
     };
 
     let mut without_effect = base.clone();
+    without_effect.push(outside_marker);
+    push_stripes(&mut without_effect);
     without_effect.push(foreground);
 
     let mut with_effect = base;
     with_effect.push(SceneOp::PushEffect {
         bounds: Rect::new(Point::new(Px(24.0), Px(0.0)), Size::new(Px(16.0), Px(64.0))),
-        mode: EffectMode::Backdrop,
-        chain: EffectChain::from_steps(&[EffectStep::ColorAdjust {
-            saturation: 0.0,
-            brightness: 0.0,
-            contrast: 1.0,
-        }]),
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::Pixelate { scale: 4 }]),
         quality: EffectQuality::Auto,
     });
-    with_effect.push(foreground);
+    with_effect.push(outside_marker);
+    push_stripes(&mut with_effect);
     with_effect.push(SceneOp::PopEffect);
+    with_effect.push(foreground);
 
     let direct = render_and_readback(&ctx, &mut renderer, &without_effect, size);
-    let adjusted = render_and_readback(&ctx, &mut renderer, &with_effect, size);
+    let filtered = render_and_readback(&ctx, &mut renderer, &with_effect, size);
 
-    // Outside bounds: unchanged.
-    let outside = pixel_rgba(&direct, size.0, 8, 32);
-    let outside_adjusted = pixel_rgba(&adjusted, size.0, 8, 32);
+    // Outside bounds but inside the effect group: should still be present and unchanged (bounds are not a clip).
+    let marker_direct = pixel_rgba(&direct, size.0, 8, 32);
+    let marker_filtered = pixel_rgba(&filtered, size.0, 8, 32);
     assert_eq!(
-        outside, outside_adjusted,
-        "pixels outside effect bounds must remain unchanged"
+        marker_direct, marker_filtered,
+        "content outside bounds must remain visible and unfiltered"
     );
 
-    // Inside bounds: desaturation should make colors grayish.
-    let inside_direct = pixel_rgba(&direct, size.0, 28, 32);
-    let inside_adjusted = pixel_rgba(&adjusted, size.0, 28, 32);
+    // Inside bounds: adjacent pixels that used to alternate should collapse to the same value.
+    let a_direct = pixel_rgba(&direct, size.0, 25, 32);
+    let b_direct = pixel_rgba(&direct, size.0, 26, 32);
     assert_ne!(
-        inside_direct, inside_adjusted,
-        "pixels inside effect bounds should be affected by color adjustment"
-    );
-    assert!(
-        is_grayish(inside_adjusted),
-        "desaturated pixel should be roughly gray (r≈g≈b)"
+        a_direct, b_direct,
+        "source stripes should alternate by column"
     );
 
-    // Foreground quad must remain on top (PushEffect is a sequence point).
-    let fg = pixel_rgba(&adjusted, size.0, 32, 56);
+    let a_filtered = pixel_rgba(&filtered, size.0, 25, 32);
+    let b_filtered = pixel_rgba(&filtered, size.0, 26, 32);
+    assert_eq!(
+        a_filtered, b_filtered,
+        "pixelate should make adjacent pixels within a block share the same value"
+    );
+
+    // Foreground must remain visible on top (sequence point).
+    let fg = pixel_rgba(&filtered, size.0, 32, 56);
     assert!(
-        fg[1] > 200 && fg[0] < 40 && fg[2] < 40 && fg[3] > 200,
-        "foreground quad should remain visible on top of the adjusted backdrop"
+        fg[0] > 200 && fg[1] > 200 && fg[2] > 200 && fg[3] > 200,
+        "foreground quad drawn after PopEffect should remain visible on top"
     );
 }

@@ -1,6 +1,8 @@
 use fret_core::geometry::{Edges, Point, Px, Rect, Size};
-use fret_core::scene::{Color, DrawOrder, Scene, SceneOp};
-use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_core::scene::{
+    Color, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene, SceneOp,
+};
+use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
 use std::sync::mpsc;
 
 fn read_texture_rgba8(
@@ -16,14 +18,14 @@ fn read_texture_rgba8(
     let buffer_size = padded_bytes_per_row as u64 * height as u64;
 
     let buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("postprocess_scissor_conformance readback buffer"),
+        label: Some("effect_filter_content_blur_conformance readback buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("postprocess_scissor_conformance readback encoder"),
+        label: Some("effect_filter_content_blur_conformance readback encoder"),
     });
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -87,7 +89,7 @@ fn render_and_readback(
 ) -> Vec<u8> {
     let format = wgpu::TextureFormat::Rgba8Unorm;
     let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("postprocess_scissor_conformance output"),
+        label: Some("effect_filter_content_blur_conformance output"),
         size: wgpu::Extent3d {
             width: size.0,
             height: size.1,
@@ -109,12 +111,7 @@ fn render_and_readback(
             format,
             target_view: &view,
             scene,
-            clear: ClearColor(wgpu::Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.0,
-            }),
+            clear: ClearColor(wgpu::Color::TRANSPARENT),
             scale_factor: 1.0,
             viewport_size: size,
         },
@@ -125,7 +122,7 @@ fn render_and_readback(
 }
 
 #[test]
-fn gpu_scissored_blur_preserves_outside_region() {
+fn gpu_filter_content_blur_is_scissored_and_preserves_outside_content() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
         Err(_err) => {
@@ -138,27 +135,12 @@ fn gpu_scissored_blur_preserves_outside_region() {
     renderer.set_intermediate_budget_bytes(u64::MAX);
 
     let size = (64u32, 64u32);
-    let mut scene = Scene::default();
 
-    // Left half white, right half black: sharp edge at x=32.
-    scene.push(SceneOp::Quad {
+    let left_red = SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
         background: Color {
             r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
-        },
-        border: Edges::all(Px(0.0)),
-        border_color: Color::TRANSPARENT,
-        corner_radii: Default::default(),
-    });
-    scene.push(SceneOp::Quad {
-        order: DrawOrder(1),
-        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
-        background: Color {
-            r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
@@ -166,25 +148,77 @@ fn gpu_scissored_blur_preserves_outside_region() {
         border: Edges::all(Px(0.0)),
         border_color: Color::TRANSPARENT,
         corner_radii: Default::default(),
+    };
+    let right_blue = SceneOp::Quad {
+        order: DrawOrder(1),
+        rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
+        background: Color {
+            r: 0.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Default::default(),
+    };
+    let foreground = SceneOp::Quad {
+        order: DrawOrder(2),
+        rect: Rect::new(
+            Point::new(Px(26.0), Px(52.0)),
+            Size::new(Px(12.0), Px(12.0)),
+        ),
+        background: Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        },
+        border: Edges::all(Px(0.0)),
+        border_color: Color::TRANSPARENT,
+        corner_radii: Default::default(),
+    };
+
+    let mut direct = Scene::default();
+    direct.push(left_red);
+    direct.push(right_blue);
+    direct.push(foreground);
+
+    let mut filtered = Scene::default();
+    filtered.push(SceneOp::PushEffect {
+        bounds: Rect::new(Point::new(Px(24.0), Px(0.0)), Size::new(Px(16.0), Px(64.0))),
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::GaussianBlur {
+            radius_px: Px(4.0),
+            downsample: 2,
+        }]),
+        quality: EffectQuality::Auto,
     });
+    filtered.push(left_red);
+    filtered.push(right_blue);
+    filtered.push(SceneOp::PopEffect);
+    filtered.push(foreground);
 
-    let direct = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let direct_pixels = render_and_readback(&ctx, &mut renderer, &direct, size);
+    let filtered_pixels = render_and_readback(&ctx, &mut renderer, &filtered, size);
 
-    renderer.set_debug_blur_radius(2);
-    renderer.set_debug_blur_scissor(Some((24, 0, 16, 64)));
-    let blurred = render_and_readback(&ctx, &mut renderer, &scene, size);
-
-    let outside = pixel_rgba(&direct, size.0, 8, 32);
-    let outside_blurred = pixel_rgba(&blurred, size.0, 8, 32);
+    let outside = pixel_rgba(&direct_pixels, size.0, 8, 32);
+    let outside_filtered = pixel_rgba(&filtered_pixels, size.0, 8, 32);
     assert_eq!(
-        outside, outside_blurred,
-        "pixels outside scissor must remain unchanged"
+        outside, outside_filtered,
+        "pixels outside effect bounds should match (unfiltered content preserved)"
     );
 
-    let inside = pixel_rgba(&direct, size.0, 32, 32);
-    let inside_blurred = pixel_rgba(&blurred, size.0, 32, 32);
+    let inside = pixel_rgba(&direct_pixels, size.0, 32, 32);
+    let inside_filtered = pixel_rgba(&filtered_pixels, size.0, 32, 32);
     assert_ne!(
-        inside, inside_blurred,
-        "pixels inside scissor near an edge should be affected by blur"
+        inside, inside_filtered,
+        "pixels inside effect bounds near a hard edge should be affected by blur"
+    );
+
+    let fg = pixel_rgba(&filtered_pixels, size.0, 32, 58);
+    assert!(
+        fg[1] > 200 && fg[0] < 40 && fg[2] < 40 && fg[3] > 200,
+        "foreground quad drawn after PopEffect should remain on top"
     );
 }

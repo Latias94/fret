@@ -16,11 +16,11 @@ Related plan:
 
 ### M1 — Render split (`fret-render-core` + `fret-render-wgpu`)
 
-- [ ] Create `crates/fret-render-core` (portable render contracts/types).
-- [ ] Create `crates/fret-render-wgpu` (wgpu backend implementation).
-- [ ] Keep `crates/fret-render` as a compatibility facade (re-exports / feature glue).
-- [ ] Update `crates/fret-launch` to depend on `fret-render-wgpu` for native.
-- [ ] Ensure `tools/check_layering.ps1` still passes.
+- [x] Create `crates/fret-render-core` (portable render contracts/types).
+- [x] Create `crates/fret-render-wgpu` (wgpu backend implementation).
+- [x] Keep `crates/fret-render` as a compatibility facade (re-exports / feature glue).
+- [x] Update `crates/fret-launch` to depend on `fret-render-wgpu` for native.
+- [x] Ensure `tools/check_layering.ps1` still passes.
 
 ### M2 — Web runner becomes real (`fret-runner-web`)
 
