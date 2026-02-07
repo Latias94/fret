@@ -102,8 +102,12 @@ Exit criteria:
 - adapter seam template remains stable and is proven by a non-shadcn example.
 - any metadata evolution is justified with duplication-reduction evidence.
 
-- [ ] IMUIECO3-adapter-030 Audit adapter seam v2 and list v3 ABI changes (if any).
-- [ ] IMUIECO3-adapter-031 Add one \"external widget crate\" style example (in-tree scaffold is OK).
+- [x] IMUIECO3-adapter-030 Audit adapter seam v2 and list v3 ABI changes (if any).
+  - Result: no v3 ABI changes required; v2 seam is the baseline.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M3 contract notes).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/adapters.rs`.
+- [x] IMUIECO3-adapter-031 Add one \"external widget crate\" style example (in-tree scaffold is OK).
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_external_adapter_example.rs`.
 
 ---
 

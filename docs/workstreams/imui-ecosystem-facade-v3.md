@@ -121,6 +121,23 @@ Goal: make it easy for third-party crates to build immediate wrappers:
 - expand metadata only when it reduces duplication (focus/geometry/a11y intents),
 - keep a stable template and at least one external-style example.
 
+M3 contract notes (normative for v3 work):
+
+- **v2 adapter seam is the v3 baseline**:
+  - No ABI changes are required to unlock external adapters: `imui::adapters` is public and the
+    seam contract remains limited to identity-in + signal-report-out + optional metadata.
+  - External adapter helpers should be written as pure wrappers that:
+    - call `ui.push_id(identity_key, |ui| canonical_wrapper(...))`,
+    - call `report_adapter_signal(...)` once after render,
+    - return the canonical `ResponseExt`.
+- **Metadata evolution rule**:
+  - Add new fields to `AdapterSignalMetadata` only when it demonstrably reduces policy duplication
+    in external crates (e.g. focus restore choreography, geometry for anchoring/measurement).
+  - Any metadata expansion must include: at least one external-style example update + evidence
+    in this tracker.
+- Evidence (external-style example): `ecosystem/fret-ui-kit/tests/imui_external_adapter_example.rs`.
+- Evidence (contract types): `ecosystem/fret-ui-kit/src/imui/adapters.rs`.
+
 ### M4 - Text/editor bridge (integration, not re-implementation)
 
 Goal: define adapter hooks for editor-grade text surfaces without forking the code editor ecosystem.
