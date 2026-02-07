@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use fret_ui_headless::table::{
     ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
-    contains_ascii_case_insensitive,
+    contains_ascii_case_insensitive, sort_for_column,
 };
 use serde::Deserialize;
 
@@ -29,7 +29,21 @@ struct FixtureExpect {
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
     #[serde(default)]
+    sorting_helpers: Option<SortingHelpersSnapshot>,
+    #[serde(default)]
     next_state: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SortingHelpersSnapshot {
+    columns: std::collections::BTreeMap<String, SortingHelperColumn>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SortingHelperColumn {
+    can_sort: bool,
+    is_sorted: Option<String>,
+    sort_index: i32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -236,6 +250,43 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
             "snapshot {} sorted flat mismatch",
             snap.id
         );
+
+        if let Some(expected) = snap.expect.sorting_helpers.as_ref() {
+            for (col_id, exp) in &expected.columns {
+                assert_eq!(
+                    table.column_can_sort(col_id.as_str()),
+                    Some(exp.can_sort),
+                    "snapshot {} sorting_helpers.columns[{}].can_sort mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    table.column_is_sorted(col_id.as_str()),
+                    Some(exp.is_sorted.is_some()),
+                    "snapshot {} sorting_helpers.columns[{}].is_sorted mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    table.column_sort_index(col_id.as_str()),
+                    Some(exp.sort_index),
+                    "snapshot {} sorting_helpers.columns[{}].sort_index mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                let expected_desc = exp.is_sorted.as_deref().map(|s| s == "desc");
+                assert_eq!(
+                    sort_for_column(&table.state().sorting, col_id.as_str()),
+                    expected_desc,
+                    "snapshot {} sorting_helpers.columns[{}].sort_for_column mismatch",
+                    snap.id,
+                    col_id
+                );
+            }
+        }
 
         // Our engine's `row_model()` corresponds to TanStack's `getRowModel()` (post-pagination).
         assert_eq!(

@@ -414,6 +414,17 @@ type FilteringHelpersSnapshot = {
   global_filter: unknown | null
 }
 
+type SortingHelpersSnapshot = {
+  columns: Record<
+    string,
+    {
+      can_sort: boolean
+      is_sorted: "asc" | "desc" | null
+      sort_index: number
+    }
+  >
+}
+
 type FixtureSnapshot = {
   id: SnapshotId
   options: TanStackOptions
@@ -444,6 +455,7 @@ type FixtureSnapshot = {
     can_some_rows_expand?: boolean
     is_all_columns_visible?: boolean
     is_some_columns_visible?: boolean
+    sorting_helpers?: SortingHelpersSnapshot
     filtering_helpers?: FilteringHelpersSnapshot
     headers_cells?: {
       header_groups: {
@@ -2214,6 +2226,28 @@ function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
   return out
 }
 
+function snapshotSortingHelpers(table: any): SortingHelpersSnapshot {
+  const out: SortingHelpersSnapshot = {
+    columns: {},
+  }
+
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    const id = String(col.id)
+    const raw = col.getIsSorted?.()
+    const is_sorted =
+      raw === undefined || raw === false ? null : (String(raw) as "asc" | "desc")
+
+    out.columns[id] = {
+      can_sort: Boolean(col.getCanSort?.()),
+      is_sorted,
+      sort_index: Number(col.getSortIndex?.() ?? -1),
+    }
+  }
+
+  return out
+}
+
 function snapshotHeaderGroups(groups: any[]): {
   id: string
   depth: number
@@ -3423,24 +3457,35 @@ function snapshotColumnPinning(
   let snapshots: FixtureSnapshot[]
 
   if (case_id === "demo_process") {
+    const withSortingHelpers = (table: any) => ({
+      sorting_helpers: snapshotSortingHelpers(table),
+    })
+    const mkExpectState = (options: TanStackOptions, state: TanStackState) =>
+      snapshotForState(options, state, withSortingHelpers)
+    const mkExpectActions = (
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => snapshotForActions(options, state, actions, withSortingHelpers)
+
     snapshots = [
       {
         id: "baseline",
         options: defaultOptions,
         state: {},
-        expect: snapshotForState(defaultOptions, {}),
+        expect: mkExpectState(defaultOptions, {}),
       },
       {
         id: "sorted_cpu_desc",
         options: defaultOptions,
         state: { sorting: [{ id: "cpu", desc: true }] },
-        expect: snapshotForState(defaultOptions, { sorting: [{ id: "cpu", desc: true }] }),
+        expect: mkExpectState(defaultOptions, { sorting: [{ id: "cpu", desc: true }] }),
       },
       {
         id: "sorted_cpu_invert_asc",
         options: defaultOptions,
         state: { sorting: [{ id: "cpu_invert", desc: false }] },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           sorting: [{ id: "cpu_invert", desc: false }],
         }),
       },
@@ -3449,7 +3494,7 @@ function snapshotColumnPinning(
         options: defaultOptions,
         state: {},
         actions: [{ type: "toggleSorting", column_id: "cpu_desc_first" }],
-        expect: snapshotForActions(defaultOptions, {}, [
+        expect: mkExpectActions(defaultOptions, {}, [
           { type: "toggleSorting", column_id: "cpu_desc_first" },
         ]),
       },
@@ -3465,7 +3510,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu", multi: false },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableSortingRemoval: false,
@@ -3489,7 +3534,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             maxMultiSortColCount: 1,
@@ -3513,7 +3558,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
           { type: "toggleSorting", column_id: "status", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             maxMultiSortColCount: 2,
@@ -3537,7 +3582,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableMultiSort: false,
@@ -3557,7 +3602,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu_no_multi", multi: true },
         ],
-        expect: snapshotForActions(sortAscFirst, {}, [
+        expect: mkExpectActions(sortAscFirst, {}, [
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu_no_multi", multi: true },
         ]),
@@ -3570,7 +3615,7 @@ function snapshotColumnPinning(
         },
         state: {},
         actions: [{ type: "toggleSortingHandler", column_id: "cpu" }],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableSorting: false,
@@ -3584,7 +3629,7 @@ function snapshotColumnPinning(
         options: sortAscFirst,
         state: {},
         actions: [{ type: "toggleSortingHandler", column_id: "cpu_no_sort" }],
-        expect: snapshotForActions(sortAscFirst, {}, [
+        expect: mkExpectActions(sortAscFirst, {}, [
           { type: "toggleSortingHandler", column_id: "cpu_no_sort" },
         ]),
       },
@@ -3595,7 +3640,7 @@ function snapshotColumnPinning(
         actions: [
           { type: "toggleSortingHandler", column_id: "mem_mb", event_multi: true },
         ],
-        expect: snapshotForActions(sortAscFirst, { sorting: [{ id: "cpu", desc: false }] }, [
+        expect: mkExpectActions(sortAscFirst, { sorting: [{ id: "cpu", desc: false }] }, [
           { type: "toggleSortingHandler", column_id: "mem_mb", event_multi: true },
         ]),
       },
@@ -3603,7 +3648,7 @@ function snapshotColumnPinning(
         id: "filter_status_run",
         options: defaultOptions,
         state: { columnFilters: [{ id: "status", value: "run" }] },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           columnFilters: [{ id: "status", value: "run" }],
         }),
       },
@@ -3611,7 +3656,7 @@ function snapshotColumnPinning(
         id: "page_0_size_2",
         options: defaultOptions,
         state: { pagination: { pageIndex: 0, pageSize: 2 } },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           pagination: { pageIndex: 0, pageSize: 2 },
         }),
       },
