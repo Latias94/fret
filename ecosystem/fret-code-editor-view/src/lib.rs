@@ -9,6 +9,7 @@ use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
 use fret_text_nav as text_nav;
 use std::ops::Range;
+use std::sync::Arc;
 
 mod folds;
 
@@ -16,6 +17,19 @@ pub use folds::{
     FoldSpan, FoldSpanError, folded_byte_to_col, folded_col_count, folded_col_to_byte,
     validate_fold_spans,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DisplayRowFragment {
+    Buffer { range: Range<usize> },
+    Placeholder { text: Arc<str>, maps_to: usize },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DisplayRowFragmentsError {
+    UnsupportedWithWrap,
+    InvalidFoldSpans(FoldSpanError),
+    MissingLineText,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DisplayPoint {
@@ -179,6 +193,67 @@ impl DisplayMap {
         };
 
         start..end
+    }
+
+    /// Return display-row text fragments for unwrapped (1 row == 1 logical line) mapping.
+    ///
+    /// This is a view-layer contract surface for fold/placeholder expansion (ADR 0200). It is
+    /// intentionally restricted to the unwrapped baseline until we define the combined wrap+fold
+    /// semantics (avoid partially materializing placeholders across wrapped rows).
+    pub fn display_row_fragments_unwrapped(
+        &self,
+        buf: &TextBuffer,
+        display_row: usize,
+        folds: &[FoldSpan],
+    ) -> Result<Vec<DisplayRowFragment>, DisplayRowFragmentsError> {
+        if self.wrap_cols.is_some() {
+            return Err(DisplayRowFragmentsError::UnsupportedWithWrap);
+        }
+
+        if self.row_to_line.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let row = display_row.min(self.row_to_line.len().saturating_sub(1));
+        let line = self.row_to_line[row];
+        let Some(line_range) = buf.line_byte_range(line) else {
+            return Ok(Vec::new());
+        };
+
+        let Some(line_text) = buf.line_text(line) else {
+            return Err(DisplayRowFragmentsError::MissingLineText);
+        };
+        validate_fold_spans(&line_text, folds)
+            .map_err(DisplayRowFragmentsError::InvalidFoldSpans)?;
+
+        let mut out = Vec::<DisplayRowFragment>::new();
+        let mut cursor = line_range.start;
+        for span in folds {
+            let start = line_range
+                .start
+                .saturating_add(span.range.start)
+                .min(line_range.end);
+            let end = line_range
+                .start
+                .saturating_add(span.range.end)
+                .min(line_range.end);
+            if cursor < start {
+                out.push(DisplayRowFragment::Buffer {
+                    range: cursor..start,
+                });
+            }
+            out.push(DisplayRowFragment::Placeholder {
+                text: Arc::clone(&span.placeholder),
+                maps_to: start,
+            });
+            cursor = end.max(start);
+        }
+        if cursor < line_range.end {
+            out.push(DisplayRowFragment::Buffer {
+                range: cursor..line_range.end,
+            });
+        }
+        Ok(out)
     }
 
     /// Map a UTF-8 byte index in the buffer to a wrapped display coordinate.
@@ -565,6 +640,21 @@ mod display_map_tests {
     use super::*;
     use fret_code_editor_buffer::{DocId, TextBuffer};
 
+    fn fragments_to_string(buf: &TextBuffer, fragments: &[DisplayRowFragment]) -> String {
+        let mut out = String::new();
+        for f in fragments {
+            match f {
+                DisplayRowFragment::Buffer { range } => {
+                    out.push_str(buf.slice_to_string(range.clone()).as_deref().unwrap_or(""));
+                }
+                DisplayRowFragment::Placeholder { text, .. } => {
+                    out.push_str(text.as_ref());
+                }
+            }
+        }
+        out
+    }
+
     #[test]
     fn display_map_without_wrap_matches_logical_lines() {
         let doc = DocId::new();
@@ -626,6 +716,48 @@ mod display_map_tests {
 
         assert_eq!(map.display_row_byte_range(&buf, 0), 0..2);
         assert_eq!(map.display_row_byte_range(&buf, 1), 3..4);
+    }
+
+    #[test]
+    fn display_row_fragments_unwrapped_replaces_fold_spans_with_placeholders() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef\n".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, None);
+
+        let folds = vec![FoldSpan {
+            range: 1..4,
+            placeholder: std::sync::Arc::<str>::from("…"),
+        }];
+        let fragments = map
+            .display_row_fragments_unwrapped(&buf, 0, &folds)
+            .expect("fragments");
+        assert_eq!(fragments_to_string(&buf, &fragments), "a…ef");
+        assert_eq!(
+            fragments,
+            vec![
+                DisplayRowFragment::Buffer { range: 0..1 },
+                DisplayRowFragment::Placeholder {
+                    text: std::sync::Arc::<str>::from("…"),
+                    maps_to: 1,
+                },
+                DisplayRowFragment::Buffer { range: 4..6 },
+            ]
+        );
+    }
+
+    #[test]
+    fn display_row_fragments_unwrapped_rejects_wrap_mode() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, Some(2));
+        let folds = vec![FoldSpan {
+            range: 1..4,
+            placeholder: std::sync::Arc::<str>::from("…"),
+        }];
+        assert_eq!(
+            map.display_row_fragments_unwrapped(&buf, 0, &folds),
+            Err(DisplayRowFragmentsError::UnsupportedWithWrap)
+        );
     }
 
     #[test]
