@@ -112,12 +112,11 @@ Baseline fact (quick reference):
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
    - Fret experiment knob (default-off): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
-   - Latest evidence (commit `68c6482cb`, `ui-resize-probes`, repeat=7; see perf log):
-     - Baseline: drag-jitter `p95 total=16470us`, stress `p95 total=15070us`.
-     - With bucketing=2px: drag-jitter improves (`p95 total=15103us`), but stress regresses (`p95 total=15729us`).
-     - Conclusion: keep this off by default until it is consistently positive and visually acceptable; the better
-       direction is still to tighten wrapped-text reuse (separate shaping vs wrapping keys) rather than rely purely on
-       quantization.
+   - Latest evidence (see perf log entries on 2026-02-07):
+     - Bucketing remains **inconsistent**: bucket=2px can reduce `drag-jitter`, but `resize-stress` tends to regress;
+       bucket=4px regresses both probes.
+     - Conclusion: keep this off by default; the better direction is to improve wrapped-text reuse (separate shaping vs
+       wrapping keys and reuse line layouts across frames), not rely on quantization.
 
 2) **Layout invalidation granularity**
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.

@@ -41,8 +41,11 @@ Conventions:
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
     - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off.
-    - Evidence (mixed): perf log entry `2026-02-07 21:48` shows bucketing=2px improves `drag-jitter` p95 total but
-      regresses `resize-stress` p95 total; keep default-off until it is consistently positive and visually acceptable.
+    - Evidence (still mixed): perf log entries on `2026-02-07` show bucketing is not consistently positive:
+      - bucket=2px: small improvement on `drag-jitter`, but `resize-stress` still regresses vs the same-run baseline.
+      - bucket=4px: regresses both probes.
+      Keep default-off until we have a strategy that is both consistently faster and visually acceptable; the likely
+      long-term fix is improving wrapped-text reuse (shaping vs wrapping separation), not just width quantization.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
 ## Milestones
