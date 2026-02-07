@@ -3,7 +3,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_diag_protocol::{DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1};
+use fret_diag_protocol::{
+    DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
+    DevtoolsSessionRemovedV1, DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1,
+};
 use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use rmcp::handler::server::tool::ToolRouter;
@@ -32,6 +35,8 @@ struct FretDevtoolsMcp {
     ws: WsState,
     client: Arc<DevtoolsWsClient>,
     inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
+    sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
+    selected_session_id: Arc<Mutex<Option<String>>>,
     tool_router: ToolRouter<Self>,
 }
 
@@ -41,11 +46,15 @@ impl FretDevtoolsMcp {
         ws: WsState,
         client: Arc<DevtoolsWsClient>,
         inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
+        sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
+        selected_session_id: Arc<Mutex<Option<String>>>,
     ) -> Self {
         Self {
             ws,
             client,
             inbox,
+            sessions,
+            selected_session_id,
             tool_router: Self::tool_router(),
         }
     }
@@ -62,18 +71,56 @@ impl FretDevtoolsMcp {
         }))
     }
 
+    #[tool(description = "List active diagnostics sessions (connected apps).")]
+    async fn fret_diag_sessions_list(&self) -> Result<Json<SessionsListV1>, String> {
+        let sessions = self.sessions.lock().await.clone();
+        Ok(Json(SessionsListV1 {
+            schema_version: 1,
+            sessions: sessions
+                .into_iter()
+                .map(|s| SessionInfoV1 {
+                    session_id: s.session_id,
+                    client_kind: s.client_kind,
+                    client_version: s.client_version,
+                    capabilities: s.capabilities,
+                })
+                .collect(),
+        }))
+    }
+
+    #[tool(description = "Select a default session_id for subsequent commands.")]
+    async fn fret_diag_sessions_select(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<SessionsSelectRequestV1>,
+    ) -> Result<String, String> {
+        let session_id = params.0.session_id;
+        let sessions = self.sessions.lock().await;
+        if !sessions.iter().any(|s| s.session_id == session_id) {
+            return Err("unknown session_id (use fret_diag_sessions_list)".to_string());
+        }
+        drop(sessions);
+
+        *self.selected_session_id.lock().await = Some(session_id.clone());
+        self.client.set_default_session_id(Some(session_id));
+        Ok("ok".to_string())
+    }
+
     #[tool(description = "Set UI inspection mode (overlay on/off).")]
     async fn fret_diag_inspect_set(
         &self,
         params: rmcp::handler::server::wrapper::Parameters<InspectSetRequestV1>,
     ) -> Result<String, String> {
-        self.client.send_type_payload(
-            "inspect.set",
-            serde_json::json!({
+        let session_id = self.resolve_session_id(params.0.session_id).await?;
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "inspect.set".to_string(),
+            session_id: Some(session_id),
+            request_id: None,
+            payload: serde_json::json!({
                 "enabled": params.0.enabled,
                 "consume_clicks": params.0.consume_clicks,
             }),
-        );
+        });
         Ok("ok".to_string())
     }
 
@@ -82,10 +129,16 @@ impl FretDevtoolsMcp {
         &self,
         params: rmcp::handler::server::wrapper::Parameters<PickRequestV1>,
     ) -> Result<String, String> {
-        self.client
-            .send_type_payload("pick.arm", serde_json::json!({}));
+        let session_id = self.resolve_session_id(params.0.session_id).await?;
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "pick.arm".to_string(),
+            session_id: Some(session_id.clone()),
+            request_id: None,
+            payload: serde_json::json!({}),
+        });
         let msg = self
-            .wait_for_type("pick.result", params.0.timeout_ms)
+            .wait_for_type_and_session("pick.result", &session_id, params.0.timeout_ms)
             .await
             .ok_or_else(|| "timeout waiting for pick.result".to_string())?;
         Ok(serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()))
@@ -96,11 +149,17 @@ impl FretDevtoolsMcp {
         &self,
         params: rmcp::handler::server::wrapper::Parameters<BundleDumpRequestV1>,
     ) -> Result<String, String> {
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
-        self.client
-            .send_type_payload("bundle.dump", serde_json::json!({ "label": label }));
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "bundle.dump".to_string(),
+            session_id: Some(session_id.clone()),
+            request_id: None,
+            payload: serde_json::json!({ "label": label }),
+        });
         let msg = self
-            .wait_for_type("bundle.dumped", params.0.timeout_ms)
+            .wait_for_type_and_session("bundle.dumped", &session_id, params.0.timeout_ms)
             .await
             .ok_or_else(|| "timeout waiting for bundle.dumped".to_string())?;
         Ok(serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()))
@@ -113,14 +172,18 @@ impl FretDevtoolsMcp {
         &self,
         params: rmcp::handler::server::wrapper::Parameters<RunScriptJsonRequestV1>,
     ) -> Result<String, String> {
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let script: serde_json::Value =
             serde_json::from_str(&params.0.script_json).map_err(|e| e.to_string())?;
-        self.client.send_type_payload(
-            "script.run",
-            serde_json::json!({
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "script.run".to_string(),
+            session_id: Some(session_id.clone()),
+            request_id: None,
+            payload: serde_json::json!({
                 "script": script,
             }),
-        );
+        });
 
         let timeout_ms = params.0.timeout_ms;
         let start = tokio::time::Instant::now();
@@ -129,7 +192,10 @@ impl FretDevtoolsMcp {
                 return Err("timeout waiting for script.result".to_string());
             }
 
-            if let Some(msg) = self.pop_next_of_type("script.result").await {
+            if let Some(msg) = self
+                .pop_next_of_type_and_session("script.result", &session_id)
+                .await
+            {
                 if let Ok(parsed) = serde_json::from_value::<UiScriptResultV1>(msg.payload.clone())
                 {
                     match parsed.stage {
@@ -146,10 +212,15 @@ impl FretDevtoolsMcp {
         }
     }
 
-    async fn wait_for_type(&self, ty: &str, timeout_ms: u64) -> Option<DiagTransportMessageV1> {
+    async fn wait_for_type_and_session(
+        &self,
+        ty: &str,
+        session_id: &str,
+        timeout_ms: u64,
+    ) -> Option<DiagTransportMessageV1> {
         let start = tokio::time::Instant::now();
         loop {
-            if let Some(msg) = self.pop_next_of_type(ty).await {
+            if let Some(msg) = self.pop_next_of_type_and_session(ty, session_id).await {
                 return Some(msg);
             }
             if start.elapsed() > Duration::from_millis(timeout_ms) {
@@ -159,10 +230,34 @@ impl FretDevtoolsMcp {
         }
     }
 
-    async fn pop_next_of_type(&self, ty: &str) -> Option<DiagTransportMessageV1> {
+    async fn pop_next_of_type_and_session(
+        &self,
+        ty: &str,
+        session_id: &str,
+    ) -> Option<DiagTransportMessageV1> {
         let mut inbox = self.inbox.lock().await;
-        let pos = inbox.iter().position(|m| m.r#type == ty)?;
+        let pos = inbox
+            .iter()
+            .position(|m| m.r#type == ty && m.session_id.as_deref() == Some(session_id))?;
         Some(inbox.remove(pos)?)
+    }
+
+    async fn resolve_session_id(&self, requested: Option<String>) -> Result<String, String> {
+        if let Some(s) = requested {
+            return Ok(s);
+        }
+
+        let selected = self.selected_session_id.lock().await.clone();
+        if let Some(s) = selected {
+            return Ok(s);
+        }
+
+        let sessions = self.sessions.lock().await;
+        if let Some(first) = sessions.first() {
+            return Ok(first.session_id.clone());
+        }
+
+        Err("no sessions available (connect an app and call fret_diag_sessions_list)".to_string())
     }
 }
 
@@ -182,11 +277,15 @@ impl ServerHandler for FretDevtoolsMcp {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct PickRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
     timeout_ms: u64,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct BundleDumpRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
     #[serde(default)]
     label: Option<String>,
     timeout_ms: u64,
@@ -194,6 +293,8 @@ struct BundleDumpRequestV1 {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct InspectSetRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
     enabled: bool,
     #[serde(default = "serde_default_true")]
     consume_clicks: bool,
@@ -201,9 +302,31 @@ struct InspectSetRequestV1 {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 struct RunScriptJsonRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
     /// JSON text for a `UiActionScriptV1` or `UiActionScriptV2` payload.
     script_json: String,
     timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct SessionsListV1 {
+    schema_version: u32,
+    sessions: Vec<SessionInfoV1>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct SessionInfoV1 {
+    session_id: String,
+    client_kind: String,
+    client_version: String,
+    #[serde(default)]
+    capabilities: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct SessionsSelectRequestV1 {
+    session_id: String,
 }
 
 fn serde_default_true() -> bool {
@@ -239,14 +362,74 @@ async fn main() -> anyhow::Result<()> {
     let client = Arc::new(DevtoolsWsClient::connect_native(cfg).map_err(anyhow::Error::msg)?);
 
     let inbox = Arc::new(Mutex::new(VecDeque::new()));
+    let sessions = Arc::new(Mutex::new(Vec::<DevtoolsSessionDescriptorV1>::new()));
+    let selected_session_id = Arc::new(Mutex::new(None::<String>));
     tokio::spawn({
         let client = Arc::clone(&client);
         let inbox = Arc::clone(&inbox);
+        let sessions = Arc::clone(&sessions);
+        let selected_session_id = Arc::clone(&selected_session_id);
         async move {
             loop {
                 let mut drained = false;
                 while let Some(msg) = client.try_recv() {
                     drained = true;
+
+                    match msg.r#type.as_str() {
+                        "session.list" => {
+                            if let Ok(parsed) =
+                                serde_json::from_value::<DevtoolsSessionListV1>(msg.payload.clone())
+                            {
+                                *sessions.lock().await = parsed.sessions;
+                            }
+                        }
+                        "session.added" => {
+                            if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionAddedV1>(
+                                msg.payload.clone(),
+                            ) {
+                                let mut s = sessions.lock().await;
+                                if let Some(pos) = s
+                                    .iter()
+                                    .position(|x| x.session_id == parsed.session.session_id)
+                                {
+                                    s[pos] = parsed.session;
+                                } else {
+                                    s.push(parsed.session);
+                                }
+                            }
+                        }
+                        "session.removed" => {
+                            if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionRemovedV1>(
+                                msg.payload.clone(),
+                            ) {
+                                let mut s = sessions.lock().await;
+                                s.retain(|x| x.session_id != parsed.session_id);
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    {
+                        let (first, contains_selected) = {
+                            let s = sessions.lock().await;
+                            let first = s.first().map(|x| x.session_id.clone());
+                            let current = selected_session_id.lock().await.clone();
+                            let contains_selected = current
+                                .as_deref()
+                                .is_some_and(|sel| s.iter().any(|x| x.session_id == sel));
+                            (first, contains_selected)
+                        };
+
+                        let mut selected = selected_session_id.lock().await;
+                        if selected.is_none() {
+                            *selected = first.clone();
+                            client.set_default_session_id(first);
+                        } else if !contains_selected {
+                            *selected = first.clone();
+                            client.set_default_session_id(first);
+                        }
+                    }
+
                     inbox.lock().await.push_back(msg);
                 }
                 if !drained {
@@ -256,9 +439,15 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    let service = FretDevtoolsMcp::new(WsState { ws_url, token }, client, inbox)
-        .serve(stdio())
-        .await?;
+    let service = FretDevtoolsMcp::new(
+        WsState { ws_url, token },
+        client,
+        inbox,
+        sessions,
+        selected_session_id,
+    )
+    .serve(stdio())
+    .await?;
     service.waiting().await?;
     Ok(())
 }

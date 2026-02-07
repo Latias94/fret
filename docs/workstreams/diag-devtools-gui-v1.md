@@ -248,9 +248,37 @@ The first client message must be `hello`:
   - `client_version`: semver-ish string (best effort),
   - `capabilities`: feature flags (e.g. `inspect`, `pick`, `scripts`, `screenshots`, `bundles`).
 - server responds with `hello_ack` including:
-  - `session_id`,
+  - `server_version`,
   - server capabilities,
   - auth/limits (max message size, rate hints).
+
+Session assignment rules:
+
+- When `client_kind` is `native_app` or `web_app`, the server assigns a `session_id` and includes it in the `hello_ack` envelope.
+- When `client_kind` is `tooling`, the server does not assign an app session. Tooling must target an app by sending commands with `session_id` set.
+- After a `tooling` hello, the server sends an initial `session.list` to establish the set of active sessions.
+
+### Sessions (multi-app routing)
+
+`session_id` identifies a single connected app instance (native or web).
+
+The server is responsible for:
+
+- assigning unique `session_id` values to app connections,
+- publishing session lifecycle events to tooling clients,
+- routing messages so that apps only receive messages for their own session.
+
+Tooling clients must:
+
+- show the current session in the UI (and allow switching),
+- include `session_id` on all app-directed commands (`inspect.set`, `pick.arm`, `script.run`, `bundle.dump`, etc.),
+- filter session-scoped events (e.g. `pick.result`, `script.result`, `bundle.dumped`) to the selected session by default.
+
+Session discovery messages (server -> tooling):
+
+- `session.list`: `{ "sessions": [ { "session_id", "client_kind", "client_version", "capabilities" } ] }`
+- `session.added`: `{ "session": { ... } }`
+- `session.removed`: `{ "session_id": "..." }`
 
 ### Error model
 

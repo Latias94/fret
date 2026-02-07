@@ -65,6 +65,7 @@ impl std::fmt::Debug for DevtoolsWsClient {
 struct State {
     outbox: Mutex<VecDeque<DiagTransportMessageV1>>,
     inbox: Mutex<VecDeque<DiagTransportMessageV1>>,
+    default_session_id: Mutex<Option<String>>,
 }
 
 #[cfg(feature = "client-wasm")]
@@ -87,6 +88,7 @@ impl DevtoolsWsClient {
         let state = Arc::new(State {
             outbox: Mutex::new(VecDeque::new()),
             inbox: Mutex::new(VecDeque::new()),
+            default_session_id: Mutex::new(None),
         });
 
         let ws_url =
@@ -124,6 +126,7 @@ impl DevtoolsWsClient {
             let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) else {
                 return;
             };
+            maybe_capture_session_id(&state_message, &msg);
             if let Ok(mut inbox) = state_message.inbox.lock() {
                 inbox.push_back(msg);
             }
@@ -156,8 +159,30 @@ impl DevtoolsWsClient {
         self.state.inbox.lock().ok()?.pop_front()
     }
 
+    pub fn default_session_id(&self) -> Option<String> {
+        self.state
+            .default_session_id
+            .lock()
+            .ok()
+            .and_then(|v| v.clone())
+    }
+
+    pub fn set_default_session_id(&self, session_id: Option<String>) {
+        if let Ok(mut v) = self.state.default_session_id.lock() {
+            *v = session_id;
+        }
+    }
+
     pub fn send(&self, msg: DiagTransportMessageV1) {
         if let Ok(mut outbox) = self.state.outbox.lock() {
+            let mut msg = msg;
+            if msg.session_id.is_none() && msg.r#type != "hello" {
+                if let Ok(default) = self.state.default_session_id.lock() {
+                    if let Some(s) = default.as_deref() {
+                        msg.session_id = Some(s.to_string());
+                    }
+                }
+            }
             outbox.push_back(msg);
         }
 
@@ -184,6 +209,7 @@ impl DevtoolsWsClient {
         let state = Arc::new(State {
             outbox: Mutex::new(VecDeque::new()),
             inbox: Mutex::new(VecDeque::new()),
+            default_session_id: Mutex::new(None),
         });
 
         let state_thread = Arc::clone(&state);
@@ -248,6 +274,7 @@ impl DevtoolsWsClient {
                     match ws.read() {
                         Ok(Message::Text(text)) => {
                             if let Ok(msg) = serde_json::from_str::<DiagTransportMessageV1>(&text) {
+                                maybe_capture_session_id(&state_thread, &msg);
                                 if let Ok(mut inbox) = state_thread.inbox.lock() {
                                     inbox.push_back(msg);
                                 }
@@ -278,6 +305,21 @@ impl DevtoolsWsClient {
             #[cfg(feature = "client-wasm")]
             wasm: None,
         })
+    }
+}
+
+fn maybe_capture_session_id(state: &Arc<State>, msg: &DiagTransportMessageV1) {
+    if msg.r#type != "hello_ack" {
+        return;
+    }
+    let Some(session_id) = msg.session_id.as_deref() else {
+        return;
+    };
+    let Ok(mut default) = state.default_session_id.lock() else {
+        return;
+    };
+    if default.is_none() {
+        *default = Some(session_id.to_string());
     }
 }
 

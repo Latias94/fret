@@ -74,7 +74,7 @@ Conventions:
 - [ ] Implement WS server (DevTools side):
   - [x] binds to `127.0.0.1`,
   - [x] requires a capability token,
-  - [ ] supports multiple clients (session ids).
+  - [x] supports multiple clients (session ids).
 - [ ] Implement WS client bridge in diagnostics service:
   - [x] add `FRET_DEVTOOLS_WS=ws://127.0.0.1:<port>` (name TBD) to enable it,
   - [x] wasm32 client via `web_sys::WebSocket`,
@@ -115,7 +115,9 @@ Conventions:
 
 - [x] Add `apps/fret-devtools-mcp` using `rmcp` (stdio transport first).
 - [ ] Expose a minimal tool set (names TBD):
-  - [ ] `fret_diag_connect` (connect/select session; choose transport: filesystem vs WS),
+  - [x] `fret_diag_sessions_list` (list sessions),
+  - [x] `fret_diag_sessions_select` (select a session),
+  - [ ] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
   - [x] `fret_diag_inspect_set` (on/off/toggle + consume_clicks),
   - [x] `fret_diag_pick` (arm + wait + return selector JSON),
   - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),

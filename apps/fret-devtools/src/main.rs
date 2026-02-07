@@ -4,8 +4,11 @@ use std::sync::Arc;
 use fret_app::{App, CommandId, Effect};
 use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
-use fret_core::{AppWindowId, UiServices};
-use fret_diag_protocol::DiagTransportMessageV1;
+use fret_core::{AppWindowId, Px, UiServices};
+use fret_diag_protocol::{
+    DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
+    DevtoolsSessionRemovedV1, DiagTransportMessageV1,
+};
 use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
@@ -35,6 +38,9 @@ struct State {
 
     panel_fractions: Model<Vec<f32>>,
     details_tab: Model<Option<Arc<str>>>,
+    sessions: Model<Vec<DevtoolsSessionDescriptorV1>>,
+    selected_session_id: Model<Option<Arc<str>>>,
+    selected_session_open: Model<bool>,
     inspect_consume_clicks: Model<bool>,
     script_text: Model<String>,
 
@@ -44,6 +50,7 @@ struct State {
     log_lines: Model<Vec<Arc<str>>>,
 
     client: DevtoolsWsClient,
+    applied_session_id: Option<Arc<str>>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -92,6 +99,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
     let panel_fractions = app.models_mut().insert(vec![0.25f32, 0.45f32, 0.30f32]);
     let details_tab = app.models_mut().insert(Some(Arc::<str>::from("pick")));
+    let sessions = app
+        .models_mut()
+        .insert(Vec::<DevtoolsSessionDescriptorV1>::new());
+    let selected_session_id = app.models_mut().insert(None::<Arc<str>>);
+    let selected_session_open = app.models_mut().insert(false);
     let inspect_consume_clicks = app.models_mut().insert(false);
     let script_text = app.models_mut().insert(String::new());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -115,6 +127,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         cfg,
         panel_fractions,
         details_tab,
+        sessions,
+        selected_session_id,
+        selected_session_open,
         inspect_consume_clicks,
         script_text,
         last_pick_json,
@@ -122,11 +137,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_bundle_json,
         log_lines,
         client,
+        applied_session_id: None,
     }
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     drain_ws_messages(cx.app, st);
+    sync_selected_session_to_client(cx.app, st);
 
     let mut needs_frames = false;
     cx.with_state(
@@ -149,6 +166,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
 
     cx.observe_model(&st.panel_fractions, Invalidation::Layout);
     cx.observe_model(&st.details_tab, Invalidation::Paint);
+    cx.observe_model(&st.sessions, Invalidation::Paint);
+    cx.observe_model(&st.selected_session_id, Invalidation::Paint);
+    cx.observe_model(&st.selected_session_open, Invalidation::Paint);
     cx.observe_model(&st.inspect_consume_clicks, Invalidation::Paint);
     cx.observe_model(&st.script_text, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -194,6 +214,39 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
             .items_center()
             .justify_between(),
         |cx| {
+            let has_session = cx
+                .app
+                .models()
+                .read(&st.selected_session_id, |v| v.is_some())
+                .unwrap_or(false);
+
+            let session_items = cx
+                .app
+                .models()
+                .read(&st.sessions, |sessions| {
+                    sessions
+                        .iter()
+                        .map(|s| {
+                            let label = if s.client_version.trim().is_empty() {
+                                format!("{} ({})", s.session_id, s.client_kind)
+                            } else {
+                                format!("{} ({} {})", s.session_id, s.client_kind, s.client_version)
+                            };
+                            shadcn::SelectItem::new(s.session_id.clone(), label)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            let session_select = shadcn::Select::new(
+                st.selected_session_id.clone(),
+                st.selected_session_open.clone(),
+            )
+            .placeholder("Session")
+            .items(session_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
+            .into_element(cx);
+
             let left = fret_ui_kit::declarative::stack::hstack(
                 cx,
                 fret_ui_kit::declarative::stack::HStackProps::default()
@@ -209,6 +262,7 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
                     .items_center(),
                 |cx| {
                     [
+                        session_select,
                         shadcn::Button::new("Copy WS URL")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .size(shadcn::ButtonSize::Sm)
@@ -222,21 +276,25 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
                         shadcn::Button::new("Inspect On")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
+                            .disabled(!has_session)
                             .on_click(CMD_INSPECT_ENABLE)
                             .into_element(cx),
                         shadcn::Button::new("Inspect Off")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
+                            .disabled(!has_session)
                             .on_click(CMD_INSPECT_DISABLE)
                             .into_element(cx),
                         shadcn::Button::new("Pick")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
+                            .disabled(!has_session)
                             .on_click(CMD_PICK_ARM)
                             .into_element(cx),
                         shadcn::Button::new("Dump Bundle")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
+                            .disabled(!has_session)
                             .on_click(CMD_BUNDLE_DUMP)
                             .into_element(cx),
                     ]
@@ -336,6 +394,12 @@ fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) ->
         .a11y_label("Consume clicks while inspecting")
         .into_element(cx);
 
+    let has_session = cx
+        .app
+        .models()
+        .read(&st.selected_session_id, |v| v.is_some())
+        .unwrap_or(false);
+
     let textarea = shadcn::Textarea::new(st.script_text.clone())
         .a11y_label("Script JSON")
         .into_element(cx);
@@ -350,11 +414,13 @@ fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) ->
                 shadcn::Button::new("Push Script")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
                     .on_click(CMD_SCRIPT_PUSH)
                     .into_element(cx),
                 shadcn::Button::new("Run Script")
                     .variant(shadcn::ButtonVariant::Default)
                     .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
                     .on_click(CMD_SCRIPT_RUN)
                     .into_element(cx),
                 consume_toggle,
@@ -440,6 +506,8 @@ fn on_command(
     st: &mut State,
     cmd: &CommandId,
 ) {
+    sync_selected_session_to_client(app, st);
+
     match cmd.as_str() {
         CMD_COPY_WS_URL => {
             let text = format!(
@@ -455,6 +523,10 @@ fn on_command(
             });
         }
         CMD_INSPECT_ENABLE | CMD_INSPECT_DISABLE => {
+            if !require_session_selected(app, st) {
+                app.request_redraw(window);
+                return;
+            }
             let enabled = cmd.as_str() == CMD_INSPECT_ENABLE;
             let consume_clicks = app
                 .models()
@@ -473,16 +545,28 @@ fn on_command(
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_PICK_ARM => {
+            if !require_session_selected(app, st) {
+                app.request_redraw(window);
+                return;
+            }
             st.client
                 .send_type_payload("pick.arm", serde_json::json!({}));
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_BUNDLE_DUMP => {
+            if !require_session_selected(app, st) {
+                app.request_redraw(window);
+                return;
+            }
             st.client
                 .send_type_payload("bundle.dump", serde_json::json!({ "label": "devtools" }));
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN => {
+            if !require_session_selected(app, st) {
+                app.request_redraw(window);
+                return;
+            }
             let script_text = app
                 .models()
                 .read(&st.script_text, |v| v.clone())
@@ -509,22 +593,79 @@ fn on_command(
     }
 }
 
+fn require_session_selected(app: &mut App, st: &State) -> bool {
+    let selected = app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+    if selected.is_some() {
+        return true;
+    }
+    push_log(
+        app,
+        &st.log_lines,
+        "no session selected (connect an app or pick a session)",
+    );
+    false
+}
+
 fn drain_ws_messages(app: &mut App, st: &mut State) {
     let mut drained_any = false;
     while let Some(msg) = st.client.try_recv() {
         drained_any = true;
 
         let ty = msg.r#type.clone();
-        let compact = format!("type={ty}");
+        let compact = match msg.session_id.as_deref() {
+            Some(s) => format!("type={ty} session_id={s}"),
+            None => format!("type={ty}"),
+        };
         push_log(app, &st.log_lines, &compact);
 
         match ty.as_str() {
+            "session.list" => {
+                if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionListV1>(msg.payload) {
+                    let sessions = parsed.sessions;
+                    let _ = app.models_mut().update(&st.sessions, |v| *v = sessions);
+                    ensure_session_selection_is_valid(app, st);
+                }
+            }
+            "session.added" => {
+                if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionAddedV1>(msg.payload) {
+                    let _ = app.models_mut().update(&st.sessions, |v| {
+                        if let Some(pos) = v
+                            .iter()
+                            .position(|s| s.session_id == parsed.session.session_id)
+                        {
+                            v[pos] = parsed.session;
+                        } else {
+                            v.push(parsed.session);
+                        }
+                    });
+                    ensure_session_selection_is_valid(app, st);
+                }
+            }
+            "session.removed" => {
+                if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionRemovedV1>(msg.payload)
+                {
+                    let _ = app.models_mut().update(&st.sessions, |v| {
+                        v.retain(|s| s.session_id != parsed.session_id);
+                    });
+                    ensure_session_selection_is_valid(app, st);
+                }
+            }
             "pick.result" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_pick_json, |v| *v = text);
                 }
             }
             "script.result" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app
                         .models_mut()
@@ -532,6 +673,9 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                 }
             }
             "bundle.dumped" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
                 }
@@ -545,6 +689,63 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
         // The driver can stop requesting frames once the UI is idle.
         // (We do not have a dedicated background-to-UI wakeup path yet.)
     }
+}
+
+fn ensure_session_selection_is_valid(app: &mut App, st: &mut State) {
+    let selected = app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+    let sessions = app
+        .models()
+        .read(&st.sessions, |v| v.clone())
+        .unwrap_or_default();
+
+    if let Some(selected) = selected.as_deref() {
+        if sessions.iter().any(|s| s.session_id == selected) {
+            return;
+        }
+    }
+
+    let new_selected = sessions
+        .first()
+        .map(|s| Arc::<str>::from(s.session_id.clone()));
+    let _ = app
+        .models_mut()
+        .update(&st.selected_session_id, |v| *v = new_selected);
+}
+
+fn message_matches_selected_session(
+    app: &mut App,
+    st: &State,
+    msg: &DiagTransportMessageV1,
+) -> bool {
+    let selected = app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+    let Some(selected) = selected else {
+        return true;
+    };
+    msg.session_id.as_deref() == Some(selected.as_ref())
+}
+
+fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
+    let selected = app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+
+    if selected.as_deref() == st.applied_session_id.as_deref() {
+        return;
+    }
+
+    st.client
+        .set_default_session_id(selected.as_ref().map(|s| s.to_string()));
+    st.applied_session_id = selected;
 }
 
 fn push_log(app: &mut App, model: &Model<Vec<Arc<str>>>, line: &str) {

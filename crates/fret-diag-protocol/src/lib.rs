@@ -13,6 +13,45 @@ pub struct DiagTransportMessageV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsHelloV1 {
+    pub client_kind: String,
+    pub client_version: String,
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsHelloAckV1 {
+    pub server_version: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub server_capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsSessionDescriptorV1 {
+    pub session_id: String,
+    pub client_kind: String,
+    pub client_version: String,
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsSessionListV1 {
+    pub sessions: Vec<DevtoolsSessionDescriptorV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsSessionAddedV1 {
+    pub session: DevtoolsSessionDescriptorV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsSessionRemovedV1 {
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
     pub steps: Vec<UiActionStepV1>,

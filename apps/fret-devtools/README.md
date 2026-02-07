@@ -13,6 +13,8 @@ cargo run -p fret-devtools
 
 The app prints a `ws://127.0.0.1:<port>/?fret_devtools_token=...` URL on startup.
 
+When multiple apps connect, use the **Session** selector in the toolbar to target a specific app.
+
 ## Connect a target app (native)
 
 Set:
@@ -32,4 +34,3 @@ Add query parameters:
 Example:
 
 `?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=...`
-
