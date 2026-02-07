@@ -17,6 +17,13 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
+## Current priorities (updated 2026-02-07)
+
+- [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
+  `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
+- [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
+- [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
+
 ## Milestones
 
 Execution plan:

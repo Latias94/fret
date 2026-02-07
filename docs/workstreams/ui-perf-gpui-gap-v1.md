@@ -422,6 +422,11 @@ Update:
 - Correctness gates added to make the resize policy safe to iterate:
   - Scroll offset stability: `--check-scroll-offset-stable <test_id>` (commit `6c248d9e1`).
   - Scrollbar thumb geometry validity: `--check-scrollbar-thumb-valid all` (commit `e20637f92`).
+- Latest spot check (commit `5208b6883`, repeat=7; reuse-launch):
+  - `p95 time.us(total/layout/solve/prepaint/paint)=15204/11659/1799/101/3444`
+  - Interpretation: resize remains layout-dominant; primary leverage is reducing layout plumbing overhead and
+    width-jitter-induced text churn (not the solve itself).
+  - Evidence: perf log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-07 08:45).
 
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 

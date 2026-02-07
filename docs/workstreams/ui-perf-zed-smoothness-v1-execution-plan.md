@@ -64,6 +64,20 @@ For each perf-affecting PR:
 
 ---
 
+## Priority focus (updated 2026-02-07)
+
+This workstream can easily drift into “rare tail hitch” micro-fixes. Those are still valuable, but we
+must keep a clear order of operations based on *how often the hot path executes*.
+
+- **P0: Resize-drag smoothness (layout/solve budgets)**  
+  Target probe: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
+- **P1: Text pipeline stability under width jitter**  
+  Target probes: editor autoscroll + resize.
+- **P2: GPU vs CPU attribution + upload churn**  
+  Target probes: effects blur, SVG/image upload stress, any real hitch.
+
+---
+
 ## Active milestone ladder (updated 2026-02-07)
 
 | Milestone | Status | Scope | Required evidence |
@@ -72,15 +86,17 @@ For each perf-affecting PR:
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
 | M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |
+| M4.4 Resize-drag smoothness | Pending | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-gallery-window-resize-stress-steady.json` p95/max improvements recorded in perf log; new diagnostics or gates if needed |
 | M5.0 Text pipeline stabilization | Pending | Cache-key spec + warmup/cold-path miss gate | Text cache miss gate and miss attribution recorded in bundles |
 | M7.0 GPU/CPU attribution | Pending | GPU timing capture and hitch-class triage flow | One hitch classified with recorded CPU/GPU evidence |
 
 ### Next commit queue (implementation-first, reversible)
 
-1. **M4.3 cache-key audit**: remove unstable cache-key factors causing redundant rerender on scroll.
-2. **M4.3 escape-trigger observability**: add an out-of-band escape trigger or explicit counter so escape behavior can be asserted when expected.
-3. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
-4. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
+1. **M4.4 resize probe tightening**: attribute resize cost (layout/solve/text) and confirm we only pay once per frame.
+2. **M4.4 resize LOD (guarded)**: bucket wrap widths / defer expensive probes while resizing, then reconcile on idle.
+3. **M4.3 escape-trigger observability**: make escape-driven shifts assertable when expected (deprioritized vs P0).
+4. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
+5. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
 
 This queue is intentionally aggressive, but each item has a measurable gate and a rollback trail in the perf log.
 
@@ -113,6 +129,9 @@ Deliverables:
 3. **Stabilize cache keys for windowed content**
    - Fix key instability sources (layout inputs, style resolution, subtree identity).
    - Acceptance: `view_cache_roots_cache_key_mismatch` does not spike on steady scripts.
+4. **Resize-drag smoothing**
+   - Reduce avoidable secondary work during `WindowEvent::SurfaceResized` frames (unbounded probes, text churn, cache-key mismatch).
+   - Acceptance: `ui-gallery-window-resize-stress-steady.json` stays within its baseline thresholds and improves over time.
 
 Exit criteria:
 
@@ -182,4 +201,3 @@ Baseline updates must follow the candidate-selection workflow to avoid resize ou
 - Large-scale renderer architecture changes (render graph refactor).
 - Cross-platform CI perf gating (only define the plan).
 - New UI features/components not needed for perf probes.
-

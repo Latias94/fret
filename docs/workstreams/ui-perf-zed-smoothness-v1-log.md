@@ -5674,3 +5674,41 @@ Results:
 Interpretation:
 - Even under a stronger wheel stress profile, non-retained fallback keeps zero shift/rerender churn on this probe.
 - Escape remained zero in this stress script; next M4.3 work should focus on an explicit out-of-band escape trigger path (or dedicated telemetry) if we want a positive escape expectation gate.
+
+
+## 2026-02-07 08:45:00 (commit `5208b6883`)
+
+Change:
+- Resize probe re-check on current HEAD after the VirtualList boundary work (sanity: keep P0 resize costs visible).
+
+Script:
+- `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-resize-stress-steady-1770425071 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 3 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14384 | 15204 | 15204 | 11659 | 1799 | 101 | 3444 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `15204`
+- bundle: `target/fret-diag-codex-resize-stress-steady-1770425071/1770425080919-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Interpretation:
+- Resize remains layout-dominant on this probe; the solve itself is not the primary cost.
+  Primary leverage is reducing layout plumbing overhead and width-jitter-induced text churn while resizing.
