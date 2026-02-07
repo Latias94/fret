@@ -13,10 +13,14 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use fret_diag_protocol::{
-    UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1, UiKeyModifiersV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1, UiScriptResultV1,
-    UiScriptStageV1, UiSelectorV1,
+    DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1,
+    UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
 };
+
+#[path = "ui_diagnostics_ws_bridge.rs"]
+mod ui_diagnostics_ws_bridge;
+use ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
@@ -48,6 +52,8 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    pub devtools_ws_url: Option<String>,
+    pub devtools_token: Option<String>,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -147,6 +153,19 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
+        let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .or_else(|| {
+                std::env::var("FRET_DEVTOOLS_WS_PORT")
+                    .ok()
+                    .filter(|v| !v.is_empty())
+                    .and_then(|v| v.parse::<u16>().ok())
+                    .map(|port| format!("ws://127.0.0.1:{port}/"))
+            });
+        let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
+            .ok()
+            .filter(|v| !v.is_empty());
 
         Self {
             enabled,
@@ -177,6 +196,8 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            devtools_ws_url,
+            devtools_token,
         }
     }
 }
@@ -184,6 +205,7 @@ impl Default for UiDiagnosticsConfig {
 #[derive(Default)]
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
+    ws_bridge: UiDiagnosticsWsBridge,
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
@@ -257,6 +279,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
         self.poll_script_trigger();
@@ -2994,6 +3017,21 @@ impl UiDiagnosticsService {
             let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
         }
         self.last_dump_dir = Some(dir.clone());
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dumped".to_string(),
+                session_id: None,
+                request_id: None,
+                payload: serde_json::json!({
+                    "exported_unix_ms": ts,
+                    "dir": display_path(&self.cfg.out_dir, &dir),
+                }),
+            },
+        );
         Some(dir)
     }
 
@@ -3015,20 +3053,129 @@ impl UiDiagnosticsService {
         id
     }
 
-    fn write_script_result(&self, result: UiScriptResultV1) {
+    fn write_script_result(&mut self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
         }
+        let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
         let _ = write_json(self.cfg.script_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.script_result_trigger_path);
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "script.result".to_string(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
     }
 
-    fn write_pick_result(&self, result: UiPickResultV1) {
+    fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
         }
+        let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
         let _ = write_json(self.cfg.pick_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.pick_result_trigger_path);
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "pick.result".to_string(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
+    }
+
+    fn poll_devtools_ws(&mut self) {
+        let mut inbox: Vec<DiagTransportMessageV1> = Vec::new();
+        self.ws_bridge.drain_inbox(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            &mut inbox,
+        );
+
+        for msg in inbox {
+            self.apply_devtools_ws_message(msg);
+        }
+    }
+
+    fn apply_devtools_ws_message(&mut self, msg: DiagTransportMessageV1) {
+        match msg.r#type.as_str() {
+            "inspect.set" => {
+                let enabled = msg.payload.get("enabled").and_then(|v| v.as_bool());
+                let consume_clicks = msg.payload.get("consume_clicks").and_then(|v| v.as_bool());
+                if let (Some(enabled), Some(consume_clicks)) = (enabled, consume_clicks) {
+                    self.inspect_enabled = enabled;
+                    self.inspect_consume_clicks = consume_clicks;
+                }
+            }
+            "pick.arm" => {
+                self.pending_pick = None;
+                self.pick_armed_run_id = Some(self.next_pick_run_id());
+            }
+            "bundle.dump" => {
+                let label = msg
+                    .payload
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                if let Some(label) = label {
+                    self.request_force_dump(label);
+                } else {
+                    self.request_force_dump("devtools".to_string());
+                }
+            }
+            "script.push" | "script.run" => {
+                let script_value = msg
+                    .payload
+                    .get("script")
+                    .cloned()
+                    .unwrap_or_else(|| msg.payload.clone());
+                let schema_version: u32 = script_value
+                    .get("schema_version")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32;
+
+                let script = match schema_version {
+                    1 => serde_json::from_value::<UiActionScriptV1>(script_value)
+                        .ok()
+                        .and_then(PendingScript::from_v1),
+                    2 => serde_json::from_value::<UiActionScriptV2>(script_value)
+                        .ok()
+                        .and_then(PendingScript::from_v2),
+                    _ => None,
+                };
+
+                let Some(script) = script else {
+                    return;
+                };
+                let run_id = self.next_script_run_id();
+                self.pending_script = Some(script);
+                self.pending_script_run_id = Some(run_id);
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Queued,
+                    step_index: None,
+                    reason: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+            }
+            _ => {}
+        }
     }
 
     fn poll_pick_trigger(&mut self) {

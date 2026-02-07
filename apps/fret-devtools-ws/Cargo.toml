@@ -1,0 +1,16 @@
+[package]
+name = "fret-devtools-ws"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+
+[dependencies]
+fret-diag-ws = { path = "../../crates/fret-diag-ws" }
+uuid.workspace = true
+

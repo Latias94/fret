@@ -1033,6 +1033,7 @@ dependencies = [
  "fret-canvas",
  "fret-core",
  "fret-diag-protocol",
+ "fret-diag-ws",
  "fret-i18n",
  "fret-i18n-fluent",
  "fret-icons",
@@ -1170,6 +1171,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-devtools-ws"
+version = "0.1.0"
+dependencies = [
+ "fret-diag-ws",
+ "uuid",
+]
+
+[[package]]
 name = "fret-diag"
 version = "0.1.0"
 dependencies = [
@@ -1187,6 +1196,21 @@ dependencies = [
  "fret-core",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "fret-diag-ws"
+version = "0.1.0"
+dependencies = [
+ "fret-diag-protocol",
+ "js-sys",
+ "serde",
+ "serde_json",
+ "tungstenite",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
