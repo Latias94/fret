@@ -76,6 +76,12 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
         .expect("column exists");
     assert!(!next_col_pinning.left.is_empty());
 
+    // Leaf column pin splits (TanStack-style).
+    let _ = table.pinned_leaf_columns();
+    let _ = table.left_leaf_columns();
+    let _ = table.center_leaf_columns();
+    let _ = table.right_leaf_columns();
+
     // Row pinning (table-level updater).
     let updater = table.row_pinning_updater(RowKey(2), Some(RowPinPosition::Top), false, false);
     let next_row_pinning = updater.apply(&table.state().row_pinning);

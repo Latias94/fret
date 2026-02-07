@@ -322,8 +322,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (helper surface): `Table::global_filter_updater_set_value(..)` exists and is smoke-gated.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
-  - Remaining: `onGlobalFilterChange` noop semantics (fixture marker-driven, like other controlled hooks).
-  - Gate: extend `filtering_fns.json` (or add a dedicated fixture) to assert controlled-hook outcomes.
+  - Done (controlled hook parity): fixture marker-driven noop semantics are gated for both
+    `onColumnFiltersChange` and `onGlobalFilterChange`.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
+      (snapshots: `filtering_fns_action_set_column_filter_noop_hook_ignores`,
+      `filtering_fns_action_set_global_filter_noop_hook_ignores`)
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
+    - Fixture generator: `tools/tanstack-table-fixtures/extract-fixtures.mts`
+      (`__onColumnFiltersChange`, `__onGlobalFilterChange`)
 
 ---
 
@@ -608,13 +614,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `column_pinning_action_reset_column_pinning_default_true_clears`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_column_pinning`)
-- [ ] HTP-colpin-030 Expose TanStack-like leaf-column split helpers (`getLeft/Center/RightLeafColumns`).
-  - Target: consumer-facing helper surfaces (no re-derivation in UI layer):
-    - `table.left_leaf_columns()` / `table.center_leaf_columns()` / `table.right_leaf_columns()`
-  - Notes:
-    - Must respect visibility + ordering + pinning (and nested/group columns where relevant).
-    - Must align with the cell split contract already parity-gated by `column_pinning.json`.
-  - Gate: add a small fixture parity assertion or a dedicated gate asserting the leaf split output directly.
+- [x] HTP-colpin-030 Expose TanStack-like leaf-column split helpers (`getLeft/Center/RightLeafColumns`).
+  - Done: `Table::{pinned_leaf_columns,left_leaf_columns,center_leaf_columns,right_leaf_columns}`.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
+    (asserts left/center/right leaf splits against upstream snapshots).
 - [x] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
@@ -663,10 +667,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
   - Done (UI parity gate): retained path now has a dedicated regression test covering pin/unpin + resize + center-overflow alignment.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow`)
-- [ ] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
-  - Target: catch real consumer regressions that manifest as non-uniform row widths / misaligned columns in the demo.
-  - Preferred harness: `fretboard diag` script with a deterministic table scenario (pinning + sizing + visibility + scroll).
-  - Deliverable: a `tools/diag-scripts/*.json` script + a short doc note in the workstream for how to run it.
+- [x] HTP-ui-table-010 Add a UI-level alignment regression gate for the UI gallery table demo.
+  - Done: `fretboard diag` scripts assert header/body column alignment via semantics bounds checks.
+    - Retained table torture: `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
+    - Data table torture: `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
 
 ---
 
