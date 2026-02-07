@@ -29,6 +29,8 @@ Conventions:
     - Evidence: perf log entry `2026-02-07 11:15` (r16 worst bundle + snapshot pointers).
   - [x] Quantize logical window sizes in the runner to reduce float-noise resize churn (commit `74dc38bd9`).
     - Evidence: perf log entry `2026-02-07 11:50`.
+  - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
+    - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus

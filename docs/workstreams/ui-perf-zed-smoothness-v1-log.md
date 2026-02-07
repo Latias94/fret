@@ -6389,3 +6389,55 @@ Results:
 Notes:
 - A single r19 run showed an outlier `resize-stress max_total=18891us` (still under threshold), but the subsequent r20
   re-run returned to the ~15ms range.
+
+## 2026-02-07 20:39 — Merge main + repair `diag perf --json` stats wiring
+
+Problem:
+- Local branch was in a `git pull` merge-conflict state (blocked on `apps/fretboard/src/diag/mod.rs`).
+- `fretboard diag perf --json` emitted a `stats` payload that referenced per-run vectors that were never collected
+  (build break).
+- Perf baseline generation had a merge conflict between a “minimal thresholds only” baseline row schema and the richer
+  schema that includes pointer-move + paint-cache gates and seed-policy evidence.
+
+Change (commit `9bf37cc0b`):
+- Resolve the merge conflict, keeping the richer perf baseline schema.
+- Wire missing snapshot counters into `diag perf --json` runs/stats (frame arena + renderer counters).
+- Minor hygiene: remove an unused `Stdio` import in `apps/fretboard/src/diag/compare.rs`.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r21
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+- Measured maxima (from `target/fret-diag-resize-probes-gate-r21/check.perf_thresholds.json`):
+  - resize-stress: `max_total=15398us max_layout=8862us max_solve=2203us`
+  - drag-jitter: `max_total=14724us max_layout=8579us max_solve=2303us`
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r3 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r3/check.perf_thresholds.json`).
+
+Notes:
+- Renderer churn counters may remain `0` under the default gate env set unless renderer perf instrumentation is enabled
+  (use the “deep profiling” protocol when investigating GPU/upload hitches).
