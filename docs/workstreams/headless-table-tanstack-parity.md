@@ -94,8 +94,8 @@ Initial mapping snapshot (keep updated):
 
 | Upstream API | Fret surface (today) | Status | Notes |
 | --- | --- | --- | --- |
-| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` + grouped `RowId` fallback via `Table::row_key_for_id` | Partial | Lookup parity is fixture-gated for custom RowId + grouped ids via `tanstack_v8_row_id_lookup_parity.rs` (`row_id_lookup.json`) and grouped state-op fixtures; remaining gap is broad feature-surface propagation of string RowId maps. |
-| `row.id: string` | `Row::id: RowId` (`Arc<str>`) + `GroupedRow::id` | Partial | Leaf and grouped rows both carry string ids; grouped ids are still being promoted through all feature surfaces. |
+| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` + grouped `RowId` fallback via `Table::row_key_for_id` | Partial | Lookup parity is fixture-gated for custom RowId + grouped ids via `tanstack_v8_row_id_lookup_parity.rs` (`row_id_lookup.json`) and grouped state-op fixtures; remaining gap is key-only row partition APIs (`top/center/bottom`) under grouped semantics. |
+| `row.id: string` | `Row::id: RowId` (`Arc<str>`) + `GroupedRow::id` | Partial | Leaf/grouped rows carry string ids, and id-keyed state import/export is parity-gated (`tanstack_v8_state_presence_rowid_parity.rs`, `state_presence_rowid.json`); remaining work is broader non-option API inventory parity. |
 | `RowModel.rowsById` | `RowModel::rows_by_id()` | Partial | Fixture-gated for core/pre-pagination/final models across custom RowId + grouped ids (`tanstack_v8_row_id_lookup_parity.rs`, `row_id_lookup.json`); remaining work is non-option capability inventory expansion. |
 | `table.getHeaderGroups()` (+ pinned variants) | `Table::header_groups/left_header_groups/center_header_groups/right_header_groups` | Aligned (core) | Fixture-gated via `headers_cells.json`. |
 | `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
@@ -116,10 +116,13 @@ Fret status:
 - Leaf rows now carry a stable string `RowId` alongside the existing numeric `RowKey(u64)` fast path.
 - `RowModel` maintains both `rows_by_key` and `rows_by_id` for lookup, and `Table::row_by_id` mirrors
   TanStack `getRow(id, searchAll?)` shape for leaf rows.
-- Remaining capability gap: all id-keyed feature state surfaces
-  (selection/expanded/pinning maps keyed by string ids) must be promoted to `RowId` without losing
-  existing `RowKey` optimizations, especially in grouped-row flows.
-  - Tracked in TODO: `HTP-id-010`.
+- ID-keyed state surfaces now support string `RowId` with fixture gates:
+  - TanStack JSON -> `TableState` by-id resolution: `to_table_state_with_row_model`.
+  - `TableState` -> TanStack JSON by-id export (with row model):
+    `from_table_state_with_row_model` / `from_table_state_with_row_model_and_shape`.
+  - Presence semantics (omitted vs explicit empty/default) are gated by
+    `tanstack_v8_state_presence_rowid_parity.rs`.
+  - Remaining parity focus stays on non-option capability inventory (`HTP-base-004` + `HTP-cap-010`).
 
 Compatibility requirement:
 
@@ -237,8 +240,9 @@ Goal: represent TanStack-equivalent state (and defaults) without losing informat
 
 Current status:
 
-- A round-trip parity gate exists for a growing subset of state keys (see `tanstack_v8_state_roundtrip_parity.rs`),
-  but lossless “presence” semantics (omitted vs explicit defaults) are not fully modeled yet.
+- A round-trip parity gate exists for a growing subset of state keys (`tanstack_v8_state_roundtrip_parity.rs`),
+  and now preserves presence semantics (omitted vs explicit defaults) for the covered surfaces,
+  including row-keyed maps (`rowSelection`/`expanded`/`rowPinning`) with string `RowId`.
 - A dedicated fixture (`ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`) covers
   grouping/expanded/rowPinning/globalFilter state shapes.
 - Reset semantics parity gates exist for pinning (`resetRowPinning` / `resetColumnPinning`), including

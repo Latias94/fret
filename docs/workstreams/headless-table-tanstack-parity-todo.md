@@ -154,7 +154,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_key_for_id` grouped fallback)
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
-      - Remaining: promote grouped ids into feature paths that still walk leaf-only `RowModel`s.
+      - Remaining: align key-only row partition APIs (`top/center/bottom`) with grouped row-id semantics.
     - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
@@ -164,6 +164,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_row_id_updaters_cover_selection_and_expanding`)
       - Done (grouped edges): grouped-row selection propagation is parity-gated for select-children/clear/two-level-group cases.
         - Snapshots: `row_id_state_ops_group_selection_select_children_false`, `row_id_state_ops_group_selection_toggle_off`, `row_id_state_ops_nested_group_selection`
+      - Done (state export): `TableState` -> TanStack JSON now has row-model-aware RowId export surfaces.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs`
+          (`TanStackTableState::{from_table_state_with_row_model,from_table_state_with_row_model_and_shape}`)
+      - Done (presence + RowId gate): explicit empty/default key presence and string RowId maps are parity-gated.
+        - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_presence_rowid.json`
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_state_presence_rowid_parity.rs`
     - [x] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
       - Done (smoke): grouped id lookup + pinning-by-id gate exists.
       - Done (smoke): id-keyed selection/expanding updater coverage exists for leaf rows.
@@ -180,8 +186,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Snapshots: `row_id_state_ops_group_selection_on_row_selection_change_noop`, `row_id_state_ops_group_expanding_on_expanded_change_noop`, `row_id_state_ops_group_pinning_on_row_pinning_change_noop`
       - Done (fixture parity, mixed action sequences): grouped/nested grouped selection+expanding+pinning cross-feature ordering is gated.
         - Snapshots: `row_id_state_ops_group_mixed_select_expand_pin`, `row_id_state_ops_nested_group_mixed_select_expand_pin`, `row_id_state_ops_group_mixed_selection_noop_expand_pin`
-  - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
-    still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
+  - Note: plain `TanStackTableState::to_table_state` still assumes numeric ids for row-keyed maps
+    (`rowSelection` / `expanded` / `rowPinning`). Use the row-model-aware conversion path for string RowId:
+    `TanStackTableState::to_table_state_with_row_model` (parity-gated by `tanstack_v8_state_presence_rowid_parity.rs`).
 
 ---
 
@@ -221,16 +228,21 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - which keys may be omitted vs must be present,
   - how TanStack merges defaults (and what we must preserve to avoid semantic drift),
   - canonical ordering rules for stable fixtures (maps/arrays).
-- [~] HTP-state-020 Implement round-trip conversions (Rust 鈫?TanStack JSON) without loss.
+- [x] HTP-state-020 Implement round-trip conversions (Rust 鈫?TanStack JSON) without loss.
   - Done (partial): JSON 鈫?`TableState` conversions for a growing subset of TanStack state keys, plus a round-trip parity gate.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`TanStackTableState::{to_table_state,from_table_state}`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_state_roundtrip_parity.rs`
+  - Update (RowId + presence): row-model-aware conversions cover string RowId for `rowSelection` / `expanded` / `rowPinning`
+    in both directions, and preserve omitted-vs-explicit-default JSON key presence on the covered surfaces.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs`
+      (`TanStackTableState::{to_table_state_with_row_model,from_table_state_with_shape,from_table_state_with_row_model,from_table_state_with_row_model_and_shape}`)
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_state_presence_rowid_parity.rs`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_presence_rowid.json`
   - Covered (as of current gates): sorting, columnFilters, globalFilter (any), pagination, rowSelection,
     grouping, expanded, rowPinning, columnPinning, columnOrder, columnVisibility, columnSizing, columnSizingInfo.
-  - Limitation (to remove under `HTP-id-015`): row-keyed maps currently assume numeric row ids, which is not
-    sufficient for grouped ids (`role:1`) or caller-provided string row ids.
-  - Remaining: lossless 鈥減resence鈥?(omitted vs explicit default) semantics, and cross-feature interactions that require
-    additional option gates/behavior parity.
+  - Legacy limitation note: plain `to_table_state` still assumes numeric row ids for row-keyed maps; string RowId parity is
+    now covered by row-model-aware conversions.
+  - Remaining: cross-feature interactions that require additional option gates/behavior parity.
 - [x] HTP-state-021 Add fixtures that assert state-shape parity for:
   - grouping, expanded, rowPinning, and cross-feature interactions (e.g. pinning + sizing + visibility).
   - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`
@@ -680,7 +692,4 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json` | `row_id_state_ops` | Row identity/state ops (`RowSelection` + `RowExpanding` + `RowPinning` by string RowId, grouped/nested grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json` | `row_id_lookup` | Row identity lookup (`table.getRow(id, searchAll?)`) + `rowsById` parity across core/pre-pagination/final models (custom RowId + grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs` | Partial |
-
-
-
 
