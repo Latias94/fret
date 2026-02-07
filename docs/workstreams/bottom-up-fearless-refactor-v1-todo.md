@@ -100,6 +100,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/dock/mutate.rs`
     - `crates/fret-core/src/dock/mod.rs`
 
+- [x] BU-FR-core-021 Split scene validation and replay helpers into dedicated submodules.
+  - Goal: keep `scene/mod.rs` as a stable facade while enabling incremental internal splits of recording/validation/replay.
+  - Evidence:
+    - `crates/fret-core/src/scene/validate.rs`
+    - `crates/fret-core/src/scene/replay.rs`
+    - `crates/fret-core/src/scene/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
