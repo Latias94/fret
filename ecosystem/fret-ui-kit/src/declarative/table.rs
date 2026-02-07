@@ -984,6 +984,8 @@ struct GroupedDisplayCache {
     row_index_by_key: std::collections::HashMap<RowKey, usize>,
     group_labels: std::collections::HashMap<RowKey, Arc<str>>,
     group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+    group_aggs_any:
+        std::collections::HashMap<RowKey, Arc<[(ColumnId, crate::headless::table::TanStackValue)]>>,
     group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
 
     deps: Option<GroupedDisplayDeps>,
@@ -2350,6 +2352,7 @@ where
                 let group_labels = &cache.group_labels;
                 let group_aggs_text = &cache.group_aggs_text;
                 let group_aggs_u64 = &cache.group_aggs_u64;
+                let group_aggs_any = &cache.group_aggs_any;
 
                 let mut visible: Vec<DisplayRow> = Vec::new();
                 let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
@@ -2362,6 +2365,7 @@ where
                     data,
                     row_index_by_key,
                     group_aggs_u64,
+                    group_aggs_any,
                 );
 
                 for root in roots {
@@ -2372,6 +2376,7 @@ where
                         group_labels,
                         group_aggs_text,
                         group_aggs_u64,
+                        group_aggs_any,
                         deps.sorting.as_slice(),
                         columns,
                         data,
@@ -2450,6 +2455,7 @@ where
                 .build();
 
             let grouped = table.grouped_row_model().clone();
+            let group_aggs_any = table.grouped_aggregations_any().clone();
             fn compute_group_aggregations<TData>(
                 model: &crate::headless::table::GroupedRowModel,
                 data: &[TData],
@@ -2513,6 +2519,10 @@ where
                 group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
                 group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
                 group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                group_aggs_any: &std::collections::HashMap<
+                    RowKey,
+                    Arc<[(ColumnId, crate::headless::table::TanStackValue)]>,
+                >,
                 sorting: &[SortSpec],
                 columns: &[ColumnDef<TData>],
                 data: &[TData],
@@ -2559,6 +2569,7 @@ where
                                     data,
                                     row_index_by_key,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                 );
                                 children = Some(owned);
                             }
@@ -2579,6 +2590,7 @@ where
                                     group_labels,
                                     group_aggs_text,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                     sorting,
                                     columns,
                                     data,
@@ -2628,6 +2640,7 @@ where
                 data,
                 &row_index_by_key,
                 &group_aggs_u64,
+                &group_aggs_any,
             );
 
             for root in roots {
@@ -2638,6 +2651,7 @@ where
                     &group_labels,
                     &group_aggs_text,
                     &group_aggs_u64,
+                    &group_aggs_any,
                     deps.sorting.as_slice(),
                     columns,
                     data,
@@ -2675,6 +2689,7 @@ where
             cache.row_index_by_key = row_index_by_key;
             cache.group_labels = group_labels;
             cache.group_aggs_u64 = group_aggs_u64;
+            cache.group_aggs_any = group_aggs_any;
             cache.group_aggs_text = group_aggs_text;
             cache.deps = Some(deps.clone());
             cache.page_rows = page_rows.clone();
