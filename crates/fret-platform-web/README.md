@@ -10,8 +10,8 @@ that layer.
 
 ## Module ownership map
 
-- `src/wasm.rs`: wasm32 implementation of `WebPlatformServices` and related helpers.
-- `src/native.rs`: non-wasm stub types to keep cross-target builds explicit.
+- `src/wasm/mod.rs`: wasm32 implementation of `WebPlatformServices` and related helpers.
+- `src/native/mod.rs`: non-wasm stub types to keep cross-target builds explicit.
 - `src/lib.rs`: cfg-based module selection + public re-exports.
 
 ## Public surface
@@ -23,4 +23,3 @@ re-exports stub types that report “wasm32 only”.
 
 - Formatting: `cargo fmt`
 - Build/test: `cargo nextest run -p fret-platform-web`
-
