@@ -24,11 +24,11 @@ pub struct PathPattern {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct PathSpecificity {
-    static_segments: usize,
-    param_segments: usize,
-    wildcard_segments: usize,
-    total_segments: usize,
+pub(crate) struct PathSpecificity {
+    pub(crate) static_segments: usize,
+    pub(crate) param_segments: usize,
+    pub(crate) wildcard_segments: usize,
+    pub(crate) total_segments: usize,
 }
 
 impl Ord for PathSpecificity {
@@ -170,7 +170,7 @@ impl PathPattern {
         self.segments.len() == 1 && matches!(self.segments[0], PathSegment::Wildcard(_))
     }
 
-    fn specificity(&self) -> PathSpecificity {
+    pub(crate) fn specificity(&self) -> PathSpecificity {
         let mut static_segments = 0usize;
         let mut param_segments = 0usize;
         let mut wildcard_segments = 0usize;
@@ -189,6 +189,49 @@ impl PathPattern {
             wildcard_segments,
             total_segments: self.segments.len(),
         }
+    }
+
+    pub(crate) fn match_prefix_segments(&self, segments: &[&str]) -> Option<PathPrefixMatch> {
+        let mut params = Vec::new();
+        let mut cursor = 0usize;
+
+        for segment in &self.segments {
+            match segment {
+                PathSegment::Static(expected) => {
+                    let actual = segments.get(cursor)?;
+                    if decode_path_component(actual) != *expected {
+                        return None;
+                    }
+                    cursor += 1;
+                }
+                PathSegment::Param(name) => {
+                    let actual = segments.get(cursor)?;
+                    params.push(PathParam {
+                        name: name.clone(),
+                        value: decode_path_component(actual),
+                    });
+                    cursor += 1;
+                }
+                PathSegment::Wildcard(name) => {
+                    let value = segments[cursor..]
+                        .iter()
+                        .map(|segment| decode_path_component(segment))
+                        .collect::<Vec<_>>()
+                        .join("/");
+                    params.push(PathParam {
+                        name: name.clone().unwrap_or_else(|| WILDCARD_PARAM.to_string()),
+                        value,
+                    });
+                    cursor = segments.len();
+                    break;
+                }
+            }
+        }
+
+        Some(PathPrefixMatch {
+            consumed_segments: cursor,
+            params,
+        })
     }
 
     pub fn match_path(&self, path: &str) -> Option<PathMatch> {
@@ -271,6 +314,12 @@ impl PathPattern {
             Some(format!("/{}", out.join("/")))
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PathPrefixMatch {
+    pub consumed_segments: usize,
+    pub params: Vec<PathParam>,
 }
 
 impl<R> RouteTable<R> {
