@@ -3398,6 +3398,19 @@ impl UiDiagnosticsService {
             frame = app.frame_id().0
         );
 
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "unsupported",
+                Some("screenshots_not_supported_wasm"),
+            );
+            return;
+        }
+
         if !self.cfg.screenshots_enabled {
             self.emit_screenshot_result(
                 pending.request_id,
