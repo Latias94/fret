@@ -111,6 +111,50 @@ mod tests {
     use super::*;
 
     #[test]
+    fn composition_sequence_suppresses_commit_followups() {
+        let mut st = WebImeDomState::default();
+
+        st.on_composition_start();
+        assert_eq!(
+            st.beforeinput_disposition(true),
+            DomInputDisposition::IgnoreComposing
+        );
+
+        st.on_composition_end();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        st.on_beforeinput_handled();
+        assert_eq!(
+            st.input_disposition(),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
+    fn shortcut_suppression_then_composing_beforeinput_does_not_prevent_ignoring_followup_input() {
+        let mut st = WebImeDomState::default();
+
+        st.on_shortcut_suppressed();
+        assert_eq!(
+            st.beforeinput_disposition(true),
+            DomInputDisposition::IgnoreComposing
+        );
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        st.on_beforeinput_handled();
+        assert_eq!(
+            st.input_disposition(),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
     fn beforeinput_processed_insert_suppresses_followup_input() {
         let mut st = WebImeDomState::default();
         assert_eq!(
