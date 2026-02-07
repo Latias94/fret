@@ -42,6 +42,19 @@ Prefer **small `Model<T>` fields** over one giant model. Keep stable ids as plai
 
 Example (minimal): `apps/fret-examples/src/todo_demo.rs`.
 
+### 2.1) Adopt the state stack defaults (v1)
+
+Recommended default split:
+
+- Local mutable state: `Model<T>` / element state helpers.
+- Derived state: `fret_selector::Selector` + `use_selector(...)` for memoized counts/filters/projections.
+- Async resources: `fret_query::QueryClient` + `use_query*` for loading/error/cache/retry/invalidate.
+- Typed command routing:
+  - `MessageRouter<M>` for per-frame dynamic actions,
+  - `KeyedMessageRouter<K, M>` for view-cache-safe dynamic actions.
+
+Reference: `docs/workstreams/state-management-v1-extension-contract.md`.
+
 ### 3) Use Commands for intent, Models for data, Effects for side effects
 
 Typical flow:
@@ -84,6 +97,23 @@ Examples:
 
 - Manual draining in the render loop: `apps/fret-examples/src/markdown_demo.rs`
 - Runner-drained inboxes via registry: `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
+
+### 4.1) Common ecosystem integrations
+
+Use these defaults unless a domain requires a custom policy:
+
+- HTTP APIs (`reqwest`): perform fetch in `use_query_async(...)`, map transport errors to
+  `QueryError::{transient, permanent}`, invalidate namespace after mutations.
+- SQL (`sqlx`/SQLite): use queries for read models, commands/inbox for writes/transactions,
+  then invalidate affected query namespaces.
+- GraphQL: key by operation + normalized variables, keep mutation flow command-driven,
+  invalidate dependent query namespaces.
+- SSE/WebSocket streams: treat as inbox streams (data-only messages) instead of forcing query polling.
+
+References:
+
+- `docs/integrating-tokio-and-reqwest.md`
+- `docs/workstreams/state-management-v1-extension-contract.md`
 
 ## Recipes you can copy
 

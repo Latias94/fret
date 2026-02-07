@@ -13,6 +13,7 @@ pub mod elevation;
 pub mod floating_label;
 pub mod focus_ring;
 pub mod geometry;
+pub mod icon;
 pub mod indication;
 pub mod interaction;
 pub mod interactive_size;

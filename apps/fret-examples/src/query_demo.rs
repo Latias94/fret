@@ -7,10 +7,6 @@ use fret_query::{
     QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
 };
 
-const CMD_INVALIDATE: &str = "query_demo.invalidate";
-const CMD_INVALIDATE_NAMESPACE: &str = "query_demo.invalidate_namespace";
-const CMD_TOGGLE_FAIL_MODE: &str = "query_demo.toggle_fail_mode";
-
 #[derive(Debug)]
 struct DemoData {
     label: Arc<str>,
@@ -22,6 +18,14 @@ fn demo_key() -> QueryKey<DemoData> {
 
 struct QueryDemoState {
     fail_mode: Model<bool>,
+    router: MessageRouter<QueryDemoMsg>,
+}
+
+#[derive(Debug, Clone)]
+enum QueryDemoMsg {
+    Invalidate,
+    InvalidateNamespace,
+    ToggleFailMode,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -40,14 +44,17 @@ pub fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> QueryDemoState {
+fn init_window(app: &mut App, window: AppWindowId) -> QueryDemoState {
+    let prefix = format!("query-demo.{window:?}.");
     QueryDemoState {
         fail_mode: app.models_mut().insert(false),
+        router: MessageRouter::new(prefix),
     }
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElements {
     let theme = Theme::global(&*cx.app).clone();
+    st.router.clear();
 
     let fail_mode = cx
         .watch_model(&st.fail_mode)
@@ -127,17 +134,17 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
 
     let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
         .variant(shadcn::ButtonVariant::Secondary)
-        .on_click(CMD_TOGGLE_FAIL_MODE)
+        .on_click(st.router.cmd(QueryDemoMsg::ToggleFailMode))
         .into_element(cx);
 
     let invalidate_btn = shadcn::Button::new("Invalidate")
         .variant(shadcn::ButtonVariant::Default)
-        .on_click(CMD_INVALIDATE)
+        .on_click(st.router.cmd(QueryDemoMsg::Invalidate))
         .into_element(cx);
 
     let invalidate_ns_btn = shadcn::Button::new("Invalidate namespace")
         .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(CMD_INVALIDATE_NAMESPACE)
+        .on_click(st.router.cmd(QueryDemoMsg::InvalidateNamespace))
         .into_element(cx);
 
     let buttons = ui::h_flex(cx, |_cx| {
@@ -151,6 +158,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
         let mut out: Vec<AnyElement> = Vec::new();
         out.push(ui::raw_text(cx, info_line).into_element(cx));
         out.push(ui::raw_text(cx, data_line).into_element(cx));
+        out.push(
+            ui::raw_text(
+                cx,
+                "Note: stale controls freshness only; use invalidate/refetch for refresh.",
+            )
+            .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+            .into_element(cx),
+        );
         if let Some(err) = error_line {
             out.push(
                 ui::raw_text(cx, format!("error={err} kind={:?}", err.kind()))
@@ -224,23 +239,27 @@ fn on_command(
     st: &mut QueryDemoState,
     cmd: &CommandId,
 ) {
-    match cmd.as_str() {
-        CMD_INVALIDATE => {
+    let Some(msg) = st.router.try_take(cmd) else {
+        return;
+    };
+
+    match msg {
+        QueryDemoMsg::Invalidate => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, demo_key());
             });
             app.request_redraw(window);
         }
-        CMD_INVALIDATE_NAMESPACE => {
+        QueryDemoMsg::InvalidateNamespace => {
+            let key = demo_key();
             let _ = with_query_client(app, |client, _app| {
-                client.invalidate_namespace("fret-examples.query_demo.demo_data.v1");
+                client.invalidate_namespace(key.namespace());
             });
             app.request_redraw(window);
         }
-        CMD_TOGGLE_FAIL_MODE => {
+        QueryDemoMsg::ToggleFailMode => {
             let _ = app.models_mut().update(&st.fail_mode, |v| *v = !*v);
             app.request_redraw(window);
         }
-        _ => {}
     }
 }

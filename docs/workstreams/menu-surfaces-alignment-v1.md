@@ -1,7 +1,7 @@
 # Menu Surfaces Alignment v1 (OS menubar + in-window menubar + context menus)
 
-Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-05
+Status: Completed (v1 scope delivered; workstream note, not an ADR)
+Last updated: 2026-02-06
 
 This workstream is about preventing **behavior drift** between Fret’s menu surfaces:
 
@@ -50,7 +50,7 @@ This workstream locks down the “menu surfaces should agree” outcomes without
 
 ## 2) Reference models (what “good” looks like)
 
-Local snapshots we can audit:
+Local snapshots we can audit (optional; not tracked in git — see `.gitignore:/repo-ref`):
 
 - Zed (GPUI)
   - OS menubars (`App::set_menus`) and client-side application menus for non-macOS.
@@ -58,6 +58,7 @@ Local snapshots we can audit:
   - Evidence: `repo-ref/zed/crates/title_bar/src/application_menu.rs` (hover switches open menu)
 - Godot
   - Embedded `MenuBar` that can prefer a global/native menu bar when supported.
+  - Has explicit “switch on hover” behavior (`set_switch_on_hover`).
   - Evidence: `repo-ref/godot/scene/gui/menu_bar.cpp` (`set_prefer_global_menu`, hover/pressed state)
 - Radix Menubar/Menu (behavioral outcomes)
   - We align outcomes via `ecosystem/fret-ui-kit::primitives::menu` / `menubar`.
@@ -91,6 +92,9 @@ Focus integration exists:
   `crates/fret-app/src/core_commands.rs`.
 - Window-scoped gating for “menu bar is present” is modeled by
   `crates/fret-runtime/src/window_menu_bar_focus.rs` and used by workspace shells.
+- Alt activation (Windows/Linux): Alt-up (press + release Alt without other keys) emits
+  `focus.menu_bar` when `WindowMenuBarFocusService.present == true` and when `!focus.is_text_input`.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (`handle_alt_menu_bar_activation`)
 
 Recently fixed (correctness + parity):
 
@@ -181,4 +185,105 @@ High-level intent:
   milestone minimal and outcome-driven.
 - **Dynamic menus**: “Recent” and “Window list” are easy to implement badly (unstable IDs, rebuild
   churn). We should define ID stability and update frequency early.
+
+---
+
+## 8) Gap analysis (vs Zed / Godot) + recommended refactors
+
+This is intentionally “fearless refactor” oriented: prefer outcomes + regression gates over
+incremental tweaks.
+
+### 8.1 Pointer UX gaps (menubar as a surface, not a row of buttons)
+
+- **Hover switching while a menu is already open**
+  - Zed: hovering another menubar trigger while a menu is deployed switches the open menu.
+  - Godot: explicit `switch_on_hover` behavior exists for `MenuBar`.
+  - Fret target outcome: when any top-level menu is open, pointer hover over a sibling trigger
+    switches menus (with a short delay to prevent accidental switches during fast cursor travel).
+
+- **Submenu “grace intent” (diagonal travel)**
+  - Radix-style menus tolerate diagonal pointer movement toward a submenu without closing.
+  - Fret target outcome: introduce a small grace region / timer so submenus don’t collapse while the
+    pointer moves from parent item → submenu.
+
+### 8.2 Keyboard UX gaps (editor-grade expectations)
+
+- **Mnemonics**
+  - Implemented an explicit mnemonic strategy for top-level in-window menubars (Windows/Linux):
+    - Data model: `Menu.mnemonic: Option<char>` (and `menubar.json` v2 support)
+    - Keyboard:
+      - `Alt+Key` opens/switches the corresponding top-level menu
+      - when the menubar is active (Alt-up / F10), pressing the mnemonic letter **without Alt**
+        opens the corresponding top-level menu (Windows-style outcome)
+    - Presentation: underline the mnemonic character for menubar triggers while the menubar is
+      active (ecosystem-owned rendering)
+  - Important constraint: no “first letter” heuristics — mnemonics must come from a
+    source-of-truth to avoid localization/collision regressions.
+  - Escape outcome: when the menubar is active but no menu is open, Escape cancels activation and
+    restores focus to the previously focused element.
+  - Collision outcome: if multiple top-level menus share the same mnemonic, the active trigger is
+    preferred when it matches; otherwise the first enabled match in trigger-row order is used.
+
+- **Menu key / Shift+F10**
+  - Align “open context menu” behavior with in-window menus so keyboard users have a predictable
+    path even without F10/Alt patterns.
+
+### 8.3 Contract and layering gaps (avoid drift)
+
+- **Normalization single source of truth**
+  - Ensure separator trimming + empty submenu dropping is centralized (data-only if possible) so OS
+    mapping and in-window overlays cannot diverge.
+
+- **Gating single source of truth**
+  - Every surface should consume `WindowCommandGatingSnapshot` (or a helper that is explicitly a
+    snapshot), so “enabled/disabled” parity is guaranteed.
+
+- **Stable shortcut labels**
+  - Keep shortcut labels stable via `Keymap::display_shortcut_for_command_sequence`; do not
+    accidentally make labels depend on live focus context (this feels “jittery” in menus).
+
+### 8.4 Dynamic menus (common editor patterns)
+
+- **Recent**
+  - Needs stable IDs + update strategy; avoid rebuild churn and focus loss.
+
+- **Window list**
+  - Multi-window editors need a “Window” list that reflects open windows/tabs; align with
+    `MenuRole::Window` semantics where possible.
+
+MVP contract now in place:
+
+- **Anchors**
+  - Keep stable submenu anchors in app baseline menus (`File > Recent`, `Window > Windows`).
+- **Dynamic row model**
+  - Use data-only `MenuItem::Label` for non-command placeholder/dynamic rows; render as disabled
+    text consistently across OS/in-window surfaces.
+- **Patch addressing**
+  - Use submenu path targeting for dynamic branches: `menu: ["File", "Recent"]`.
+  - For non-command rows, use typed selectors (`{"type":"label","title":"..."}` /
+    `{"type":"submenu","title":"..."}`) or index anchors when titles are not unique.
+- **Update trigger + identity**
+  - Rebuild menus on explicit state transitions (command handlers, window registration changes),
+    not per-frame.
+  - In-window menubar should refresh identity on menu update to avoid stale retained subtrees.
+- **Deterministic ordering**
+  - Keep dynamic list ordering deterministic (e.g. Recent newest-first with fixed cap;
+    Window list sorted and mapped to stable `Window N` labels for diagnostics).
+
+## 9) v1 closure summary (2026-02-06)
+
+- Scope status: all `MENU-MVP0`..`MENU-MVP4` milestones in
+  `docs/workstreams/menu-surfaces-alignment-v1-todo.md` are complete.
+- Regression status: menu keyboard/pointer/semantics/dynamic-menu gates are covered by
+  nextest + `fretboard diag` scripts, including multi-window `Window > Windows`
+  mutual-exclusion checks.
+- Verification note: latest local closure run passed
+  (`tools/diag-scripts/ui-gallery-menubar-windows-radio-mutual-exclusive.json`,
+  run_id `1770380950760`).
+
+Non-blocking follow-ups for a future v2 track:
+
+- Hover-switch delay tuning across top-level menubar triggers.
+- `Menu` key / `Shift+F10` context-menu parity hardening across shells.
+- CI bundling strategy for full menu-surface diag suite.
 

@@ -166,6 +166,12 @@ At minimum, conformance harnesses SHOULD cover:
 3) Make `text.move_word_*` always mean “identifier”
    - Rejected: surprises users in general UI text fields and harms non-code workflows.
 
+## Evidence anchors (implementation)
+
+- Runtime seam + override stack: `crates/fret-runtime/src/input.rs` (`TextBoundaryMode`, `InputContext.text_boundary_mode`), `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`).
+- Core surface integration + tests: `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests), `crates/fret-ui/src/declarative/tests/interactions.rs` (double-click selection under scroll/transform for `TextInput` / `TextArea`).
+- Ecosystem consumer (code editor): `ecosystem/fret-code-editor/src/editor/mod.rs` (double/triple click selection; `TextInputRegionProps.text_boundary_mode_override`), `ecosystem/fret-code-editor-view/src/lib.rs` (`select_word_range_in_buffer`, `move_word_*_in_buffer`).
+
 ## References
 
 - ADR 0044: Text editing state model and commands

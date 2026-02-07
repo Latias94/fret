@@ -33,7 +33,15 @@ use stats::{
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_a11y_composition,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_drag,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
+    check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
     check_bundle_for_vlist_visible_range_refreshes_max,
@@ -42,9 +50,10 @@ use stats::{
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_bundle_for_wheel_scroll_hit_changes, check_report_for_hover_layout_invalidations,
-    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
-    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
+    check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -110,6 +119,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
+    let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
+    let mut check_ui_gallery_code_editor_word_boundary: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_drag: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -128,6 +146,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_window_shifts_prefetch_max: Option<u64> = None;
     let mut check_vlist_window_shifts_escape_max: Option<u64> = None;
     let mut check_vlist_policy_key_stable: bool = false;
+    let mut check_windowed_rows_offset_changes_min: Option<u64> = None;
+    let mut check_windowed_rows_offset_changes_eps: f32 = 0.5;
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_notify_hotspot_file_max: Vec<(String, u64)> = Vec::new();
@@ -562,6 +582,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_pixels_changed_test_id = Some(v);
                 i += 1;
             }
+            "--check-ui-gallery-code-editor-torture-marker-present" => {
+                check_ui_gallery_code_editor_torture_marker_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-undo-redo" => {
+                check_ui_gallery_code_editor_torture_undo_redo = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-word-boundary" => {
+                check_ui_gallery_code_editor_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection" => {
+                check_ui_gallery_code_editor_a11y_selection = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition" => {
+                check_ui_gallery_code_editor_a11y_composition = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection-wrap" => {
+                check_ui_gallery_code_editor_a11y_selection_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap-scroll" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap_scroll = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-drag" => {
+                check_ui_gallery_code_editor_a11y_composition_drag = true;
+                i += 1;
+            }
             "--check-semantics-changed-repainted" => {
                 check_semantics_changed_repainted = true;
                 i += 1;
@@ -659,6 +715,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-vlist-policy-key-stable" => {
                 check_vlist_policy_key_stable = true;
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-min".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-eps".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_eps = v.parse::<f32>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-eps".to_string()
+                })?;
                 i += 1;
             }
             "--check-layout-fast-path-min" => {
@@ -1378,11 +1458,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
-            let mut run_launch_env = launch_env.clone();
-            let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
             let mut child = maybe_launch_demo(
                 &launch,
-                &run_launch_env,
+                &launch_env,
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
@@ -1419,6 +1497,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1434,6 +1521,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_window_shifts_prefetch_max.is_some()
                     || check_vlist_window_shifts_escape_max.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1470,6 +1558,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -1486,6 +1583,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_window_shifts_prefetch_max,
                         check_vlist_window_shifts_escape_max,
                         check_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1613,7 +1712,6 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let mut repro_launch = launch.clone();
             let mut repro_launch_env = launch_env.clone();
-            let _ = ensure_env_var(&mut repro_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
 
             if check_redraw_hitches_max_total_ms_threshold.is_some() {
                 let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
@@ -1771,6 +1869,15 @@ See: `docs/tracy.md`.\n";
                         || check_stale_scene_test_id.is_some()
                         || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
+                        || check_ui_gallery_code_editor_torture_marker_present
+                        || check_ui_gallery_code_editor_torture_undo_redo
+                        || check_ui_gallery_code_editor_word_boundary
+                        || check_ui_gallery_code_editor_a11y_selection
+                        || check_ui_gallery_code_editor_a11y_composition
+                        || check_ui_gallery_code_editor_a11y_selection_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                        || check_ui_gallery_code_editor_a11y_composition_drag
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1786,6 +1893,7 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_window_shifts_prefetch_max.is_some()
                         || check_vlist_window_shifts_escape_max.is_some()
                         || check_vlist_policy_key_stable
+                        || check_windowed_rows_offset_changes_min.is_some()
                         || check_layout_fast_path_min.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
@@ -1820,6 +1928,15 @@ See: `docs/tracy.md`.\n";
                             check_stale_scene_test_id.as_deref(),
                             check_stale_scene_eps,
                             check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
+                            check_ui_gallery_code_editor_a11y_composition,
+                            check_ui_gallery_code_editor_a11y_selection_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                            check_ui_gallery_code_editor_a11y_composition_drag,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
@@ -1836,6 +1953,8 @@ See: `docs/tracy.md`.\n";
                             check_vlist_window_shifts_prefetch_max,
                             check_vlist_window_shifts_escape_max,
                             check_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
                             check_layout_fast_path_min,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -2311,22 +2430,10 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
             let is_ui_gallery_ai_transcript_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
-            let is_ui_gallery_canvas_cull_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-canvas-cull";
-            let is_ui_gallery_node_graph_cull_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull";
-            let is_ui_gallery_node_graph_cull_window_shifts_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull-window-shifts";
-            let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = rest.len() == 1
-                && rest[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
-            let is_ui_gallery_chart_torture_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-chart-torture";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_ui_gallery_vlist_window_boundary_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
-            let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
             let is_ui_gallery_ui_kit_list_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
@@ -2516,88 +2623,11 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_ai_transcript_retained_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    push_env_if_missing(
-                        &mut launch_env,
-                        "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
-                        "1",
-                    );
                     (
                         vec![resolve_path(
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_canvas_cull_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_node_graph_cull_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_node_graph_cull_window_shifts_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_chart_torture_suite {
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2625,30 +2655,6 @@ See: `docs/tracy.md`.\n";
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
-                    // Guard rail harness: under view-cache + shell, small scroll deltas should
-                    // not force a non-retained VirtualList window shift (which currently implies
-                    // a cache-root rerender to rebuild visible items).
-                    //
-                    // Callers can still override env explicitly via `--env KEY=...`.
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
-                    push_env_if_missing(
-                        &mut launch_env,
-                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
-                        "1",
-                    );
-                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2894,32 +2900,11 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
-            // Suite defaults: most suites only need a small warmup to skip startup churn, but
-            // "no shift" gates should avoid the initial VirtualList window stabilization phase.
-            if warmup_frames == 0 && is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
-                warmup_frames = 32;
-            }
-
-            if warmup_frames == 0
-                && (is_ui_gallery_vlist_window_boundary_suite
-                    || is_ui_gallery_vlist_window_boundary_retained_suite
-                    || is_ui_gallery_canvas_cull_suite
-                    || is_ui_gallery_node_graph_cull_suite
-                    || is_ui_gallery_node_graph_cull_window_shifts_suite
-                    || is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
-                    || is_ui_gallery_chart_torture_suite
-                    || is_ui_gallery_ai_transcript_retained_suite)
-            {
-                warmup_frames = 5;
-            }
-
-            let suite_launch_env = launch_env.clone();
-
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
-                    &suite_launch_env,
+                    &launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -2935,7 +2920,7 @@ See: `docs/tracy.md`.\n";
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
-                        &suite_launch_env,
+                        &launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -3025,6 +3010,15 @@ See: `docs/tracy.md`.\n";
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -3037,6 +3031,7 @@ See: `docs/tracy.md`.\n";
                     || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -3062,11 +3057,8 @@ See: `docs/tracy.md`.\n";
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
-                    || is_ui_gallery_canvas_cull_suite
-                    || is_ui_gallery_chart_torture_suite
                     || is_ui_gallery_vlist_window_boundary_suite
                     || is_ui_gallery_vlist_window_boundary_retained_suite
-                    || is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
                     || is_components_gallery_file_tree_suite
                     || is_components_gallery_table_suite
                     || is_components_gallery_table_keep_alive_suite
@@ -3099,13 +3091,6 @@ See: `docs/tracy.md`.\n";
                     let components_gallery_suite = is_components_gallery_file_tree_suite
                         || is_components_gallery_table_suite
                         || is_components_gallery_table_keep_alive_suite;
-                    let pan_zoom_suite =
-                        is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
-                    let ai_transcript_suite = is_ui_gallery_ai_transcript_retained_suite;
-                    let suite_wheel_scroll_test_id =
-                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                            .then_some("ui-gallery-virtual-list-row-0-label")
-                            .filter(|_| check_wheel_scroll_test_id.is_none());
                     let suite_components_gallery_stale_paint_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -3115,9 +3100,6 @@ See: `docs/tracy.md`.\n";
                                     .then_some("components-gallery-table-root")
                             })
                             .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
-                        .then_some("ui-gallery-ai-transcript-row-0")
-                        .filter(|_| check_stale_paint_test_id.is_none());
                     let suite_components_gallery_wheel_scroll_hit_changes_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -3135,23 +3117,10 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| check_layout_fast_path_min.is_none());
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
-                        .or(suite_ai_transcript_stale_paint_test_id)
                         .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_view_cache_reuse_min = (vlist_window_boundary_suite
-                        || pan_zoom_suite)
+                    let suite_view_cache_reuse_min = vlist_window_boundary_suite
                         .then_some(1u64)
-                        .or_else(|| ai_transcript_suite.then_some(10u64))
                         .filter(|_| check_view_cache_reuse_min.is_none());
-                    let suite_view_cache_reuse_stable_min = ai_transcript_suite
-                        .then_some(10u64)
-                        .filter(|_| check_view_cache_reuse_stable_min.is_none());
-                    let suite_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
-                        .then_some("ui-gallery-canvas-cull-root")
-                        .or_else(|| {
-                            is_ui_gallery_chart_torture_suite
-                                .then_some("ui-gallery-chart-torture-root")
-                        })
-                        .filter(|_| check_pixels_changed_test_id.is_none());
                     let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
@@ -3172,21 +3141,6 @@ See: `docs/tracy.md`.\n";
                     let suite_prepaint_actions_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_prepaint_actions_min.is_none());
-                    let suite_hover_layout_max = ai_transcript_suite
-                        .then_some(0u32)
-                        .filter(|_| check_hover_layout_max.is_none());
-                    let suite_chart_sampling_window_shifts_min = is_ui_gallery_chart_torture_suite
-                        .then_some(1u64)
-                        .filter(|_| check_chart_sampling_window_shifts_min.is_none());
-                    let suite_node_graph_cull_window_shifts_min =
-                        is_ui_gallery_node_graph_cull_window_shifts_suite
-                            .then_some(1u64)
-                            .or_else(|| is_ui_gallery_node_graph_cull_suite.then_some(0u64))
-                            .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
-                    let suite_node_graph_cull_window_shifts_max =
-                        is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
-                            .then_some(0u64)
-                            .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
@@ -3211,32 +3165,19 @@ See: `docs/tracy.md`.\n";
                         script_requires_retained_vlist_reconcile_gate
                             .then_some(0u64)
                             .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-                    let suite_vlist_small_scroll_window_shifts_non_retained_max =
-                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                            .then_some(0u64)
-                            .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-                    let suite_vlist_small_scroll_window_shifts_prefetch_max =
-                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                            .then_some(0u64)
-                            .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
-                    let suite_vlist_small_scroll_window_shifts_escape_max =
-                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
-                            .then_some(0u64)
-                            .filter(|_| check_vlist_window_shifts_escape_max.is_none());
                     let suite_vlist_policy_key_stable = components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate
                         && !check_vlist_policy_key_stable;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-                    let retained_vlist_suite = components_gallery_suite
-                        || ai_transcript_suite
-                        || vlist_window_boundary_retained_suite;
-                    let suite_retained_vlist_reconcile_no_notify_min = (retained_vlist_suite
+                    let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate)
+                        || vlist_window_boundary_retained_suite)
                         .then_some(1u64)
                         .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-                    let suite_retained_vlist_attach_detach_max = (retained_vlist_suite
+                    let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate)
+                        || vlist_window_boundary_retained_suite)
                         .then_some(if vlist_window_boundary_retained_suite {
                             64u64
                         } else {
@@ -3286,24 +3227,26 @@ See: `docs/tracy.md`.\n";
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
-                        check_pixels_changed_test_id
-                            .as_deref()
-                            .or(suite_pixels_changed_test_id),
+                        check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id
-                            .as_deref()
-                            .or(suite_wheel_scroll_test_id),
+                        check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
-                        check_chart_sampling_window_shifts_min
-                            .or(suite_chart_sampling_window_shifts_min),
-                        check_node_graph_cull_window_shifts_min
-                            .or(suite_node_graph_cull_window_shifts_min),
-                        check_node_graph_cull_window_shifts_max
-                            .or(suite_node_graph_cull_window_shifts_max),
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
@@ -3313,21 +3256,20 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_have_prepaint_actions
                             || suite_vlist_window_shifts_have_prepaint_actions,
                         vlist_window_shifts_non_retained_max_for_script
-                            .or(suite_vlist_window_shifts_non_retained_max)
-                            .or(suite_vlist_small_scroll_window_shifts_non_retained_max),
+                            .or(suite_vlist_window_shifts_non_retained_max),
                         check_vlist_window_shifts_prefetch_max
-                            .or(suite_vlist_window_shifts_prefetch_max)
-                            .or(suite_vlist_small_scroll_window_shifts_prefetch_max),
+                            .or(suite_vlist_window_shifts_prefetch_max),
                         check_vlist_window_shifts_escape_max
-                            .or(suite_vlist_window_shifts_escape_max)
-                            .or(suite_vlist_small_scroll_window_shifts_escape_max),
+                            .or(suite_vlist_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max.or(suite_hover_layout_max),
+                        check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
                         &notify_hotspot_file_max_for_script,
-                        check_view_cache_reuse_stable_min.or(suite_view_cache_reuse_stable_min),
+                        check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min
                             .or(suite_view_cache_reuse_min)
                             .or(suite_components_gallery_view_cache_reuse_min),
@@ -3381,22 +3323,6 @@ See: `docs/tracy.md`.\n";
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
-            } else if rest.len() == 1 && rest[0] == "ui-gallery-steady" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -3423,10 +3349,21 @@ See: `docs/tracy.md`.\n";
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
-            let mut child: Option<LaunchedDemo> = None;
-            let launched_by_fretboard = reuse_launch && launch.is_some();
-            let mut perf_launch_env = launch_env.clone();
-            let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+            let mut child = if reuse_process {
+                maybe_launch_demo(
+                    &launch,
+                    &launch_env,
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &resolved_ready_path,
+                    &resolved_exit_path,
+                    false,
+                    timeout_ms,
+                    poll_ms,
+                )?
+            } else {
+                None
+            };
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
@@ -3447,26 +3384,12 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
-            if launched_by_fretboard {
-                child = maybe_launch_demo(
-                    &launch,
-                    &perf_launch_env,
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &resolved_ready_path,
-                    &resolved_exit_path,
-                    false,
-                    timeout_ms,
-                    poll_ms,
-                )?;
-            }
-
             for src in scripts {
                 if repeat == 1 {
                     if !reuse_process {
                         child = maybe_launch_demo(
                             &launch,
-                            &perf_launch_env,
+                            &launch_env,
                             &workspace_root,
                             &resolved_out_dir,
                             &resolved_ready_path,
@@ -3550,16 +3473,9 @@ See: `docs/tracy.md`.\n";
 
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
-                    let bundle_path: Option<PathBuf> = match bundle_dir {
-                        Some(bundle_dir) => {
-                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
-                        }
-                        None => read_latest_pointer(&resolved_out_dir)
-                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                            .map(|path| resolve_bundle_json_path(path.as_path())),
-                    };
-
-                    if let Some(bundle_path) = bundle_path {
+                    if let Some(bundle_dir) = bundle_dir {
+                        let bundle_path =
+                            resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
                         let mut report = bundle_stats_from_path(
                             &bundle_path,
                             stats_top.max(1),
@@ -3581,55 +3497,10 @@ See: `docs/tracy.md`.\n";
                         let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                         let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
-                        let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
-                        let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
-                        let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
-                        let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
-                        let pointer_move_frames_present = report.pointer_move_frames_present;
-                        let pointer_move_frames_considered =
-                            report.pointer_move_frames_considered as u64;
-                        let pointer_move_max_dispatch_time_us =
-                            report.pointer_move_max_dispatch_time_us;
-                        let pointer_move_max_hit_test_time_us =
-                            report.pointer_move_max_hit_test_time_us;
-                        let pointer_move_snapshots_with_global_changes =
-                            report.pointer_move_snapshots_with_global_changes as u64;
-                        let top_hit_test_bounds_tree_queries =
-                            top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
-                        let top_hit_test_bounds_tree_disabled =
-                            top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
-                        let top_hit_test_bounds_tree_misses =
-                            top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
-                        let top_hit_test_bounds_tree_hits =
-                            top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
-                        let top_hit_test_bounds_tree_candidate_rejected = top
-                            .map(|r| r.hit_test_bounds_tree_candidate_rejected)
-                            .unwrap_or(0);
-                        let top_frame_arena_capacity_estimate_bytes = top
-                            .map(|r| r.frame_arena_capacity_estimate_bytes)
-                            .unwrap_or(0);
-                        let top_frame_arena_grow_events =
-                            top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
-                        let top_element_children_vec_pool_reuses =
-                            top.map(|r| r.element_children_vec_pool_reuses).unwrap_or(0);
-                        let top_element_children_vec_pool_misses =
-                            top.map(|r| r.element_children_vec_pool_misses).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                         let top_view_cache_contained_relayouts =
                             top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
-                        let top_view_cache_roots_total =
-                            top.map(|r| r.view_cache_roots_total).unwrap_or(0);
-                        let top_view_cache_roots_reused =
-                            top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
-                        let top_view_cache_roots_cache_key_mismatch = top
-                            .map(|r| r.view_cache_roots_cache_key_mismatch)
-                            .unwrap_or(0);
-                        let top_view_cache_roots_needs_rerender =
-                            top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
-                        let top_view_cache_roots_layout_invalidated = top
-                            .map(|r| r.view_cache_roots_layout_invalidated)
-                            .unwrap_or(0);
                         let top_cache_roots_contained_relayout =
                             top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
@@ -3644,95 +3515,6 @@ See: `docs/tracy.md`.\n";
                         let top_virtual_list_visible_range_refreshes = top
                             .map(|r| r.virtual_list_visible_range_refreshes)
                             .unwrap_or(0);
-                        let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
-                        let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
-                        let top_renderer_encode_scene_us =
-                            top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
-                        let top_renderer_prepare_text_us =
-                            top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
-                        let top_renderer_prepare_svg_us =
-                            top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
-                        let top_renderer_draw_calls =
-                            top.map(|r| r.renderer_draw_calls).unwrap_or(0);
-                        let top_renderer_pipeline_switches =
-                            top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
-                        let top_renderer_bind_group_switches =
-                            top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
-                        let top_renderer_scissor_sets =
-                            top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
-                        let top_renderer_scene_encoding_cache_misses = top
-                            .map(|r| r.renderer_scene_encoding_cache_misses)
-                            .unwrap_or(0);
-                        let top_renderer_text_atlas_upload_bytes =
-                            top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
-                        let top_renderer_text_atlas_evicted_pages = top
-                            .map(|r| r.renderer_text_atlas_evicted_pages)
-                            .unwrap_or(0);
-                        let top_renderer_svg_upload_bytes =
-                            top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
-                        let top_renderer_image_upload_bytes =
-                            top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
-                        let top_renderer_svg_raster_cache_misses =
-                            top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
-                        let top_renderer_svg_raster_budget_evictions = top
-                            .map(|r| r.renderer_svg_raster_budget_evictions)
-                            .unwrap_or(0);
-                        let top_renderer_svg_raster_budget_bytes =
-                            top.map(|r| r.renderer_svg_raster_budget_bytes).unwrap_or(0);
-                        let top_renderer_svg_rasters_live =
-                            top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
-                        let top_renderer_svg_standalone_bytes_live = top
-                            .map(|r| r.renderer_svg_standalone_bytes_live)
-                            .unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_pages_live = top
-                            .map(|r| r.renderer_svg_mask_atlas_pages_live)
-                            .unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_bytes_live = top
-                            .map(|r| r.renderer_svg_mask_atlas_bytes_live)
-                            .unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_used_px =
-                            top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_capacity_px = top
-                            .map(|r| r.renderer_svg_mask_atlas_capacity_px)
-                            .unwrap_or(0);
-                        let top_renderer_svg_raster_cache_hits =
-                            top.map(|r| r.renderer_svg_raster_cache_hits).unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_page_evictions = top
-                            .map(|r| r.renderer_svg_mask_atlas_page_evictions)
-                            .unwrap_or(0);
-                        let top_renderer_svg_mask_atlas_entries_evicted = top
-                            .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_budget_bytes = top
-                            .map(|r| r.renderer_intermediate_budget_bytes)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_in_use_bytes = top
-                            .map(|r| r.renderer_intermediate_in_use_bytes)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_peak_in_use_bytes = top
-                            .map(|r| r.renderer_intermediate_peak_in_use_bytes)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_release_targets = top
-                            .map(|r| r.renderer_intermediate_release_targets)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_allocations = top
-                            .map(|r| r.renderer_intermediate_pool_allocations)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_reuses = top
-                            .map(|r| r.renderer_intermediate_pool_reuses)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_releases = top
-                            .map(|r| r.renderer_intermediate_pool_releases)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_evictions = top
-                            .map(|r| r.renderer_intermediate_pool_evictions)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_free_bytes = top
-                            .map(|r| r.renderer_intermediate_pool_free_bytes)
-                            .unwrap_or(0);
-                        let top_renderer_intermediate_pool_free_textures = top
-                            .map(|r| r.renderer_intermediate_pool_free_textures)
-                            .unwrap_or(0);
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
@@ -3744,79 +3526,20 @@ See: `docs/tracy.md`.\n";
                                 "top_layout_engine_solves": top_solves,
                                 "top_prepaint_time_us": top_prepaint,
                                 "top_paint_time_us": top_paint,
-                                "top_dispatch_time_us": top_dispatch,
-                                "top_hit_test_time_us": top_hit_test,
-                                "top_dispatch_events": top_dispatch_events,
-                                "top_hit_test_queries": top_hit_test_queries,
-                                "pointer_move_frames_present": pointer_move_frames_present,
-                                "pointer_move_frames_considered": pointer_move_frames_considered,
-                                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                                "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
-                                "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
-                                "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
-                                "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
-                                "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
-                                "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
-                                "top_frame_arena_grow_events": top_frame_arena_grow_events,
-                                "top_element_children_vec_pool_reuses": top_element_children_vec_pool_reuses,
-                                "top_element_children_vec_pool_misses": top_element_children_vec_pool_misses,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
-                                "top_view_cache_roots_total": top_view_cache_roots_total,
-                                "top_view_cache_roots_reused": top_view_cache_roots_reused,
-                                "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
-                                "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
-                                "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
                                 "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                                 "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                                 "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
-                                "top_renderer_tick_id": top_renderer_tick_id,
-                                "top_renderer_frame_id": top_renderer_frame_id,
-                                "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
-                                "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
-                                "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
-                                "top_renderer_draw_calls": top_renderer_draw_calls,
-                                "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
-                                "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
-                                "top_renderer_scissor_sets": top_renderer_scissor_sets,
-                                "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
-                                "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
-                                "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
-                                "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
-                                "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
-                                "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
-                                "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
-                                "top_renderer_svg_raster_budget_bytes": top_renderer_svg_raster_budget_bytes,
-                                "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
-                                "top_renderer_svg_standalone_bytes_live": top_renderer_svg_standalone_bytes_live,
-                                "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
-                                "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
-                                "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-	                                "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-	                                "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-	                                "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-	                                "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-	                                "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
-	                                "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
-	                                "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-	                                "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
-	                                "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
-	                                "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
-	                                "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
-	                                "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-	                                "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
-	                                "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
-	                                "bundle": bundle_path.display().to_string(),
-	                            }));
+                                "bundle": bundle_path.display().to_string(),
+                            }));
                         } else {
                             println!(
-                                "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
+                                "PERF {} sort={} top.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                                 src.display(),
                                 sort.as_str(),
                                 top_total,
@@ -3824,8 +3547,6 @@ See: `docs/tracy.md`.\n";
                                 top_solve,
                                 top_prepaint,
                                 top_paint,
-                                top_dispatch,
-                                top_hit_test,
                                 top_tick,
                                 top_frame,
                                 bundle_path.display(),
@@ -3834,16 +3555,13 @@ See: `docs/tracy.md`.\n";
 
                         if perf_baseline_out.is_some() {
                             perf_baseline_rows.push(serde_json::json!({
-	                                "script": script_key.clone(),
-	                                "max": {
-	                                    "top_total_time_us": top_total,
-	                                    "top_layout_time_us": top_layout,
-	                                    "top_layout_engine_solve_time_us": top_solve,
-	                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-	                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-	                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-	                                },
-	                            }));
+                                "script": script_key.clone(),
+                                "max": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                            }));
                         }
                         if wants_perf_thresholds {
                             let baseline_thresholds = perf_baseline
@@ -3862,32 +3580,12 @@ See: `docs/tracy.md`.\n";
                                 cli_thresholds.max_top_solve_us,
                                 baseline_thresholds.max_top_solve_us,
                             );
-                            let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
-                                resolve_threshold(
-                                    cli_thresholds.max_pointer_move_dispatch_us,
-                                    baseline_thresholds.max_pointer_move_dispatch_us,
-                                );
-                            let (thr_pointer_move_hit_test, src_pointer_move_hit_test) =
-                                resolve_threshold(
-                                    cli_thresholds.max_pointer_move_hit_test_us,
-                                    baseline_thresholds.max_pointer_move_hit_test_us,
-                                );
-                            let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
-                                resolve_threshold(
-                                    cli_thresholds.max_pointer_move_global_changes,
-                                    baseline_thresholds.max_pointer_move_global_changes,
-                                );
                             let run = serde_json::json!({
                                 "run_index": 0,
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
                                 "top_layout_engine_solve_time_us": top_solve,
                                 "top_layout_engine_solves": top_solves,
-                                "pointer_move_frames_present": pointer_move_frames_present,
-                                "pointer_move_frames_considered": pointer_move_frames_considered,
-                                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "bundle": bundle_path.display().to_string(),
@@ -3901,25 +3599,16 @@ See: `docs/tracy.md`.\n";
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
-                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
                                     "max_top_layout_us": thr_layout,
                                     "max_top_solve_us": thr_solve,
-                                    "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                                    "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                                    "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                                 },
                                 "threshold_sources": {
                                     "max_top_total_us": src_total,
                                     "max_top_layout_us": src_layout,
                                     "max_top_solve_us": src_solve,
-                                    "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
-                                    "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
-                                    "max_pointer_move_global_changes": src_pointer_move_global_changes,
                                 },
                             });
                             perf_threshold_rows.push(row);
@@ -3931,9 +3620,9 @@ See: `docs/tracy.md`.\n";
                                 top_total,
                                 top_layout,
                                 top_solve,
-                                pointer_move_max_dispatch_time_us,
-                                pointer_move_max_hit_test_time_us,
-                                pointer_move_snapshots_with_global_changes,
+                                report.pointer_move_max_dispatch_time_us,
+                                report.pointer_move_max_hit_test_time_us,
+                                report.pointer_move_snapshots_with_global_changes as u64,
                             ));
                         }
 
@@ -3968,11 +3657,6 @@ See: `docs/tracy.md`.\n";
                 let mut runs_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_dispatch: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_hit_test: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_pointer_move_dispatch: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_pointer_move_hit_test: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_pointer_move_global_changes: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf)> = None;
 
@@ -3980,7 +3664,7 @@ See: `docs/tracy.md`.\n";
                     if !reuse_process {
                         child = maybe_launch_demo(
                             &launch,
-                            &perf_launch_env,
+                            &launch_env,
                             &workspace_root,
                             &resolved_out_dir,
                             &resolved_ready_path,
@@ -4062,16 +3746,7 @@ See: `docs/tracy.md`.\n";
                         .filter(|s| !s.trim().is_empty())
                         .map(PathBuf::from);
 
-                    let bundle_path: Option<PathBuf> = match bundle_dir {
-                        Some(bundle_dir) => {
-                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
-                        }
-                        None => read_latest_pointer(&resolved_out_dir)
-                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
-                            .map(|path| resolve_bundle_json_path(path.as_path())),
-                    };
-
-                    let Some(bundle_path) = bundle_path else {
+                    let Some(bundle_dir) = bundle_dir else {
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
                                 "script": src.display().to_string(),
@@ -4093,6 +3768,8 @@ See: `docs/tracy.md`.\n";
                         break;
                     };
 
+                    let bundle_path =
+                        resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir.clone()));
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
                     if warmup_frames > 0 && report.top.is_empty() {
@@ -4110,46 +3787,10 @@ See: `docs/tracy.md`.\n";
                     let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                     let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
-                    let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
-                    let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
-                    let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
-                    let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
-                    let top_hit_test_bounds_tree_queries =
-                        top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
-                    let top_hit_test_bounds_tree_disabled =
-                        top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
-                    let top_hit_test_bounds_tree_misses =
-                        top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
-                    let top_hit_test_bounds_tree_hits =
-                        top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
-                    let top_hit_test_bounds_tree_candidate_rejected = top
-                        .map(|r| r.hit_test_bounds_tree_candidate_rejected)
-                        .unwrap_or(0);
-                    let top_frame_arena_capacity_estimate_bytes = top
-                        .map(|r| r.frame_arena_capacity_estimate_bytes)
-                        .unwrap_or(0);
-                    let top_frame_arena_grow_events =
-                        top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
-                    let top_element_children_vec_pool_reuses =
-                        top.map(|r| r.element_children_vec_pool_reuses).unwrap_or(0);
-                    let top_element_children_vec_pool_misses =
-                        top.map(|r| r.element_children_vec_pool_misses).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                     let top_view_cache_contained_relayouts =
                         top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
-                    let top_view_cache_roots_total =
-                        top.map(|r| r.view_cache_roots_total).unwrap_or(0);
-                    let top_view_cache_roots_reused =
-                        top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
-                    let top_view_cache_roots_cache_key_mismatch = top
-                        .map(|r| r.view_cache_roots_cache_key_mismatch)
-                        .unwrap_or(0);
-                    let top_view_cache_roots_needs_rerender =
-                        top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
-                    let top_view_cache_roots_layout_invalidated = top
-                        .map(|r| r.view_cache_roots_layout_invalidated)
-                        .unwrap_or(0);
                     let top_cache_roots_contained_relayout =
                         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
@@ -4164,115 +3805,12 @@ See: `docs/tracy.md`.\n";
                     let top_virtual_list_visible_range_refreshes = top
                         .map(|r| r.virtual_list_visible_range_refreshes)
                         .unwrap_or(0);
-                    let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
-                    let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
-                    let top_renderer_encode_scene_us =
-                        top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
-                    let top_renderer_prepare_text_us =
-                        top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
-                    let top_renderer_prepare_svg_us =
-                        top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
-                    let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
-                    let top_renderer_pipeline_switches =
-                        top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
-                    let top_renderer_bind_group_switches =
-                        top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
-                    let top_renderer_scissor_sets =
-                        top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
-                    let top_renderer_scene_encoding_cache_misses = top
-                        .map(|r| r.renderer_scene_encoding_cache_misses)
-                        .unwrap_or(0);
-                    let top_renderer_text_atlas_upload_bytes =
-                        top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
-                    let top_renderer_text_atlas_evicted_pages = top
-                        .map(|r| r.renderer_text_atlas_evicted_pages)
-                        .unwrap_or(0);
-                    let top_renderer_svg_upload_bytes =
-                        top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
-                    let top_renderer_image_upload_bytes =
-                        top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
-                    let top_renderer_svg_raster_cache_misses =
-                        top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
-                    let top_renderer_svg_raster_budget_evictions = top
-                        .map(|r| r.renderer_svg_raster_budget_evictions)
-                        .unwrap_or(0);
-                    let top_renderer_svg_raster_budget_bytes =
-                        top.map(|r| r.renderer_svg_raster_budget_bytes).unwrap_or(0);
-                    let top_renderer_svg_rasters_live =
-                        top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
-                    let top_renderer_svg_standalone_bytes_live = top
-                        .map(|r| r.renderer_svg_standalone_bytes_live)
-                        .unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_pages_live = top
-                        .map(|r| r.renderer_svg_mask_atlas_pages_live)
-                        .unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_bytes_live = top
-                        .map(|r| r.renderer_svg_mask_atlas_bytes_live)
-                        .unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_used_px =
-                        top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_capacity_px = top
-                        .map(|r| r.renderer_svg_mask_atlas_capacity_px)
-                        .unwrap_or(0);
-                    let top_renderer_svg_raster_cache_hits =
-                        top.map(|r| r.renderer_svg_raster_cache_hits).unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_page_evictions = top
-                        .map(|r| r.renderer_svg_mask_atlas_page_evictions)
-                        .unwrap_or(0);
-                    let top_renderer_svg_mask_atlas_entries_evicted = top
-                        .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_budget_bytes = top
-                        .map(|r| r.renderer_intermediate_budget_bytes)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_in_use_bytes = top
-                        .map(|r| r.renderer_intermediate_in_use_bytes)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_peak_in_use_bytes = top
-                        .map(|r| r.renderer_intermediate_peak_in_use_bytes)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_release_targets = top
-                        .map(|r| r.renderer_intermediate_release_targets)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_allocations = top
-                        .map(|r| r.renderer_intermediate_pool_allocations)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_reuses = top
-                        .map(|r| r.renderer_intermediate_pool_reuses)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_releases = top
-                        .map(|r| r.renderer_intermediate_pool_releases)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_evictions = top
-                        .map(|r| r.renderer_intermediate_pool_evictions)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_free_bytes = top
-                        .map(|r| r.renderer_intermediate_pool_free_bytes)
-                        .unwrap_or(0);
-                    let top_renderer_intermediate_pool_free_textures = top
-                        .map(|r| r.renderer_intermediate_pool_free_textures)
-                        .unwrap_or(0);
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
                     runs_solve.push(top_solve);
                     runs_prepaint.push(top_prepaint);
                     runs_paint.push(top_paint);
-                    runs_dispatch.push(top_dispatch);
-                    runs_hit_test.push(top_hit_test);
-                    let pointer_move_frames_present = report.pointer_move_frames_present;
-                    let pointer_move_frames_considered =
-                        report.pointer_move_frames_considered as u64;
-                    let pointer_move_max_dispatch_time_us =
-                        report.pointer_move_max_dispatch_time_us;
-                    let pointer_move_max_hit_test_time_us =
-                        report.pointer_move_max_hit_test_time_us;
-                    let pointer_move_snapshots_with_global_changes =
-                        report.pointer_move_snapshots_with_global_changes as u64;
-                    runs_pointer_move_dispatch.push(pointer_move_max_dispatch_time_us);
-                    runs_pointer_move_hit_test.push(pointer_move_max_hit_test_time_us);
-                    runs_pointer_move_global_changes
-                        .push(pointer_move_snapshots_with_global_changes);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "top_total_time_us": top_total,
@@ -4281,76 +3819,20 @@ See: `docs/tracy.md`.\n";
                         "top_layout_engine_solves": top_solves,
                         "top_prepaint_time_us": top_prepaint,
                         "top_paint_time_us": top_paint,
-                        "top_dispatch_time_us": top_dispatch,
-                        "top_hit_test_time_us": top_hit_test,
-                        "top_dispatch_events": top_dispatch_events,
-                        "top_hit_test_queries": top_hit_test_queries,
-                        "pointer_move_frames_present": pointer_move_frames_present,
-                        "pointer_move_frames_considered": pointer_move_frames_considered,
-                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
-                        "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
-                        "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
-                        "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
-                        "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
-                        "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
-                        "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
-                        "top_frame_arena_grow_events": top_frame_arena_grow_events,
-                        "top_element_children_vec_pool_reuses": top_element_children_vec_pool_reuses,
-                        "top_element_children_vec_pool_misses": top_element_children_vec_pool_misses,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
-                        "top_view_cache_roots_total": top_view_cache_roots_total,
-                        "top_view_cache_roots_reused": top_view_cache_roots_reused,
-                        "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
-                        "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
-                        "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
                         "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                         "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                         "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
-                        "top_renderer_tick_id": top_renderer_tick_id,
-                        "top_renderer_frame_id": top_renderer_frame_id,
-                        "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
-                        "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
-                        "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
-                        "top_renderer_draw_calls": top_renderer_draw_calls,
-                        "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
-                        "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
-                        "top_renderer_scissor_sets": top_renderer_scissor_sets,
-                        "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
-                        "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
-                        "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
-                        "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
-                        "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
-                        "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
-                        "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
-                        "top_renderer_svg_raster_budget_bytes": top_renderer_svg_raster_budget_bytes,
-                        "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
-                        "top_renderer_svg_standalone_bytes_live": top_renderer_svg_standalone_bytes_live,
-                        "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
-                        "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
-                        "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-	                        "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-	                        "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-	                        "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-	                        "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-	                        "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
-	                        "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
-	                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-	                        "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
-	                        "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
-	                        "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
-	                        "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
-	                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-	                        "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
-	                        "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
-	                        "bundle": bundle_path.display().to_string(),
-	                    }));
+                        "pointer_move_max_dispatch_time_us": report.pointer_move_max_dispatch_time_us,
+                        "pointer_move_max_hit_test_time_us": report.pointer_move_max_hit_test_time_us,
+                        "pointer_move_snapshots_with_global_changes": report.pointer_move_snapshots_with_global_changes,
+                        "bundle": bundle_path.display().to_string(),
+                    }));
 
                     match &script_worst {
                         Some((prev_us, _)) if *prev_us >= top_total => {}
@@ -4369,22 +3851,7 @@ See: `docs/tracy.md`.\n";
 
                 if runs_total.len() == repeat {
                     if stats_json {
-                        let mut top_frame_arena_capacity_estimate_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_frame_arena_grow_events: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_element_children_vec_pool_reuses: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_element_children_vec_pool_misses: Vec<u64> =
-                            Vec::with_capacity(repeat);
                         let mut top_view_cache_contained_relayouts: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_view_cache_roots_total: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_view_cache_roots_reused: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_view_cache_roots_cache_key_mismatch: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_view_cache_roots_needs_rerender: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_view_cache_roots_layout_invalidated: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_cache_roots_contained_relayout: Vec<u64> =
                             Vec::with_capacity(repeat);
@@ -4398,101 +3865,9 @@ See: `docs/tracy.md`.\n";
                             Vec::with_capacity(repeat);
                         let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
                             Vec::with_capacity(repeat);
-                        let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
-                        let mut top_renderer_pipeline_switches: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_bind_group_switches: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_text_atlas_upload_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_text_atlas_evicted_pages: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_upload_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_image_upload_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_raster_cache_misses: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_raster_budget_evictions: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_rasters_live: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_mask_atlas_pages_live: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_svg_mask_atlas_used_px: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_budget_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_in_use_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_release_targets: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_allocations: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_reuses: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_releases: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_evictions: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_free_bytes: Vec<u64> =
-                            Vec::with_capacity(repeat);
-                        let mut top_renderer_intermediate_pool_free_textures: Vec<u64> =
-                            Vec::with_capacity(repeat);
                         for run in &runs_json {
-                            top_frame_arena_capacity_estimate_bytes.push(
-                                run.get("top_frame_arena_capacity_estimate_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_frame_arena_grow_events.push(
-                                run.get("top_frame_arena_grow_events")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_element_children_vec_pool_reuses.push(
-                                run.get("top_element_children_vec_pool_reuses")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_element_children_vec_pool_misses.push(
-                                run.get("top_element_children_vec_pool_misses")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
                             top_view_cache_contained_relayouts.push(
                                 run.get("top_view_cache_contained_relayouts")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_view_cache_roots_total.push(
-                                run.get("top_view_cache_roots_total")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_view_cache_roots_reused.push(
-                                run.get("top_view_cache_roots_reused")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_view_cache_roots_cache_key_mismatch.push(
-                                run.get("top_view_cache_roots_cache_key_mismatch")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_view_cache_roots_needs_rerender.push(
-                                run.get("top_view_cache_roots_needs_rerender")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_view_cache_roots_layout_invalidated.push(
-                                run.get("top_view_cache_roots_layout_invalidated")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
@@ -4526,205 +3901,39 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
-                            top_renderer_encode_scene_us.push(
-                                run.get("top_renderer_encode_scene_us")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_prepare_text_us.push(
-                                run.get("top_renderer_prepare_text_us")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_draw_calls.push(
-                                run.get("top_renderer_draw_calls")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_pipeline_switches.push(
-                                run.get("top_renderer_pipeline_switches")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_bind_group_switches.push(
-                                run.get("top_renderer_bind_group_switches")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_scene_encoding_cache_misses.push(
-                                run.get("top_renderer_scene_encoding_cache_misses")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_text_atlas_upload_bytes.push(
-                                run.get("top_renderer_text_atlas_upload_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_text_atlas_evicted_pages.push(
-                                run.get("top_renderer_text_atlas_evicted_pages")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_upload_bytes.push(
-                                run.get("top_renderer_svg_upload_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_image_upload_bytes.push(
-                                run.get("top_renderer_image_upload_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_raster_cache_misses.push(
-                                run.get("top_renderer_svg_raster_cache_misses")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_raster_budget_evictions.push(
-                                run.get("top_renderer_svg_raster_budget_evictions")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_rasters_live.push(
-                                run.get("top_renderer_svg_rasters_live")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_mask_atlas_pages_live.push(
-                                run.get("top_renderer_svg_mask_atlas_pages_live")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_svg_mask_atlas_used_px.push(
-                                run.get("top_renderer_svg_mask_atlas_used_px")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_budget_bytes.push(
-                                run.get("top_renderer_intermediate_budget_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_in_use_bytes.push(
-                                run.get("top_renderer_intermediate_in_use_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_peak_in_use_bytes.push(
-                                run.get("top_renderer_intermediate_peak_in_use_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_release_targets.push(
-                                run.get("top_renderer_intermediate_release_targets")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_allocations.push(
-                                run.get("top_renderer_intermediate_pool_allocations")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_reuses.push(
-                                run.get("top_renderer_intermediate_pool_reuses")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_releases.push(
-                                run.get("top_renderer_intermediate_pool_releases")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_evictions.push(
-                                run.get("top_renderer_intermediate_pool_evictions")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_free_bytes.push(
-                                run.get("top_renderer_intermediate_pool_free_bytes")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
-                            top_renderer_intermediate_pool_free_textures.push(
-                                run.get("top_renderer_intermediate_pool_free_textures")
-                                    .and_then(|v| v.as_u64())
-                                    .unwrap_or(0),
-                            );
                         }
                         perf_json_rows.push(serde_json::json!({
-	                        "script": src.display().to_string(),
-	                        "sort": sort.as_str(),
-		                        "repeat": repeat,
-		                            "runs": runs_json,
-		                            "stats": {
-		                                "total_time_us": summarize_times_us(&runs_total),
-		                                "layout_time_us": summarize_times_us(&runs_layout),
-		                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
-		                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
-		                                "paint_time_us": summarize_times_us(&runs_paint),
-		                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
-		                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
-		                                "pointer_move_max_dispatch_time_us": summarize_times_us(&runs_pointer_move_dispatch),
-		                                "pointer_move_max_hit_test_time_us": summarize_times_us(&runs_pointer_move_hit_test),
-		                                "pointer_move_snapshots_with_global_changes": summarize_times_us(&runs_pointer_move_global_changes),
-		                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
-		                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
-		                                "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
-		                                "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
-	                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
-	                                "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
-	                                "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
-	                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
-	                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
-	                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
-	                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
-	                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
-	                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
-	                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
-	                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
-	                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
-	                                "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
-	                                "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
-	                                "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),
-	                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
-	                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
-	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
-	                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
-	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
-	                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
-	                                "top_renderer_image_upload_bytes": summarize_times_us(&top_renderer_image_upload_bytes),
-	                                "top_renderer_svg_raster_cache_misses": summarize_times_us(&top_renderer_svg_raster_cache_misses),
-	                                "top_renderer_svg_raster_budget_evictions": summarize_times_us(&top_renderer_svg_raster_budget_evictions),
-	                                "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),
-	                                "top_renderer_svg_mask_atlas_pages_live": summarize_times_us(&top_renderer_svg_mask_atlas_pages_live),
-	                                "top_renderer_svg_mask_atlas_used_px": summarize_times_us(&top_renderer_svg_mask_atlas_used_px),
-	                                "top_renderer_intermediate_budget_bytes": summarize_times_us(&top_renderer_intermediate_budget_bytes),
-	                                "top_renderer_intermediate_in_use_bytes": summarize_times_us(&top_renderer_intermediate_in_use_bytes),
-	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
-	                                "top_renderer_intermediate_release_targets": summarize_times_us(&top_renderer_intermediate_release_targets),
-	                                "top_renderer_intermediate_pool_allocations": summarize_times_us(&top_renderer_intermediate_pool_allocations),
-	                                "top_renderer_intermediate_pool_reuses": summarize_times_us(&top_renderer_intermediate_pool_reuses),
-	                                "top_renderer_intermediate_pool_releases": summarize_times_us(&top_renderer_intermediate_pool_releases),
-	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
-	                                "top_renderer_intermediate_pool_free_bytes": summarize_times_us(&top_renderer_intermediate_pool_free_bytes),
-	                                "top_renderer_intermediate_pool_free_textures": summarize_times_us(&top_renderer_intermediate_pool_free_textures),
-	                            },
-	                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
-	                                "top_total_time_us": us,
-	                                "bundle": bundle.display().to_string(),
-	                            })),
-	                        }));
+                            "script": src.display().to_string(),
+                            "sort": sort.as_str(),
+                            "repeat": repeat,
+                            "runs": runs_json,
+                            "stats": {
+                                "total_time_us": summarize_times_us(&runs_total),
+                                "layout_time_us": summarize_times_us(&runs_layout),
+                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
+                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
+                                "paint_time_us": summarize_times_us(&runs_paint),
+                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
+                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
+                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
+                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
+                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
+                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+                            },
+                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                                "top_total_time_us": us,
+                                "bundle": bundle.display().to_string(),
+                            })),
+                        }));
                     } else {
                         let total = summarize_times_us(&runs_total);
                         let layout = summarize_times_us(&runs_layout);
                         let solve = summarize_times_us(&runs_solve);
                         let prepaint = summarize_times_us(&runs_prepaint);
                         let paint = summarize_times_us(&runs_paint);
-                        let dispatch = summarize_times_us(&runs_dispatch);
-                        let hit_test = summarize_times_us(&runs_hit_test);
                         println!(
-                            "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{}",
+                            "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{}",
                             src.display(),
                             sort.as_str(),
                             repeat,
@@ -4733,48 +3942,33 @@ See: `docs/tracy.md`.\n";
                             solve.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                            dispatch.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
-                            hit_test.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             solve.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                            dispatch.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
-                            hit_test.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             solve.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                            dispatch.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
-                            hit_test.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                         );
                     }
 
                     let max_total = *runs_total.iter().max().unwrap_or(&0);
                     let max_layout = *runs_layout.iter().max().unwrap_or(&0);
                     let max_solve = *runs_solve.iter().max().unwrap_or(&0);
-                    let max_pointer_move_dispatch =
-                        *runs_pointer_move_dispatch.iter().max().unwrap_or(&0);
-                    let max_pointer_move_hit_test =
-                        *runs_pointer_move_hit_test.iter().max().unwrap_or(&0);
-                    let max_pointer_move_global_changes =
-                        *runs_pointer_move_global_changes.iter().max().unwrap_or(&0);
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
                     if perf_baseline_out.is_some() {
                         perf_baseline_rows.push(serde_json::json!({
-	                            "script": script_key.clone(),
-	                            "max": {
-	                                "top_total_time_us": max_total,
-	                                "top_layout_time_us": max_layout,
-	                                "top_layout_engine_solve_time_us": max_solve,
-	                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-	                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-	                            },
-	                        }));
+                            "script": script_key.clone(),
+                            "max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                            },
+                        }));
                     }
 
                     if wants_perf_thresholds {
@@ -4794,21 +3988,6 @@ See: `docs/tracy.md`.\n";
                             cli_thresholds.max_top_solve_us,
                             baseline_thresholds.max_top_solve_us,
                         );
-                        let (thr_pointer_move_dispatch, src_pointer_move_dispatch) =
-                            resolve_threshold(
-                                cli_thresholds.max_pointer_move_dispatch_us,
-                                baseline_thresholds.max_pointer_move_dispatch_us,
-                            );
-                        let (thr_pointer_move_hit_test, src_pointer_move_hit_test) =
-                            resolve_threshold(
-                                cli_thresholds.max_pointer_move_hit_test_us,
-                                baseline_thresholds.max_pointer_move_hit_test_us,
-                            );
-                        let (thr_pointer_move_global_changes, src_pointer_move_global_changes) =
-                            resolve_threshold(
-                                cli_thresholds.max_pointer_move_global_changes,
-                                baseline_thresholds.max_pointer_move_global_changes,
-                            );
                         let row = serde_json::json!({
                             "script": script_key.clone(),
                             "sort": sort.as_str(),
@@ -4818,25 +3997,16 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
-                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
                             },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
                                 "max_top_layout_us": thr_layout,
                                 "max_top_solve_us": thr_solve,
-                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
                             },
                             "threshold_sources": {
                                 "max_top_total_us": src_total,
                                 "max_top_layout_us": src_layout,
                                 "max_top_solve_us": src_solve,
-                                "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
-                                "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
-                                "max_pointer_move_global_changes": src_pointer_move_global_changes,
                             },
                         });
                         perf_threshold_rows.push(row);
@@ -4848,9 +4018,30 @@ See: `docs/tracy.md`.\n";
                             max_total,
                             max_layout,
                             max_solve,
-                            max_pointer_move_dispatch,
-                            max_pointer_move_hit_test,
-                            max_pointer_move_global_changes,
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_max_dispatch_time_us")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_max_hit_test_time_us")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_snapshots_with_global_changes")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
                         ));
                     }
                 }
@@ -4865,59 +4056,34 @@ See: `docs/tracy.md`.\n";
             if let Some(path) = perf_baseline_out.as_ref() {
                 let out_path = path;
                 let rows = perf_baseline_rows
-	                    .iter()
-	                    .filter_map(|row| {
-	                        let script = row.get("script")?.as_str()?.to_string();
-	                        let max = row.get("max")?;
-	                        let max_total = max.get("top_total_time_us")?.as_u64()?;
-	                        let max_layout = max.get("top_layout_time_us")?.as_u64()?;
-	                        let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
-	                        let max_pointer_move_dispatch =
-	                            max.get("pointer_move_max_dispatch_time_us")?.as_u64()?;
-	                        let max_pointer_move_hit_test =
-	                            max.get("pointer_move_max_hit_test_time_us")?.as_u64()?;
-	                        let max_pointer_move_global_changes = max
-	                            .get("pointer_move_snapshots_with_global_changes")?
-	                            .as_u64()?;
-	                        let thr_total =
-	                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
-	                        let thr_layout =
-	                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
-	                        let thr_solve =
-	                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
-	                        let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
-	                            max_pointer_move_dispatch,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
-	                            max_pointer_move_hit_test,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
-	                            max_pointer_move_global_changes,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        Some(serde_json::json!({
-	                            "script": script,
-	                            "thresholds": {
-	                                "max_top_total_us": thr_total,
-	                                "max_top_layout_us": thr_layout,
-	                                "max_top_solve_us": thr_solve,
-	                                "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
-	                                "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
-	                                "max_pointer_move_global_changes": thr_pointer_move_global_changes,
-	                            },
-	                            "measured_max": {
-	                                "top_total_time_us": max_total,
-	                                "top_layout_time_us": max_layout,
-	                                "top_layout_engine_solve_time_us": max_solve,
-	                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
-	                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
-	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
-	                            },
-	                        }))
-	                    })
-	                    .collect::<Vec<_>>();
+                    .iter()
+                    .filter_map(|row| {
+                        let script = row.get("script")?.as_str()?.to_string();
+                        let max = row.get("max")?;
+                        let max_total = max.get("top_total_time_us")?.as_u64()?;
+                        let max_layout = max.get("top_layout_time_us")?.as_u64()?;
+                        let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
+                        let thr_total =
+                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
+                        let thr_layout =
+                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
+                        let thr_solve =
+                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+                        Some(serde_json::json!({
+                            "script": script,
+                            "thresholds": {
+                                "max_top_total_us": thr_total,
+                                "max_top_layout_us": thr_layout,
+                                "max_top_solve_us": thr_solve,
+                            },
+                            "measured_max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                            },
+                        }))
+                    })
+                    .collect::<Vec<_>>();
                 let payload = serde_json::json!({
                     "schema_version": 1,
                     "generated_unix_ms": now_unix_ms(),
@@ -4957,9 +4123,6 @@ See: `docs/tracy.md`.\n";
                 });
                 let _ = write_json_value(&out_path, &payload);
                 if !perf_threshold_failures.is_empty() {
-                    if launched_by_fretboard {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    }
                     eprintln!(
                         "PERF threshold gate failed (failures={}, evidence={})",
                         perf_threshold_failures.len(),
@@ -4967,10 +4130,6 @@ See: `docs/tracy.md`.\n";
                     );
                     std::process::exit(1);
                 }
-            }
-
-            if launched_by_fretboard {
-                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
 
             if stats_json {
@@ -5209,10 +4368,7 @@ See: `docs/tracy.md`.\n";
             //   overlay producers always rerendered”).
             // - Otherwise, leave the gate off by default to avoid forcing overlay-specific
             //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
-            let mut matrix_base_env = launch_env.clone();
-            let _ = ensure_env_var(&mut matrix_base_env, "FRET_DIAG_RENDERER_PERF", "1");
-
-            let shell_reuse_enabled = matrix_base_env.iter().any(|(k, v)| {
+            let shell_reuse_enabled = launch_env.iter().any(|(k, v)| {
                 (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
                     && !v.trim().is_empty()
                     && (v.as_str() != "0")
@@ -5237,8 +4393,8 @@ See: `docs/tracy.md`.\n";
                 ResolvedScriptPaths::for_out_dir(&workspace_root, &uncached_out_dir);
             let cached_paths = ResolvedScriptPaths::for_out_dir(&workspace_root, &cached_out_dir);
 
-            let uncached_env = matrix_launch_env(&matrix_base_env, false)?;
-            let cached_env = matrix_launch_env(&matrix_base_env, true)?;
+            let uncached_env = matrix_launch_env(&launch_env, false)?;
+            let cached_env = matrix_launch_env(&launch_env, true)?;
 
             let uncached_bundles = run_script_suite_collect_bundles(
                 &scripts,
@@ -6449,7 +5605,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 16] {
+fn ui_gallery_suite_scripts() -> [&'static str; 22] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -6460,6 +5616,12 @@ fn ui_gallery_suite_scripts() -> [&'static str; 16] {
         "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
         "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
         "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+        "tools/diag-scripts/ui-gallery-menubar-hover-switch.json",
+        "tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json",
+        "tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json",
+        "tools/diag-scripts/ui-gallery-menubar-active-mnemonic.json",
+        "tools/diag-scripts/ui-gallery-menubar-escape-exits-active.json",
+        "tools/diag-scripts/ui-gallery-context-menu-shift-f10.json",
         "tools/diag-scripts/ui-gallery-slider-set-value.json",
         "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
         "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
@@ -6511,8 +5673,7 @@ fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bo
 
     matches!(
         name,
-        "ui-gallery-ai-transcript-torture-scroll.json"
-            | "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
             | "ui-gallery-tree-window-boundary-scroll-retained.json"
             | "ui-gallery-data-table-window-boundary-scroll-retained.json"
             | "ui-gallery-table-retained-window-boundary-scroll.json"
@@ -6757,6 +5918,15 @@ fn apply_post_run_checks(
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
     check_pixels_changed_test_id: Option<&str>,
+    check_ui_gallery_code_editor_torture_marker_present: bool,
+    check_ui_gallery_code_editor_torture_undo_redo: bool,
+    check_ui_gallery_code_editor_word_boundary: bool,
+    check_ui_gallery_code_editor_a11y_selection: bool,
+    check_ui_gallery_code_editor_a11y_composition: bool,
+    check_ui_gallery_code_editor_a11y_selection_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool,
+    check_ui_gallery_code_editor_a11y_composition_drag: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
@@ -6773,6 +5943,8 @@ fn apply_post_run_checks(
     check_vlist_window_shifts_prefetch_max: Option<u64>,
     check_vlist_window_shifts_escape_max: Option<u64>,
     check_vlist_policy_key_stable: bool,
+    check_windowed_rows_offset_changes_min: Option<u64>,
+    check_windowed_rows_offset_changes_eps: f32,
     check_layout_fast_path_min: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -6801,6 +5973,39 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_marker_present {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_present(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_undo_redo {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_word_boundary {
+        check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap_scroll {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_drag {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(bundle_path, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
@@ -6896,6 +6101,15 @@ fn apply_post_run_checks(
     }
     if check_vlist_policy_key_stable {
         check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if let Some(min_total_offset_changes) = check_windowed_rows_offset_changes_min {
+        check_bundle_for_windowed_rows_offset_changes_min(
+            bundle_path,
+            out_dir,
+            min_total_offset_changes,
+            warmup_frames,
+            check_windowed_rows_offset_changes_eps,
+        )?;
     }
     if let Some(min_frames) = check_layout_fast_path_min {
         check_bundle_for_layout_fast_path_min(bundle_path, out_dir, min_frames, warmup_frames)?;
@@ -7926,6 +7140,122 @@ mod tests {
         );
     }
 
+    #[test]
+    fn bundle_stats_aggregates_query_snapshot_entries() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Loading",
+                                        "stale": false,
+                                        "inflight": { "attempt": 1 }
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 1,
+                                    "invalidation_walk_nodes": 1,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Success",
+                                        "stale": true,
+                                        "retry": { "next_retry_at_unix_ms": 1000 }
+                                    },
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Error",
+                                        "stale": false,
+                                        "retry": { "next_retry_at_unix_ms": 2000 }
+                                    },
+                                    {
+                                        "namespace": "users",
+                                        "status": "Idle",
+                                        "stale": false
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 2,
+                                    "invalidation_walk_nodes": 2,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            3,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(report.snapshots_with_query_snapshot, 2);
+        assert_eq!(report.query_entries_total, 4);
+        assert_eq!(report.query_entries_stale, 1);
+        assert_eq!(report.query_entries_inflight, 1);
+        assert_eq!(report.query_entries_idle, 1);
+        assert_eq!(report.query_entries_loading, 1);
+        assert_eq!(report.query_entries_success, 1);
+        assert_eq!(report.query_entries_error, 1);
+        assert_eq!(report.query_entries_retry_pending, 2);
+
+        let report_json = report.to_json();
+        assert_eq!(
+            report_json["snapshots_with_query_snapshot"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(report_json["sum"]["query_entries_total"].as_u64(), Some(4));
+        assert_eq!(report_json["sum"]["query_entries_stale"].as_u64(), Some(1));
+        assert_eq!(
+            report_json["sum"]["query_entries_inflight"].as_u64(),
+            Some(1)
+        );
+        assert_eq!(
+            report_json["sum"]["query_entries_retry_pending"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(
+            report_json["query_namespace_hotspots"][0]["namespace"],
+            "todos"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][0]["count"], 3);
+        assert_eq!(
+            report_json["query_namespace_hotspots"][1]["namespace"],
+            "users"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][1]["count"], 1);
+    }
     #[test]
     fn json_pointer_set_updates_object_field() {
         let mut v = json!({
@@ -9397,256 +8727,6 @@ mod tests {
     }
 
     #[test]
-    fn chart_sampling_window_shifts_min_accepts_matching_action() {
-        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_ok");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": [{
-                            "node": 10,
-                            "kind": "chart_sampling_window_shift",
-                            "chart_sampling_window_key": 123
-                        }]
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
-            .expect("expected gate to accept chart sampling action");
-
-        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected chart sampling window shifts evidence JSON to be written"
-        );
-    }
-
-    #[test]
-    fn chart_sampling_window_shifts_min_writes_evidence_json_on_failure() {
-        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_evidence");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": []
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        let err =
-            check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
-                .unwrap_err();
-        assert!(err.contains("chart sampling window shift"));
-
-        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected chart sampling window shifts evidence JSON to be written"
-        );
-        let evidence: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
-        assert_eq!(
-            evidence.get("kind").and_then(|v| v.as_str()),
-            Some("chart_sampling_window_shifts_min")
-        );
-    }
-
-    #[test]
-    fn node_graph_cull_window_shifts_min_accepts_matching_action() {
-        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_min_ok");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": [{
-                            "node": 10,
-                            "kind": "node_graph_cull_window_shift",
-                            "node_graph_cull_window_key": 456
-                        }]
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        check_bundle_for_node_graph_cull_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
-            .expect("expected gate to accept node graph cull action");
-
-        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_min.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected node graph cull window shifts evidence JSON to be written"
-        );
-    }
-
-    #[test]
-    fn node_graph_cull_window_shifts_min_writes_evidence_json_on_failure() {
-        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_min_evidence");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": []
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        let err =
-            check_bundle_for_node_graph_cull_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
-                .unwrap_err();
-        assert!(err.contains("node graph cull window shift"));
-
-        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_min.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected node graph cull window shifts evidence JSON to be written"
-        );
-        let evidence: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
-        assert_eq!(
-            evidence.get("kind").and_then(|v| v.as_str()),
-            Some("node_graph_cull_window_shifts_min")
-        );
-    }
-
-    #[test]
-    fn node_graph_cull_window_shifts_max_accepts_when_under_budget() {
-        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_max_ok");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": [{
-                            "node": 10,
-                            "kind": "node_graph_cull_window_shift",
-                            "node_graph_cull_window_key": 456
-                        }]
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        check_bundle_for_node_graph_cull_window_shifts_max(&bundle_path, &bundle_dir, 1, 0)
-            .expect("expected max gate to accept actions under budget");
-
-        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_max.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected node graph cull window shifts max evidence JSON to be written"
-        );
-    }
-
-    #[test]
-    fn node_graph_cull_window_shifts_max_writes_evidence_json_on_failure() {
-        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_max_evidence");
-        let _ = std::fs::create_dir_all(&out_dir);
-
-        let bundle_dir = out_dir.join("run");
-        let _ = std::fs::create_dir_all(&bundle_dir);
-        let bundle_path = bundle_dir.join("bundle.json");
-
-        let bundle = json!({
-            "schema_version": 1,
-            "windows": [{
-                "window": 1,
-                "snapshots": [{
-                    "tick_id": 1,
-                    "frame_id": 1,
-                    "debug": {
-                        "prepaint_actions": [{
-                            "node": 10,
-                            "kind": "node_graph_cull_window_shift",
-                            "node_graph_cull_window_key": 456
-                        }]
-                    }
-                }]
-            }]
-        });
-        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
-            .expect("bundle.json write should succeed");
-
-        let err =
-            check_bundle_for_node_graph_cull_window_shifts_max(&bundle_path, &bundle_dir, 0, 0)
-                .unwrap_err();
-        assert!(err.contains("node graph cull window shift"));
-
-        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_max.json");
-        assert!(
-            evidence_path.is_file(),
-            "expected node graph cull window shifts max evidence JSON to be written"
-        );
-        let evidence: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
-        assert_eq!(
-            evidence.get("kind").and_then(|v| v.as_str()),
-            Some("node_graph_cull_window_shifts_max")
-        );
-    }
-
-    #[test]
     fn vlist_window_shifts_have_prepaint_actions_accepts_matching_action() {
         let out_dir = tmp_out_dir("vlist_window_shifts_have_prepaint_actions_ok");
         let _ = std::fs::create_dir_all(&out_dir);
@@ -9896,16 +8976,16 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
-                max_pointer_move_dispatch_us: Some(2000),
-                max_pointer_move_hit_test_us: Some(1500),
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
                 max_pointer_move_global_changes: Some(0),
             },
             PerfThresholds::default(),
             99,
             79,
             49,
-            1999,
-            1499,
+            1_999,
+            1_499,
             0,
         );
         assert!(failures.is_empty());
@@ -9920,16 +9000,16 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
-                max_pointer_move_dispatch_us: Some(2000),
-                max_pointer_move_hit_test_us: Some(1500),
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
                 max_pointer_move_global_changes: Some(0),
             },
             PerfThresholds::default(),
             101,
             81,
             51,
-            2001,
-            1501,
+            2_001,
+            1_501,
             1,
         );
         assert_eq!(failures.len(), 6);
@@ -9970,7 +9050,10 @@ mod tests {
                 "thresholds": {
                     "max_top_total_us": 25000,
                     "max_top_layout_us": 15000,
-                    "max_top_solve_us": 8000
+                    "max_top_solve_us": 8000,
+                    "max_pointer_move_dispatch_us": 3000,
+                    "max_pointer_move_hit_test_us": 2000,
+                    "max_pointer_move_global_changes": 1
                 }
             }]
         });
@@ -9986,6 +9069,9 @@ mod tests {
         assert_eq!(t.max_top_total_us, Some(25_000));
         assert_eq!(t.max_top_layout_us, Some(15_000));
         assert_eq!(t.max_top_solve_us, Some(8_000));
+        assert_eq!(t.max_pointer_move_dispatch_us, Some(3_000));
+        assert_eq!(t.max_pointer_move_hit_test_us, Some(2_000));
+        assert_eq!(t.max_pointer_move_global_changes, Some(1));
     }
 
     #[test]

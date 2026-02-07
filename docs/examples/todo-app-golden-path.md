@@ -108,32 +108,55 @@ struct TodoWindowState {
 }
 ```
 
-## Commands (UI → app logic)
 
-We recommend keeping UI → app communication as command IDs:
+## Three-layer state split (recommended)
+
+The official baseline (including `apps/fret-examples/src/todo_demo.rs`) uses an explicit 3-layer model:
+
+1. Local mutable state (`Model<T>`):
+   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).
+2. Derived state (`fret-selector`):
+   - memoized projections/counters/filtered views derived from models.
+3. Async resource state (`fret-query`):
+   - loading/error/success/cache lifecycle for remote or background resources.
+
+Boundary rule:
+
+- keep domain mutations in typed command handlers,
+- keep selector/query as read-side helpers,
+- pass plain values/snapshots into components whenever practical.
+
+## Commands (UI -> app logic)
+
+Use typed messages as the default boundary between UI intents and app mutations:
 
 ```rust,ignore
-use fret_runtime::CommandId;
 use fret_kit::prelude::MessageRouter;
-
-const CMD_ADD: &str = "todo.add";
-const CMD_CLEAR_DONE: &str = "todo.clear_done";
-const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
 
 #[derive(Debug, Clone)]
 enum Msg {
+    Add,
+    ClearDone,
+    RefreshTip,
     Remove(u64),
+}
+
+struct TodoWindowState {
+    // ...
+    router: MessageRouter<Msg>,
 }
 ```
 
 Recommended pattern:
 
-- Keep **stable** command IDs for keybindable actions (`CMD_ADD`, `CMD_CLEAR_DONE`).
-- Use a per-window `MessageRouter<Msg>` to allocate per-item commands (toggle/remove) without
-  stringly `"prefix.{id}"` parsing.
+- Keep app mutations in typed `Msg` variants.
+- Allocate command IDs via `MessageRouter<Msg>` in `view(...)`:
+  - toolbar intents (`Add`, `ClearDone`, `RefreshTip`),
+  - row intents (`Remove(id)`).
+- Resolve once in `on_command(...)` via `state.router.try_take(cmd)` and `match` on `Msg`.
+- Only keep stable literal `CommandId`s when the action must be globally addressable by keymap/menu.
 
-This avoids storing long-lived closures at arbitrary nodes and keeps hot reload resets predictable
-(ADR 0107).
+This removes stringly `"prefix.{id}"` parsing and keeps hot reload resets predictable.
 
 ## View (build retained UI tree)
 
@@ -210,27 +233,23 @@ In a typical window driver:
 Commands are the boundary where you mutate models and emit effects:
 
 ```rust,ignore
-use fret_runtime::CommandId;
-
 fn on_command(
     app: &mut fret_app::App,
     services: &mut dyn fret_core::UiServices,
     window: fret_core::AppWindowId,
     ui: &mut fret_ui::UiTree<fret_app::App>,
     state: &mut TodoWindowState,
-    cmd: &CommandId,
+    cmd: &fret_runtime::CommandId,
 ) {
-    // App commands: update models.
-    match cmd.as_str() {
-        CMD_ADD => { /* read draft, push todo, clear draft */ }
-        CMD_CLEAR_DONE => { /* retain only !done */ }
-        CMD_REFRESH_TIP => { /* invalidate query key */ }
-        _ => {
-            let Some(msg) = state.router.try_take(cmd) else { return };
-            match msg {
-                Msg::Remove(id) => { /* remove */ }
-            }
-        }
+    let Some(msg) = state.router.try_take(cmd) else {
+        return;
+    };
+
+    match msg {
+        Msg::Add => { /* read draft, push todo, clear draft */ }
+        Msg::ClearDone => { /* retain only !done */ }
+        Msg::RefreshTip => { /* invalidate query key */ }
+        Msg::Remove(id) => { /* remove */ }
     }
 }
 ```

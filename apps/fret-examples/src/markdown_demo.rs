@@ -8,7 +8,7 @@ use fret_launch::{
 };
 use fret_markdown as markdown;
 use fret_query::ui::QueryElementContextExt as _;
-use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_runtime::Model;
 use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui::declarative;
@@ -30,6 +30,7 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 enum Msg {
     ToggleCodeBlockExpand(markdown::BlockId),
+    RefreshRemoteImages,
 }
 
 struct MarkdownDemoWindowState {
@@ -54,12 +55,16 @@ enum RemoteImageData {
 }
 
 fn remote_image_key(url: &Arc<str>) -> QueryKey<RemoteImageData> {
-    QueryKey::new("fret-examples.markdown_demo.remote_image.v1", url)
+    QueryKey::new(REMOTE_IMAGE_NAMESPACE, url)
 }
 
+const REMOTE_IMAGE_NAMESPACE: &str = "fret-examples.markdown_demo.remote_image.v1";
+
 fn remote_image_policy() -> QueryPolicy {
+    // stale_time only controls freshness (no implicit polling). Keep entries fresh within the
+    // cache window and use explicit invalidate to force refresh.
     QueryPolicy {
-        stale_time: Duration::from_secs(60),
+        stale_time: Duration::from_secs(5 * 60),
         cache_time: Duration::from_secs(5 * 60),
         keep_previous_data_while_loading: true,
         ..Default::default()
@@ -336,6 +341,7 @@ $$
         }
 
         let on_link_activate = components.on_link_activate.clone();
+        let refresh_remote_images_cmd = router.borrow_mut().cmd(Msg::RefreshRemoteImages);
 
         components.image = Some(Arc::new(move |cx, info| {
             let theme = Theme::global(&*cx.app).clone();
@@ -512,6 +518,11 @@ $$
                             shadcn::Switch::new(cap_code_height.clone())
                                 .a11y_label("Cap code block height")
                                 .into_element(cx),
+                            shadcn::Button::new("Refresh remote images")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(refresh_remote_images_cmd.clone())
+                                .into_element(cx),
                             cx.text(format!("expanded code blocks: {expanded_count}")),
                         ]
                     })
@@ -679,6 +690,12 @@ impl WinitAppDriver for MarkdownDemoDriver {
                         } else {
                             set.insert(id);
                         }
+                    });
+                    app.push_effect(Effect::Redraw(window));
+                }
+                Msg::RefreshRemoteImages => {
+                    let _ = with_query_client(app, |client, _app| {
+                        client.invalidate_namespace(REMOTE_IMAGE_NAMESPACE);
                     });
                     app.push_effect(Effect::Redraw(window));
                 }

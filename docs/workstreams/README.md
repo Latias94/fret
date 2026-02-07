@@ -10,8 +10,15 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/retained-bridge-exit-v1.md`
+- `docs/workstreams/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/localization-i18n-v1.md`
+- `docs/workstreams/localization-i18n-v1-todo.md`
 - `docs/workstreams/state-management-v1.md`
 - `docs/workstreams/state-management-v1-todo.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1-todo.md`
+- `docs/workstreams/imui-state-integration-v1.md`
 - `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
 - `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
@@ -28,6 +35,18 @@ Active workstreams:
 - `docs/workstreams/imui-authoring-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
 - `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md`
+- `docs/workstreams/imui-ecosystem-facade-v3.md`
+- `docs/workstreams/imui-ecosystem-facade-v3-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
+- `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)
 - `docs/workstreams/imui-authoring-facade-v1-todo.md` (baseline / historical reference)
 - `docs/workstreams/shadcn-web-goldens-v4.md`
@@ -56,3 +75,5 @@ Active workstreams:
 - `docs/workstreams/execution-concurrency-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`
+- `docs/workstreams/router-v1.md`
+- `docs/workstreams/router-v1-todo.md`

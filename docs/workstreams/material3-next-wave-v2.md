@@ -286,6 +286,57 @@ before continuing component surface work:
           - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
             (`material3-select-trigger-error`).
 
+- [x] SearchBar (MVP) token surface + headless goldens.
+  - Goal: add a low-risk, token-driven “search” text-input surface to validate `md.comp.search-bar.*`
+    plumbing before implementing higher-level “search view” policies.
+  - Subtasks:
+    - Import `md.comp.search-bar.*` / `md.comp.search-view.*` scalars/colors via `material3_token_import`.
+    - Wire v30 token injection for search scalars, colors, and text styles.
+    - Implement `SearchBar` container + input + leading/trailing icons with hover/pressed state layer,
+      bounded ripple, and focus-visible ring.
+    - Headless suites: add `material3-search-bar.*.json` into `goldens/material3-headless/v1/`.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_bar_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-search-bar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-bar.scss`
+      and `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-view.scss`.
+    - Compose baseline: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt`.
+
+- [x] SearchView (overlay) policy surface.
+  - Goal: implement the expanded “search view” overlay surface on top of `SearchBar`, using
+    `md.comp.search-view.*` tokens for outcome alignment.
+  - Notes:
+    - MVP: keep focus on the underlay text input while the overlay is open (Compose-like), and use a
+      dismissible popover for outside-press dismissal without requiring a new mechanism surface.
+    - Prefer reusing the existing overlay + placement + motion infrastructure hardened for Select / Autocomplete.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_view.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/search_view.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_view_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-search-view.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+
+- [x] Carousel item (MVP) surface.
+  - Goal: add a low-coupling `CarouselItem` primitive aligned with Material Web v30
+    `md.comp.carousel-item.*` tokens.
+  - Notes:
+    - Scope (v1): the item surface only (container + outline + state layer + ripple + focus ring).
+    - Out of scope (v1): a full carousel layout policy (snap points, pager-like behavior, or auto
+      sizing). Consumers can build higher-level carousels using horizontal scrolling until we have
+      a concrete product need for snap behavior.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_carousel_item_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-carousel-item.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-carousel-item.scss`
+
 - [x] Autocomplete (outlined + filled) MVP surface.
   - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
     aligned with Compose exposed dropdown menus at the outcome level.

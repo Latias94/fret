@@ -156,6 +156,7 @@ pub(super) struct BundleStatsReport {
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     pub(super) snapshots_with_hover_layout_invalidations: u32,
+    pub(super) snapshots_with_query_snapshot: u32,
     /// Whether the bundle includes `pointer.move` events (so the derived “pointer move” frame set
     /// can be identified from the event log rather than inferred from dispatch-only frames).
     pub(super) pointer_move_frames_present: bool,
@@ -188,6 +189,14 @@ pub(super) struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     pub(super) sum_hover_layout_invalidations: u64,
+    pub(super) query_entries_total: u64,
+    pub(super) query_entries_stale: u64,
+    pub(super) query_entries_inflight: u64,
+    pub(super) query_entries_idle: u64,
+    pub(super) query_entries_loading: u64,
+    pub(super) query_entries_success: u64,
+    pub(super) query_entries_error: u64,
+    pub(super) query_entries_retry_pending: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
@@ -200,6 +209,7 @@ pub(super) struct BundleStatsReport {
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
+    query_namespace_hotspots: Vec<BundleStatsQueryNamespaceHotspot>,
     pub(super) top: Vec<BundleStatsSnapshotRow>,
 }
 
@@ -552,6 +562,12 @@ struct BundleStatsModelSourceHotspot {
     count: u64,
 }
 
+#[derive(Debug, Default, Clone)]
+struct BundleStatsQueryNamespaceHotspot {
+    namespace: String,
+    count: u64,
+}
+
 impl BundleStatsReport {
     pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
@@ -612,6 +628,20 @@ impl BundleStatsReport {
                 self.snapshots_with_hover_layout_invalidations
             );
         }
+        if self.snapshots_with_query_snapshot > 0 || self.query_entries_total > 0 {
+            println!(
+                "query snapshots: frames_with_query_snapshot={} entries(total/stale/inflight)={}/{}/{} status(idle/loading/success/error)={}/{}/{}/{} retry_pending={}",
+                self.snapshots_with_query_snapshot,
+                self.query_entries_total,
+                self.query_entries_stale,
+                self.query_entries_inflight,
+                self.query_entries_idle,
+                self.query_entries_loading,
+                self.query_entries_success,
+                self.query_entries_error,
+                self.query_entries_retry_pending
+            );
+        }
 
         if !self.global_type_hotspots.is_empty() {
             let items: Vec<String> = self
@@ -628,6 +658,14 @@ impl BundleStatsReport {
                 .map(|h| format!("{}={}", h.source, h.count))
                 .collect();
             println!("changed_models_top: {}", items.join(" | "));
+        }
+        if !self.query_namespace_hotspots.is_empty() {
+            let items: Vec<String> = self
+                .query_namespace_hotspots
+                .iter()
+                .map(|h| format!("{}={}", h.namespace, h.count))
+                .collect();
+            println!("query_namespaces_top: {}", items.join(" | "));
         }
 
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -1198,6 +1236,10 @@ impl BundleStatsReport {
             "snapshots_with_hover_layout_invalidations".to_string(),
             Value::from(self.snapshots_with_hover_layout_invalidations),
         );
+        root.insert(
+            "snapshots_with_query_snapshot".to_string(),
+            Value::from(self.snapshots_with_query_snapshot),
+        );
 
         root.insert(
             "pointer_move".to_string(),
@@ -1265,6 +1307,38 @@ impl BundleStatsReport {
         sum.insert(
             "hover_layout_invalidations".to_string(),
             Value::from(self.sum_hover_layout_invalidations),
+        );
+        sum.insert(
+            "query_entries_total".to_string(),
+            Value::from(self.query_entries_total),
+        );
+        sum.insert(
+            "query_entries_stale".to_string(),
+            Value::from(self.query_entries_stale),
+        );
+        sum.insert(
+            "query_entries_inflight".to_string(),
+            Value::from(self.query_entries_inflight),
+        );
+        sum.insert(
+            "query_entries_idle".to_string(),
+            Value::from(self.query_entries_idle),
+        );
+        sum.insert(
+            "query_entries_loading".to_string(),
+            Value::from(self.query_entries_loading),
+        );
+        sum.insert(
+            "query_entries_success".to_string(),
+            Value::from(self.query_entries_success),
+        );
+        sum.insert(
+            "query_entries_error".to_string(),
+            Value::from(self.query_entries_error),
+        );
+        sum.insert(
+            "query_entries_retry_pending".to_string(),
+            Value::from(self.query_entries_retry_pending),
         );
         root.insert("sum".to_string(), Value::Object(sum));
 
@@ -1334,6 +1408,21 @@ impl BundleStatsReport {
         root.insert(
             "model_source_hotspots".to_string(),
             Value::Array(model_source_hotspots),
+        );
+
+        let query_namespace_hotspots = self
+            .query_namespace_hotspots
+            .iter()
+            .map(|h| {
+                let mut obj = Map::new();
+                obj.insert("namespace".to_string(), Value::from(h.namespace.clone()));
+                obj.insert("count".to_string(), Value::from(h.count));
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+        root.insert(
+            "query_namespace_hotspots".to_string(),
+            Value::Array(query_namespace_hotspots),
         );
 
         let top = self
@@ -2931,7 +3020,7 @@ fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value)
 }
 
 fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
-    // Higher is “more useful for debugging”.
+    // Higher is 鈥渕ore useful for debugging鈥?
     let mut score: u64 = 0;
     if node.get("test_id").and_then(|v| v.as_str()).is_some() {
         score += 10_000;
@@ -3234,6 +3323,36 @@ fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
         .iter()
         .filter(|e| e.get("kind").and_then(|v| v.as_str()) == Some("pointer.wheel"))
         .filter_map(|e| e.get("frame_id").and_then(|v| v.as_u64()))
+        .min()
+}
+
+fn first_scroll_offset_change_frame_id_for_window(
+    window: &serde_json::Value,
+    warmup_frames: u64,
+) -> Option<u64> {
+    let snaps = window
+        .get("snapshots")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    snaps
+        .iter()
+        .filter_map(|s| {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64())?;
+            if frame_id < warmup_frames {
+                return None;
+            }
+            let changes = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_handle_changes"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            let any_offset_changed = changes.iter().any(|c| {
+                c.get("offset_changed")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+            });
+            any_offset_changed.then_some(frame_id)
+        })
         .min()
 }
 
@@ -3783,6 +3902,227 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
         min_total_refreshes,
         warmup_frames,
     )
+}
+
+pub(super) fn check_bundle_for_windowed_rows_offset_changes_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_total_offset_changes: u64,
+    warmup_frames: u64,
+    eps_px: f32,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_windowed_rows_offset_changes_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_total_offset_changes,
+        warmup_frames,
+        eps_px,
+    )
+}
+
+pub(super) fn check_bundle_for_windowed_rows_offset_changes_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_total_offset_changes: u64,
+    warmup_frames: u64,
+    eps_px: f32,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    #[derive(Default)]
+    struct SurfaceStats {
+        location: Option<serde_json::Value>,
+        samples: u64,
+        offset_changes: u64,
+        visible_start_changes: u64,
+        prev_offset_y: Option<f32>,
+        prev_visible_start: Option<u64>,
+    }
+
+    let mut any_scroll = false;
+    let mut examined_snapshots: u64 = 0;
+    let mut scroll_offset_changed_events: u64 = 0;
+    let mut total_offset_changes: u64 = 0;
+
+    let mut surfaces: std::collections::BTreeMap<(u64, u64), SurfaceStats> =
+        std::collections::BTreeMap::new();
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(scroll_frame) = first_scroll_offset_change_frame_id_for_window(w, warmup_frames)
+        else {
+            continue;
+        };
+        any_scroll = true;
+
+        let after_frame = scroll_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let scroll_changes = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_handle_changes"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            for c in scroll_changes {
+                if c.get("offset_changed")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                {
+                    scroll_offset_changed_events = scroll_offset_changed_events.saturating_add(1);
+                }
+            }
+
+            let list = s
+                .get("debug")
+                .and_then(|v| v.get("windowed_rows_surfaces"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if list.is_empty() {
+                continue;
+            }
+
+            for entry in list {
+                let Some(callsite_id) = entry.get("callsite_id").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                let Some(offset_y) = entry
+                    .get("offset_y")
+                    .and_then(|v| v.as_f64())
+                    .map(|v| v as f32)
+                else {
+                    continue;
+                };
+
+                let stats = surfaces.entry((window_id, callsite_id)).or_default();
+                stats.samples = stats.samples.saturating_add(1);
+                if stats.location.is_none() {
+                    stats.location = entry.get("location").cloned();
+                }
+
+                if let Some(prev) = stats.prev_offset_y {
+                    let delta = offset_y - prev;
+                    if delta.abs() >= eps_px {
+                        stats.offset_changes = stats.offset_changes.saturating_add(1);
+                        total_offset_changes = total_offset_changes.saturating_add(1);
+
+                        if samples.len() < 32 {
+                            samples.push(serde_json::json!({
+                                "window": window_id,
+                                "tick_id": tick_id,
+                                "frame_id": frame_id,
+                                "callsite_id": callsite_id,
+                                "delta_offset_y": delta,
+                                "prev_offset_y": prev,
+                                "offset_y": offset_y,
+                            }));
+                        }
+                    }
+                }
+                stats.prev_offset_y = Some(offset_y);
+
+                if let Some(visible_start) = entry.get("visible_start").and_then(|v| v.as_u64()) {
+                    if let Some(prev) = stats.prev_visible_start
+                        && visible_start != prev
+                    {
+                        stats.visible_start_changes = stats.visible_start_changes.saturating_add(1);
+                    }
+                    stats.prev_visible_start = Some(visible_start);
+                }
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.windowed_rows_offset_changes_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "windowed_rows_offset_changes_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "eps_px": eps_px,
+        "min_total_offset_changes": min_total_offset_changes,
+        "any_scroll": any_scroll,
+        "examined_snapshots": examined_snapshots,
+        "scroll_offset_changed_events": scroll_offset_changed_events,
+        "surfaces_seen": surfaces.len(),
+        "total_offset_changes": total_offset_changes,
+        "surfaces": surfaces.iter().map(|((window, callsite_id), stats)| serde_json::json!({
+            "window": window,
+            "callsite_id": callsite_id,
+            "location": stats.location,
+            "samples": stats.samples,
+            "offset_changes": stats.offset_changes,
+            "visible_start_changes": stats.visible_start_changes,
+        })).collect::<Vec<_>>(),
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_scroll {
+        return Err(format!(
+            "windowed rows offset-change gate requires scroll offset changes after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if examined_snapshots == 0 {
+        return Err(format!(
+            "windowed rows offset-change gate requires snapshots after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if scroll_offset_changed_events == 0 {
+        return Err(format!(
+            "windowed rows offset-change gate requires debug.scroll_handle_changes events after the first scroll change, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if surfaces.is_empty() {
+        return Err(format!(
+            "windowed rows offset-change gate requires debug.windowed_rows_surfaces after scroll changes, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if min_total_offset_changes > 0 && total_offset_changes < min_total_offset_changes {
+        return Err(format!(
+            "expected windowed rows surfaces to observe scroll offset changes, but total_offset_changes={total_offset_changes} was below min_total_offset_changes={min_total_offset_changes} (warmup_frames={warmup_frames}, eps_px={eps_px})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
 }
 
 pub(super) fn check_bundle_for_layout_fast_path_min(
@@ -6480,6 +6820,8 @@ pub(super) fn bundle_stats_from_json_with_options(
         std::collections::HashMap::new();
     let mut model_source_counts: std::collections::HashMap<String, u64> =
         std::collections::HashMap::new();
+    let mut query_namespace_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let pointer_move_frame_ids: HashSet<u64> = w
@@ -6559,6 +6901,56 @@ pub(super) fn bundle_stats_from_json_with_options(
                     let count = item.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
                     let key = format!("{}@{}:{}:{}", type_name, file, line, column);
                     *model_source_counts.entry(key).or_insert(0) += count;
+                }
+            }
+
+            if let Some(query_entries) = s
+                .get("query_snapshot")
+                .and_then(|v| v.get("entries"))
+                .and_then(|v| v.as_array())
+            {
+                out.snapshots_with_query_snapshot =
+                    out.snapshots_with_query_snapshot.saturating_add(1);
+                for entry in query_entries {
+                    out.query_entries_total = out.query_entries_total.saturating_add(1);
+                    if entry
+                        .get("stale")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        out.query_entries_stale = out.query_entries_stale.saturating_add(1);
+                    }
+                    if entry.get("inflight").is_some_and(|v| !v.is_null()) {
+                        out.query_entries_inflight = out.query_entries_inflight.saturating_add(1);
+                    }
+                    match entry.get("status").and_then(|v| v.as_str()) {
+                        Some("Idle") => {
+                            out.query_entries_idle = out.query_entries_idle.saturating_add(1);
+                        }
+                        Some("Loading") => {
+                            out.query_entries_loading = out.query_entries_loading.saturating_add(1);
+                        }
+                        Some("Success") => {
+                            out.query_entries_success = out.query_entries_success.saturating_add(1);
+                        }
+                        Some("Error") => {
+                            out.query_entries_error = out.query_entries_error.saturating_add(1);
+                        }
+                        _ => {}
+                    }
+                    if entry
+                        .get("retry")
+                        .and_then(|v| v.get("next_retry_at_unix_ms"))
+                        .is_some_and(|v| !v.is_null())
+                    {
+                        out.query_entries_retry_pending =
+                            out.query_entries_retry_pending.saturating_add(1);
+                    }
+                    if let Some(namespace) = entry.get("namespace").and_then(|v| v.as_str()) {
+                        *query_namespace_counts
+                            .entry(namespace.to_string())
+                            .or_insert(0) += 1;
+                    }
                 }
             }
 
@@ -7927,6 +8319,18 @@ pub(super) fn bundle_stats_from_json_with_options(
     model_hotspots.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.source.cmp(&b.source)));
     model_hotspots.truncate(top);
     out.model_source_hotspots = model_hotspots;
+
+    let mut query_hotspots: Vec<BundleStatsQueryNamespaceHotspot> = query_namespace_counts
+        .into_iter()
+        .map(|(namespace, count)| BundleStatsQueryNamespaceHotspot { namespace, count })
+        .collect();
+    query_hotspots.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.namespace.cmp(&b.namespace))
+    });
+    query_hotspots.truncate(8);
+    out.query_namespace_hotspots = query_hotspots;
 
     out.top = rows.into_iter().take(top).collect();
     Ok(out)
@@ -9558,6 +9962,1903 @@ pub(super) fn check_bundle_for_notify_hotspot_file_max_json(
     }
 
     Ok(())
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut any_marker_present = false;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let marker_present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("marker_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if marker_present {
+                any_marker_present = true;
+            }
+
+            let text_len_bytes = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let anchor = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("anchor"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "marker_present": marker_present,
+                "text_len_bytes": text_len_bytes,
+                "selection": { "anchor": anchor, "caret": caret },
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_torture_marker_present.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_marker_present",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "any_marker_present": any_marker_present,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor marker gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if any_marker_present {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor marker gate failed (expected code_editor.torture.marker_present=true after warmup)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+    let mut max_caret: u64 = 0;
+
+    // State machine over `marker_present`:
+    // 0: waiting for insert (marker=true)
+    // 1: waiting for undo (marker=false)
+    // 2: waiting for redo (marker=true)
+    // 3: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let marker_present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("marker_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            match state {
+                0 if marker_present => state = 1,
+                1 if !marker_present => state = 2,
+                2 if marker_present => state = 3,
+                _ => {}
+            }
+
+            let text_len_bytes = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let anchor = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("anchor"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            max_caret = max_caret.max(caret);
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "marker_present": marker_present,
+                "text_len_bytes": text_len_bytes,
+                "selection": { "anchor": anchor, "caret": caret },
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_torture_marker_undo_redo.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_marker_undo_redo",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "max_caret": max_caret,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor undo/redo gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 && max_caret > 0 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor undo/redo gate failed (expected marker present, then absent, then present again; and caret to advance)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_word_boundary_json(&bundle, bundle_path, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-word-gate-viewport";
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for caret=0 in Identifier mode
+    // 1: waiting for caret=3 (Identifier splits `can't` around the apostrophe, `can|'t`)
+    // 2: waiting for caret=0 in UnicodeWord mode
+    // 3: waiting for caret=5 (UnicodeWord treats `can't` as a single word)
+    // 4: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, caret)) = selection else {
+                continue;
+            };
+            if anchor != caret {
+                continue;
+            }
+            let caret = caret;
+
+            match state {
+                0 => {
+                    if caret == 0 {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if caret == 3 {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if caret == 0 {
+                        state = 3;
+                    }
+                }
+                3 => {
+                    if caret == 5 {
+                        state = 4;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_code_editor_word_boundary.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_word_boundary",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_sequence": [
+            {"anchor":0,"caret":0},
+            {"anchor":3,"caret":3},
+            {"anchor":0,"caret":0},
+            {"anchor":5,"caret":5}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor word-boundary gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor word-boundary gate failed (expected caret sequence 0 -> 3 -> 0 -> 5 for can't)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_json(&bundle, bundle_path, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-selection-gate-viewport";
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine for "hello world":
+    //
+    // 0: waiting for caret=0 (collapsed)
+    // 1: waiting for selection=0..5 ("hello", normalized)
+    // 2: waiting for caret=11 (collapsed, end of string)
+    // 3: waiting for selection=0..11 (select all, normalized)
+    // 4: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (lo, hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+
+            match state {
+                0 => {
+                    if lo == 0 && hi == 0 {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if lo == 0 && hi == 5 {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if lo == 11 && hi == 11 {
+                        state = 3;
+                    }
+                }
+                3 => {
+                    if lo == 0 && hi == 11 {
+                        state = 4;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_code_editor_a11y_selection.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_selection",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_sequence_normalized": [
+            {"min":0,"max":0},
+            {"min":0,"max":5},
+            {"min":11,"max":11},
+            {"min":0,"max":11}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-selection gate failed (expected selection sequence for \"hello world\": 0..0 -> 0..5 -> 11..11 -> 0..11)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-gate-viewport";
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for caret=2 (collapsed), no composition
+    // 1: waiting for composition=2..4 and caret=4 (collapsed)
+    // 2: waiting for caret=2 (collapsed), no composition
+    // 3: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    if let Some((a, b)) = obj
+                        .get("anchor")
+                        .and_then(|a| Some((a.as_u64()?, obj.get("focus")?.as_u64()?)))
+                    {
+                        return Some((a, b));
+                    }
+                    if let Some((a, b)) = obj
+                        .get("start")
+                        .and_then(|a| Some((a.as_u64()?, obj.get("end")?.as_u64()?)))
+                    {
+                        return Some((a, b));
+                    }
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            match state {
+                0 => {
+                    if sel_lo == 2 && sel_hi == 2 && comp_norm.is_none() {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if sel_lo == 4 && sel_hi == 4 && comp_norm == Some((2, 4)) {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if sel_lo == 2 && sel_hi == 2 && comp_norm.is_none() {
+                        state = 3;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_code_editor_a11y_composition.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_sequence_normalized": [
+            {"text_selection":[2,2],"text_composition":null},
+            {"text_selection":[4,4],"text_composition":[2,4]},
+            {"text_selection":[2,2],"text_composition":null}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition gate failed (expected selection/composition sequence: caret 2..2 (no composition) -> caret 4..4 (composition 2..4) -> caret 2..2 (no composition))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-selection-wrap-gate-viewport";
+    const WRAP_COLS: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    let mut expected_len_bytes: Option<u64> = None;
+
+    // State machine (single long line, wrap at 80 cols):
+    //
+    // 0: waiting for caret=0
+    // 1: waiting for caret=80 (End over visual row)
+    // 2: waiting for caret=len (Ctrl+End clamps to document bounds)
+    // 3: waiting for selection=0..len (Ctrl+A)
+    // 4: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let len_bytes = text_field
+                .get("value")
+                .and_then(|v| v.as_str())
+                .and_then(|s| {
+                    parse_redacted_len_bytes(s).or_else(|| {
+                        let trimmed = s.trim_start();
+                        if trimmed.starts_with("<redacted") {
+                            return None;
+                        }
+                        Some(s.len() as u64)
+                    })
+                });
+            if let Some(len_bytes) = len_bytes {
+                if expected_len_bytes.is_none() {
+                    expected_len_bytes = Some(len_bytes);
+                }
+            }
+            let Some(len_bytes) = expected_len_bytes else {
+                continue;
+            };
+            if len_bytes <= WRAP_COLS {
+                continue;
+            }
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "len_bytes": len_bytes,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (lo, hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+
+            match state {
+                0 => {
+                    if lo == 0 && hi == 0 {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if lo == WRAP_COLS && hi == WRAP_COLS {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if lo == len_bytes && hi == len_bytes {
+                        state = 3;
+                    }
+                }
+                3 => {
+                    if lo == 0 && hi == len_bytes {
+                        state = 4;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_code_editor_a11y_selection_wrap.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_selection_wrap",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "wrap_cols": WRAP_COLS,
+        "expected_len_bytes": expected_len_bytes,
+        "expected_sequence_template": [
+            {"min":0,"max":0},
+            {"min":WRAP_COLS,"max":WRAP_COLS},
+            {"min":"len_bytes","max":"len_bytes"},
+            {"min":0,"max":"len_bytes"}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if expected_len_bytes.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires a text_field semantics node with a value/len, but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if expected_len_bytes.unwrap_or(0) <= WRAP_COLS {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires len_bytes > {WRAP_COLS}, but observed len_bytes={:?}\n  bundle: {}\n  evidence: {}",
+            expected_len_bytes,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-selection-wrap gate failed (expected: caret 0..0 -> caret {WRAP_COLS}..{WRAP_COLS} (End) -> caret len..len (Ctrl+End) -> selection 0..len (Ctrl+A))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport";
+    const PREEDIT_START: u64 = 78;
+    const PREEDIT_END: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    //
+    // 0: waiting for caret=78 (collapsed), no composition
+    // 1: waiting for caret=80 (collapsed), composition=78..80
+    // 2: waiting for caret=78 (collapsed), no composition
+    // 3: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("start").and_then(|v| v.as_u64())?;
+                    let b = obj.get("end").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            match state {
+                0 => {
+                    if sel_lo == PREEDIT_START && sel_hi == PREEDIT_START && comp_norm.is_none() {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if sel_lo == PREEDIT_END
+                        && sel_hi == PREEDIT_END
+                        && comp_norm == Some((PREEDIT_START, PREEDIT_END))
+                    {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if sel_lo == PREEDIT_START && sel_hi == PREEDIT_START && comp_norm.is_none() {
+                        state = 3;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_a11y_composition_wrap.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition_wrap",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_sequence_normalized": [
+            {"text_selection":[PREEDIT_START,PREEDIT_START],"text_composition":null},
+            {"text_selection":[PREEDIT_END,PREEDIT_END],"text_composition":[PREEDIT_START,PREEDIT_END]},
+            {"text_selection":[PREEDIT_START,PREEDIT_START],"text_composition":null}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition-wrap gate failed (expected selection/composition sequence: caret 78..78 (no composition) -> caret 80..80 (composition 78..80) -> caret 78..78 (no composition))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport";
+    const PREEDIT_START: u64 = 78;
+    const PREEDIT_END: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    let mut preedit_observed_frame: Option<u64> = None;
+    let mut scroll_after_preedit_frame: Option<u64> = None;
+    let mut preedit_observed_after_scroll_frame: Option<u64> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("start").and_then(|v| v.as_u64())?;
+                    let b = obj.get("end").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let scroll_offset_changed = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_handle_changes"))
+                .and_then(|v| v.as_array())
+                .is_some_and(|changes| {
+                    changes.iter().any(|c| {
+                        c.get("offset_changed")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false)
+                    })
+                });
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "scroll_offset_changed": scroll_offset_changed,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "preedit_observed_frame": preedit_observed_frame,
+                "scroll_after_preedit_frame": scroll_after_preedit_frame,
+                "preedit_observed_after_scroll_frame": preedit_observed_after_scroll_frame,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            let is_expected_preedit = sel_lo == PREEDIT_END
+                && sel_hi == PREEDIT_END
+                && comp_norm == Some((PREEDIT_START, PREEDIT_END));
+
+            if preedit_observed_frame.is_none() && is_expected_preedit {
+                preedit_observed_frame = Some(frame_id);
+            }
+
+            if scroll_after_preedit_frame.is_none()
+                && preedit_observed_frame.is_some()
+                && scroll_offset_changed
+            {
+                scroll_after_preedit_frame = Some(frame_id);
+            }
+
+            if preedit_observed_after_scroll_frame.is_none()
+                && scroll_after_preedit_frame.is_some()
+                && is_expected_preedit
+            {
+                preedit_observed_after_scroll_frame = Some(frame_id);
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_a11y_composition_wrap_scroll.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition_wrap_scroll",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "preedit_observed_frame": preedit_observed_frame,
+        "scroll_after_preedit_frame": scroll_after_preedit_frame,
+        "preedit_observed_after_scroll_frame": preedit_observed_after_scroll_frame,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_preedit": {"text_selection":[PREEDIT_END,PREEDIT_END],"text_composition":[PREEDIT_START,PREEDIT_END]},
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if preedit_observed_frame.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires observing an inline preedit (selection 80..80, composition 78..80), but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scroll_after_preedit_frame.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires observing a scroll offset change after preedit is active, but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if preedit_observed_after_scroll_frame.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition-wrap-scroll gate failed (expected preedit to remain active after scroll while composing)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-drag-gate-viewport";
+    const PREEDIT_START: u64 = 78;
+    const PREEDIT_END: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    //
+    // 0: waiting for caret=78 (collapsed), no composition
+    // 1: waiting for caret=80 (collapsed), composition=78..80
+    // 2: waiting for a non-collapsed selection, no composition (drag selection clears preedit deterministically)
+    // 3: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("start").and_then(|v| v.as_u64())?;
+                    let b = obj.get("end").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            match state {
+                0 => {
+                    if sel_lo == PREEDIT_START && sel_hi == PREEDIT_START && comp_norm.is_none() {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if sel_lo == PREEDIT_END
+                        && sel_hi == PREEDIT_END
+                        && comp_norm == Some((PREEDIT_START, PREEDIT_END))
+                    {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if sel_lo != sel_hi && comp_norm.is_none() {
+                        state = 3;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_a11y_composition_drag.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition_drag",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "preedit": {"start": PREEDIT_START, "end": PREEDIT_END},
+        "expected_sequence": [
+            {"text_selection":[PREEDIT_START,PREEDIT_START],"text_composition":null},
+            {"text_selection":[PREEDIT_END,PREEDIT_END],"text_composition":[PREEDIT_START,PREEDIT_END]},
+            {"text_selection":"non-collapsed","text_composition":null}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-drag gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition-drag gate failed (expected: caret 78..78 (no composition) -> caret 80..80 (composition 78..80) -> non-collapsed selection (no composition))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
+    let value = value.trim();
+    if !value.starts_with("<redacted") {
+        return None;
+    }
+    let idx = value.find("len=")?;
+    let digits = value[(idx + "len=".len())..]
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect::<String>();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<u64>().ok()
 }
 
 fn unescape_json_pointer_token(raw: &str) -> String {

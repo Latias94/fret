@@ -2,47 +2,41 @@
 
 ## Project Structure & Module Organization
 
-- `crates/`: Core framework crates (Cargo workspace members).
-  - `crates/fret-core`: platform-agnostic core contracts and IDs (keep minimal).
-  - `crates/fret-runtime`: portable runtime services/value types.
-  - `crates/fret-app`: app runtime (effects, commands, models).
-  - `crates/fret-ui`: UI runtime and widgets (layout via `taffy`).
-  - `crates/fret-render`: wgpu-based renderer building blocks.
-  - `crates/fret-platform`: portable platform I/O contracts.
-  - `crates/fret-platform-native`: native platform I/O implementation.
-  - `crates/fret-platform-web`: wasm platform I/O implementation.
-  - `crates/fret-runner-winit`: winit adapter (event/input mapping).
-  - `crates/fret-runner-web`: compatibility shim re-exporting `fret-platform-web` (dedicated DOM adapter TBD).
-  - `crates/fret-fonts`: bundled default font bytes for wasm/bootstrap.
-  - `crates/fret-launch`: runner/launcher glue (desktop now; web/mobile later).
-  - `crates/fret`: facade crate (re-exports).
-- `ecosystem/`: Policy-heavy UI kits and reusable component surfaces (Cargo workspace members).
-  - `ecosystem/fret-ui-kit`: shared interaction policies + headless primitives + styling helpers.
-  - `ecosystem/fret-docking`: docking UI + interaction policy.
-  - `ecosystem/fret-ui-shadcn`: shadcn/ui v4-aligned taxonomy + recipes built on `fret-ui-kit`.
-  - `ecosystem/fret-bootstrap`: golden-path startup layer over `fret-launch` (optional).
-  - `ecosystem/fret-ui-assets`: UI render asset caches facade (re-export surface over `fret-asset-cache`).
-  - `ecosystem/fret-icons`: renderer-agnostic icon registry.
-  - `ecosystem/fret-icons-lucide`: Lucide icon pack (data-only).
-  - `ecosystem/fret-icons-radix`: Radix icon pack (data-only).
-- `docs/`: documentation-driven design (start at `docs/README.md`); ADRs in `docs/adr/`.
-- `apps/`: runnable apps / experiments (in the workspace, but excluded from `default-members`).
-  - `apps/fret-demo`: native demo binaries (thin shells over `apps/fret-examples`).
-  - `apps/fret-demo-web`: wasm demo shell (thin shell over `apps/fret-examples`).
-  - `apps/fretboard`: dev CLI (run demos, hotpatch helpers, starter templates).
-- `repo-ref/`: pinned upstream reference checkouts (not required to build).
-- `.fret/`: generated local state when running the demo (e.g. layout/keymap JSON).
+- Canonical overview: `docs/README.md` and `docs/repo-structure.md`.
+- `crates/`: Core framework crates (stable boundaries; framework + backends + runner glue).
+  - Contracts / portable core: `crates/fret-core`, `crates/fret-runtime`.
+  - Default integrated runtime: `crates/fret-app`, `crates/fret-ui`, `crates/fret-ui-app`.
+  - Backends: `crates/fret-platform`, `crates/fret-platform-native`, `crates/fret-platform-web`, `crates/fret-runner-winit`, `crates/fret-runner-web`, `crates/fret-render`.
+  - Integration / wiring: `crates/fret-launch`.
+  - Public facade: `crates/fret`.
+  - Other core glue: `crates/fret-a11y-accesskit`, `crates/fret-fonts`, `crates/fret-i18n`.
+- `ecosystem/`: In-tree incubation crates (components, icon sets, app kits; may move out-of-tree later).
+  - Component/policy layers: `ecosystem/fret-ui-kit`, `ecosystem/fret-docking`, `ecosystem/fret-ui-shadcn`.
+  - App kit / defaults: `ecosystem/fret-kit`, `ecosystem/fret-bootstrap`, `ecosystem/fret-ui-assets`.
+  - Icons: `ecosystem/fret-icons`, `ecosystem/fret-icons-lucide`, `ecosystem/fret-icons-radix`.
+- `apps/`: Runnable apps / end-to-end harness shells (in the workspace, excluded from `default-members`).
+  - Harness code: `apps/fret-examples`.
+  - Native/web shells: `apps/fret-demo`, `apps/fret-demo-web`.
+  - Tooling + diagnostics runner: `apps/fretboard`.
+  - Other apps exist (e.g. UI gallery/editor); treat `apps/` as non-stable surfaces.
+- `docs/`: Documentation-driven design; ADRs live in `docs/adr/`.
+- `tools/`: Scripts and maintenance utilities (e.g. layering checks).
+- `repo-ref/`: Pinned upstream references (not required to build; do not treat as dependencies).
+- `assets/`, `themes/`, `screenshots/`: Non-code assets.
+- `.fret/`: Project-scoped local state. Some files (e.g. `.fret/settings.json`, `.fret/keymap.json`) may be checked into VCS per ADRs.
 
 ## Build, Test, and Development Commands
 
 - `cargo build`: build the full workspace.
 - `cargo run -p fret-demo --bin todo_demo`: run a specific native demo (writes to `.fret/`).
 - `cargo run -p fretboard -- dev native --bin todo_demo`: preferred demo runner (consistent flags).
-- `cargo run -p fretboard -- init todo --name my-todo [--ui-assets]`: generate a starter todo app template.
+- `cargo run -p fretboard -- dev web --demo ui_gallery`: run the web UI gallery demo.
+- `cargo run -p fretboard -- new todo --name my-todo [--ui-assets]`: generate a starter todo app template.
 - `cargo test --workspace`: run all tests (may be sparse early on).
 - Prefer `cargo nextest run` when available for faster test execution.
 - `cargo fmt`: format code with rustfmt.
 - `cargo clippy --workspace --all-targets -- -D warnings`: lint (treat warnings as errors).
+- `pwsh -File tools/check_layering.ps1`: enforce workspace crate boundary rules (see `docs/dependency-policy.md`).
 
 Toolchain is pinned via `rust-toolchain.toml` (Rust 1.92) and the workspace uses Rust 2024 edition.
 

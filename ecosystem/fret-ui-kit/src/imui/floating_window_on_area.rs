@@ -58,6 +58,15 @@ where
         let resizing = resize_snapshot
             .map(|(_, dragging, _, _)| dragging)
             .unwrap_or(false);
+        let collapsed_model = super::float_window_collapsed_model_for(cx, window_id);
+        if cx.take_transient_for(window_id, super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED) {
+            let _ = cx.app.models_mut().update(&collapsed_model, |v| {
+                *v = !*v;
+            });
+        }
+        let collapsed = cx
+            .read_model(&collapsed_model, fret_ui::Invalidation::Paint, |_app, v| *v)
+            .unwrap_or(false);
 
         let (
             position_after_resize,
@@ -115,7 +124,9 @@ where
                     Px(out)
                 };
 
-                if let Some((handle, dragging, current, start)) = resize_snapshot {
+                if collapsed {
+                    st.last_resize_position = None;
+                } else if let Some((handle, dragging, current, start)) = resize_snapshot {
                     if dragging {
                         let prev = st.last_resize_position.unwrap_or(start);
                         let delta = super::point_sub(current, prev);
@@ -211,7 +222,8 @@ where
 
         let chrome = super::FloatingWindowChromeResponse {
             size: resizable.then_some(size),
-            resizing,
+            resizing: resizing && !collapsed,
+            collapsed,
         };
 
         let (popover, border, muted) = {
@@ -227,7 +239,9 @@ where
         window_props.layout.overflow = Overflow::Visible;
         if resizable {
             window_props.layout.size.width = Length::Px(size.width);
-            window_props.layout.size.height = Length::Px(size.height);
+            if !collapsed {
+                window_props.layout.size.height = Length::Px(size.height);
+            }
         }
         window_props.background = Some(popover);
         window_props.border = Edges::all(Px(1.0));
@@ -290,6 +304,13 @@ where
                             },
                             ..Default::default()
                         },
+                        Some(Arc::new(move |host, acx| {
+                            host.record_transient_event(
+                                acx,
+                                super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED,
+                            );
+                            host.notify(acx);
+                        })),
                         move |cx, region_id| {
                             cx.key_clear_on_key_down_for(region_id);
                             if let Some(open) = open_for_key {
@@ -368,9 +389,13 @@ where
                 },
             );
 
-            let body = cx.column(col, move |_cx| vec![title_bar, content]);
+            let body = if collapsed {
+                title_bar
+            } else {
+                cx.column(col, move |_cx| vec![title_bar, content])
+            };
 
-            if !resizable {
+            if !resizable || collapsed {
                 return vec![body];
             }
 

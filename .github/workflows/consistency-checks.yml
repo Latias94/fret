@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -33,3 +35,7 @@ jobs:
       - name: Check stringly command parsing
         shell: pwsh
         run: pwsh -NoProfile -File tools/check_stringly_command_parsing.ps1
+
+      - name: Check generated icon artifacts
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack all

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -20,9 +20,10 @@ use fret_ui::element::{
     SpacerProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{Invalidation, Theme, UiHost};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
@@ -581,19 +582,4 @@ fn drawer_icon<H: UiHost>(
     props.layout.size.height = Length::Px(size);
     props.color = color;
     cx.svg_icon_props(props)
-}
-
-fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
-    let resolved = cx
-        .app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
-        });
-
-    match resolved {
-        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
 }

@@ -36,16 +36,16 @@ pub use keymap::{BindingV1, KeySpecV1, KeymapFileV1};
 
 pub use menu_bar::{
     LayeredMenuBarConfig, MenuBarBaselineService, MenuBarFileError, apply_layered_menu_bar,
-    effective_menu_bar, menu_bar_from_file_if_exists, should_publish_os_menu_bar,
-    should_render_in_window_menu_bar, sync_os_menu_bar,
+    effective_menu_bar, menu_bar_from_file_if_exists, set_menu_bar_baseline,
+    should_publish_os_menu_bar, should_render_in_window_menu_bar, sync_os_menu_bar,
 };
 
 pub use plugins::{Plugin, PluginHost, PluginId, PluginRegistrar, install_plugins};
 
 pub use settings::{
     DockDragInversionModifierV1, DockDragInversionPolicyV1, DockDragInversionSettingsV1,
-    DockingSettingsV1, FontsSettingsV1, MenuBarIntegrationModeV1, MenuBarSettingsV1, SettingsError,
-    SettingsFileV1,
+    DockingSettingsV1, FontsSettingsV1, LocaleSettingsV1, MenuBarIntegrationModeV1,
+    MenuBarSettingsV1, SettingsError, SettingsFileV1,
 };
 
 pub use dock_layout_file::{DockLayoutError, DockLayoutFileV1};

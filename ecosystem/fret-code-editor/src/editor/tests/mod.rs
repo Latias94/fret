@@ -1,5 +1,6 @@
 use super::*;
 use super::{input, paint};
+use fret_core::Point;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -45,6 +46,8 @@ fn replace_buffer_resets_state() {
         };
         st.dragging = true;
         st.drag_pointer = Some(fret_core::PointerId(1));
+        st.drag_last_pointer_pos = Some(fret_core::Point::new(Px(12.0), Px(34.0)));
+        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(56.0));
         st.row_text_cache.insert(
             0,
             (
@@ -84,10 +87,77 @@ fn replace_buffer_resets_state() {
     assert!(st.undo_group.is_none());
     assert!(!st.dragging);
     assert_eq!(st.drag_pointer, None);
+    assert_eq!(st.drag_last_pointer_pos, None);
+    assert_eq!(
+        st.drag_last_scroll_offset,
+        fret_core::Point::new(Px(0.0), Px(0.0))
+    );
     assert_eq!(st.row_text_cache.len(), 0);
     assert_eq!(st.row_text_cache_queue.len(), 0);
     assert_eq!(st.row_geom_cache.len(), 0);
     assert_eq!(st.row_geom_cache_queue.len(), 0);
+}
+
+#[test]
+fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
+    let delta = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(130.0));
+    assert_eq!(delta, Px(0.0));
+}
+
+#[test]
+fn drag_autoscroll_delta_y_uses_direction_and_clamp() {
+    let up = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(110.0));
+    assert!(up.0 < 0.0);
+
+    let down = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(190.0));
+    assert!(down.0 > 0.0);
+
+    let capped = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(10_000.0));
+    assert!((capped.0 - 3.0).abs() < 1e-6);
+}
+
+#[test]
+fn drag_autoscroll_delta_y_handles_zero_sizes() {
+    assert_eq!(
+        drag_autoscroll_delta_y(Px(0.0), Px(100.0), Px(0.0), Px(20.0)),
+        Px(0.0)
+    );
+    assert_eq!(
+        drag_autoscroll_delta_y(Px(20.0), Px(0.0), Px(0.0), Px(20.0)),
+        Px(0.0)
+    );
+}
+
+#[test]
+fn display_row_for_pointer_y_clamps_outside_viewport() {
+    let bounds = Rect::new(
+        Point::new(Px(10.0), Px(20.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(5.0), 5),
+        Some(0)
+    );
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(25.0), 5),
+        Some(0)
+    );
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(95.0), 5),
+        Some(4)
+    );
+}
+
+#[test]
+fn display_row_for_pointer_y_rejects_invalid_inputs() {
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(1.0), 0),
+        None
+    );
+    assert_eq!(display_row_for_pointer_y(bounds, Px(0.0), Px(1.0), 2), None);
 }
 
 #[test]
@@ -99,6 +169,25 @@ fn replace_buffer_preserves_text_boundary_mode() {
     let buffer = TextBuffer::new(doc, "world".to_string()).unwrap();
     handle.replace_buffer(buffer);
 
+    assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+}
+
+#[test]
+fn text_boundary_mode_override_can_be_cleared() {
+    let handle = CodeEditorHandle::new("hello");
+    assert_eq!(
+        handle.text_boundary_mode_override(),
+        Some(TextBoundaryMode::Identifier)
+    );
+
+    handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+    assert_eq!(
+        handle.text_boundary_mode_override(),
+        Some(TextBoundaryMode::UnicodeWord)
+    );
+
+    handle.set_text_boundary_mode_override(None);
+    assert_eq!(handle.text_boundary_mode_override(), None);
     assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
 }
 
@@ -419,6 +508,112 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
 }
 
 #[test]
+fn a11y_window_includes_preedit_and_reports_composition_range() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+        st.preedit = Some(PreeditState {
+            text: "ab".to_string(),
+            cursor: Some((0, "a".len())),
+        });
+    }
+
+    let st = handle.state.borrow();
+    let (value, selection, composition) = a11y_composed_text_window(&st);
+    assert_eq!(value.as_str(), "heabllo");
+    assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
+    assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
+}
+
+#[test]
+fn pointer_down_double_click_selects_word_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("foo_bar baz");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        let caret = "foo_".len();
+        let (expect_start, expect_end) =
+            select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+
+        input::apply_pointer_down_selection(&mut st, 0, caret, 2, false);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection,
+            Selection {
+                anchor: expect_start,
+                focus: expect_end,
+            }
+        );
+    }
+}
+
+#[test]
+fn pointer_down_triple_click_selects_logical_line_including_newline_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("abc\ndef\n");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        let row = 1;
+        let caret = "abc\n".len() + 1;
+        input::apply_pointer_down_selection(&mut st, row, caret, 3, false);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection.normalized(),
+            "abc\n".len()..("abc\ndef\n".len())
+        );
+    }
+}
+
+#[test]
+fn pointer_down_shift_click_extends_selection_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        input::apply_pointer_down_selection(&mut st, 0, 4, 1, true);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection,
+            Selection {
+                anchor: 1,
+                focus: 4,
+            }
+        );
+    }
+}
+
+#[test]
 fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
     let handle = CodeEditorHandle::new("abcd\nef");
     handle.set_soft_wrap_cols(Some(2));
@@ -607,6 +802,41 @@ fn delete_word_forward_removes_next_word() {
     assert_eq!(st.selection.caret(), 0);
 }
 
+#[test]
+fn move_word_right_respects_text_boundary_mode_for_apostrophe() {
+    let handle = CodeEditorHandle::new("can't");
+
+    handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        input::move_word(&mut st, 1, false);
+        assert_eq!(
+            st.selection.caret(),
+            "can't".len(),
+            "UnicodeWord should treat \"can't\" as a single word"
+        );
+    }
+
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        input::move_word(&mut st, 1, false);
+        assert_eq!(
+            st.selection.caret(),
+            3,
+            "Identifier should split \"can't\" around the apostrophe"
+        );
+    }
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn rust_syntax_spans_are_materialized_for_rows() {
@@ -673,4 +903,121 @@ fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
         !st.syntax_row_cache.contains_key(&0),
         "expected near-row cache entries to be invalidated"
     );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_newline_insertion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    assert!(
+        st.syntax_row_cache.contains_key(&150),
+        "expected far-row cache entries to be populated"
+    );
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Insert {
+            at: 0,
+            text: "\n".to_string(),
+        },
+        Selection {
+            anchor: 1,
+            focus: 1,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 151;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&0),
+        "expected near-row cache entries to be invalidated"
+    );
+
+    let hits_before = st.cache_stats.syntax_hits;
+    let spans_after = paint::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
+    assert!(
+        st.cache_stats.syntax_hits > hits_before,
+        "expected shifted far-row cache to hit"
+    );
+    assert!(Arc::ptr_eq(&spans_after, &spans_150));
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_newline_deletion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let newline = text.find('\n').expect("expected a newline");
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    assert!(
+        st.syntax_row_cache.contains_key(&150),
+        "expected far-row cache entries to be populated"
+    );
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Delete {
+            range: newline..newline + 1,
+        },
+        Selection {
+            anchor: newline,
+            focus: newline,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 149;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&0),
+        "expected near-row cache entries to be invalidated"
+    );
+
+    let hits_before = st.cache_stats.syntax_hits;
+    let spans_after = paint::cached_row_syntax_spans(&mut st, shifted_row, max_entries);
+    assert!(
+        st.cache_stats.syntax_hits > hits_before,
+        "expected shifted far-row cache to hit"
+    );
+    assert!(Arc::ptr_eq(&spans_after, &spans_150));
 }

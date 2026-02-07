@@ -36,89 +36,88 @@ enum Demo {
     DragDemo,
 }
 
+fn demo_from_id(id: &str) -> Option<Demo> {
+    match id {
+        "ui_gallery" => Some(Demo::UiGallery),
+        "components_gallery" => Some(Demo::ComponentsGallery),
+        "emoji_conformance_demo" => Some(Demo::EmojiConformanceDemo),
+        "cjk_conformance_demo" => Some(Demo::CjkConformanceDemo),
+        "chart_demo" => Some(Demo::ChartDemo),
+        "chart_multi_axis_demo" => Some(Demo::ChartMultiAxisDemo),
+        "horizontal_bars_demo" => Some(Demo::HorizontalBarsDemo),
+        "plot_demo" => Some(Demo::PlotDemo),
+        "plot_image_demo" => Some(Demo::PlotImageDemo),
+        "bars_demo" => Some(Demo::BarsDemo),
+        "grouped_bars_demo" => Some(Demo::GroupedBarsDemo),
+        "stacked_bars_demo" => Some(Demo::StackedBarsDemo),
+        "area_demo" => Some(Demo::AreaDemo),
+        "candlestick_demo" => Some(Demo::CandlestickDemo),
+        "error_bars_demo" => Some(Demo::ErrorBarsDemo),
+        "heatmap_demo" => Some(Demo::HeatmapDemo),
+        "histogram_demo" => Some(Demo::HistogramDemo),
+        "histogram2d_demo" => Some(Demo::Histogram2DDemo),
+        "shaded_demo" => Some(Demo::ShadedDemo),
+        "stairs_demo" => Some(Demo::StairsDemo),
+        "stems_demo" => Some(Demo::StemsDemo),
+        "linked_cursor_demo" => Some(Demo::LinkedCursorDemo),
+        "inf_lines_demo" => Some(Demo::InfLinesDemo),
+        "tags_demo" => Some(Demo::TagsDemo),
+        "drag_demo" => Some(Demo::DragDemo),
+        _ => None,
+    }
+}
+
 fn select_demo() -> Demo {
-    let Some(window) = web_sys::window() else {
+    let Some(location) = fret_router::web::current_location() else {
         return Demo::ComponentsGallery;
     };
 
-    let location = window.location();
+    let hash = location.hash;
+    let search = location.search;
 
-    let hash = location.hash().unwrap_or_default();
-    let search = location.search().unwrap_or_default();
-
-    if hash.contains("ui_gallery") || search.contains("demo=ui_gallery") {
-        return Demo::UiGallery;
-    }
-    if hash.contains("chart_demo") || search.contains("demo=chart_demo") {
-        return Demo::ChartDemo;
-    }
-    if hash.contains("chart_multi_axis_demo") || search.contains("demo=chart_multi_axis_demo") {
-        return Demo::ChartMultiAxisDemo;
-    }
-    if hash.contains("horizontal_bars_demo") || search.contains("demo=horizontal_bars_demo") {
-        return Demo::HorizontalBarsDemo;
-    }
-    if hash.contains("plot_demo") || search.contains("demo=plot_demo") {
-        return Demo::PlotDemo;
-    }
-    if hash.contains("plot_image_demo") || search.contains("demo=plot_image_demo") {
-        return Demo::PlotImageDemo;
-    }
-    if hash.contains("bars_demo") || search.contains("demo=bars_demo") {
-        return Demo::BarsDemo;
-    }
-    if hash.contains("grouped_bars_demo") || search.contains("demo=grouped_bars_demo") {
-        return Demo::GroupedBarsDemo;
-    }
-    if hash.contains("stacked_bars_demo") || search.contains("demo=stacked_bars_demo") {
-        return Demo::StackedBarsDemo;
-    }
-    if hash.contains("area_demo") || search.contains("demo=area_demo") {
-        return Demo::AreaDemo;
-    }
-    if hash.contains("candlestick_demo") || search.contains("demo=candlestick_demo") {
-        return Demo::CandlestickDemo;
-    }
-    if hash.contains("error_bars_demo") || search.contains("demo=error_bars_demo") {
-        return Demo::ErrorBarsDemo;
-    }
-    if hash.contains("heatmap_demo") || search.contains("demo=heatmap_demo") {
-        return Demo::HeatmapDemo;
-    }
-    if hash.contains("histogram_demo") || search.contains("demo=histogram_demo") {
-        return Demo::HistogramDemo;
-    }
-    if hash.contains("histogram2d_demo") || search.contains("demo=histogram2d_demo") {
-        return Demo::Histogram2DDemo;
-    }
-    if hash.contains("shaded_demo") || search.contains("demo=shaded_demo") {
-        return Demo::ShadedDemo;
-    }
-    if hash.contains("stairs_demo") || search.contains("demo=stairs_demo") {
-        return Demo::StairsDemo;
-    }
-    if hash.contains("stems_demo") || search.contains("demo=stems_demo") {
-        return Demo::StemsDemo;
-    }
-    if hash.contains("linked_cursor_demo") || search.contains("demo=linked_cursor_demo") {
-        return Demo::LinkedCursorDemo;
-    }
-    if hash.contains("inf_lines_demo") || search.contains("demo=inf_lines_demo") {
-        return Demo::InfLinesDemo;
-    }
-    if hash.contains("tags_demo") || search.contains("demo=tags_demo") {
-        return Demo::TagsDemo;
-    }
-    if hash.contains("drag_demo") || search.contains("demo=drag_demo") {
-        return Demo::DragDemo;
+    if let Some(demo) = fret_router::first_query_value_from_search_or_hash(&search, &hash, "demo")
+        .and_then(|id| demo_from_id(id.as_str()))
+    {
+        return demo;
     }
 
-    if hash.contains("emoji_conformance_demo") || search.contains("demo=emoji_conformance_demo") {
-        return Demo::EmojiConformanceDemo;
+    if let Some(demo) = fret_router::hash_token(&hash).and_then(|id| demo_from_id(id.as_str())) {
+        return demo;
     }
 
-    if hash.contains("cjk_conformance_demo") || search.contains("demo=cjk_conformance_demo") {
-        return Demo::CjkConformanceDemo;
+    // Keep compatibility with older hash forms that matched by substring.
+    for id in [
+        "ui_gallery",
+        "chart_demo",
+        "chart_multi_axis_demo",
+        "horizontal_bars_demo",
+        "plot_demo",
+        "plot_image_demo",
+        "bars_demo",
+        "grouped_bars_demo",
+        "stacked_bars_demo",
+        "area_demo",
+        "candlestick_demo",
+        "error_bars_demo",
+        "heatmap_demo",
+        "histogram_demo",
+        "histogram2d_demo",
+        "shaded_demo",
+        "stairs_demo",
+        "stems_demo",
+        "linked_cursor_demo",
+        "inf_lines_demo",
+        "tags_demo",
+        "drag_demo",
+        "emoji_conformance_demo",
+        "cjk_conformance_demo",
+        "components_gallery",
+    ] {
+        if fret_router::hash_contains_token(&hash, id) {
+            if let Some(demo) = demo_from_id(id) {
+                return demo;
+            }
+        }
     }
 
     Demo::ComponentsGallery

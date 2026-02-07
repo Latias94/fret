@@ -11,6 +11,9 @@ documentation.workspace = true
 
 [features]
 default = []
+state-selector = []
+state-query = []
+state = ["state-selector", "state-query"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

@@ -14,7 +14,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
     TextOverflow, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned, ids};
+use fret_icons::{IconId, ids};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -23,7 +23,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -34,6 +34,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::floating_label;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
@@ -1189,21 +1190,6 @@ fn select_menu_item_icon<H: UiHost>(
     props.layout.size.width = Length::Px(size);
     props.layout.size.height = Length::Px(size);
     cx.svg_icon_props(props)
-}
-
-fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
-    let resolved = cx
-        .app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
-        });
-
-    match resolved {
-        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
 }
 
 #[derive(Debug, Default)]

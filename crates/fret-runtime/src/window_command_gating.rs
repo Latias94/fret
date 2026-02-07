@@ -377,6 +377,26 @@ mod tests {
     }
 
     #[test]
+    fn action_availability_disables_widget_scope_commands_only() {
+        let command = CommandId::new("test.widget");
+
+        let mut availability: HashMap<CommandId, bool> = HashMap::new();
+        availability.insert(command.clone(), false);
+
+        let snapshot = WindowCommandGatingSnapshot::new(InputContext::default(), HashMap::new())
+            .with_action_availability(Some(Arc::new(availability)));
+
+        assert!(
+            !snapshot.is_enabled_for_meta(&command, CommandScope::Widget, None),
+            "expected widget-scope command to be disabled by action availability"
+        );
+        assert!(
+            snapshot.is_enabled_for_meta(&command, CommandScope::Window, None),
+            "expected non-widget scopes to ignore action availability"
+        );
+    }
+
+    #[test]
     fn set_snapshot_does_not_override_stack_top() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();

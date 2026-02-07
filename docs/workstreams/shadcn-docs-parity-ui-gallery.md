@@ -35,6 +35,8 @@ Status legend:
 | Button | Aligned (with gaps) | Added RTL; “Link (render)” is a TODO because `Button::render/asChild` is not implemented in `fret-ui-shadcn` yet. | `apps/fret-ui-gallery/src/ui.rs` |
 | Menubar | Aligned | Added examples: Checkbox, Radio, Submenu, With Icons, RTL. | `apps/fret-ui-gallery/src/ui.rs` |
 | Navigation Menu | Aligned (with gaps) | Demo + RTL match docs. Doc-site `render` link composition is not modeled; use `NavigationMenuLink` + commands instead. | `apps/fret-ui-gallery/src/ui.rs` |
+| Slider | Aligned (with known gaps) | Core Radix contracts are covered (`vertical`, `dir`, `inverted`, `onValueCommit`, `minStepsBetweenThumbs`); continue parity checks with scripted gallery sweeps to catch visual drift in app-level composition. | `ecosystem/fret-ui-shadcn/src/slider.rs` |
+| Avatar | Aligned (with known gaps) | Added retry for transient image registration failures during early runner initialization (`renderer/wgpu not initialized`) to prevent a blank first avatar in UI Gallery. | `apps/fret-ui-gallery/src/driver.rs` |
 
 ## Next
 
@@ -43,3 +45,4 @@ Priority order (highest first):
 1. **Sidebar**: align examples and verify hover/active chrome across all items (repro + hit-test diagnostics if needed).
 2. **Native Select**: upgrade from “smoke stubs” to doc-shaped previews.
 3. **Pagination**: mirror docs ordering (and add RTL if applicable).
+4. **Gallery sweep gate**: keep a lightweight scripted sweep for Slider + Avatar (`tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`) and run it when semantics/layout wrappers change.

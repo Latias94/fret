@@ -95,6 +95,14 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         });
     }
 
+    pub fn push_id<K: Hash>(
+        &mut self,
+        key: K,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>),
+    ) {
+        self.id(key, f);
+    }
+
     pub fn for_each_keyed<I, K, T>(
         &mut self,
         items: I,
@@ -155,7 +163,7 @@ impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUi<'cx, 'a, H> {
 mod tests {
     use std::{
         any::{Any, TypeId},
-        cell::Cell,
+        cell::{Cell, RefCell},
         collections::{HashMap, HashSet},
         rc::Rc,
         sync::Arc,
@@ -176,7 +184,10 @@ mod tests {
     use fret_ui::{ElementContext, UiTree};
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
-    use fret_ui_kit::imui::{MenuItemOptions, PopupMenuOptions};
+    use fret_ui_kit::imui::{
+        GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions, PopupMenuOptions,
+        ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, ToggleOptions, VerticalOptions,
+    };
 
     #[derive(Default)]
     struct FakeTextService;
@@ -630,6 +641,15 @@ mod tests {
         );
     }
 
+    fn text_input_event(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        text: &str,
+    ) {
+        ui.dispatch_event(app, services, &Event::TextInput(text.to_string()));
+    }
+
     fn pointer_down_at(
         ui: &mut UiTree<TestHost>,
         app: &mut TestHost,
@@ -679,6 +699,30 @@ mod tests {
                 pointer_type: PointerType::Mouse,
             }),
         );
+    }
+
+    fn dispatch_all_timers(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+    ) -> usize {
+        let mut pending: Vec<TimerToken> = Vec::new();
+        for effect in &app.effects {
+            if let Effect::SetTimer { token, repeat, .. } = effect
+                && repeat.is_none()
+            {
+                pending.push(*token);
+            }
+        }
+        app.effects.retain(
+            |effect| !matches!(effect, Effect::SetTimer { repeat, .. } if repeat.is_none()),
+        );
+
+        let dispatched = pending.len();
+        for token in pending {
+            ui.dispatch_event(app, services, &Event::Timer { token });
+        }
+        dispatched
     }
 
     fn first_child_point(ui: &UiTree<TestHost>, root: fret_core::NodeId) -> Point {
@@ -2047,6 +2091,116 @@ mod tests {
         assert!(stopped.get());
     }
 
+    #[test]
+    fn long_press_sets_long_pressed_true_once_and_reports_holding() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let long_pressed = Rc::new(Cell::new(false));
+        let holding = Rc::new(Cell::new(false));
+
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(!holding.get());
+
+        let at = first_child_point(&ui, root);
+        pointer_down_at(&mut ui, &mut app, &mut services, at);
+        let dispatched = dispatch_all_timers(&mut ui, &mut app, &mut services);
+        assert!(dispatched > 0);
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+
+        assert!(long_pressed.get());
+        assert!(holding.get());
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(holding.get());
+
+        pointer_up_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(!holding.get());
+    }
+
     fn floating_window_nodes(
         ui: &UiTree<TestHost>,
         root: fret_core::NodeId,
@@ -2085,6 +2239,22 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some(test_id))
             .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
             .id
+    }
+
+    fn has_test_id(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        bounds: Rect,
+        test_id: &str,
+    ) -> bool {
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .any(|n| n.test_id.as_deref() == Some(test_id))
     }
 
     #[test]
@@ -2626,12 +2796,19 @@ mod tests {
         );
 
         let _ = floating_window_nodes(&ui, root);
-        let title_bar = point_for_test_id(
+        let title_bar_node = node_for_test_id(
             &mut ui,
             &mut app,
             &mut services,
             bounds,
             "imui.float_window.title_bar:demo",
+        );
+        let title_bar_bounds = ui
+            .debug_node_bounds(title_bar_node)
+            .expect("title bar bounds");
+        let title_bar = Point::new(
+            Px(title_bar_bounds.origin.x.0 + title_bar_bounds.size.width.0 * 0.5),
+            Px(title_bar_bounds.origin.y.0 + title_bar_bounds.size.height.0 * 0.5),
         );
         click_at(&mut ui, &mut app, &mut services, title_bar);
         assert!(ui.focus().is_some(), "expected title bar to take focus");
@@ -3080,6 +3257,201 @@ mod tests {
     }
 
     #[test]
+    fn floating_window_title_bar_double_click_toggles_collapsed() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(240.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let collapsed = Rc::new(Cell::new(false));
+        let resizing = Rc::new(Cell::new(false));
+        let area_id = Rc::new(Cell::new(0u64));
+
+        let collapsed_out = collapsed.clone();
+        let resizing_out = resizing.clone();
+        let area_id_out = area_id.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-collapse",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(60.0), Px(36.0)),
+                        Size::new(Px(180.0), Px(120.0)),
+                        |ui| ui.text("Hello"),
+                    );
+                    collapsed_out.set(resp.collapsed());
+                    resizing_out.set(resp.resizing());
+                    area_id_out.set(resp.area.id.0);
+                })
+            },
+        );
+        let _ = ui.children(root);
+        assert!(!collapsed.get());
+        assert!(!resizing.get());
+        let area_id_before = area_id.get();
+        assert_ne!(area_id_before, 0, "expected non-zero floating area id");
+
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let before = ui.debug_node_bounds(window_node).expect("window bounds");
+
+        let title_bar_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
+        );
+        let title_bar_bounds = ui
+            .debug_node_bounds(title_bar_node)
+            .expect("title bar bounds");
+        let title_bar = Point::new(
+            Px(title_bar_bounds.origin.x.0 + title_bar_bounds.size.width.0 * 0.5),
+            Px(title_bar_bounds.origin.y.0 + title_bar_bounds.size.height.0 * 0.5),
+        );
+        double_click_at(&mut ui, &mut app, &mut services, title_bar);
+
+        app.advance_frame();
+        let collapsed_out = collapsed.clone();
+        let resizing_out = resizing.clone();
+        let area_id_out = area_id.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-collapse",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(60.0), Px(36.0)),
+                        Size::new(Px(180.0), Px(120.0)),
+                        |ui| ui.text("Hello"),
+                    );
+                    collapsed_out.set(resp.collapsed());
+                    resizing_out.set(resp.resizing());
+                    area_id_out.set(resp.area.id.0);
+                })
+            },
+        );
+        assert!(collapsed.get());
+        assert!(!resizing.get());
+        let area_id_collapsed = area_id.get();
+        assert_eq!(
+            area_id_collapsed, area_id_before,
+            "expected floating area id stable across collapse"
+        );
+
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let collapsed_bounds = ui.debug_node_bounds(window_node).expect("window bounds");
+        assert!(
+            collapsed_bounds.size.height.0 < before.size.height.0,
+            "expected collapsed window to be shorter"
+        );
+        assert!(
+            !has_test_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                bounds,
+                "imui.float_window.resize.corner:demo",
+            ),
+            "expected resize handles hidden while collapsed"
+        );
+
+        let title_bar_after_collapse_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
+        );
+        let title_bar_after_collapse_bounds = ui
+            .debug_node_bounds(title_bar_after_collapse_node)
+            .expect("title bar bounds");
+        let title_bar_after_collapse = Point::new(
+            Px(title_bar_after_collapse_bounds.origin.x.0
+                + title_bar_after_collapse_bounds.size.width.0 * 0.5),
+            Px(title_bar_after_collapse_bounds.origin.y.0
+                + title_bar_after_collapse_bounds.size.height.0 * 0.5),
+        );
+        double_click_at(&mut ui, &mut app, &mut services, title_bar_after_collapse);
+
+        app.advance_frame();
+        let collapsed_out = collapsed.clone();
+        let resizing_out = resizing.clone();
+        let area_id_out = area_id.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-collapse",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(60.0), Px(36.0)),
+                        Size::new(Px(180.0), Px(120.0)),
+                        |ui| ui.text("Hello"),
+                    );
+                    collapsed_out.set(resp.collapsed());
+                    resizing_out.set(resp.resizing());
+                    area_id_out.set(resp.area.id.0);
+                })
+            },
+        );
+        assert!(!collapsed.get());
+        assert!(!resizing.get());
+        assert_eq!(
+            area_id.get(),
+            area_id_before,
+            "expected floating area id stable across expand"
+        );
+        assert!(
+            has_test_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                bounds,
+                "imui.float_window.resize.corner:demo",
+            ),
+            "expected resize handles restored after expanding"
+        );
+    }
+
+    #[test]
     fn checkbox_changed_is_delivered_once_and_updates_model() {
         let window = AppWindowId::default();
         let bounds = Rect::new(
@@ -3180,6 +3552,1224 @@ mod tests {
         assert!(value.get());
     }
 
+    #[test]
+    fn input_text_model_reports_changed_once_after_text_input() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(String::new());
+
+        let changed = Rc::new(Cell::new(false));
+        let text = Rc::new(RefCell::new(String::new()));
+
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-input-text",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.input_text_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(text.borrow().is_empty());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+        text_input_event(&mut ui, &mut app, &mut services, "hello");
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-input-text",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.input_text_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert_eq!(text.borrow().as_str(), "hello");
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-input-text",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.input_text_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert_eq!(text.borrow().as_str(), "hello");
+    }
+
+    #[test]
+    fn textarea_model_reports_changed_once_after_text_input() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(String::new());
+
+        let changed = Rc::new(Cell::new(false));
+        let text = Rc::new(RefCell::new(String::new()));
+
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-textarea",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.textarea_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(text.borrow().is_empty());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+        text_input_event(&mut ui, &mut app, &mut services, "line-1\nline-2");
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-textarea",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.textarea_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert_eq!(text.borrow().as_str(), "line-1\nline-2");
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let text_out = text.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-textarea",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(ui.textarea_model(&model).changed());
+                    let current = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_cloned(&model)
+                        .unwrap_or_default();
+                    text_out.replace(current);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert_eq!(text.borrow().as_str(), "line-1\nline-2");
+    }
+
+    #[test]
+    fn push_id_keeps_changed_signal_stable_after_reorder() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model_a = app.models_mut().insert(String::new());
+        let model_b = app.models_mut().insert(String::new());
+
+        let order = Rc::new(RefCell::new(vec![1_u8, 2_u8]));
+        let changed = Rc::new(RefCell::new(HashMap::<u8, bool>::new()));
+
+        let order_out = order.clone();
+        let changed_out = changed.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-push-id-reorder",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.borrow_mut().clear();
+                    let order_now = order_out.borrow().clone();
+                    let changed_map = changed_out.clone();
+                    ui.column(|ui| {
+                        for key in order_now {
+                            let model = if key == 1 {
+                                model_a.clone()
+                            } else {
+                                model_b.clone()
+                            };
+                            let test_id: Arc<str> = Arc::from(format!("imui-input-{key}"));
+                            let changed_map = changed_map.clone();
+                            ui.push_id(key, |ui| {
+                                let resp = ui.input_text_model_ex(
+                                    &model,
+                                    InputTextOptions {
+                                        test_id: Some(test_id),
+                                        ..Default::default()
+                                    },
+                                );
+                                changed_map.borrow_mut().insert(key, resp.changed());
+                            });
+                        }
+                    });
+                })
+            },
+        );
+        assert_eq!(changed.borrow().get(&1).copied().unwrap_or(false), false);
+        assert_eq!(changed.borrow().get(&2).copied().unwrap_or(false), false);
+
+        let at = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-input-1");
+        click_at(&mut ui, &mut app, &mut services, at);
+        text_input_event(&mut ui, &mut app, &mut services, "hello");
+
+        app.advance_frame();
+        let order_out = order.clone();
+        let changed_out = changed.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-push-id-reorder",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.borrow_mut().clear();
+                    let order_now = order_out.borrow().clone();
+                    let changed_map = changed_out.clone();
+                    ui.column(|ui| {
+                        for key in order_now {
+                            let model = if key == 1 {
+                                model_a.clone()
+                            } else {
+                                model_b.clone()
+                            };
+                            let test_id: Arc<str> = Arc::from(format!("imui-input-{key}"));
+                            let changed_map = changed_map.clone();
+                            ui.push_id(key, |ui| {
+                                let resp = ui.input_text_model_ex(
+                                    &model,
+                                    InputTextOptions {
+                                        test_id: Some(test_id),
+                                        ..Default::default()
+                                    },
+                                );
+                                changed_map.borrow_mut().insert(key, resp.changed());
+                            });
+                        }
+                    });
+                })
+            },
+        );
+        assert_eq!(changed.borrow().get(&1).copied().unwrap_or(false), true);
+        assert_eq!(changed.borrow().get(&2).copied().unwrap_or(false), false);
+
+        order.borrow_mut().swap(0, 1);
+        app.advance_frame();
+        let order_out = order.clone();
+        let changed_out = changed.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-push-id-reorder",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.borrow_mut().clear();
+                    let order_now = order_out.borrow().clone();
+                    let changed_map = changed_out.clone();
+                    ui.column(|ui| {
+                        for key in order_now {
+                            let model = if key == 1 {
+                                model_a.clone()
+                            } else {
+                                model_b.clone()
+                            };
+                            let test_id: Arc<str> = Arc::from(format!("imui-input-{key}"));
+                            let changed_map = changed_map.clone();
+                            ui.push_id(key, |ui| {
+                                let resp = ui.input_text_model_ex(
+                                    &model,
+                                    InputTextOptions {
+                                        test_id: Some(test_id),
+                                        ..Default::default()
+                                    },
+                                );
+                                changed_map.borrow_mut().insert(key, resp.changed());
+                            });
+                        }
+                    });
+                })
+            },
+        );
+        assert_eq!(changed.borrow().get(&1).copied().unwrap_or(false), false);
+        assert_eq!(changed.borrow().get(&2).copied().unwrap_or(false), false);
+    }
+
+    #[test]
+    fn toggle_model_reports_changed_once_after_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(false);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(false));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(!value.get());
+
+        let at = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-toggle");
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get());
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get());
+    }
+
+    #[test]
+    fn switch_model_reports_changed_once_after_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(false);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(false));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(!value.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get());
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get());
+    }
+
+    #[test]
+    fn slider_f32_model_reports_changed_once_after_pointer_input() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(0.0_f32);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(0.0_f32));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!((value.get() - 0.0).abs() <= f32::EPSILON);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let at = Point::new(
+            Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 * 0.9),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get() >= 70.0);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get() >= 70.0);
+    }
+
+    #[test]
+    fn select_model_reports_changed_once_after_option_pick() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+        let changed = Rc::new(Cell::new(false));
+        let selected = Rc::new(RefCell::new(None::<Arc<str>>));
+
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(selected.borrow().is_none());
+
+        let trigger = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-select");
+        click_at(&mut ui, &mut app, &mut services, trigger);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(selected.borrow().is_none());
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        ));
+
+        let first_option = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        );
+        click_at(&mut ui, &mut app, &mut services, first_option);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        ));
+    }
+
+    #[test]
+    fn select_popup_escape_closes_and_restores_trigger_focus() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let trigger = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape",
+        );
+        click_at(&mut ui, &mut app, &mut services, trigger);
+        let focus_before_open = ui.focus();
+        assert!(focus_before_open.is_some());
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape.option.0",
+        ));
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Escape,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape.option.0",
+        ));
+        assert_eq!(ui.focus(), focus_before_open);
+    }
+
+    #[test]
+    fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = fret_ui::theme::ThemeConfig {
+                name: "Test".to_string(),
+                ..fret_ui::theme::ThemeConfig::default()
+            };
+            cfg.colors.insert(
+                "scrollbar.track.background".to_string(),
+                "#1f1f1f".to_string(),
+            );
+            cfg.colors.insert(
+                "scrollbar.thumb.background".to_string(),
+                "#5f5f5f".to_string(),
+            );
+            cfg.colors.insert(
+                "scrollbar.thumb.hover.background".to_string(),
+                "#7f7f7f".to_string(),
+            );
+            cfg.metrics
+                .insert("metric.scrollbar.width".to_string(), 8.0);
+            theme.apply_config_patch(&cfg);
+        });
+        let mut services = FakeTextService::default();
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-container-helpers-layout",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.vertical_ex(
+                        VerticalOptions {
+                            gap: Px(8.0).into(),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.horizontal_ex(
+                                HorizontalOptions {
+                                    gap: Px(10.0).into(),
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    ui.menu_item_ex(
+                                        "Left",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-container-left")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                    ui.menu_item_ex(
+                                        "Right",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-container-right")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                },
+                            );
+
+                            ui.grid_ex(
+                                GridOptions {
+                                    columns: 2,
+                                    column_gap: Px(6.0).into(),
+                                    row_gap: Px(6.0).into(),
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    ui.menu_item_ex(
+                                        "A",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-grid-a")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                    ui.menu_item_ex(
+                                        "B",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-grid-b")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                    ui.menu_item_ex(
+                                        "C",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-grid-c")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                },
+                            );
+
+                            ui.scroll_ex(
+                                ScrollOptions {
+                                    axis: fret_ui::element::ScrollAxis::X,
+                                    show_scrollbar_x: true,
+                                    show_scrollbar_y: false,
+                                    ..Default::default()
+                                },
+                                |ui| {
+                                    ui.menu_item_ex(
+                                        "Scroll Child",
+                                        MenuItemOptions {
+                                            test_id: Some(Arc::from("imui-scroll-child")),
+                                            ..Default::default()
+                                        },
+                                    );
+                                },
+                            );
+                        },
+                    );
+                })
+            },
+        );
+
+        let left = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-container-left",
+        );
+        let right = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-container-right",
+        );
+        assert!(right.x.0 > left.x.0);
+
+        let grid_a = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-grid-a");
+        let grid_b = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-grid-b");
+        let grid_c = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-grid-c");
+        assert!(grid_b.x.0 > grid_a.x.0);
+        assert!(grid_c.y.0 > grid_a.y.0);
+
+        let scroll_child = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-scroll-child",
+        );
+        assert!(scroll_child.y.0 > grid_c.y.0);
+    }
     // Note: `for_each_keyed` is exercised indirectly by downstream ecosystem crates. The core
     // smoke tests above focus on interaction correctness (`clicked` / `changed`).
 }

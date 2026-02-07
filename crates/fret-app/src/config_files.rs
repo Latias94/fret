@@ -218,4 +218,40 @@ mod tests {
         );
         assert_eq!(out.fonts, crate::FontsSettingsV1::default());
     }
+
+    #[test]
+    fn layered_settings_merge_applies_locale_fields() {
+        let mut merged = serde_json::to_value(SettingsFileV1::default()).unwrap();
+
+        let overlay: Value = serde_json::json!({
+            "locale": {
+                "primary": "zh-CN",
+                "fallbacks": ["en-US"],
+                "pseudo": true
+            }
+        });
+        merge_json(&mut merged, overlay);
+
+        let out: SettingsFileV1 = serde_json::from_value(merged).unwrap();
+        assert_eq!(out.locale.primary, "zh-CN");
+        assert_eq!(out.locale.fallbacks, vec!["en-US"]);
+        assert!(out.locale.pseudo);
+    }
+
+    #[test]
+    fn layered_settings_partial_locale_overlay_keeps_defaults() {
+        let mut merged = serde_json::to_value(SettingsFileV1::default()).unwrap();
+
+        let overlay: Value = serde_json::json!({
+            "locale": {
+                "pseudo": true
+            }
+        });
+        merge_json(&mut merged, overlay);
+
+        let out: SettingsFileV1 = serde_json::from_value(merged).unwrap();
+        assert_eq!(out.locale.primary, "en-US");
+        assert!(out.locale.fallbacks.is_empty());
+        assert!(out.locale.pseudo);
+    }
 }

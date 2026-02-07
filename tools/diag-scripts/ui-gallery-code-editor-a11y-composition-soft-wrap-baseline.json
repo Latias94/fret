@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "code_editor_mvp" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-mvp" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-mvp" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-code-editor-mvp" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-a11y-composition-gate-viewport"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-code-editor-mvp-soft-wrap" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-code-editor-mvp-soft-wrap" } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor a11y composition gate"
+      },
+      "text": "",
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-soft-wrap-before" },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-inject-preedit"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text_field",
+          "name": "Code editor a11y composition gate"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-soft-wrap-preedit" },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-clear-preedit"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text_field",
+          "name": "Code editor a11y composition gate"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-soft-wrap-after" }
+  ]
+}
+
