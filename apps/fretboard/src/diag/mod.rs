@@ -5304,12 +5304,26 @@ See: `docs/tracy.md`.\n";
                             p90_solve,
                             p95_solve,
                         );
-                        let thr_total =
-                            apply_perf_baseline_headroom(seed_total, perf_baseline_headroom_pct);
-	                        let thr_layout =
-	                            apply_perf_baseline_headroom(seed_layout, perf_baseline_headroom_pct);
-		                        let thr_solve =
-		                            apply_perf_baseline_headroom(seed_solve, perf_baseline_headroom_pct);
+                        // Quantize the big-frame thresholds so 1–2us jitter doesn't cause flaky
+                        // regressions (while keeping the headroom pct semantics intact).
+                        let thr_total = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_total,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
+                        let thr_layout = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_layout,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
+                        let thr_solve = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_solve,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
 		                        let thr_pointer_move_dispatch =
 		                            apply_perf_baseline_headroom_with_slack_and_quantum(
 		                                max_pointer_move_dispatch,
@@ -11307,6 +11321,18 @@ mod tests {
         assert_eq!(apply_perf_baseline_headroom(100, 20), 120);
         assert_eq!(apply_perf_baseline_headroom(101, 20), 122);
         assert_eq!(apply_perf_baseline_headroom(0, 20), 0);
+    }
+
+    #[test]
+    fn perf_baseline_big_thresholds_quantize_to_4us() {
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(9828, 20, 0, 4),
+            11796
+        );
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(15437, 20, 0, 4),
+            18528
+        );
     }
 
     #[test]

@@ -146,9 +146,11 @@ run_baseline() {
     --perf-baseline-headroom-pct "$headroom_pct"
   )
 
-  for preset in "${preset_paths[@]}"; do
-    cmd+=(--perf-baseline-seed-preset "$preset")
-  done
+  if ((${#preset_paths[@]})); then
+    for preset in "${preset_paths[@]}"; do
+      cmd+=(--perf-baseline-seed-preset "$preset")
+    done
+  fi
 
   cmd+=(
     --env FRET_UI_GALLERY_VIEW_CACHE=1
