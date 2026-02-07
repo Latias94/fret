@@ -10,6 +10,8 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/retained-bridge-exit-v1.md`
+- `docs/workstreams/retained-bridge-exit-v1-todo.md`
 - `docs/workstreams/localization-i18n-v1.md`
 - `docs/workstreams/localization-i18n-v1-todo.md`
 - `docs/workstreams/state-management-v1.md`
