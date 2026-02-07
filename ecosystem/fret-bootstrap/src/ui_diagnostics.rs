@@ -59,8 +59,23 @@ pub struct UiDiagnosticsConfig {
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let enabled =
-            std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
+        let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .or_else(|| {
+                std::env::var("FRET_DEVTOOLS_WS_PORT")
+                    .ok()
+                    .filter(|v| !v.is_empty())
+                    .and_then(|v| v.parse::<u16>().ok())
+                    .map(|port| format!("ws://127.0.0.1:{port}/"))
+            });
+        let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
+            .ok()
+            .filter(|v| !v.is_empty());
+
+        let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || out_dir_env.is_some()
+            || (devtools_ws_url.is_some() && devtools_token.is_some());
         let out_dir = out_dir_env
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
@@ -153,19 +168,6 @@ impl Default for UiDiagnosticsConfig {
             .unwrap_or(200)
             .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
-        let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
-            .ok()
-            .filter(|v| !v.is_empty())
-            .or_else(|| {
-                std::env::var("FRET_DEVTOOLS_WS_PORT")
-                    .ok()
-                    .filter(|v| !v.is_empty())
-                    .and_then(|v| v.parse::<u16>().ok())
-                    .map(|port| format!("ws://127.0.0.1:{port}/"))
-            });
-        let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
-            .ok()
-            .filter(|v| !v.is_empty());
 
         Self {
             enabled,
