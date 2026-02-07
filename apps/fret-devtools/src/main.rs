@@ -1,4 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_app::{App, CommandId, Effect};
@@ -17,6 +18,8 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::{ElementContext, Invalidation, Theme};
 use fret_ui_shadcn as shadcn;
 
+mod script_studio;
+
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
 const CMD_COPY_TOKEN: &str = "fret.devtools.copy_token";
 const CMD_INSPECT_ENABLE: &str = "fret.devtools.inspect_enable";
@@ -26,6 +29,10 @@ const CMD_BUNDLE_DUMP: &str = "fret.devtools.bundle_dump";
 const CMD_SCREENSHOT_REQUEST: &str = "fret.devtools.screenshot_request";
 const CMD_SCRIPT_PUSH: &str = "fret.devtools.script_push";
 const CMD_SCRIPT_RUN: &str = "fret.devtools.script_run";
+const CMD_SCRIPTS_REFRESH: &str = "fret.devtools.scripts.refresh";
+const CMD_SCRIPT_FORK: &str = "fret.devtools.script.fork";
+const CMD_SCRIPT_SAVE: &str = "fret.devtools.script.save";
+const CMD_SCRIPT_APPLY_PICK: &str = "fret.devtools.script.apply_pick";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -43,6 +50,12 @@ struct State {
     selected_session_id: Model<Option<Arc<str>>>,
     selected_session_open: Model<bool>,
     inspect_consume_clicks: Model<bool>,
+
+    script_paths: script_studio::ScriptPaths,
+    script_library: Model<Vec<script_studio::ScriptItem>>,
+    loaded_script_origin: Model<Option<script_studio::ScriptOrigin>>,
+    loaded_script_path: Model<Option<Arc<str>>>,
+    script_apply_pointer: Model<String>,
     script_text: Model<String>,
 
     last_pick_json: Model<String>,
@@ -107,6 +120,17 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let selected_session_id = app.models_mut().insert(None::<Arc<str>>);
     let selected_session_open = app.models_mut().insert(false);
     let inspect_consume_clicks = app.models_mut().insert(false);
+
+    let repo_root = script_studio::repo_root_from_manifest_dir()
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+    let script_paths = script_studio::ScriptPaths::from_repo_root(repo_root);
+    let script_library = app
+        .models_mut()
+        .insert(Vec::<script_studio::ScriptItem>::new());
+    let loaded_script_origin = app.models_mut().insert(None::<script_studio::ScriptOrigin>);
+    let loaded_script_path = app.models_mut().insert(None::<Arc<str>>);
+    let script_apply_pointer = app.models_mut().insert("/steps/0/target".to_string());
+
     let script_text = app.models_mut().insert(String::new());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
@@ -126,7 +150,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let client = DevtoolsWsClient::connect_native(client_cfg)
         .expect("devtools ws client connect must succeed");
 
-    State {
+    let mut st = State {
         cfg,
         panel_fractions,
         details_tab,
@@ -134,6 +158,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         selected_session_id,
         selected_session_open,
         inspect_consume_clicks,
+        script_paths,
+        script_library,
+        loaded_script_origin,
+        loaded_script_path,
+        script_apply_pointer,
         script_text,
         last_pick_json,
         last_script_result_json,
@@ -142,7 +171,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         log_lines,
         client,
         applied_session_id: None,
-    }
+    };
+
+    refresh_script_library(app, &mut st);
+    st
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
@@ -174,6 +206,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.selected_session_id, Invalidation::Paint);
     cx.observe_model(&st.selected_session_open, Invalidation::Paint);
     cx.observe_model(&st.inspect_consume_clicks, Invalidation::Paint);
+    cx.observe_model(&st.script_library, Invalidation::Paint);
+    cx.observe_model(&st.loaded_script_origin, Invalidation::Paint);
+    cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
+    cx.observe_model(&st.script_apply_pointer, Invalidation::Paint);
     cx.observe_model(&st.script_text, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
@@ -389,12 +425,40 @@ fn left_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> A
     .into_element(cx)
 }
 
-fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> AnyElement {
+fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> AnyElement {
     let script_text = cx
         .app
         .models()
         .read(&st.script_text, |v| v.clone())
         .unwrap_or_default();
+    let pick_text = cx
+        .app
+        .models()
+        .read(&st.last_pick_json, |v| v.clone())
+        .unwrap_or_default();
+    let apply_pointer = cx
+        .app
+        .models()
+        .read(&st.script_apply_pointer, |v| v.clone())
+        .unwrap_or_default();
+    let scripts = cx
+        .app
+        .models()
+        .read(&st.script_library, |v| v.clone())
+        .unwrap_or_default();
+    let loaded_origin = cx
+        .app
+        .models()
+        .read(&st.loaded_script_origin, |v| *v)
+        .ok()
+        .flatten();
+    let loaded_path = cx
+        .app
+        .models()
+        .read(&st.loaded_script_path, |v| v.clone())
+        .ok()
+        .flatten();
+
     let consume_clicks = cx
         .app
         .models()
@@ -411,8 +475,19 @@ fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) ->
         .read(&st.selected_session_id, |v| v.is_some())
         .unwrap_or(false);
 
+    let can_fork = loaded_origin == Some(script_studio::ScriptOrigin::WorkspaceTools);
+    let can_save = loaded_origin == Some(script_studio::ScriptOrigin::UserLocal);
+    let can_apply_pick = !pick_text.trim().is_empty() && !apply_pointer.trim().is_empty();
+
+    let pointer_input = shadcn::Input::new(st.script_apply_pointer.clone())
+        .a11y_label("JSON pointer")
+        .placeholder("/steps/0/target")
+        .into_element(cx);
+
     let textarea = shadcn::Textarea::new(st.script_text.clone())
         .a11y_label("Script JSON")
+        .min_height(Px(360.0))
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
         .into_element(cx);
 
     let buttons = fret_ui_kit::declarative::stack::hstack(
@@ -434,6 +509,23 @@ fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) ->
                     .disabled(!has_session)
                     .on_click(CMD_SCRIPT_RUN)
                     .into_element(cx),
+                shadcn::Button::new("Refresh Scripts")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_SCRIPTS_REFRESH)
+                    .into_element(cx),
+                shadcn::Button::new("Fork")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!can_fork)
+                    .on_click(CMD_SCRIPT_FORK)
+                    .into_element(cx),
+                shadcn::Button::new("Save")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!can_save)
+                    .on_click(CMD_SCRIPT_SAVE)
+                    .into_element(cx),
                 consume_toggle,
                 cx.text(format!(
                     "consume_clicks={}",
@@ -443,17 +535,150 @@ fn center_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) ->
         },
     );
 
+    let apply_row = fret_ui_kit::declarative::stack::hstack(
+        cx,
+        fret_ui_kit::declarative::stack::HStackProps::default()
+            .gap_x(fret_ui_kit::Space::N2)
+            .items_center(),
+        |cx| {
+            [
+                cx.text("Pick-to-fill:"),
+                pointer_input,
+                shadcn::Button::new("Apply Pick")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!can_apply_pick)
+                    .on_click(CMD_SCRIPT_APPLY_PICK)
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let loaded_line = match (loaded_origin, loaded_path.as_deref()) {
+        (Some(origin), Some(path)) => format!("Loaded: [{}] {path}", origin.label()),
+        _ => "Loaded: <none>".to_string(),
+    };
+
+    let mut script_rows: Vec<AnyElement> = Vec::new();
+    for item in scripts.iter() {
+        let label = format!("[{}] {}", item.origin.label(), item.file_name);
+        let is_loaded = loaded_path
+            .as_deref()
+            .is_some_and(|p| PathBuf::from(p) == item.path);
+
+        let variant = if is_loaded {
+            shadcn::ButtonVariant::Secondary
+        } else {
+            shadcn::ButtonVariant::Ghost
+        };
+
+        let origin_for_activate = item.origin;
+        let path_for_activate = item.path.clone();
+        let script_text_for_activate = st.script_text.clone();
+        let loaded_origin_for_activate = st.loaded_script_origin.clone();
+        let loaded_path_for_activate = st.loaded_script_path.clone();
+        let log_lines_for_activate = st.log_lines.clone();
+
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let text = match std::fs::read_to_string(&path_for_activate) {
+                Ok(text) => text,
+                Err(err) => {
+                    let line = format!("script load failed: {err}");
+                    let _ = host.models_mut().update(&log_lines_for_activate, |v| {
+                        v.push(Arc::<str>::from(line));
+                        if v.len() > 2000 {
+                            let drain = v.len().saturating_sub(2000);
+                            v.drain(0..drain);
+                        }
+                    });
+                    host.request_redraw(action_cx.window);
+                    return;
+                }
+            };
+
+            let _ = host.models_mut().update(&script_text_for_activate, |v| {
+                *v = text;
+            });
+            let _ = host.models_mut().update(&loaded_origin_for_activate, |v| {
+                *v = Some(origin_for_activate)
+            });
+            let _ = host.models_mut().update(&loaded_path_for_activate, |v| {
+                *v = Some(Arc::<str>::from(
+                    path_for_activate.to_string_lossy().to_string(),
+                ))
+            });
+
+            host.request_redraw(action_cx.window);
+            host.push_effect(fret_runtime::Effect::RequestAnimationFrame(
+                action_cx.window,
+            ));
+        });
+
+        script_rows.push(
+            shadcn::Button::new(label)
+                .variant(variant)
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx),
+        );
+    }
+
+    let scripts_list = shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+        |_cx| script_rows,
+    )])
+    .into_element(cx);
+
+    let split = fret_ui_kit::declarative::stack::hstack(
+        cx,
+        fret_ui_kit::declarative::stack::HStackProps::default()
+            .gap_x(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+            .items_start(),
+        |cx| {
+            [
+                cx.container(
+                    fret_ui_kit::declarative::style::container_props(
+                        theme,
+                        fret_ui_kit::ChromeRefinement::default(),
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(Px(240.0))
+                            .h_full(),
+                    ),
+                    |_cx| [scripts_list],
+                ),
+                cx.container(
+                    fret_ui_kit::declarative::style::container_props(
+                        theme,
+                        fret_ui_kit::ChromeRefinement::default(),
+                        fret_ui_kit::LayoutRefinement::default()
+                            .flex_1()
+                            .min_w_0()
+                            .h_full(),
+                    ),
+                    |_cx| [textarea],
+                ),
+            ]
+        },
+    );
+
     shadcn::Card::new([
         shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Commands").into_element(cx),
-            shadcn::CardDescription::new("Send protocol commands to connected apps.")
+            shadcn::CardTitle::new("Script Studio").into_element(cx),
+            shadcn::CardDescription::new("Browse, fork, edit, and run diagnostics scripts.")
                 .into_element(cx),
         ])
         .into_element(cx),
         shadcn::CardContent::new([
             buttons,
-            cx.text("Script (paste JSON):"),
-            textarea,
+            apply_row,
+            cx.text(loaded_line),
+            cx.text(format!("Library: {} scripts", scripts.len())),
+            split,
             cx.text(format!("Script text bytes={}", script_text.len())),
         ])
         .into_element(cx),
@@ -590,6 +815,22 @@ fn on_command(
             );
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
+        CMD_SCRIPTS_REFRESH => {
+            refresh_script_library(app, st);
+            app.request_redraw(window);
+        }
+        CMD_SCRIPT_FORK => {
+            fork_loaded_script(app, window, st);
+            app.request_redraw(window);
+        }
+        CMD_SCRIPT_SAVE => {
+            save_loaded_script(app, window, st);
+            app.request_redraw(window);
+        }
+        CMD_SCRIPT_APPLY_PICK => {
+            apply_pick_to_loaded_script(app, window, st);
+            app.request_redraw(window);
+        }
         CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN => {
             if !require_session_selected(app, st) {
                 app.request_redraw(window);
@@ -618,6 +859,155 @@ fn on_command(
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         _ => {}
+    }
+}
+
+fn refresh_script_library(app: &mut App, st: &mut State) {
+    let scripts = script_studio::scan_script_library(&st.script_paths);
+    let _ = app
+        .models_mut()
+        .update(&st.script_library, |v| *v = scripts.clone());
+
+    let loaded_path = app
+        .models()
+        .read(&st.loaded_script_path, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|s| PathBuf::from(s.as_ref()));
+
+    let loaded_origin = loaded_path
+        .as_ref()
+        .and_then(|p| scripts.iter().find(|i| &i.path == p).map(|i| i.origin));
+    let _ = app
+        .models_mut()
+        .update(&st.loaded_script_origin, |v| *v = loaded_origin);
+}
+
+fn fork_loaded_script(app: &mut App, window: AppWindowId, st: &mut State) {
+    let origin = app
+        .models()
+        .read(&st.loaded_script_origin, |v| *v)
+        .ok()
+        .flatten();
+    let path = app
+        .models()
+        .read(&st.loaded_script_path, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|s| PathBuf::from(s.as_ref()));
+
+    if origin != Some(script_studio::ScriptOrigin::WorkspaceTools) {
+        push_log(
+            app,
+            &st.log_lines,
+            "fork refused (load a tools/* script first)",
+        );
+        return;
+    }
+    let Some(path) = path else {
+        push_log(app, &st.log_lines, "fork refused (no script loaded)");
+        return;
+    };
+    let Some(file_name) = path.file_name().and_then(|s| s.to_str()) else {
+        push_log(app, &st.log_lines, "fork refused (invalid file name)");
+        return;
+    };
+
+    let item = script_studio::ScriptItem {
+        origin: script_studio::ScriptOrigin::WorkspaceTools,
+        file_name: Arc::from(file_name),
+        path,
+    };
+
+    let forked = match script_studio::fork_script_to_user(&st.script_paths, &item) {
+        Ok(item) => item,
+        Err(err) => {
+            push_log(app, &st.log_lines, &format!("fork failed: {err}"));
+            return;
+        }
+    };
+
+    refresh_script_library(app, st);
+    let _ = app.models_mut().update(&st.script_text, |v| {
+        *v = script_studio::load_script_text(&forked.path).unwrap_or_default()
+    });
+    let _ = app
+        .models_mut()
+        .update(&st.loaded_script_origin, |v| *v = Some(forked.origin));
+    let _ = app.models_mut().update(&st.loaded_script_path, |v| {
+        *v = Some(Arc::<str>::from(forked.path.to_string_lossy().to_string()))
+    });
+
+    app.push_effect(Effect::RequestAnimationFrame(window));
+}
+
+fn save_loaded_script(app: &mut App, window: AppWindowId, st: &mut State) {
+    let origin = app
+        .models()
+        .read(&st.loaded_script_origin, |v| *v)
+        .ok()
+        .flatten();
+    if origin != Some(script_studio::ScriptOrigin::UserLocal) {
+        push_log(
+            app,
+            &st.log_lines,
+            "save refused (fork into .fret/diag/scripts first)",
+        );
+        return;
+    }
+
+    let Some(path) = app
+        .models()
+        .read(&st.loaded_script_path, |v| v.clone())
+        .ok()
+        .flatten()
+        .map(|s| PathBuf::from(s.as_ref()))
+    else {
+        push_log(app, &st.log_lines, "save refused (no script loaded)");
+        return;
+    };
+
+    let text = app
+        .models()
+        .read(&st.script_text, |v| v.clone())
+        .unwrap_or_default();
+    if let Err(err) = script_studio::save_user_script(&st.script_paths, &path, &text) {
+        push_log(app, &st.log_lines, &format!("save failed: {err}"));
+        return;
+    }
+
+    refresh_script_library(app, st);
+    app.push_effect(Effect::RequestAnimationFrame(window));
+}
+
+fn apply_pick_to_loaded_script(app: &mut App, window: AppWindowId, st: &mut State) {
+    let pointer = app
+        .models()
+        .read(&st.script_apply_pointer, |v| v.clone())
+        .unwrap_or_default();
+    let script = app
+        .models()
+        .read(&st.script_text, |v| v.clone())
+        .unwrap_or_default();
+    let pick = app
+        .models()
+        .read(&st.last_pick_json, |v| v.clone())
+        .unwrap_or_default();
+    if pick.trim().is_empty() {
+        push_log(
+            app,
+            &st.log_lines,
+            "apply pick refused (no pick.result yet)",
+        );
+        return;
+    }
+
+    match script_studio::apply_pick_to_json_pointer(&script, &pointer, &pick) {
+        Ok(updated) => {
+            let _ = app.models_mut().update(&st.script_text, |v| *v = updated);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+        Err(err) => push_log(app, &st.log_lines, &format!("apply pick failed: {err}")),
     }
 }
 

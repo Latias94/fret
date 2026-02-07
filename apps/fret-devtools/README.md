@@ -15,6 +15,15 @@ The app prints a `ws://127.0.0.1:<port>/?fret_devtools_token=...` URL on startup
 
 When multiple apps connect, use the **Session** selector in the toolbar to target a specific app.
 
+## Script Studio
+
+- **Refresh Scripts** scans:
+  - workspace scripts: `tools/diag-scripts/*.json`
+  - user scripts: `.fret/diag/scripts/*.json`
+- **Fork** copies the loaded `tools/diag-scripts/*.json` file into `.fret/diag/scripts/` (to avoid editing workspace scripts by default).
+- **Save** writes the current editor text back to the loaded `.fret/diag/scripts/*.json` file.
+- **Apply Pick** replaces a JSON pointer (e.g. `/steps/0/target`) with the best selector from the latest `pick.result`.
+
 ## Connect a target app (native)
 
 Set:

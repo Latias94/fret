@@ -52,7 +52,7 @@ Conventions:
   - [x] Inspect (inspect toggle + pick + show selector JSON),
   - [x] Run (run a script; show progress + failures),
   - [x] Artifacts (latest bundle dump payload),
-  - [ ] Scripts (browse `tools/diag-scripts` + open editor).
+  - [x] Scripts (browse `tools/diag-scripts` + open editor).
 - [ ] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
   - [ ] auto-refresh latest bundle,
   - [ ] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.
@@ -64,9 +64,9 @@ Conventions:
   - [ ] step palette (v1 steps + v2 intent steps),
   - [ ] structured editor for selector/predicate.
 - [ ] Pick-to-fill UX:
-  - [ ] select a JSON pointer (e.g. `/steps/3/target`) and apply pick result into the editor (equivalent of `diag pick-apply`).
+  - [x] select a JSON pointer (e.g. `/steps/3/target`) and apply pick result into the editor (equivalent of `diag pick-apply`).
 - [ ] Script library ergonomics:
-  - [ ] fork/copy a script into `.fret/diag/scripts/` (avoid editing workspace scripts by default),
+  - [x] fork/copy a script into `.fret/diag/scripts/` (avoid editing workspace scripts by default),
   - [ ] “Run this script” button produces a shareable zip by default.
 
 ### M4: WebSocket transport (enables web runner)
