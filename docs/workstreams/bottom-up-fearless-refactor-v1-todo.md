@@ -238,6 +238,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-launch/src/runner/web/render_loop.rs`
 
+- [x] BU-FR-launch-076 Extract wasm GPU adoption and surface sizing helpers into a dedicated submodule.
+  - Goal: isolate async GPU adoption + font seeding and canvas DPI sizing from the frame loop and the event handler glue.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/gfx_init.rs`
+
 - [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
   - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
   - Evidence:

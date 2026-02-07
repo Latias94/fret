@@ -9,7 +9,7 @@ for starting apps (native and web) while keeping platform/runner details out of 
 
 - `src/runner/`: the primary winit/web runner integration surfaces and helpers.
 - `src/runner/common/`: shared runner contracts and support types (driver traits, contexts, config).
-- `src/runner/web/`: wasm32 runner implementation (winit-web + WebGPU) split into focused submodules.
+- `src/runner/web/`: wasm32 runner implementation (winit-web + WebGPU) split into focused submodules (`app_handler`, `gfx_init`, `render_loop`, `streaming_images`, `ime_mount`).
 - `src/error.rs`: runner error types.
 - `src/stacksafe_config.rs`: stack-safety configuration (env-driven).
 - `src/lib.rs`: public facade re-exports (`run_app*`, contexts, and runner config types).

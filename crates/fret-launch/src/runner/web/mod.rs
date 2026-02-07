@@ -9,6 +9,7 @@ mod dispatcher;
 use dispatcher::WebDispatcher;
 
 mod app_handler;
+mod gfx_init;
 mod ime_mount;
 mod render_loop;
 mod streaming_images;
