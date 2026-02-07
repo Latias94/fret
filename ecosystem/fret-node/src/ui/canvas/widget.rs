@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -189,7 +188,7 @@ use super::route_math::{
 };
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
-use super::spatial::CanvasSpatialIndex;
+use super::spatial::CanvasSpatialDerived;
 use super::state::{
     ContextMenuState, ContextMenuTarget, DerivedBaseKey, DragPreviewCache, DragPreviewKind,
     GeometryCache, GeometryCacheKey, InteractionState, InternalsCacheKey, InternalsViewKey,

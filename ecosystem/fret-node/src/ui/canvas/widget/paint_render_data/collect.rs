@@ -6,7 +6,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &H,
         snapshot: &ViewSnapshot,
         geom: Arc<CanvasGeometry>,
-        index: Arc<CanvasSpatialIndex>,
+        index: Arc<CanvasSpatialDerived>,
         render_cull_rect: Option<Rect>,
         zoom: f32,
         hovered_edge: Option<EdgeId>,

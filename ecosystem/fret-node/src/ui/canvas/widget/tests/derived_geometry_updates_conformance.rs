@@ -9,7 +9,7 @@ use crate::core::{
 };
 use crate::io::NodeGraphNodeOrigin;
 use crate::ui::canvas::geometry::{CanvasGeometry, NodeGeometry, PortHandleGeometry};
-use crate::ui::canvas::spatial::CanvasSpatialIndex;
+use crate::ui::canvas::spatial::CanvasSpatialDerived;
 use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
@@ -141,7 +141,7 @@ fn update_ports_for_node_rect_change_keeps_ports_pinned_to_sides() {
         },
     );
 
-    let mut index = CanvasSpatialIndex::build(&graph, &geom, 1.0, 0.0, 64.0);
+    let mut index = CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
 
     NodeGraphCanvas::update_ports_for_node_rect_change(
         &mut geom,
@@ -208,7 +208,7 @@ fn update_edges_for_ports_dedups_edge_ids_and_updates_index() {
         NodeGraphNodeOrigin::default(),
         &mut presenter,
     );
-    let mut index = CanvasSpatialIndex::build(&graph, &geom, 1.0, 2.0, 64.0);
+    let mut index = CanvasSpatialDerived::build(&graph, &geom, 1.0, 2.0, 64.0);
 
     // Force a geometry change so updating edges must relocate their AABBs.
     let out_handle = geom.ports.get_mut(&out_port).unwrap();

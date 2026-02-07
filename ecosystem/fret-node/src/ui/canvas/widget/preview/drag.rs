@@ -9,7 +9,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         kind: DragPreviewKind,
         preview_rev: u64,
         nodes: &[(GraphNodeId, CanvasPoint)],
-    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>)> {
         if nodes.is_empty() {
             return None;
         }

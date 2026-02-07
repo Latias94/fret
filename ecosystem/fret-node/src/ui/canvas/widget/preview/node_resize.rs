@@ -10,7 +10,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         node_id: GraphNodeId,
         pos: CanvasPoint,
         size_opt_px: Option<CanvasSize>,
-    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>)> {
         let base_index_key = self.geometry.index_key?;
         let base_geom = self.geometry.geom.clone();
         let base_index = self.geometry.index.clone();
