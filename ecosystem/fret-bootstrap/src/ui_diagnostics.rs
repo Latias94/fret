@@ -682,6 +682,7 @@ impl UiDiagnosticsService {
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
 
+        // Some steps need per-frame state even when running schema v1 scripts.
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::EnsureVisible { .. }
@@ -690,6 +691,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragTo { .. }
+                | UiActionStepV2::DragPointer { .. }
                 | UiActionStepV2::SetSliderValue { .. }
         );
         if !is_v2_intent_step {
@@ -1112,65 +1114,164 @@ impl UiDiagnosticsService {
                 delta_y,
                 steps,
             } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-drag_pointer-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
+                // `drag_pointer` is intentionally multi-frame so the element tree can rebuild and
+                // observe intermediate drag state (e.g. pointer capture, floating window moves,
+                // docking drop indicators).
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::DragPointer(state)) if state.step_index == step_index => {
+                        state
                     }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
-                    output.request_redraw = true;
-                    let label =
-                        format!("script-step-{step_index:04}-drag_pointer-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("drag_pointer_no_semantics_match".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
+                    _ => {
+                        let Some(snapshot) = semantics_snapshot else {
+                            output.request_redraw = true;
+                            let label =
+                                format!("script-step-{step_index:04}-drag_pointer-no-semantics");
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("no_semantics_snapshot".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+                        let Some(node) =
+                            select_semantics_node(snapshot, window, element_runtime, &target)
+                        else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-drag_pointer-no-semantics-match"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("drag_pointer_no_semantics_match".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
 
-                let start = center_of_rect(node.bounds);
-                let end = Point::new(
-                    fret_core::Px(start.x.0 + delta_x),
-                    fret_core::Px(start.y.0 + delta_y),
-                );
-                let steps = steps.max(1);
-                output.events.extend(drag_events(start, end, button, steps));
+                        let start = center_of_rect(node.bounds);
+                        let end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        V2DragPointerState {
+                            step_index,
+                            phase: 0,
+                            steps: steps.max(1),
+                            start,
+                            end,
+                            button,
+                        }
+                    }
+                };
 
                 active.wait_until = None;
                 active.screenshot_wait = None;
-                active.next_step = active.next_step.saturating_add(1);
+
+                let pointer_id = PointerId(0);
+                let modifiers = Modifiers::default();
+                let pointer_type = PointerType::Mouse;
+
+                let button = match state.button {
+                    UiMouseButtonV1::Left => MouseButton::Left,
+                    UiMouseButtonV1::Right => MouseButton::Right,
+                    UiMouseButtonV1::Middle => MouseButton::Middle,
+                };
+
+                let mut pressed_buttons = MouseButtons::default();
+                match button {
+                    MouseButton::Left => pressed_buttons.left = true,
+                    MouseButton::Right => pressed_buttons.right = true,
+                    MouseButton::Middle => pressed_buttons.middle = true,
+                    _ => {}
+                }
+
+                let done = if state.phase == 0 {
+                    output.events.push(move_pointer_event(state.start));
+                    output.events.push(Event::Pointer(PointerEvent::Down {
+                        pointer_id,
+                        position: state.start,
+                        button,
+                        modifiers,
+                        click_count: 1,
+                        pointer_type,
+                    }));
+                    state.phase = 1;
+                    false
+                } else if state.phase <= state.steps {
+                    let t = state.phase as f32 / state.steps as f32;
+                    let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                    let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                    output.events.push(Event::Pointer(PointerEvent::Move {
+                        pointer_id,
+                        position,
+                        buttons: pressed_buttons,
+                        modifiers,
+                        pointer_type,
+                    }));
+                    output
+                        .events
+                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                            pointer_id,
+                            position,
+                            kind: fret_core::InternalDragKind::Over,
+                            modifiers,
+                        }));
+                    state.phase = state.phase.saturating_add(1);
+                    false
+                } else {
+                    output.events.push(Event::Pointer(PointerEvent::Up {
+                        pointer_id,
+                        position: state.end,
+                        button,
+                        modifiers,
+                        is_click: false,
+                        click_count: 1,
+                        pointer_type,
+                    }));
+                    output
+                        .events
+                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                            pointer_id,
+                            position: state.end,
+                            kind: fret_core::InternalDragKind::Drop,
+                            modifiers,
+                        }));
+                    true
+                };
+
                 output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
+                if done {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-drag_pointer"));
+                    }
+                } else {
+                    active.v2_step_state = Some(V2StepState::DragPointer(state));
                 }
             }
             UiActionStepV2::Wheel {
@@ -3824,6 +3925,7 @@ enum V2StepState {
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
     DragTo(V2DragToState),
+    DragPointer(V2DragPointerState),
     SetSliderValue(V2SetSliderValueState),
 }
 
@@ -3864,6 +3966,16 @@ struct V2MenuSelectPathState {
 struct V2DragToState {
     step_index: usize,
     remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2DragPointerState {
+    step_index: usize,
+    phase: u32,
+    steps: u32,
+    start: Point,
+    end: Point,
+    button: UiMouseButtonV1,
 }
 
 #[derive(Debug, Clone)]
