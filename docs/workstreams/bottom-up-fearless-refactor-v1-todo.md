@@ -228,6 +228,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-launch/src/runner/web/streaming_images.rs`
 
+- [x] BU-FR-launch-074 Extract the wasm runner `ApplicationHandler` impl into a dedicated submodule.
+  - Goal: keep winit event-loop glue isolated so the remaining `web/mod.rs` can focus on runner state and contracts.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/app_handler.rs`
+
 - [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
   - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
   - Evidence:
