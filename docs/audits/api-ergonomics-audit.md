@@ -89,7 +89,7 @@ This document is meant to stay 鈥渓ive鈥?while we iterate. Update this sectio
   - Evidence: `ecosystem/fret-ui-kit/src/tree.rs` (`TreeRowRenderer::* -> Elements`)
   - Evidence: `ecosystem/fret-node/src/ui/registry.rs` (`NodeGraphNodeRenderer -> Elements`)
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs` (`*Request::new(..., children: impl IntoIterator<Item = AnyElement>)`)
-  - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`, `ecosystem/fret-ui-primitives/src/focus_scope.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/{ui,ui_builder}.rs`, `ecosystem/fret-ui-kit/src/declarative/{cached_subtree,chrome,dismissible,glass,pixelate,scroll,stack,visually_hidden}.rs`, `ecosystem/fret-ui-kit/src/primitives/{accordion,dismissable_layer,focus_scope,menu/*,popover,popper_content,roving_focus_group,tabs,toggle,toolbar}.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/src/{breadcrumb,card,command,field,input_group,item,scroll_area,select,toggle,tooltip}.rs`,
     `ecosystem/fret-ui-shadcn/src/ui_builder_ext/breadcrumb.rs`
 - [x] Fill P0 authoring gaps discovered during demo migration: px/metric-aware `gap` and one-value padding shorthands.

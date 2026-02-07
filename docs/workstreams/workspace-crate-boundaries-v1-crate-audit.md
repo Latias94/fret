@@ -106,11 +106,11 @@ These are not commitments; they are “review prompts” to keep boundaries inte
 
 Potential merge candidates (only if they do not represent a real extraction seam):
 
-- `ecosystem/fret-ui-primitives` → `ecosystem/fret-ui-kit`
-  - Today it is primarily consumed by `fret-ui-kit`. If it remains a pure internal adapter layer,
-    merging could reduce cognitive load.
-  - Keep it separate if we expect multiple design-system kits to depend on the same primitives
-    surface.
+- `ecosystem/fret-ui-primitives` → `ecosystem/fret-ui-kit` (done)
+  - It was only consumed via `fret-ui-kit` compatibility shims, so the extra crate did not provide
+    a real seam yet.
+  - We kept the public import surface stable (`fret-ui-kit::primitives::*`) while removing a
+    transitive path dependency.
 
 Potential split candidates (only if ownership/portability becomes unclear):
 

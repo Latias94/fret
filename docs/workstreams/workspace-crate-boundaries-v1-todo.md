@@ -50,6 +50,10 @@ Related plan:
 - [x] Consider whether `fret-code-editor-view` should remain a standalone crate (keep: buffer/view are reusable seams).
 - [x] Add a short “merge vs split” candidate list to the crate survey notes and revisit quarterly.
 
+### M6 — Reduce accidental micro-crates (optional)
+
+- [x] Merge `ecosystem/fret-ui-primitives` into `ecosystem/fret-ui-kit` (it was only consumed via `fret-ui-kit` shims).
+
 ## Validation checklist (run at each milestone)
 
 - [x] `pwsh -NoProfile -File tools/check_layering.ps1`

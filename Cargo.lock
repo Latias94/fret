@@ -1779,7 +1779,6 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",
- "fret-ui-primitives",
  "fret-viewport-tooling",
  "serde",
  "serde_json",
@@ -1804,16 +1803,6 @@ dependencies = [
  "serde",
  "serde_json",
  "time",
-]
-
-[[package]]
-name = "fret-ui-primitives"
-version = "0.1.0"
-dependencies = [
- "fret-app",
- "fret-core",
- "fret-ui",
- "fret-ui-headless",
 ]
 
 [[package]]
