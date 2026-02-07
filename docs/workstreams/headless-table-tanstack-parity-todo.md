@@ -129,8 +129,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `docs/workstreams/headless-table-tanstack-parity-capability.md` to keep the mapping work honest.
   - Next: turn the raw upstream instance-member dump into an explicit checklist (public surfaces first),
     with status + evidence anchors for each capability surface.
-    - [ ] HTP-cap-011 Table instance public surface checklist (`table.*`, non-underscore).
-    - [ ] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
+    - [x] HTP-cap-011 Table instance public surface checklist (`table.*`, non-underscore).
+    - [x] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
     - [ ] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
     - [ ] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
     - [ ] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)

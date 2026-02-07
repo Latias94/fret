@@ -769,6 +769,37 @@ Initial mapping (WIP):
   → `grouping.rs` helpers + `TableState.grouping` (fixture-gated for outcomes, but no consolidated “column instance” helper surface yet).
 - **Partial**: faceting instance surfaces (`getFaceted*`) are supported via `Table::{faceted_*}` (fixture-gated), but we do not expose them as `Column` instance methods.
 
+#### Column instance full checklist (public surfaces)
+
+This is a **non-underscore** inventory of `column.*` members from upstream. The mapping may be Rust-native
+and does not need to preserve method names, but the **capability must exist**.
+
+| Upstream (`column.*`) | Fret mapping (capability) | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| `id` | `ColumnDef.id` | Aligned | core snapshots (`headers_cells.json`) |
+| `depth/parent/columns` | `CoreModelSnapshot.column_tree` (depth + parent_id + child_ids) | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
+| `columnDef/accessorFn` | `ColumnDef` (Rust-native; value extraction via closures) | Partial | N/A |
+| `getFlatColumns/getLeafColumns` | derive via column tree + ordered leaf flatten (`Table::ordered_columns`) | Partial | N/A |
+| `getIndex/getIsFirstColumn/getIsLastColumn` | derive from visible ordered leaf list (`CoreModelSnapshot.leaf_columns.visible`) | Partial | N/A |
+| `getCanHide/getIsVisible` | `Table::{column_can_hide,is_column_visible}` | Aligned | `visibility_ordering.json` |
+| `toggleVisibility/getToggleVisibilityHandler` | `Table::{toggled_column_visibility}` + consumer-owned UI events | Aligned | `visibility_ordering.json` |
+| `getCanPin/getIsPinned/getPinnedIndex` | `Table::{column_can_pin,column_pin_position,column_pinned_index}` | Aligned | `column_pinning.json` |
+| `pin` | `Table::{column_pinning_updater,toggled_column_pinning}` | Aligned | `column_pinning.json` |
+| `getCanResize/getIsResizing/getSize/getStart/getAfter` | `Table::{column_can_resize,is_column_resizing,column_size,column_start,column_after}` | Aligned | `column_sizing.json` |
+| `resetSize` | `Table::reset_column_size` | Aligned | `column_sizing.json` |
+| `getCanFilter/getFilterValue/getIsFiltered/getFilterIndex` | `Table::{column_can_filter,column_filter_value,column_is_filtered,column_filter_index}` | Aligned | `filtering_fns.json` |
+| `setFilterValue` | `Table::column_filters_updater_set_value` (or direct state mutation via filtering helper) | Aligned | `filtering_fns.json` |
+| `getFilterFn/getAutoFilterFn` | `FilteringFnSpec` resolution (`filtering.rs`) | Partial | behavior outcomes gated (`filtering_fns.json`), fn identity not exposed |
+| `getCanGlobalFilter/getAutoFilterFn` | `Table::{column_can_global_filter}` + `TableBuilder::get_column_can_global_filter` hook | Aligned | `filtering_fns.json` |
+| `getCanGroup/getIsGrouped/getGroupedIndex` | `Table::{column_can_group,is_column_grouped,column_grouped_index}` | Aligned | `grouping.json` |
+| `toggleGrouping/getToggleGroupingHandler` | `Table::{toggled_column_grouping,grouping_handler_updater}` | Aligned | `grouping.json` |
+| `getAggregationFn/getAutoAggregationFn` | aggregation registry (`aggregation_fns.rs`) + `ColumnDef.aggregation_fn` | Aligned | `grouping_aggregation_fns.json` |
+| `getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
+| `clearSorting` | remove column from `TableState.sorting` (engine helper TBD) | Partial | N/A |
+| `getCanSort/getIsSorted/getSortIndex/getNextSortingOrder/getFirstSortDir/getAutoSortDir` | sorting policy in `sorting.rs` (`toggle_sorting_tanstack`, `toggle_sorting_handler_tanstack`) | Partial | sorting outcomes gated (`demo_process.json`, `sorting_fns.json`), policy helper not table-owned |
+| `toggleSorting/getToggleSortingHandler` | prefer engine-owned helper (see `HTP-cap-015`) wrapping `sorting.rs` policy | Partial | currently used in tests only (`tanstack_v8_parity.rs`) |
+| `getSortingFn/getAutoSortingFn` | `SortingFnSpec` resolution + registry (`sorting.rs`) | Aligned | `sorting_fns.json` |
+
 ### Row instance (public, non-underscore)
 
 Fret does not expose a first-class `Row` instance object yet. Capabilities map to:
