@@ -74,6 +74,15 @@ Boundary tightening:
   - UI sugar (`ElementContext` extension traits) should be opt-in (e.g. `fret-query/ui`).
 - Remove stale/unused feature flags when a crate does not actually implement them yet.
 
+### 3.3 UI primitives: remove accidental micro-crate
+
+Completed (see workstream M6):
+
+- `ecosystem/fret-ui-primitives` was only consumed via `fret-ui-kit` compatibility shims, so the
+  extra crate did not represent a real seam yet.
+- We merged its code into `ecosystem/fret-ui-kit/src/{primitives,declarative}/*` to reduce workspace
+  churn and dependency noise, while keeping the public import surface stable.
+
 ## 3.3 Reference patterns (notes only)
 
 These snapshots are not prescriptive, but they help validate that our boundaries match common
@@ -85,8 +94,69 @@ successful shapes:
     (`*-winit`, `*-web`, `*-wgpu`) so contracts stay narrow and backends are swappable.
 - **Dioxus**: a UI framework with a large multi-package workspace (`core`, `html`, `router`, `desktop`,
   `web`, etc.) that keeps portability via many explicit crates.
-  - Takeaway for Fret: this supports our “contract vs adapter vs facade” direction; the key is to
-    avoid unnecessary micro-crates unless they represent a real seam.
+- Takeaway for Fret: this supports our “contract vs adapter vs facade” direction; the key is to
+  avoid unnecessary micro-crates unless they represent a real seam.
+
+## 3.4 Ecosystem crate graph snapshot (2026-02-07)
+
+Method:
+
+- `cargo metadata --no-deps` for workspace packages.
+- Reverse-deps count = “how many workspace crates depend on this crate”.
+- LOC = best-effort `.rs` line count under the crate directory (excluding `target/`).
+
+This is *not* a stability signal by itself; it is a quick way to spot “single-consumer micro-crates”
+that do not provide a seam.
+
+| crate | rev deps | rs files | loc | path |
+| --- | ---: | ---: | ---: | --- |
+| `fret-ui-kit` | 16 | 166 | 66843 | `ecosystem/fret-ui-kit` |
+| `fret-icons` | 10 | 1 | 420 | `ecosystem/fret-icons` |
+| `fret-ui-shadcn` | 8 | 151 | 194310 | `ecosystem/fret-ui-shadcn` |
+| `fret-canvas` | 7 | 35 | 7941 | `ecosystem/fret-canvas` |
+| `fret-query` | 7 | 1 | 2790 | `ecosystem/fret-query` |
+| `fret-authoring` | 7 | 3 | 286 | `ecosystem/fret-authoring` |
+| `fret-bootstrap` | 4 | 3 | 14848 | `ecosystem/fret-bootstrap` |
+| `delinea` | 3 | 57 | 38071 | `ecosystem/delinea` |
+| `fret-ui-headless` | 3 | 86 | 31232 | `ecosystem/fret-ui-headless` |
+| `fret-workspace` | 3 | 11 | 7298 | `ecosystem/fret-workspace` |
+| `fret-markdown` | 3 | 8 | 4424 | `ecosystem/fret-markdown` |
+| `fret-code-view` | 3 | 8 | 2814 | `ecosystem/fret-code-view` |
+| `fret-selector` | 3 | 2 | 611 | `ecosystem/fret-selector` |
+| `fret-undo` | 3 | 1 | 489 | `ecosystem/fret-undo` |
+| `fret-node` | 2 | 342 | 77057 | `ecosystem/fret-node` |
+| `fret-chart` | 2 | 19 | 15013 | `ecosystem/fret-chart` |
+| `fret-kit` | 2 | 7 | 3828 | `ecosystem/fret-kit` |
+| `fret-router` | 2 | 12 | 2400 | `ecosystem/fret-router` |
+| `fret-syntax` | 2 | 2 | 1052 | `ecosystem/fret-syntax` |
+| `fret-dnd` | 2 | 9 | 972 | `ecosystem/fret-dnd` |
+| `fret-executor` | 2 | 1 | 847 | `ecosystem/fret-executor` |
+| `fret-code-editor-view` | 2 | 1 | 808 | `ecosystem/fret-code-editor-view` |
+| `fret-code-editor-buffer` | 2 | 1 | 753 | `ecosystem/fret-code-editor-buffer` |
+| `fret-ui-assets` | 2 | 5 | 566 | `ecosystem/fret-ui-assets` |
+| `fret-viewport-tooling` | 2 | 1 | 386 | `ecosystem/fret-viewport-tooling` |
+| `fret-ui-material3` | 1 | 107 | 79204 | `ecosystem/fret-ui-material3` |
+| `fret-plot` | 1 | 31 | 25559 | `ecosystem/fret-plot` |
+| `fret-gizmo` | 1 | 23 | 16246 | `ecosystem/fret-gizmo` |
+| `fret-docking` | 1 | 24 | 15287 | `ecosystem/fret-docking` |
+| `fret-imui` | 1 | 3 | 4777 | `ecosystem/fret-imui` |
+| `fret-ui-ai` | 1 | 20 | 4770 | `ecosystem/fret-ui-ai` |
+| `fret-code-editor` | 1 | 7 | 4592 | `ecosystem/fret-code-editor` |
+| `fret-icons-lucide` | 1 | 3 | 1825 | `ecosystem/fret-icons-lucide` |
+| `fret-asset-cache` | 1 | 4 | 1202 | `ecosystem/fret-asset-cache` |
+| `fret-icons-radix` | 1 | 3 | 448 | `ecosystem/fret-icons-radix` |
+| `fret-i18n-fluent` | 1 | 1 | 225 | `ecosystem/fret-i18n-fluent` |
+| `fret-plot3d` | 1 | 2 | 171 | `ecosystem/fret-plot3d` |
+
+Immediate interpretation:
+
+- **Data packs** (`fret-icons-*`) should remain separate even with 1 consumer: optional deps and
+  compile-time isolation are the seam.
+- Several crates have 1 consumer but **large code / domain boundaries** (`fret-docking`, `fret-gizmo`,
+  `fret-plot`, `fret-ui-material3`): keeping them separate is still valuable for extraction and
+  cognition.
+- The only “small + single-consumer” crates at this snapshot (`fret-i18n-fluent`, `fret-plot3d`)
+  are not clear merge wins without a stronger product direction (they might become shared soon).
 
 ## 4) Open questions worth auditing next
 

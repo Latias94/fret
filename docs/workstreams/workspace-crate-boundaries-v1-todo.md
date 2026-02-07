@@ -54,6 +54,12 @@ Related plan:
 
 - [x] Merge `ecosystem/fret-ui-primitives` into `ecosystem/fret-ui-kit` (it was only consumed via `fret-ui-kit` shims).
 
+### M7 — Ecosystem crate graph audit (optional)
+
+- [ ] Record a reverse-deps + LOC snapshot (date-stamped) in the crate survey notes.
+- [ ] List “single-consumer micro-crates” and justify each one (seam vs accidental).
+- [ ] Decide follow-up actions (merge/keep/split) and track separately if needed.
+
 ## Validation checklist (run at each milestone)
 
 - [x] `pwsh -NoProfile -File tools/check_layering.ps1`
