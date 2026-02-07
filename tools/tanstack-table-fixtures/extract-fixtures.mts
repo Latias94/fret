@@ -12,6 +12,7 @@ type CaseId =
   | "sorting_fns"
   | "filtering_fns"
   | "headers_cells"
+  | "headers_inventory_deep"
   | "visibility_ordering"
   | "pinning"
   | "pinning_tree"
@@ -31,6 +32,11 @@ type CaseId =
 
 type SnapshotId =
   | "baseline"
+  | "headers_inventory_deep_baseline"
+  | "headers_inventory_deep_pin_one_leaf_left"
+  | "headers_inventory_deep_hide_deep_leaf"
+  | "headers_inventory_deep_hide_whole_branch"
+  | "headers_inventory_deep_order_reorders_across_depths"
   | "auto_reset_sorting_default_resets"
   | "auto_reset_sorting_manual_pagination_true_no_reset"
   | "auto_reset_sorting_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
@@ -1012,6 +1018,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "sorting_fns" &&
         v !== "filtering_fns" &&
         v !== "headers_cells" &&
+        v !== "headers_inventory_deep" &&
         v !== "visibility_ordering" &&
         v !== "pinning" &&
         v !== "pinning_tree" &&
@@ -1038,7 +1045,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+        "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1694,6 +1701,58 @@ async function main(): Promise<void> {
                 accessorFn: (row: DemoProcessRow) => row.mem_mb,
               },
             ],
+          },
+        ],
+      },
+    ]
+  } else if (case_id === "headers_inventory_deep") {
+    const rows: DemoProcessRow[] = [
+      { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
+      { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 3, name: "Indexer", status: "Running", cpu: 38, mem_mb: 860 },
+    ]
+
+    data = rows
+
+    // Deeper column nesting to exercise placeholder generation and leaf/flat traversal.
+    columns = [
+      {
+        id: "name",
+        accessorFn: (row: DemoProcessRow) => row.name,
+      },
+      {
+        id: "metrics",
+        columns: [
+          {
+            id: "stats",
+            columns: [
+              {
+                id: "perf",
+                columns: [
+                  {
+                    id: "cpu",
+                    accessorFn: (row: DemoProcessRow) => row.cpu,
+                  },
+                  {
+                    id: "cpu2",
+                    accessorFn: (row: DemoProcessRow) => row.cpu,
+                  },
+                ],
+              },
+              {
+                id: "mem",
+                columns: [
+                  {
+                    id: "mem_mb",
+                    accessorFn: (row: DemoProcessRow) => row.mem_mb,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: "status",
+            accessorFn: (row: DemoProcessRow) => row.status,
           },
         ],
       },
@@ -4667,6 +4726,108 @@ function snapshotColumnPinning(
         grouping: ["cpu"],
         },
       ),
+    ]
+  } else if (case_id === "headers_inventory_deep") {
+    const base = defaultOptions
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const { table } = buildTable(options, state)
+
+      const baseExpect: FixtureSnapshot["expect"] = {
+        core: snapshotRowModel(table.getCoreRowModel()),
+        filtered: snapshotRowModel(table.getFilteredRowModel()),
+        sorted: snapshotRowModel(table.getSortedRowModel()),
+        paginated: snapshotRowModel(table.getPaginationRowModel()),
+        row_model: snapshotRowModel(table.getRowModel()),
+      }
+
+      const header_groups = snapshotHeaderGroups(table.getHeaderGroups())
+      const left_header_groups = snapshotHeaderGroups(table.getLeftHeaderGroups())
+      const center_header_groups = snapshotHeaderGroups(table.getCenterHeaderGroups())
+      const right_header_groups = snapshotHeaderGroups(table.getRightHeaderGroups())
+      const footer_groups = snapshotHeaderGroups(table.getFooterGroups())
+      const left_footer_groups = snapshotHeaderGroups(table.getLeftFooterGroups())
+      const center_footer_groups = snapshotHeaderGroups(table.getCenterFooterGroups())
+      const right_footer_groups = snapshotHeaderGroups(table.getRightFooterGroups())
+      const flat_headers = snapshotHeaders(table.getFlatHeaders())
+      const left_flat_headers = snapshotHeaders(table.getLeftFlatHeaders())
+      const center_flat_headers = snapshotHeaders(table.getCenterFlatHeaders())
+      const right_flat_headers = snapshotHeaders(table.getRightFlatHeaders())
+      const leaf_headers = snapshotHeaders(table.getLeafHeaders())
+      const left_leaf_headers = snapshotHeaders(table.getLeftLeafHeaders())
+      const center_leaf_headers = snapshotHeaders(table.getCenterLeafHeaders())
+      const right_leaf_headers = snapshotHeaders(table.getRightLeafHeaders())
+      const cells = snapshotCells(table)
+
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...baseExpect,
+          headers_cells: {
+            header_groups,
+            footer_groups,
+            left_header_groups,
+            left_footer_groups,
+            center_header_groups,
+            center_footer_groups,
+            right_header_groups,
+            right_footer_groups,
+            flat_headers,
+            left_flat_headers,
+            center_flat_headers,
+            right_flat_headers,
+            leaf_headers,
+            left_leaf_headers,
+            center_leaf_headers,
+            right_leaf_headers,
+            cells,
+          },
+          core_model: {
+            column_tree: snapshotColumnTree(table.getAllColumns()),
+            leaf_columns: {
+              all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
+              left_visible: (table.getLeftVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+              center_visible: (table.getCenterVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+              right_visible: (table.getRightVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+            },
+            header_groups,
+            left_header_groups,
+            center_header_groups,
+            right_header_groups,
+            rows: {
+              core: snapshotRowModel(table.getCoreRowModel()),
+              row_model: snapshotRowModel(table.getRowModel()),
+            },
+            cells,
+          },
+        },
+      }
+    }
+
+    snapshots = [
+      mk("headers_inventory_deep_baseline", base, {
+        columnPinning: { left: ["name"], right: ["status"] },
+      }),
+      mk("headers_inventory_deep_pin_one_leaf_left", base, {
+        columnPinning: { left: ["cpu"], right: [] },
+      }),
+      mk("headers_inventory_deep_hide_deep_leaf", base, {
+        columnVisibility: { cpu2: false },
+      }),
+      mk("headers_inventory_deep_hide_whole_branch", base, {
+        columnVisibility: { perf: false },
+      }),
+      mk("headers_inventory_deep_order_reorders_across_depths", base, {
+        columnOrder: ["status", "mem_mb", "cpu", "cpu2", "name"],
+      }),
     ]
   } else if (case_id === "visibility_ordering") {
     const coreModelForState = (options: TanStackOptions, state: TanStackState) => {

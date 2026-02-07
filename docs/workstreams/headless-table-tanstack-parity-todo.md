@@ -213,12 +213,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (scaffolding): grouped column defs via `ColumnDef::columns(...)` and leaf flattening.
     - Evidence: `ecosystem/fret-ui-headless/src/table/column.rs` (`ColumnDef.columns`)
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (stores `column_tree` + leaf flatten)
-- [~] HTP-core-020 Implement header group generation (including placeholder headers).
+- [x] HTP-core-020 Implement header group generation (including placeholder headers).
   - Done (parity-gated): `getHeaderGroups` + pin-family variants + placeholder headers.
     - Evidence: `ecosystem/fret-ui-headless/src/table/headers.rs`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
-  - Remaining: expand fixture coverage for deeper nesting and visibility interactions.
+  - Done (deeper nesting + visibility): additional deep header inventory fixture extends coverage for
+    deep placeholder trees, leaf/flat/footer inventories, and branch hiding.
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
 - [~] HTP-core-030 Implement cell model generation (row 脳 leaf columns) with stable IDs.
   - Done (parity-gated): TanStack-style `${rowId}_${columnId}` ids for all/visible/left/center/right.
     - Evidence: `ecosystem/fret-ui-headless/src/table/cells.rs`
