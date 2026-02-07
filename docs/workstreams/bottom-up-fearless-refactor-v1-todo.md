@@ -124,6 +124,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/input/keyboard.rs`
     - `crates/fret-core/src/input/mod.rs`
 
+- [x] BU-FR-core-025 Extract viewport input types and mapping helpers into dedicated submodules.
+  - Goal: keep `input/mod.rs` focused on portable event vocabulary, while isolating viewport-tooling glue (ADR 0147).
+  - Evidence:
+    - `crates/fret-core/src/input/viewport.rs`
+    - `crates/fret-core/src/input/viewport_input_event_tests.rs`
+    - `crates/fret-core/src/input/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
