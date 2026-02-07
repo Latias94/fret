@@ -1571,6 +1571,178 @@
       }
     },
     {
+      "id": "filtering_fns_column_filters_disabled_when_enable_column_filters_false",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "enableColumnFilters": false
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "text_auto",
+            "value": "ap"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 2,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": false,
+              "filter_value": "ap",
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
+      }
+    },
+    {
       "id": "filtering_fns_registry_custom_text_case_sensitive",
       "options": {
         "manualFiltering": false,

@@ -4326,6 +4326,15 @@ function snapshotColumnPinning(
         expect: mkExpectState({ ...base, enableFilters: false }, { globalFilter: "ap" }),
       },
       {
+        id: "filtering_fns_column_filters_disabled_when_enable_column_filters_false",
+        options: { ...base, enableColumnFilters: false },
+        state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
+        expect: mkExpectState(
+          { ...base, enableColumnFilters: false },
+          { columnFilters: [{ id: "text_auto", value: "ap" }] },
+        ),
+      },
+      {
         id: "filtering_fns_registry_custom_text_case_sensitive",
         options: { ...base, filterFnsMode: "custom_text_case_sensitive" },
         state: { columnFilters: [{ id: "text_custom", value: "A" }] },

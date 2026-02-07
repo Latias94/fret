@@ -68,6 +68,8 @@ ColumnDef keys referenced by upstream feature implementations:
   - state 鈥渞eset鈥?and 鈥渁uto-reset鈥?behavior inventory.
   - In progress: core + pinning inventories are tracked in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
+  - Update: added a raw upstream instance member dump (table/column/row/header/cell) as an appendix in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md`.
 
 ---
 
@@ -119,6 +121,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
   - In progress: initial core + pinning mapping is tracked in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
+  - Update: added a raw upstream instance member inventory appendix (table/column/row/header/cell) in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md` to keep the mapping work honest.
   - Source of truth:
     - Core: `repo-ref/table/packages/table-core/src/core/*`
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
@@ -126,6 +130,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Deliverables:
     - A minimal list of 鈥渕ust-have鈥?APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
     - A second list of 鈥渃apability parity鈥?APIs that must exist to avoid being weaker than upstream.
+  - Update: started a consumer-driven must-have surface section in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md` (references `fret-ui-kit` virtualized table usage).
+  - Update: documented the current TanStack → Fret mapping strategy in
+    `docs/workstreams/headless-table-tanstack-parity-capability.md` (pure models + snapshots + helper surfaces).
 - [x] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
@@ -271,12 +279,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 - [x] HTP-filt-010 Generalize filter values beyond `Arc<str>` (TanStack `unknown` equivalent).
   - Constraint: keep a cheap 鈥渟tring fast-path鈥?for common UI filters.
   - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`ColumnFilter.value: serde_json::Value`)
-- [~] HTP-filt-020 Implement option gates: `enableFilters`, `enableColumnFilters`, `enableGlobalFilter`.
+- [x] HTP-filt-020 Implement option gates: `enableFilters`, `enableColumnFilters`, `enableGlobalFilter`.
   - Done (parity-gated): `enableFilters` + `enableGlobalFilter` gate global filtering application in `filtered_row_model`.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
-  - Remaining: wire gates into TanStack-style instance helper surfaces (`getCanFilter`/`getCanGlobalFilter`)
-    (tracked in `HTP-filt-090`).
+  - Done (parity-gated): `enableColumnFilters=false` disables `getCanFilter`, but does **not** disable
+    `getFilteredRowModel` in upstream (it still uses `state.columnFilters` when present); fixtures assert we match.
+    - Snapshot: `filtering_fns_column_filters_disabled_when_enable_column_filters_false`
 - [x] HTP-filt-030 Implement filterFn registry parity (`filterFns`):
   - built-ins, custom, and `auto` selection based on first known value.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`

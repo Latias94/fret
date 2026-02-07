@@ -21,6 +21,36 @@ Legend:
 
 ---
 
+## Consumer-driven “must-have” surface (WIP)
+
+Before we chase 1:1 instance method parity, we track what our current UI consumers *actually* need, so we can ensure
+we are not weaker than upstream while keeping the Rust surface idiomatic.
+
+- `fret-ui-kit` virtualized table: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+  - Uses the engine as a pure derived-model provider (build `Table`, read row models, compute rendering).
+  - Currently calls into: `Table::{core_row_model,pre_pagination_row_model,grouped_row_model,top_row_keys,center_row_keys,bottom_row_keys}`
+    plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
+- `fret-ui-shadcn` DataTable: (TODO) identify the minimal required engine surface once it is wired to `fret-ui-headless`.
+
+---
+
+## Mapping strategy (TanStack → Fret)
+
+Goal: **capability parity**, not method-name parity. The mapping rules below are the working contract for `HTP-cap-010`.
+
+- Prefer **pure derived models** over mutable instance methods:
+  - TanStack: `table.setState` + instance methods that mutate internal state.
+  - Fret: consumers own `TableState`; the engine provides updaters (`Updater<T>`) and derived snapshots.
+- Prefer **snapshots** over “live” instance objects:
+  - TanStack exposes rich `Column/Row/Header/Cell` instances with caches and closures.
+  - Fret exposes stable, JSON-serializable snapshots (IDs, structure, and computed fields) plus targeted helper methods.
+- Add **targeted helper surfaces** when TanStack has “policy logic” that consumers should not re-implement:
+  - Example: filtering/sorting/pinning capability gates, sizing offsets, pinned leaf splits.
+- Treat underscore-prefixed upstream members as **behavioral obligations**, not API obligations:
+  - If an upstream `_queue` / `_autoResetX` affects observable outcomes, we gate outcomes with fixtures rather than mirroring the internal mechanism.
+
+---
+
 ## Core APIs (table/row/column/header/cell)
 
 Source of truth:
@@ -246,3 +276,312 @@ This inventory is intentionally incomplete. Next expansions (tracked in `HTP-cap
 - Header/footer/flat/leaf header inventories under visibility + pinning + nested columns (deep nesting + edge cases).
 - Fill in missing “column/row instance method” helpers where consumers should not have to reimplement logic (e.g. `getCanFilter`-style gates).
 - Global faceting instance surface (`getGlobalFaceted*`) if/when consumers need it.
+
+---
+
+## Appendix: upstream instance method inventory (raw, WIP)
+
+This is a **raw** inventory of instance members assigned on upstream `table`, `column`, `row`, `header`, and `cell`
+objects. It is intentionally redundant and includes some underscore-prefixed internals, because those often correspond
+to observable behavior (memo caches / queues / derived model hooks).
+
+Source (local): `F:/SourceCodes/Rust/fret/repo-ref/table/packages/table-core/src/**/*.ts`.
+
+Extraction command (PowerShell; requires ripgrep `rg` with `--pcre2`):
+
+```ps1
+$root='F:\SourceCodes\Rust\fret\repo-ref\table\packages\table-core\src'
+cd $root
+rg --pcre2 -o "table\.[A-Za-z0-9_]+"  -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
+rg --pcre2 -o "column\.[A-Za-z0-9_]+" -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
+rg --pcre2 -o "row\.[A-Za-z0-9_]+"    -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
+rg --pcre2 -o "header\.[A-Za-z0-9_]+" -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
+rg --pcre2 -o "cell\.[A-Za-z0-9_]+"   -g"*.ts" | % { $_.Split(':')[-1] } | sort -unique
+```
+
+### Table instance (`table.*`)
+
+```
+table._autoResetExpanded
+table._autoResetPageIndex
+table._features
+table._getAllFlatColumnsById
+table._getColumnDefs
+table._getCoreRowModel
+table._getDefaultColumnDef
+table._getExpandedRowModel
+table._getFilteredRowModel
+table._getGlobalFacetedMinMaxValues
+table._getGlobalFacetedRowModel
+table._getGlobalFacetedUniqueValues
+table._getGroupedRowModel
+table._getOrderColumnsFn
+table._getPaginationRowModel
+table._getPinnedRows
+table._getRowId
+table._getSortedRowModel
+table._queue
+table.firstPage
+table.getAllColumns
+table.getAllFlatColumns
+table.getAllLeafColumns
+table.getBottomRows
+table.getCanNextPage
+table.getCanPreviousPage
+table.getCanSomeRowsExpand
+table.getCenterFlatHeaders
+table.getCenterFooterGroups
+table.getCenterHeaderGroups
+table.getCenterLeafColumns
+table.getCenterLeafHeaders
+table.getCenterRows
+table.getCenterTotalSize
+table.getCenterVisibleLeafColumns
+table.getColumn
+table.getCoreRowModel
+table.getExpandedDepth
+table.getExpandedRowModel
+table.getFilteredRowModel
+table.getFilteredSelectedRowModel
+table.getFlatHeaders
+table.getFooterGroups
+table.getGlobalAutoFilterFn
+table.getGlobalFacetedMinMaxValues
+table.getGlobalFacetedRowModel
+table.getGlobalFacetedUniqueValues
+table.getGlobalFilterFn
+table.getGroupedRowModel
+table.getGroupedSelectedRowModel
+table.getHeaderGroups
+table.getIsAllColumnsVisible
+table.getIsAllPageRowsSelected
+table.getIsAllRowsExpanded
+table.getIsAllRowsSelected
+table.getIsSomeColumnsPinned
+table.getIsSomeColumnsVisible
+table.getIsSomePageRowsSelected
+table.getIsSomeRowsExpanded
+table.getIsSomeRowsPinned
+table.getIsSomeRowsSelected
+table.getLeafHeaders
+table.getLeftFlatHeaders
+table.getLeftFooterGroups
+table.getLeftHeaderGroups
+table.getLeftLeafColumns
+table.getLeftLeafHeaders
+table.getLeftTotalSize
+table.getLeftVisibleLeafColumns
+table.getPageCount
+table.getPageOptions
+table.getPaginationRowModel
+table.getPreExpandedRowModel
+table.getPreFilteredRowModel
+table.getPreGroupedRowModel
+table.getPrePaginationRowModel
+table.getPreSelectedRowModel
+table.getPreSortedRowModel
+table.getRightFlatHeaders
+table.getRightFooterGroups
+table.getRightHeaderGroups
+table.getRightLeafColumns
+table.getRightLeafHeaders
+table.getRightTotalSize
+table.getRightVisibleLeafColumns
+table.getRow
+table.getRowCount
+table.getRowModel
+table.getSelectedRowModel
+table.getSortedRowModel
+table.getState
+table.getToggleAllColumnsVisibilityHandler
+table.getToggleAllPageRowsSelectedHandler
+table.getToggleAllRowsExpandedHandler
+table.getToggleAllRowsSelectedHandler
+table.getTopRows
+table.getTotalSize
+table.getVisibleFlatColumns
+table.getVisibleLeafColumns
+table.initialState
+table.lastPage
+table.nextPage
+table.options
+table.previousPage
+table.resetColumnFilters
+table.resetColumnOrder
+table.resetColumnPinning
+table.resetColumnSizing
+table.resetColumnVisibility
+table.resetExpanded
+table.resetGlobalFilter
+table.resetGrouping
+table.resetHeaderSizeInfo
+table.resetPageIndex
+table.resetPageSize
+table.resetPagination
+table.resetRowPinning
+table.resetRowSelection
+table.resetSorting
+table.rows
+table.setColumnFilters
+table.setColumnOrder
+table.setColumnPinning
+table.setColumnSizing
+table.setColumnSizingInfo
+table.setColumnVisibility
+table.setExpanded
+table.setGlobalFilter
+table.setGrouping
+table.setPageCount
+table.setPageIndex
+table.setPageSize
+table.setPagination
+table.setRowPinning
+table.setRowSelection
+table.setRowType
+table.setSorting
+table.setState
+table.toggleAllColumnsVisible
+table.toggleAllPageRowsSelected
+table.toggleAllRowsExpanded
+table.toggleAllRowsSelected
+table.toggleColumnSorting
+```
+
+### Column instance (`column.*`)
+
+```
+column._getFacetedMinMaxValues
+column._getFacetedRowModel
+column._getFacetedUniqueValues
+column.accessorFn
+column.clearSorting
+column.columnDef
+column.columns
+column.depth
+column.filterFn
+column.getAfter
+column.getAggregationFn
+column.getAutoAggregationFn
+column.getAutoFilterFn
+column.getAutoSortDir
+column.getAutoSortingFn
+column.getCanFilter
+column.getCanGlobalFilter
+column.getCanGroup
+column.getCanHide
+column.getCanMultiSort
+column.getCanPin
+column.getCanResize
+column.getCanSort
+column.getFacetedMinMaxValues
+column.getFacetedRowModel
+column.getFacetedUniqueValues
+column.getFilterFn
+column.getFilterIndex
+column.getFilterValue
+column.getFirstSortDir
+column.getFlatColumns
+column.getGroupedIndex
+column.getIndex
+column.getIsFiltered
+column.getIsFirstColumn
+column.getIsGrouped
+column.getIsLastColumn
+column.getIsPinned
+column.getIsResizing
+column.getIsSorted
+column.getIsVisible
+column.getLeafColumns
+column.getNextSortingOrder
+column.getPinnedIndex
+column.getSize
+column.getSortIndex
+column.getSortingFn
+column.getStart
+column.getToggleGroupingHandler
+column.getToggleSortingHandler
+column.getToggleVisibilityHandler
+column.id
+column.parent
+column.pin
+column.resetSize
+column.setFilterValue
+column.toggleGrouping
+column.toggleSorting
+column.toggleVisibility
+```
+
+### Row instance (`row.*`)
+
+```
+row._getAllVisibleCells
+row._groupingValuesCache
+row._uniqueValuesCache
+row._valuesCache
+row.columnFilters
+row.columnFiltersMeta
+row.depth
+row.getAllCells
+row.getCanExpand
+row.getCanMultiSelect
+row.getCanPin
+row.getCanSelect
+row.getCanSelectSubRows
+row.getCenterVisibleCells
+row.getGroupingValue
+row.getIsAllParentsExpanded
+row.getIsAllSubRowsSelected
+row.getIsExpanded
+row.getIsGrouped
+row.getIsPinned
+row.getIsSelected
+row.getIsSomeSelected
+row.getLeafRows
+row.getLeftVisibleCells
+row.getParentRows
+row.getPinnedIndex
+row.getRightVisibleCells
+row.getToggleExpandedHandler
+row.getToggleSelectedHandler
+row.getValue
+row.getVisibleCells
+row.groupingColumnId
+row.id
+row.index
+row.original
+row.originalSubRows
+row.parentId
+row.pin
+row.subRows
+row.toggleExpanded
+row.toggleSelected
+row.userId
+```
+
+### Header instance (`header.*`)
+
+```
+header.colSpan
+header.column
+header.getLeafHeaders
+header.getResizeHandler
+header.getSize
+header.getStart
+header.headerGroup
+header.index
+header.isPlaceholder
+header.rowSpan
+header.subHeaders
+```
+
+### Cell instance (`cell.*`)
+
+```
+cell.column
+cell.getContext
+cell.getIsAggregated
+cell.getIsGrouped
+cell.getIsPlaceholder
+cell.getValue
+cell.renderValue
+```
