@@ -35,15 +35,21 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
     query on instances (e.g. `getCanResize`, `getIsPlaceholder`, pin-family splits).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:
-  - Gap: we do not yet have a documented + tested integration pattern for “rebuild per frame, keep memo cache”.
-  - Tracking: `HTP-memo-020` + `HTP-perf-010`.
+  - Closed (initial): a documented + gated integration pattern exists for “rebuild per frame, keep memo cache”
+    for the filtered+sorted flat root-row ordering (plus a large-dataset guardrail test).
+  - Remaining: lift the same memo strategy across the full derived model pipeline (filtered/sorted/expanded/paginated).
+  - Tracking: `HTP-memo-010` (remaining scope).
 
 **P1 (should close to match upstream ergonomics without copying the JS API):**
 
-- **State JSON spec**: a written, enforceable spec for omitted-vs-explicit defaults and normalization rules.
-  - Tracking: `HTP-state-010` / `HTP-state-011`.
 - **Inventory completeness**: convert the raw upstream instance member dump into an explicit checklist with status + evidence.
   - Tracking: `HTP-cap-010` / `HTP-base-004`.
+
+Recently closed (no longer a gap):
+
+- **State JSON spec**: omitted-vs-explicit defaults and normalization rules are now specified and parity-gated.
+  - Evidence: `docs/workstreams/headless-table-tanstack-parity.md` (TanStack state JSON contract section),
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_state_json_semantics_parity.rs`.
 
 ---
 

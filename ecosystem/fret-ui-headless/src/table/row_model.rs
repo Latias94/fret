@@ -1776,6 +1776,43 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// Returns a stable, memoized ordering of the root row list after filtering + sorting.
+    ///
+    /// This helper exists to support "rebuild each frame" callers: they can rebuild a fresh `Table`
+    /// while keeping a persistent memo cache (TanStack-style) outside the ephemeral instance.
+    ///
+    /// Notes:
+    /// - The returned ordering is based on the **flat core row model** (no grouping, no sub-rows).
+    /// - Cache invalidation is driven by `items_revision` plus a dependency snapshot derived from
+    ///   `state`, `options`, and the configured column/filter/sort surfaces.
+    pub fn tanstack_sorted_flat_row_order_with_cache(
+        &self,
+        items_revision: u64,
+        cache: &mut super::TanStackSortedFlatRowOrderCache,
+    ) -> (Arc<[super::FlatRowOrderEntry]>, bool) {
+        let deps = super::TanStackSortedFlatRowOrderDeps {
+            items_revision,
+            data_len: self.data.len(),
+            sorting: self.state.sorting.clone(),
+            column_filters: self.state.column_filters.clone(),
+            global_filter: self.state.global_filter.clone(),
+            options: self.options,
+            global_filter_fn: self.global_filter_fn.clone(),
+            has_get_column_can_global_filter: self.get_column_can_global_filter.is_some(),
+        };
+
+        let (order, recomputed) = cache.sorted_order(
+            self.data,
+            &self.columns,
+            self.get_row_key.as_ref(),
+            &self.filter_fns,
+            &self.sorting_fns,
+            self.get_column_can_global_filter.as_deref(),
+            deps,
+        );
+        (order.clone(), recomputed)
+    }
+
     /// TanStack-aligned: `column.getCanSort()`.
     pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;
