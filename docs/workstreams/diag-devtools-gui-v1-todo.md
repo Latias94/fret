@@ -123,7 +123,9 @@ Conventions:
   - [x] `fret_diag_pick` (arm + wait + return selector JSON),
   - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),
   - [x] `fret_diag_run_script_json` (minimal: run a v1/v2 script JSON and wait for pass/fail),
-  - [ ] `fret_diag_pack` / `fret_diag_latest` / `fret_diag_compare`.
+  - [x] `fret_diag_pack_last_bundle` (dump + pack into zip),
+  - [x] `fret_diag_bundle_dump_latest` (best-effort latest bundle.dumped payload),
+  - [ ] `fret_diag_compare`.
 - [ ] (Optional) Expose key artifacts as resources:
   - [ ] latest `bundle.json`,
   - [ ] `repro.summary.json`,

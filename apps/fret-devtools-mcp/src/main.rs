@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
@@ -166,6 +167,103 @@ impl FretDevtoolsMcp {
             .await
             .ok_or_else(|| "timeout waiting for bundle.dumped".to_string())?;
         Ok(serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()))
+    }
+
+    #[tool(
+        description = "Pack the latest bundle into a repro zip. Always performs a fresh bundle dump first."
+    )]
+    async fn fret_diag_pack_last_bundle(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<PackLastBundleRequestV1>,
+    ) -> Result<Json<PackLastBundleResultV1>, String> {
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+        let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
+        let include_all = params.0.include_all.unwrap_or(true);
+
+        self.client.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "bundle.dump".to_string(),
+            session_id: Some(session_id.clone()),
+            request_id: None,
+            payload: serde_json::json!({ "label": label }),
+        });
+
+        let dumped = self
+            .wait_for_type_and_session("bundle.dumped", &session_id, params.0.timeout_ms)
+            .await
+            .ok_or_else(|| "timeout waiting for bundle.dumped".to_string())?;
+
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let (out_dir_arg, bundle_dir_arg) = materialize_or_resolve_bundle_dir(
+            &repo_root,
+            &dumped.payload,
+            params.0.export_out_dir.as_deref(),
+        )?;
+
+        let pack_out = match params.0.pack_out.as_deref() {
+            Some(path) if !path.trim().is_empty() => PathBuf::from(path.trim()),
+            _ => default_pack_out_path(&repo_root, &bundle_dir_arg),
+        };
+
+        let mut args = vec![
+            "--dir".to_string(),
+            out_dir_arg.clone(),
+            "--pack-out".to_string(),
+            pack_out.to_string_lossy().to_string(),
+        ];
+        if include_all {
+            args.push("--include-all".to_string());
+        }
+        args.push("pack".to_string());
+        args.push(bundle_dir_arg.clone());
+
+        tokio::task::spawn_blocking(move || fret_diag::diag_cmd(args))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+        Ok(Json(PackLastBundleResultV1 {
+            schema_version: 1,
+            out_dir: out_dir_arg,
+            bundle_dir: bundle_dir_arg,
+            pack_path: pack_out.to_string_lossy().to_string(),
+            bundle_dumped_json: serde_json::to_string_pretty(&dumped.payload)
+                .unwrap_or_else(|_| "{}".to_string()),
+        }))
+    }
+
+    #[tool(description = "Return the most recent bundle.dumped payload currently in the inbox.")]
+    async fn fret_diag_bundle_dump_latest(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<BundleDumpLatestRequestV1>,
+    ) -> Result<Json<BundleDumpLatestResultV1>, String> {
+        let session_id = self.resolve_session_id(params.0.session_id).await?;
+        let inbox = self.inbox.lock().await;
+        let msg = inbox
+            .iter()
+            .rev()
+            .find(|m| m.r#type == "bundle.dumped" && m.session_id.as_deref() == Some(&session_id))
+            .cloned();
+        drop(inbox);
+
+        let Some(msg) = msg else {
+            return Ok(Json(BundleDumpLatestResultV1 {
+                schema_version: 1,
+                found: false,
+                payload_json: None,
+            }));
+        };
+
+        Ok(Json(BundleDumpLatestResultV1 {
+            schema_version: 1,
+            found: true,
+            payload_json: Some(
+                serde_json::to_string_pretty(&msg.payload).unwrap_or_else(|_| "{}".to_string()),
+            ),
+        }))
     }
 
     #[tool(
@@ -367,6 +465,47 @@ struct BundleDumpRequestV1 {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+struct PackLastBundleRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    label: Option<String>,
+    /// Optional override for where to materialize web-runner bundles (defaults to `.fret/diag/exports`).
+    #[serde(default)]
+    export_out_dir: Option<String>,
+    /// Optional override for output zip path.
+    #[serde(default)]
+    pack_out: Option<String>,
+    /// When true (default), includes triage/screenshot/root artifacts if present.
+    #[serde(default)]
+    include_all: Option<bool>,
+    timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct PackLastBundleResultV1 {
+    schema_version: u32,
+    out_dir: String,
+    bundle_dir: String,
+    pack_path: String,
+    bundle_dumped_json: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct BundleDumpLatestRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct BundleDumpLatestResultV1 {
+    schema_version: u32,
+    found: bool,
+    #[serde(default)]
+    payload_json: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct InspectSetRequestV1 {
     #[serde(default)]
     session_id: Option<String>,
@@ -516,7 +655,14 @@ async fn main() -> anyhow::Result<()> {
                         }
                     }
 
-                    inbox.lock().await.push_back(msg);
+                    {
+                        let mut inbox = inbox.lock().await;
+                        inbox.push_back(msg);
+                        if inbox.len() > 2000 {
+                            let drain = inbox.len().saturating_sub(2000);
+                            inbox.drain(0..drain);
+                        }
+                    }
                 }
                 if !drained {
                     tokio::time::sleep(Duration::from_millis(10)).await;
@@ -540,4 +686,79 @@ async fn main() -> anyhow::Result<()> {
 
 fn env_u16(key: &str) -> Option<u16> {
     std::env::var(key).ok().and_then(|v| v.parse().ok())
+}
+
+fn repo_root_from_manifest_dir() -> Option<PathBuf> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let apps_dir = manifest_dir.parent()?;
+    apps_dir.parent().map(|p| p.to_path_buf())
+}
+
+fn default_pack_out_path(repo_root: &Path, bundle_dir_arg: &str) -> PathBuf {
+    let pack_dir = repo_root.join(".fret").join("diag").join("packs");
+    let _ = std::fs::create_dir_all(&pack_dir);
+
+    let bundle_name = Path::new(bundle_dir_arg)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+    pack_dir.join(format!("{bundle_name}-{}.zip", unix_ms_now()))
+}
+
+fn materialize_or_resolve_bundle_dir(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+    export_out_dir_override: Option<&str>,
+) -> Result<(String, String), String> {
+    let exported_unix_ms = dumped_payload
+        .get("exported_unix_ms")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(unix_ms_now);
+
+    if let Some(bundle) = dumped_payload.get("bundle") {
+        let export_root = match export_out_dir_override
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+        {
+            Some(p) if Path::new(&p).is_absolute() => PathBuf::from(p),
+            Some(p) => repo_root.join(p),
+            None => repo_root.join(".fret").join("diag").join("exports"),
+        };
+        let export_dir = export_root.join(exported_unix_ms.to_string());
+        std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+        let text = serde_json::to_string_pretty(bundle).unwrap_or_else(|_| "{}".to_string());
+        std::fs::write(export_dir.join("bundle.json"), text.as_bytes())
+            .map_err(|e| e.to_string())?;
+        return Ok((
+            export_root.to_string_lossy().to_string(),
+            export_dir.to_string_lossy().to_string(),
+        ));
+    }
+
+    let out_dir = dumped_payload
+        .get("out_dir")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "bundle.dumped missing out_dir (and no bundle payload)".to_string())?;
+    let dir = dumped_payload
+        .get("dir")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "bundle.dumped missing dir (and no bundle payload)".to_string())?;
+
+    let bundle_dir = if Path::new(dir).is_absolute() {
+        dir.to_string()
+    } else {
+        let joined = Path::new(out_dir).join(dir);
+        joined.to_string_lossy().to_string()
+    };
+
+    Ok((out_dir.to_string(), bundle_dir))
+}
+
+fn unix_ms_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis().min(u128::from(u64::MAX)) as u64)
+        .unwrap_or(0)
 }

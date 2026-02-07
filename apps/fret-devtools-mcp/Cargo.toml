@@ -22,4 +22,5 @@ schemars = "1.2"
 rmcp = { version = "0.14.0", default-features = false, features = ["base64", "macros", "server", "transport-io"] }
 
 fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
+fret-diag = { path = "../../crates/fret-diag" }
 fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["client-native", "server-native"] }
