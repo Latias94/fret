@@ -17,7 +17,7 @@ imui = ["ui", "dep:fret-authoring"]
 
 syntax-rust = ["fret-code-view/syntax-rust"]
 syntax-all = ["fret-code-view/syntax-all"]
-mathjax-svg = ["dep:mathjax_svg", "dep:fret-query"]
+mathjax-svg = ["dep:mathjax_svg", "dep:fret-query", "fret-query/ui"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

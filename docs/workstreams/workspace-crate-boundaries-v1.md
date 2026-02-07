@@ -103,10 +103,20 @@ If `taffy` is the committed direction, remove the now-stale feature fork to:
 
 ### 4.4 Router/query: consolidate if it improves user cognition
 
-If `fret-router` is primarily a thin integration over `fret-query`, choose one:
+Decision: keep `fret-router` and `fret-query` as separate ecosystem crates.
 
-- merge into `fret-query` behind features, or
-- rename to make its layer intent explicit (app/UI integration surface, not kernel).
+Rationale:
+
+- `fret-router` is not “just glue”: it already provides a portable URL/route model (path patterns,
+  canonicalization, in-memory history) plus an opt-in wasm adapter.
+- `fret-query` is an async resource state/cache layer (TanStack Query-like) that should remain useful
+  outside of navigation concerns.
+
+Boundary tightening follow-ups:
+
+- Keep route↔query helpers behind an explicit feature (today: `fret-router/query-integration`).
+- Keep `fret-query` portable by default by requiring callers that want `ElementContext` sugar to opt
+  into `fret-query/ui` explicitly (avoid “UI by default” in transitive deps).
 
 ## 5) Definition of done
 
@@ -121,4 +131,3 @@ This workstream is considered complete when:
    - `fret` facade `web` bundle follows the default direction.
 3. Layout feature fork is removed (if committed) and the workspace builds cleanly.
 4. `tools/check_layering.ps1` remains green and CI-like guardrails remain in place.
-

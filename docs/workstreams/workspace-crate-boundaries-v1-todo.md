@@ -38,9 +38,11 @@ Related plan:
 
 ### M4 — Router/query consolidation decision
 
-- [ ] Decide: merge `fret-router` into `fret-query` vs rename to clarify layer intent.
-- [ ] Apply the decision and update downstream crates (`apps/*` + ecosystem callers).
-- [ ] Add/adjust doc pointers if the crate name or surface changes.
+- [x] Decide: keep `fret-router` and `fret-query` separate (no merge/rename).
+- [x] Tighten boundaries:
+  - [x] Remove unused/stale `fret-router` feature flags (keep web + query integration only).
+  - [x] Make `fret-query` portable by default (no `ui` in `default` features); callers opt into `fret-query/ui`.
+- [x] Update docs to reflect the new feature defaults and router feature surface.
 
 ### M5 — Follow-up cleanups (optional)
 
