@@ -3,12 +3,12 @@ use std::hash::{Hash, Hasher};
 
 use fret_core::{ImageId, UvRect};
 
-use crate::Renderer;
-use crate::images::{ImageColorSpace, ImageDescriptor};
-use crate::svg::{
+use super::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, upload_alpha_mask,
     upload_rgba_image,
 };
+use crate::Renderer;
+use crate::images::{ImageColorSpace, ImageDescriptor};
 use fret_core::AlphaMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

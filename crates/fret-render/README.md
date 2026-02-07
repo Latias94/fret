@@ -19,7 +19,7 @@ and presentation loop.
 - `src/targets.rs`: render target descriptors + registries.
 - `src/surface.rs`: surface state helpers (presentation glue, but still renderer-owned).
 - `src/images.rs`: image registry + upload helpers.
-- `src/svg.rs` + `src/svg_cache.rs`: SVG rasterization and caching.
+- `src/svg/`: SVG rasterization and caching.
 - `src/text/`: text shaping/wrapping glue and font family configuration.
 - `src/perf_store.rs`: frame-level performance sample storage.
 - `src/capabilities.rs`: adapter capability detection and surfaced capability flags.
@@ -35,4 +35,3 @@ refactor.
 
 - Tests: `cargo nextest run -p fret-render`
 - Formatting: `cargo fmt`
-

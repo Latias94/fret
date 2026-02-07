@@ -15,7 +15,6 @@ mod perf_store;
 mod renderer;
 mod surface;
 mod svg;
-mod svg_cache;
 mod targets;
 mod text;
 mod upload_counters;
@@ -35,11 +34,11 @@ pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;
+pub use svg::cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use svg::{
     SMOOTH_SVG_SCALE_FACTOR, SvgAlphaMask, SvgRenderer, SvgRgbaImage, UploadedAlphaMask,
     UploadedRgbaImage, upload_alpha_mask, upload_rgba_image,
 };
-pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetColorSpace, RenderTargetDescriptor, RenderTargetRegistry};
 pub use text::TextFontFamilyConfig;
 

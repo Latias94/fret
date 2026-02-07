@@ -5,6 +5,8 @@ use resvg::tiny_skia::{Pixmap, Transform};
 
 use crate::upload_counters::record_svg_upload;
 
+pub(crate) mod cache;
+
 pub const SMOOTH_SVG_SCALE_FACTOR: f32 = 2.0;
 
 #[derive(Debug, Clone)]
