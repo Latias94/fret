@@ -1,10 +1,11 @@
 use fret_app::{
-    App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBarIntegrationModeV1,
-    MenuItem, Model, Platform, SettingsFileV1, WindowRequest, load_layered_settings,
+    ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
+    LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
+    Platform, SettingsFileV1, WindowRequest, WindowRole, WindowStyleRequest, load_layered_settings,
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, TimerToken, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -19,12 +20,12 @@ use fret_router::{
     route_query_key,
 };
 use fret_runtime::{
-    PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
-    WindowCommandEnabledService,
+    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailability,
+    WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::SemanticsDecoration;
+use fret_ui::element::{SemanticsDecoration, SemanticsProps};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
@@ -45,6 +46,10 @@ use time::Date;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::harness::{
+    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+};
 use crate::spec::*;
 use crate::ui;
 
@@ -124,7 +129,23 @@ struct PendingTaffyDumpRequest {
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
+    focused_window: Option<AppWindowId>,
 }
+
+#[derive(Default)]
+struct UiGalleryRecentItemsService {
+    next_id: u64,
+    items: Vec<Arc<str>>,
+}
+
+#[derive(Default)]
+struct UiGalleryDebugWindowService {
+    next_logical_window_id: u64,
+    script_keepalive_window: Option<AppWindowId>,
+    script_keepalive_frames: u32,
+}
+
+const DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER: TimerToken = TimerToken(0x7569_6761_6c6c_6572);
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone)]
@@ -253,6 +274,7 @@ struct UiGalleryWindowState {
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
     sonner_position: Model<shadcn::ToastPosition>,
+    menu_bar_seq: Model<u64>,
     virtual_list_torture_jump: Model<String>,
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
@@ -287,6 +309,306 @@ impl UiGalleryDriver {
         });
     }
 
+    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
+        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
+        cmds.open = Some(CommandId::new(CMD_APP_OPEN));
+        cmds.save = Some(CommandId::new(CMD_APP_SAVE));
+        cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
+        cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
+        cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
+        cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
+        cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
+        cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
+        cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
+        cmds.switch_locale = Some(CommandId::new(
+            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
+        ));
+
+        let resolve_menu_title = |key: &'static str, fallback: &'static str| -> Arc<str> {
+            app.global::<fret_runtime::fret_i18n::I18nService>()
+                .map(|i18n| {
+                    let text = i18n.t(key.to_string());
+                    if text == key {
+                        Arc::from(fallback)
+                    } else {
+                        Arc::from(text)
+                    }
+                })
+                .unwrap_or_else(|| Arc::from(fallback))
+        };
+        cmds.file_menu_title = Some(resolve_menu_title("workspace-menu-file", "File"));
+        cmds.edit_menu_title = Some(resolve_menu_title("workspace-menu-edit", "Edit"));
+        cmds.view_menu_title = Some(resolve_menu_title("workspace-menu-view", "View"));
+        cmds.window_menu_title = Some(resolve_menu_title("workspace-menu-window", "Window"));
+
+        if Platform::current() == Platform::Macos {
+            cmds.app_menu_title = Some(Arc::from("Fret"));
+            cmds.include_services_menu = true;
+            cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
+            cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
+            cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
+            cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
+            cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
+            cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
+        }
+
+        cmds
+    }
+
+    fn recent_menu_items(app: &App) -> Vec<Arc<str>> {
+        app.global::<UiGalleryRecentItemsService>()
+            .map(|svc| svc.items.clone())
+            .unwrap_or_default()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn window_menu_items(app: &App) -> Vec<AppWindowId> {
+        let Some(store) = app.global::<UiGalleryHarnessDiagnosticsStore>() else {
+            return Vec::new();
+        };
+        let mut windows: Vec<AppWindowId> = store.per_window.keys().copied().collect();
+        windows.sort_by_key(|window| format!("{window:?}"));
+        windows
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn focused_window_menu_item(app: &App) -> Option<AppWindowId> {
+        let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+        let focused = store.focused_window?;
+        store.per_window.contains_key(&focused).then_some(focused)
+    }
+
+    fn recent_open_command(index: usize) -> CommandId {
+        CommandId::new(format!("{CMD_GALLERY_RECENT_OPEN_PREFIX}{}", index + 1))
+    }
+
+    fn window_activate_command(index: usize) -> CommandId {
+        CommandId::new(format!("{CMD_GALLERY_WINDOW_ACTIVATE_PREFIX}{}", index + 1))
+    }
+
+    fn parse_dynamic_command_index(command: &CommandId, prefix: &str) -> Option<usize> {
+        command
+            .as_str()
+            .strip_prefix(prefix)?
+            .parse::<usize>()
+            .ok()?
+            .checked_sub(1)
+    }
+
+    fn sync_dynamic_menu_command_metadata(app: &mut App) {
+        for (index, title) in Self::recent_menu_items(app)
+            .into_iter()
+            .take(10)
+            .enumerate()
+        {
+            app.commands_mut().register(
+                Self::recent_open_command(index),
+                CommandMeta::new(title)
+                    .with_category("Menu")
+                    .with_keywords(["menu", "recent", "open"])
+                    .hidden(),
+            );
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        for (index, _window) in Self::window_menu_items(app).into_iter().enumerate() {
+            app.commands_mut().register(
+                Self::window_activate_command(index),
+                CommandMeta::new(format!("Window {}", index + 1))
+                    .with_category("Window")
+                    .with_keywords(["menu", "window", "activate"])
+                    .hidden(),
+            );
+        }
+    }
+
+    fn build_menu_bar(app: &App) -> MenuBar {
+        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let os = settings.menu_bar.os;
+        let in_window = settings.menu_bar.in_window;
+
+        let mut menu_bar = fret_workspace::menu::workspace_default_menu_bar(
+            Self::build_workspace_menu_commands(app),
+        );
+
+        let recent_items = Self::recent_menu_items(app);
+
+        if let Some(menu) = menu_bar
+            .menus
+            .iter_mut()
+            .find(|m| m.role == Some(MenuRole::File) || m.title.as_ref() == "File")
+        {
+            if let Some(MenuItem::Submenu {
+                title: _, items, ..
+            }) = menu.items.iter_mut().find(
+                |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Recent"),
+            ) {
+                *items = if recent_items.is_empty() {
+                    vec![MenuItem::Label {
+                        title: Arc::from("No recent items"),
+                    }]
+                } else {
+                    recent_items
+                        .iter()
+                        .take(10)
+                        .enumerate()
+                        .map(|(index, _title)| MenuItem::Command {
+                            command: Self::recent_open_command(index),
+                            when: None,
+                            toggle: None,
+                        })
+                        .collect()
+                };
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let windows = Self::window_menu_items(app);
+            let focused_window = Self::focused_window_menu_item(app);
+            if !windows.is_empty() {
+                if let Some(menu) = menu_bar
+                    .menus
+                    .iter_mut()
+                    .find(|m| m.role == Some(MenuRole::Window) || m.title.as_ref() == "Window")
+                {
+                    if let Some(MenuItem::Submenu { title: _, items, .. }) =
+                        menu.items.iter_mut().find(|i| {
+                            matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows")
+                        })
+                    {
+                        *items = windows
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, window_id)| MenuItem::Command {
+                                command: Self::window_activate_command(index),
+                                when: None,
+                                toggle: Some(MenuItemToggle {
+                                    kind: MenuItemToggleKind::Radio,
+                                    checked: Some(window_id) == focused_window,
+                                }),
+                            })
+                            .collect();
+                    }
+                }
+            }
+        }
+
+        let radio = |checked: bool| {
+            Some(MenuItemToggle {
+                kind: MenuItemToggleKind::Radio,
+                checked,
+            })
+        };
+
+        menu_bar.menus.push(Menu {
+            title: Arc::from("Gallery"),
+            role: None,
+            mnemonic: Some('g'),
+            items: vec![
+                MenuItem::Command {
+                    command: CommandId::new(CMD_APP_SETTINGS),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Separator,
+                MenuItem::Submenu {
+                    title: Arc::from("Menu Bar"),
+                    when: None,
+                    items: vec![
+                        MenuItem::Submenu {
+                            title: Arc::from("OS"),
+                            when: None,
+                            items: vec![
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_AUTO),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::Auto),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_ON),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::On),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_OFF),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::Off),
+                                },
+                            ],
+                        },
+                        MenuItem::Submenu {
+                            title: Arc::from("In-window"),
+                            when: None,
+                            items: vec![
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_AUTO),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::Auto),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_ON),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::On),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_OFF),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::Off),
+                                },
+                            ],
+                        },
+                    ],
+                },
+                MenuItem::Separator,
+                MenuItem::Submenu {
+                    title: Arc::from("Debug"),
+                    when: None,
+                    items: vec![
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
+                            when: None,
+                            toggle: None,
+                        },
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_RECENT_CLEAR),
+                            when: None,
+                            toggle: None,
+                        },
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_WINDOW_OPEN),
+                            when: None,
+                            toggle: None,
+                        },
+                    ],
+                },
+                MenuItem::Separator,
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
+                    when: None,
+                    toggle: None,
+                },
+            ],
+        });
+
+        menu_bar
+    }
+
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
@@ -301,6 +623,17 @@ impl UiGalleryDriver {
                 }
             },
         );
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = app
+                .global::<UiGalleryCodeEditorHandlesStore>()
+                .and_then(|store| store.per_window.get(&window).cloned())
+            {
+                edit_can_undo |= handle.can_undo();
+                edit_can_redo |= handle.can_redo();
+            }
+        }
 
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
             svc.set_snapshot(
@@ -495,12 +828,7 @@ impl UiGalleryDriver {
         if is_diag {
             settings.menu_bar.os = MenuBarIntegrationModeV1::Off;
             settings.menu_bar.in_window = MenuBarIntegrationModeV1::On;
-            Self::apply_menu_bar_settings(
-                app,
-                window,
-                settings.menu_bar.os,
-                settings.menu_bar.in_window,
-            );
+            Self::apply_menu_bar_settings(app, settings.menu_bar.os, settings.menu_bar.in_window);
         }
         let settings_open = app.models_mut().insert(false);
         let settings_menu_bar_os = app
@@ -585,6 +913,7 @@ impl UiGalleryDriver {
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
         let sonner_position = app.models_mut().insert(shadcn::ToastPosition::TopCenter);
+        let menu_bar_seq = app.models_mut().insert(0_u64);
         let virtual_list_torture_jump = app.models_mut().insert(String::from("9000"));
         let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
         let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
@@ -718,6 +1047,7 @@ impl UiGalleryDriver {
             cmdk_query,
             last_action,
             sonner_position,
+            menu_bar_seq,
             virtual_list_torture_jump,
             virtual_list_torture_edit_row,
             virtual_list_torture_edit_text,
@@ -738,7 +1068,15 @@ impl UiGalleryDriver {
                     text_area: state.text_area.clone(),
                 },
             );
+            if store.focused_window.is_none() {
+                store.focused_window = Some(window);
+            }
         });
+
+        // Sync once after per-window state is registered so dynamic menu content (e.g. window list)
+        // can be derived from the latest app globals.
+        Self::sync_menu_bar_after_state_change(app, window);
+        Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
         state
     }
@@ -903,7 +1241,141 @@ impl UiGalleryDriver {
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
+        if let Some(index) =
+            Self::parse_dynamic_command_index(command, CMD_GALLERY_RECENT_OPEN_PREFIX)
+        {
+            let Some(title) = Self::recent_menu_items(app).into_iter().nth(index) else {
+                return false;
+            };
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from(format!("recent.open({})", title.as_ref()));
+            });
+            return true;
+        }
+
+        if let Some(index) =
+            Self::parse_dynamic_command_index(command, CMD_GALLERY_WINDOW_ACTIVATE_PREFIX)
+        {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let Some(target_window) = Self::window_menu_items(app).into_iter().nth(index)
+                else {
+                    return false;
+                };
+                let is_diag_automation =
+                    std::env::var_os("FRET_DIAG").is_some_and(|value| !value.is_empty());
+
+                if is_diag_automation {
+                    app.with_global_mut(
+                        UiGalleryHarnessDiagnosticsStore::default,
+                        |store, _app| {
+                            if store.per_window.contains_key(&target_window) {
+                                store.focused_window = Some(target_window);
+                            }
+                        },
+                    );
+                    Self::sync_menu_bar_after_state_change(app, window);
+                    Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+                } else {
+                    app.push_effect(Effect::Window(WindowRequest::Raise {
+                        window: target_window,
+                        sender: Some(window),
+                    }));
+                }
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from(format!("window.activate({})", index + 1));
+                });
+                return true;
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = index;
+                return false;
+            }
+        }
+
         match command.as_str() {
+            CMD_GALLERY_DEBUG_RECENT_ADD => {
+                let mut label: Option<Arc<str>> = None;
+                app.with_global_mut(UiGalleryRecentItemsService::default, |svc, _app| {
+                    svc.next_id = svc.next_id.saturating_add(1);
+                    let id = svc.next_id;
+                    let next: Arc<str> = Arc::from(format!("Recent {id}"));
+                    svc.items.insert(0, next.clone());
+                    svc.items.truncate(10);
+                    label = Some(next);
+                });
+
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from(format!(
+                        "debug.recent.add({})",
+                        label.as_deref().unwrap_or("unknown")
+                    ));
+                });
+            }
+            CMD_GALLERY_DEBUG_RECENT_CLEAR => {
+                app.with_global_mut(UiGalleryRecentItemsService::default, |svc, _app| {
+                    svc.items.clear();
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("debug.recent.clear");
+                });
+            }
+            CMD_GALLERY_DEBUG_WINDOW_OPEN => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let logical_window_id =
+                        app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                            svc.next_logical_window_id =
+                                svc.next_logical_window_id.saturating_add(1);
+                            format!("ui-gallery-debug-window-{}", svc.next_logical_window_id)
+                        });
+
+                    app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                        kind: CreateWindowKind::DockRestore {
+                            logical_window_id: logical_window_id.clone(),
+                        },
+                        anchor: None,
+                        role: WindowRole::Auxiliary,
+                        style: WindowStyleRequest {
+                            activation: Some(ActivationPolicy::NonActivating),
+                            ..Default::default()
+                        },
+                    })));
+                    app.push_effect(Effect::Window(WindowRequest::Raise {
+                        window,
+                        sender: Some(window),
+                    }));
+                    app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                        svc.script_keepalive_window = Some(window);
+                        svc.script_keepalive_frames = 180;
+                    });
+                    app.push_effect(Effect::SetTimer {
+                        window: None,
+                        token: DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER,
+                        after: Duration::from_millis(16),
+                        repeat: Some(Duration::from_millis(16)),
+                    });
+
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from(format!("debug.window.open({logical_window_id})"));
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("debug.window.open.unsupported");
+                    });
+                }
+            }
             CMD_CODE_EDITOR_LOAD_FONTS => {
                 app.push_effect(Effect::FileDialogOpen {
                     window,
@@ -1090,7 +1562,6 @@ impl UiGalleryDriver {
 
     fn apply_menu_bar_settings(
         app: &mut App,
-        window: AppWindowId,
         os: MenuBarIntegrationModeV1,
         in_window: MenuBarIntegrationModeV1,
     ) {
@@ -1098,8 +1569,78 @@ impl UiGalleryDriver {
             settings.menu_bar.os = os;
             settings.menu_bar.in_window = in_window;
         });
+    }
+
+    fn sync_menu_bar_after_state_change(app: &mut App, window: AppWindowId) {
+        Self::sync_dynamic_menu_command_metadata(app);
+        let menu_bar = Self::build_menu_bar(app);
+        fret_app::set_menu_bar_baseline(app, menu_bar);
         fret_app::sync_os_menu_bar(app);
         app.request_redraw(window);
+    }
+
+    fn bump_menu_bar_seq(app: &mut App, seq: &Model<u64>) {
+        let _ = app.models_mut().update(seq, |v| {
+            *v = v.saturating_add(1);
+        });
+    }
+
+    fn handle_menu_bar_mode_command(
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut UiGalleryWindowState,
+        command: &str,
+    ) -> bool {
+        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let mut os = settings.menu_bar.os;
+        let mut in_window = settings.menu_bar.in_window;
+
+        let last_action: &'static str = match command {
+            CMD_MENU_BAR_OS_AUTO => {
+                os = MenuBarIntegrationModeV1::Auto;
+                "settings.menu_bar.os.auto"
+            }
+            CMD_MENU_BAR_OS_ON => {
+                os = MenuBarIntegrationModeV1::On;
+                "settings.menu_bar.os.on"
+            }
+            CMD_MENU_BAR_OS_OFF => {
+                os = MenuBarIntegrationModeV1::Off;
+                "settings.menu_bar.os.off"
+            }
+            CMD_MENU_BAR_IN_WINDOW_AUTO => {
+                in_window = MenuBarIntegrationModeV1::Auto;
+                "settings.menu_bar.in_window.auto"
+            }
+            CMD_MENU_BAR_IN_WINDOW_ON => {
+                in_window = MenuBarIntegrationModeV1::On;
+                "settings.menu_bar.in_window.on"
+            }
+            CMD_MENU_BAR_IN_WINDOW_OFF => {
+                in_window = MenuBarIntegrationModeV1::Off;
+                "settings.menu_bar.in_window.off"
+            }
+            _ => return false,
+        };
+
+        Self::apply_menu_bar_settings(app, os, in_window);
+        Self::sync_menu_bar_after_state_change(app, window);
+        Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+
+        let _ = app.models_mut().update(&state.settings_menu_bar_os, |v| {
+            *v = Some(Self::menu_bar_mode_key(os));
+        });
+        let _ = app
+            .models_mut()
+            .update(&state.settings_menu_bar_in_window, |v| {
+                *v = Some(Self::menu_bar_mode_key(in_window));
+            });
+
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from(last_action);
+        });
+
+        true
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -1197,6 +1738,8 @@ impl UiGalleryDriver {
     ) {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
+
+        Self::sync_undo_availability(app, window, &state.undo_doc);
 
         let availability = app
             .global::<WindowCommandAvailabilityService>()
@@ -1303,6 +1846,7 @@ impl UiGalleryDriver {
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
         let sonner_position = state.sonner_position.clone();
+        let menu_bar_seq = state.menu_bar_seq.clone();
         let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
         let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
         let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
@@ -1851,22 +2395,33 @@ impl UiGalleryDriver {
                             .into_element(cx)
                     });
 
+                    let menu_bar_seq_value = cx
+                        .get_model_copied(&menu_bar_seq, Invalidation::Layout)
+                        .unwrap_or(0);
                     let menu_bar = fret_app::effective_menu_bar(cx.app);
                     let show_in_window_menu_bar = fret_app::should_render_in_window_menu_bar(
                         cx.app,
                         fret_app::Platform::current(),
                     );
+                    cx.app.with_global_mut(
+                        fret_runtime::WindowMenuBarFocusService::default,
+                        |svc, _app| {
+                            svc.set_present(cx.window, show_in_window_menu_bar && menu_bar.is_some());
+                        },
+                    );
                     let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
                         std::cell::RefCell::new(None);
                     let in_window_menu_bar = if show_in_window_menu_bar {
                         menu_bar.as_ref().map(|menu_bar| {
-                            let (menu, handle) = menubar_from_runtime_with_focus_handle(
-                                cx,
-                                menu_bar,
-                                MenubarFromRuntimeOptions::default(),
-                            );
-                            *menubar_handle.borrow_mut() = Some(handle);
-                            menu
+                            cx.keyed(format!("ui_gallery.menubar.{menu_bar_seq_value}"), |cx| {
+                                let (menu, handle) = menubar_from_runtime_with_focus_handle(
+                                    cx,
+                                    menu_bar,
+                                    MenubarFromRuntimeOptions::default(),
+                                );
+                                *menubar_handle.borrow_mut() = Some(handle);
+                                menu
+                            })
                         })
                     } else {
                         None
@@ -1915,11 +2470,21 @@ impl UiGalleryDriver {
                             right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
                         }
 
+                        let status_last_action_label =
+                            Arc::<str>::from(format!("last action: {}", status_last_action.as_ref()));
+                        let status_last_action_text = status_last_action_label.clone();
+                        let status_last_action_item = cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Text,
+                                label: Some(status_last_action_label),
+                                test_id: Some(Arc::from("ui-gallery-status-last-action")),
+                                ..Default::default()
+                            },
+                            move |cx| vec![cx.text(status_last_action_text.as_ref())],
+                        );
+
                         WorkspaceStatusBar::new()
-                            .left(vec![cx.text(format!(
-                                "last action: {}",
-                                status_last_action.as_ref()
-                            ))])
+                            .left(vec![status_last_action_item])
                             .right(right_items)
                             .into_element(cx)
                     });
@@ -1951,6 +2516,11 @@ impl UiGalleryDriver {
                     if let Some(handle) = menubar_handle.borrow().clone() {
                         let group_active = handle.group_active.clone();
                         let trigger_registry = handle.trigger_registry.clone();
+                        let last_focus_before_menubar = handle.last_focus_before_menubar.clone();
+                        let focus_is_trigger = handle.focus_is_trigger.clone();
+                        let group_active_for_command = group_active.clone();
+                        let trigger_registry_for_command = trigger_registry.clone();
+                        let last_focus_for_command = last_focus_before_menubar.clone();
                         cx.command_add_on_command_for(
                             panel.id,
                             Arc::new(move |host, acx, command| {
@@ -1958,28 +2528,71 @@ impl UiGalleryDriver {
                                     return false;
                                 }
 
-                                let active = host.models_mut().get_cloned(&group_active).flatten();
+                                let active = host
+                                    .models_mut()
+                                    .get_cloned(&group_active_for_command)
+                                    .flatten();
                                 if let Some(active) = active {
                                     let _ = host.models_mut().update(&active.open, |v| *v = false);
-                                    let _ = host.models_mut().update(&group_active, |v| *v = None);
-                                    host.request_focus(active.trigger);
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&group_active_for_command, |v| *v = None);
+                                    let restore =
+                                        host.models_mut().get_cloned(&last_focus_for_command).flatten();
+                                    host.request_focus(restore.unwrap_or(active.trigger));
                                     host.request_redraw(acx.window);
                                     return true;
                                 }
 
                                 let entries = host
                                     .models_mut()
-                                    .get_cloned(&trigger_registry)
+                                    .get_cloned(&trigger_registry_for_command)
                                     .unwrap_or_default();
-                                let target = entries.iter().find(|e| e.enabled).map(|e| e.trigger);
+                                let target = entries.iter().find(|e| e.enabled).cloned();
                                 let Some(target) = target else {
                                     return false;
                                 };
 
-                                host.request_focus(target);
+                                let open_for_state = target.open.clone();
+                                let _ = host
+                                    .models_mut()
+                                    .update(&group_active_for_command, |v| {
+                                        *v = Some(
+                                            fret_ui_kit::primitives::menubar::trigger_row::MenubarActiveTrigger {
+                                                trigger: target.trigger,
+                                                open: open_for_state,
+                                            },
+                                        );
+                                    });
+
+                                host.request_focus(target.trigger);
                                 host.request_redraw(acx.window);
                                 true
                             }),
+                        );
+
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::open_on_alt_mnemonic(
+                                group_active.clone(),
+                                trigger_registry.clone(),
+                            ),
+                        );
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::open_on_mnemonic_when_active(
+                                group_active.clone(),
+                                trigger_registry.clone(),
+                                focus_is_trigger.clone(),
+                            ),
+                        );
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::exit_active_on_escape_when_closed(
+                                group_active.clone(),
+                                last_focus_before_menubar.clone(),
+                                focus_is_trigger.clone(),
+                            ),
                         );
                     }
 
@@ -2021,13 +2634,17 @@ impl UiGalleryDriver {
                                         settings_menu_bar_os_open.clone(),
                                     )
                                     .placeholder("OS menubar")
+                                    .trigger_test_id("ui-gallery-settings-os-menubar")
                                     .items([
                                         shadcn::SelectItem::new(
                                             "auto",
                                             "Auto (Windows/macOS on; Linux/Web off)",
-                                        ),
-                                        shadcn::SelectItem::new("on", "On"),
-                                        shadcn::SelectItem::new("off", "Off"),
+                                        )
+                                        .test_id("ui-gallery-settings-os-menubar-auto"),
+                                        shadcn::SelectItem::new("on", "On")
+                                            .test_id("ui-gallery-settings-os-menubar-on"),
+                                        shadcn::SelectItem::new("off", "Off")
+                                            .test_id("ui-gallery-settings-os-menubar-off"),
                                     ])
                                     .refine_layout(LayoutRefinement::default().w_full())
                                     .into_element(cx);
@@ -2037,13 +2654,17 @@ impl UiGalleryDriver {
                                         settings_menu_bar_in_window_open.clone(),
                                     )
                                     .placeholder("In-window menubar")
+                                    .trigger_test_id("ui-gallery-settings-in-window-menubar")
                                     .items([
                                         shadcn::SelectItem::new(
                                             "auto",
                                             "Auto (Linux/Web on; Windows/macOS off)",
-                                        ),
-                                        shadcn::SelectItem::new("on", "On"),
-                                        shadcn::SelectItem::new("off", "Off"),
+                                        )
+                                        .test_id("ui-gallery-settings-in-window-menubar-auto"),
+                                        shadcn::SelectItem::new("on", "On")
+                                            .test_id("ui-gallery-settings-in-window-menubar-on"),
+                                        shadcn::SelectItem::new("off", "Off")
+                                            .test_id("ui-gallery-settings-in-window-menubar-off"),
                                     ])
                                     .refine_layout(LayoutRefinement::default().w_full())
                                     .into_element(cx);
@@ -2122,6 +2743,7 @@ impl UiGalleryDriver {
                                                 shadcn::SheetFooter::new(vec![
                                                     shadcn::Button::new("Apply (in memory)")
                                                         .variant(shadcn::ButtonVariant::Secondary)
+                                                        .test_id("ui-gallery-settings-apply")
                                                         .on_click(CMD_APP_SETTINGS_APPLY)
                                                         .into_element(cx),
                                                     shadcn::Button::new(
@@ -2265,6 +2887,7 @@ impl UiGalleryDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    app.set_global(UiGalleryRecentItemsService::default());
     shadcn::shadcn_themes::apply_shadcn_new_york_v4(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -2273,8 +2896,7 @@ pub fn build_app() -> App {
 
     let config_paths = LayeredConfigPaths::for_project_root(".");
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
-        app.set_global(settings.clone());
-        app.set_global(settings.docking_interaction_settings());
+        fret_app::settings::apply_settings_globals(&mut app, &settings);
     }
 
     // Minimal command surface for `CommandDialog::new_with_host_commands`.
@@ -2315,6 +2937,60 @@ pub fn build_app() -> App {
             .with_category("Settings")
             .with_keywords(["preferences", "menubar", "enabled", "disable", "debug"]),
     );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_AUTO),
+        CommandMeta::new("Menu Bar (OS): Auto")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "auto"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_ON),
+        CommandMeta::new("Menu Bar (OS): On")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "on"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_OFF),
+        CommandMeta::new("Menu Bar (OS): Off")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "off"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_AUTO),
+        CommandMeta::new("Menu Bar (In-window): Auto")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "auto"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_ON),
+        CommandMeta::new("Menu Bar (In-window): On")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "on"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_OFF),
+        CommandMeta::new("Menu Bar (In-window): Off")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "off"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
+        CommandMeta::new("Debug: Recent (add item)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "recent", "add"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_RECENT_CLEAR),
+        CommandMeta::new("Debug: Recent (clear)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "recent", "clear"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_WINDOW_OPEN),
+        CommandMeta::new("Debug: Window (open)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "window", "open"]),
+    );
 
     for group in PAGE_GROUPS {
         for page in group.items {
@@ -2353,61 +3029,10 @@ pub fn build_app() -> App {
 
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
-
-    let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
-    cmds.open = Some(CommandId::new(CMD_APP_OPEN));
-    cmds.save = Some(CommandId::new(CMD_APP_SAVE));
-    cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
-    cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-    cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
-    cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
-    cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
-    cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
-    cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
-
-    if Platform::current() == Platform::Macos {
-        cmds.app_menu_title = Some(Arc::from("Fret"));
-        cmds.include_services_menu = true;
-        cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
-        cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
-        cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
-        cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
-        cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
-        cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
-    }
-
-    let mut menu_bar = fret_workspace::menu::workspace_default_menu_bar(cmds);
-
-    menu_bar.menus.push(Menu {
-        title: Arc::from("Gallery"),
-        role: None,
-        items: vec![
-            MenuItem::Command {
-                command: CommandId::new(CMD_APP_SETTINGS),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
-                when: None,
-            },
-            MenuItem::Separator,
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
-                when: None,
-            },
-        ],
-    });
+    UiGalleryDriver::sync_dynamic_menu_command_metadata(&mut app);
     app.push_effect(Effect::SetMenuBar {
         window: None,
-        menu_bar,
+        menu_bar: UiGalleryDriver::build_menu_bar(&app),
     });
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -2424,6 +3049,22 @@ pub fn build_app() -> App {
                 let text_input = app.models().get_cloned(&ids.text_input)?;
                 let text_area = app.models().get_cloned(&ids.text_area)?;
 
+                let torture = app
+                    .global::<UiGalleryCodeEditorHandlesStore>()
+                    .and_then(|store| store.per_window.get(&window))
+                    .map(|handle| {
+                        let text = handle.with_buffer(|b| b.text_string());
+                        let selection = handle.selection();
+                        let anchor = selection.anchor.min(text.len()) as u64;
+                        let caret = selection.caret().min(text.len()) as u64;
+                        serde_json::json!({
+                            "schema_version": 1,
+                            "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                            "text_len_bytes": text.len() as u64,
+                            "selection": { "anchor": anchor, "caret": caret },
+                        })
+                    });
+
                 let mut out = serde_json::Map::new();
                 out.insert("schema_version".to_string(), serde_json::json!(1));
                 out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
@@ -2437,6 +3078,7 @@ pub fn build_app() -> App {
                         "syntax_rust": syntax_rust,
                         "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
                         "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                        "torture": torture,
                     }),
                 );
                 out.insert(
@@ -2660,6 +3302,11 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        if Self::handle_menu_bar_mode_command(app, window, state, command.as_str()) {
+            app.request_redraw(window);
+            return;
+        }
+
         if state.ui.dispatch_command(app, services, &command) {
             app.request_redraw(window);
             return;
@@ -2866,7 +3513,9 @@ impl WinitAppDriver for UiGalleryDriver {
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-                Self::apply_menu_bar_settings(app, window, os, in_window);
+                Self::apply_menu_bar_settings(app, os, in_window);
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
                 let _ = app
                     .models_mut()
@@ -2909,8 +3558,7 @@ impl WinitAppDriver for UiGalleryDriver {
                             let paths = LayeredConfigPaths::for_project_root(".");
                             let (settings, _report) = load_layered_settings(&paths)
                                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-                            app.set_global(settings.clone());
-                            app.set_global(settings.docking_interaction_settings());
+                            fret_app::settings::apply_settings_globals(app, &settings);
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
                         });
@@ -2986,6 +3634,14 @@ impl WinitAppDriver for UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.preferences");
                 });
+            }
+            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
+                if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
+                    Self::sync_menu_bar_after_state_change(app, window);
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.locale.switch_next");
+                    });
+                }
             }
             fret_app::core_commands::APP_QUIT => {
                 app.push_effect(Effect::QuitApp);
@@ -3209,7 +3865,61 @@ impl WinitAppDriver for UiGalleryDriver {
                     }
                 }
             }
+            Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {
+                let (target_window, keep_running) =
+                    app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                        let target_window = svc.script_keepalive_window;
+                        if svc.script_keepalive_frames == 0 {
+                            svc.script_keepalive_window = None;
+                            return (target_window, false);
+                        }
+
+                        svc.script_keepalive_frames = svc.script_keepalive_frames.saturating_sub(1);
+                        if svc.script_keepalive_frames == 0 {
+                            svc.script_keepalive_window = None;
+                            return (target_window, false);
+                        }
+
+                        (target_window, true)
+                    });
+
+                if let Some(target_window) = target_window {
+                    app.request_redraw(target_window);
+                    app.push_effect(Effect::RequestAnimationFrame(target_window));
+                }
+
+                if !keep_running {
+                    app.push_effect(Effect::CancelTimer {
+                        token: DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER,
+                    });
+                }
+            }
+            Event::WindowFocusChanged(focused) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+                    if *focused {
+                        store.focused_window = Some(window);
+                    } else if store.focused_window == Some(window) {
+                        store.focused_window = None;
+                    }
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+            }
             Event::WindowCloseRequested => {
+                #[cfg(not(target_arch = "wasm32"))]
+                app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+                    store.per_window.remove(&window);
+                    if store.focused_window == Some(window) {
+                        let next_focused = store
+                            .per_window
+                            .keys()
+                            .copied()
+                            .min_by_key(|window_id| format!("{window_id:?}"));
+                        store.focused_window = next_focused;
+                    }
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
             _ => {
@@ -3411,9 +4121,15 @@ impl WinitAppDriver for UiGalleryDriver {
     fn window_create_spec(
         &mut self,
         _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
+        request: &CreateWindowRequest,
     ) -> Option<WindowCreateSpec> {
-        None
+        match &request.kind {
+            CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
+                format!("fret-ui-gallery - {logical_window_id}"),
+                winit::dpi::LogicalSize::new(980.0, 720.0),
+            )),
+            CreateWindowKind::DockFloating { .. } => None,
+        }
     }
 
     fn window_created(

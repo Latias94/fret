@@ -61,7 +61,7 @@ struct ScrollLayoutProbeCacheState {
 
 fn available_space_cache_key(space: AvailableSpace) -> u64 {
     match space {
-        AvailableSpace::Definite(px) => (0 << 62) | (px.0.to_bits() as u64),
+        AvailableSpace::Definite(px) => px.0.to_bits() as u64,
         AvailableSpace::MinContent => 1 << 62,
         AvailableSpace::MaxContent => 2 << 62,
     }
@@ -75,9 +75,34 @@ fn scroll_defer_unbounded_probe_on_invalidation_enabled() -> bool {
     })
 }
 
+fn scroll_defer_unbounded_probe_stable_frames() -> u8 {
+    static STABLE_FRAMES: OnceLock<u8> = OnceLock::new();
+    *STABLE_FRAMES.get_or_init(|| {
+        std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(2)
+            .min(60)
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScrollDeferredUnboundedProbeKind {
+    None,
+    Invalidation,
+    Resize,
+}
+
+impl Default for ScrollDeferredUnboundedProbeKind {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 struct ScrollDeferredUnboundedProbeState {
-    pending: bool,
+    kind: ScrollDeferredUnboundedProbeKind,
+    stable_frames: u8,
 }
 
 impl ElementHostWidget {
@@ -193,7 +218,9 @@ impl ElementHostWidget {
         {
             deferred_scroll_consumed = true;
             offset = metrics.scroll_offset_for_item(index, viewport, offset, strategy);
-            props.scroll_handle.clear_deferred_scroll_to_item();
+            props
+                .scroll_handle
+                .clear_deferred_scroll_to_item(cx.app.frame_id());
         }
 
         offset = metrics.clamp_offset(offset, viewport);
@@ -448,6 +475,11 @@ impl ElementHostWidget {
         };
 
         if cx.tree.debug_enabled() {
+            let scroll_to_item_consumed_in_frame = props
+                .scroll_handle
+                .scroll_to_item_consumed_in_frame(cx.app.frame_id());
+            let scroll_to_item_in_frame =
+                deferred_scroll_to_item || scroll_to_item_consumed_in_frame;
             let policy_key = {
                 let mut b = CacheKeyBuilder::new();
                 b.write_u32(axis as u32);
@@ -478,7 +510,7 @@ impl ElementHostWidget {
             };
             let (window_shift_reason, window_shift_apply_mode, window_shift_invalidation_detail) =
                 if window_mismatch {
-                    let reason = if deferred_scroll_to_item {
+                    let reason = if scroll_to_item_in_frame {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
                     } else if props.items_revision != prev_items_revision {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
@@ -551,8 +583,9 @@ impl ElementHostWidget {
                     window_range,
                     prev_window_range,
                     render_window_range,
-                    deferred_scroll_to_item,
-                    deferred_scroll_consumed,
+                    deferred_scroll_to_item: scroll_to_item_in_frame,
+                    deferred_scroll_consumed: deferred_scroll_consumed
+                        || scroll_to_item_consumed_in_frame,
                     window_mismatch,
                     window_shift_kind: if window_mismatch {
                         crate::tree::UiDebugVirtualListWindowShiftKind::Escape
@@ -675,8 +708,17 @@ impl ElementHostWidget {
         let wants_unbounded_probe = props.probe_unbounded
             && (props.axis.scroll_x() || props.axis.scroll_y())
             && !is_probe_layout;
-        let should_defer_unbounded_probe = wants_unbounded_probe
-            && scroll_defer_unbounded_probe_on_invalidation_enabled()
+        let defer_probe_enabled = scroll_defer_unbounded_probe_on_invalidation_enabled();
+        let prev_viewport = handle.viewport_size();
+        let viewport_changed = prev_viewport.width.0 > 0.0
+            && prev_viewport.height.0 > 0.0
+            && (prev_viewport.width.0.to_bits() != available.width.0.to_bits()
+                || prev_viewport.height.0.to_bits() != available.height.0.to_bits());
+
+        let should_defer_unbounded_probe_on_resize =
+            wants_unbounded_probe && defer_probe_enabled && viewport_changed;
+        let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
+            && defer_probe_enabled
             && cx
                 .children
                 .iter()
@@ -691,35 +733,66 @@ impl ElementHostWidget {
             |state| *state,
         );
 
-        let defer_this_frame = should_defer_unbounded_probe && !defer_state.pending;
-        if defer_this_frame {
-            defer_state.pending = true;
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                ScrollDeferredUnboundedProbeState::default,
-                |state| *state = defer_state,
-            );
+        let stable_frames_required = scroll_defer_unbounded_probe_stable_frames();
+        let mut defer_this_frame = false;
+        if should_defer_unbounded_probe_on_resize {
+            defer_this_frame = true;
+            defer_state.kind = ScrollDeferredUnboundedProbeKind::Resize;
+            defer_state.stable_frames = 0;
+        } else {
+            match defer_state.kind {
+                ScrollDeferredUnboundedProbeKind::Resize => {
+                    if stable_frames_required == 0 {
+                        defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
+                        defer_state.stable_frames = 0;
+                    } else {
+                        defer_state.stable_frames = defer_state.stable_frames.saturating_add(1);
+                        if defer_state.stable_frames < stable_frames_required {
+                            defer_this_frame = true;
+                        } else {
+                            defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
+                            defer_state.stable_frames = 0;
+                        }
+                    }
+                }
+                ScrollDeferredUnboundedProbeKind::Invalidation => {
+                    // Consume the pending deferral by running the unbounded probe on this frame.
+                    defer_state.kind = ScrollDeferredUnboundedProbeKind::None;
+                    defer_state.stable_frames = 0;
+                }
+                ScrollDeferredUnboundedProbeKind::None => {
+                    if should_defer_unbounded_probe_on_invalidation {
+                        defer_this_frame = true;
+                        defer_state.kind = ScrollDeferredUnboundedProbeKind::Invalidation;
+                        defer_state.stable_frames = 0;
+                    }
+                }
+            }
+        }
 
-            // Ensure we run another layout soon so we can compute accurate scroll extents.
-            cx.tree.invalidate_with_source_and_detail(
-                cx.node,
-                Invalidation::Layout,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-            );
-            cx.request_animation_frame();
-        } else if defer_state.pending {
-            // Consume the pending deferral by running the unbounded probe on this frame.
-            defer_state.pending = false;
-            crate::elements::with_element_state(
-                &mut *cx.app,
-                window,
-                self.element,
-                ScrollDeferredUnboundedProbeState::default,
-                |state| *state = defer_state,
-            );
+        crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            ScrollDeferredUnboundedProbeState::default,
+            |state| *state = defer_state,
+        );
+
+        if defer_this_frame {
+            let schedule_follow_up = match defer_state.kind {
+                ScrollDeferredUnboundedProbeKind::Invalidation => true,
+                ScrollDeferredUnboundedProbeKind::Resize => !viewport_changed,
+                ScrollDeferredUnboundedProbeKind::None => false,
+            };
+            if schedule_follow_up {
+                cx.tree.invalidate_with_source_and_detail(
+                    cx.node,
+                    Invalidation::Layout,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::ScrollDeferredProbe,
+                );
+                cx.request_redraw();
+            }
         }
 
         // Avoid recomputing the unbounded scroll probe twice in a single frame when the runtime

@@ -6,8 +6,17 @@ use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+
+fn keep_alive_view_cache_scratch_disabled() -> bool {
+    static DISABLED: OnceLock<bool> = OnceLock::new();
+    *DISABLED.get_or_init(|| {
+        std::env::var_os("FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE")
+            .is_some_and(|v| !v.is_empty() && v != "0")
+    })
+}
 
 #[cfg(feature = "unstable-retained-bridge")]
 #[derive(Default)]
@@ -99,7 +108,7 @@ pub(crate) fn node_for_element_in_window_frame<H: UiHost>(
         window_frame
             .instances
             .iter()
-            .find_map(|(&node, record)| (record.element == element).then_some(node))
+            .find_map(|(node, record)| (record.element == element).then_some(node))
     })
 }
 
@@ -117,6 +126,17 @@ fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: Fram
     }
 }
 
+fn sync_window_frame_children(window_frame: &mut WindowFrame, parent: NodeId, children: &[NodeId]) {
+    if let Some(prev) = window_frame.children.get(parent)
+        && prev.as_ref() == children
+    {
+        return;
+    }
+    window_frame
+        .children
+        .insert(parent, Arc::<[NodeId]>::from(children));
+}
+
 pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -124,7 +144,7 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
 ) -> Vec<NodeId> {
     with_window_frame(app, window, |window_frame| {
         window_frame
-            .and_then(|w| w.children.get(&node))
+            .and_then(|w| w.children.get(node))
             .map(|children| children.as_ref().to_vec())
             .unwrap_or_default()
     })
@@ -133,7 +153,7 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
-pub fn render_root<H: UiHost, I>(
+pub fn render_root<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -143,7 +163,7 @@ pub fn render_root<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
-    H: 'static,
+    H: UiHost + 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     let frame_id = app.frame_id();
@@ -162,6 +182,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;
@@ -177,7 +199,8 @@ where
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx).into_iter().collect()
+            let built = render(&mut cx);
+            cx.collect_children(built)
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -186,6 +209,10 @@ where
         let cutoff = frame_id.0.saturating_sub(lag);
 
         let window_state = runtime.for_window_mut(window);
+        ui.debug_set_element_children_vec_pool_stats(
+            window_state.element_children_vec_pool_reuses(),
+            window_state.element_children_vec_pool_misses(),
+        );
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
@@ -228,7 +255,8 @@ where
             ui.set_root(root_node);
         }
 
-        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
+        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+        pending_invalidations.clear();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
@@ -246,7 +274,8 @@ where
                 .is_none();
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            for child in children {
+            let mut children = children;
+            for child in children.drain(..) {
                 mounted_children.push(mount_element(
                     ui,
                     window,
@@ -259,13 +288,12 @@ where
                     &mut pending_invalidations,
                 ));
             }
-            ui.set_children(root_node, mounted_children.clone());
-            window_frame
-                .children
-                .insert(root_node, Arc::<[NodeId]>::from(mounted_children));
+            ui.set_children(root_node, mounted_children);
+            sync_window_frame_children(window_frame, root_node, ui.children_ref(root_node));
             if inserted {
                 window_frame.revision = window_frame.revision.saturating_add(1);
             }
+            window_state.restore_scratch_element_children_vec(children);
 
             let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
             if !retained_virtual_lists.is_empty() {
@@ -294,7 +322,8 @@ where
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
 
-        apply_pending_invalidations(ui, pending_invalidations);
+        apply_pending_invalidations(ui, &mut pending_invalidations);
+        ui.restore_scratch_pending_invalidations(pending_invalidations);
 
         if ui.view_cache_enabled() {
             ui.propagate_auto_sized_view_cache_root_invalidations();
@@ -321,8 +350,12 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
-            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+        let keep_alive_view_cache_elements_from_scratch: bool;
+        if keep_alive_view_cache_scratch_disabled() {
+            keep_alive_view_cache_elements = HashSet::new();
+            keep_alive_view_cache_elements_from_scratch = false;
+
             let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
             let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
 
@@ -334,7 +367,7 @@ where
                     continue;
                 };
                 for &element in elements {
-                    keep_alive.insert(element);
+                    keep_alive_view_cache_elements.insert(element);
                     if !visited_roots.contains(&element)
                         && window_state.view_cache_elements_for_root(element).is_some()
                     {
@@ -342,9 +375,43 @@ where
                     }
                 }
             }
+        } else {
+            keep_alive_view_cache_elements =
+                window_state.take_scratch_view_cache_keep_alive_elements();
+            keep_alive_view_cache_elements_from_scratch = true;
+            keep_alive_view_cache_elements.clear();
 
-            keep_alive
-        };
+            {
+                let mut visited_roots =
+                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                visited_roots.clear();
+                stack.clear();
+                stack.extend(window_state.view_cache_reuse_roots());
+
+                while let Some(root) = stack.pop() {
+                    if !visited_roots.insert(root) {
+                        continue;
+                    }
+                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                        continue;
+                    };
+                    for &element in elements {
+                        keep_alive_view_cache_elements.insert(element);
+                        if !visited_roots.contains(&element)
+                            && window_state.view_cache_elements_for_root(element).is_some()
+                        {
+                            stack.push(element);
+                        }
+                    }
+                }
+
+                visited_roots.clear();
+                stack.clear();
+                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            }
+        }
 
         // If any cache root transitions into reuse this frame, proactively touch the entire
         // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
@@ -387,10 +454,18 @@ where
             .retained_virtual_list_keep_alive_roots()
             .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+        reachable_from_layers.clear();
+        let mut reachable_from_layers_computed = false;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
-        {
+        let mut reachable_from_view_cache_roots =
+            ui.take_scratch_gc_reachable_from_view_cache_roots();
+        reachable_from_view_cache_roots.clear();
+        let mut reachable_from_view_cache_roots_active = false;
+        let mut gc_stack = ui.take_scratch_gc_stack();
+        gc_stack.clear();
+
+        if view_cache_has_reuse_roots {
             let view_cache_reuse_roots: Vec<GlobalElementId> =
                 window_state.view_cache_reuse_roots().collect();
             let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
@@ -398,16 +473,16 @@ where
                 .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
                 .collect();
 
-            let mut reachable: HashSet<NodeId> = HashSet::new();
-
             if !view_cache_reuse_root_nodes.is_empty() {
-                reachable.extend(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
+                with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc_in_place(
                         ui,
                         window_frame,
                         view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }));
+                        &mut reachable_from_view_cache_roots,
+                        &mut gc_stack,
+                    );
+                });
             }
 
             // Also treat recorded view-cache subtree memberships as authoritative reachability,
@@ -417,16 +492,13 @@ where
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
                         if let Some(entry) = window_state.node_entry(element) {
-                            reachable.insert(entry.node);
+                            reachable_from_view_cache_roots.insert(entry.node);
                         }
                     }
                 }
             }
-
-            Some(reachable)
-        } else {
-            None
-        };
+            reachable_from_view_cache_roots_active = true;
+        }
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -446,31 +518,36 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_layers.get_or_insert_with(|| {
+            if !reachable_from_layers_computed {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
-                        )
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     } else {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             liveness_roots
                                 .iter()
                                 .copied()
                                 .chain(keep_alive_roots.iter().copied()),
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
                         )
                     }
-                })
-            });
-            if reachable.contains(&entry.node) {
+                });
+                reachable_from_layers_computed = true;
+            }
+            if reachable_from_layers.contains(&entry.node) {
                 return true;
             }
-            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
-                && reachable.contains(&entry.node)
+            if reachable_from_view_cache_roots_active
+                && reachable_from_view_cache_roots.contains(&entry.node)
             {
                 return true;
             }
@@ -493,13 +570,11 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
-                let root_reachable_from_layer_roots = reachable_from_layers
-                    .as_ref()
-                    .is_some_and(|reachable| reachable.contains(&node));
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
-                    .as_ref()
-                    .map(|reachable| reachable.contains(&node));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                let root_reachable_from_layer_roots =
+                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
+                    .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
                     window_state.view_cache_reuse_roots().collect();
                 let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
@@ -523,7 +598,7 @@ where
                     }
                     let contains = window_frame
                         .children
-                        .get(&parent)
+                        .get(parent)
                         .map(|children| children.contains(&child));
                     path_edge_frame_contains_child[path_edge_len as usize] = match contains {
                         Some(true) => 1,
@@ -538,10 +613,10 @@ where
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     parent_frame_children_contains_root: parent_frame_children
                         .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_instance_present: window_frame.instances.contains_key(node),
                     root_frame_children_len: window_frame
                         .children
-                        .get(&node)
+                        .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
@@ -572,13 +647,26 @@ where
                 let window_frame = frame.windows.entry(window).or_default();
                 let any_removed = !removed.is_empty();
                 for removed in removed {
-                    window_frame.instances.remove(&removed);
-                    window_frame.children.remove(&removed);
+                    window_frame.instances.remove(removed);
+                    window_frame.children.remove(removed);
                 }
                 if any_removed {
                     window_frame.revision = window_frame.revision.saturating_add(1);
                 }
             });
+        }
+
+        reachable_from_layers.clear();
+        reachable_from_view_cache_roots.clear();
+        gc_stack.clear();
+        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+        ui.restore_scratch_gc_stack(gc_stack);
+
+        if keep_alive_view_cache_elements_from_scratch {
+            keep_alive_view_cache_elements.clear();
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
         }
 
         if window_state.wants_continuous_frames() {
@@ -595,7 +683,7 @@ where
 /// - Escape dismissal (bubbling from any focused descendant).
 /// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
+pub fn render_dismissible_root_with_hooks<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -605,7 +693,7 @@ pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
-    H: 'static,
+    H: UiHost + 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
@@ -634,6 +722,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;
@@ -649,7 +739,8 @@ where
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx).into_iter().collect()
+            let built = render(&mut cx);
+            cx.collect_children(built)
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -658,6 +749,10 @@ where
         let cutoff = frame_id.0.saturating_sub(lag);
 
         let window_state = runtime.for_window_mut(window);
+        ui.debug_set_element_children_vec_pool_stats(
+            window_state.element_children_vec_pool_reuses(),
+            window_state.element_children_vec_pool_misses(),
+        );
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
@@ -689,7 +784,8 @@ where
             },
         );
 
-        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
+        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+        pending_invalidations.clear();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
@@ -712,7 +808,8 @@ where
             }
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            for child in children {
+            let mut children = children;
+            for child in children.drain(..) {
                 mounted_children.push(mount_element(
                     ui,
                     window,
@@ -726,13 +823,15 @@ where
                 ));
             }
             ui.set_children(root_node, mounted_children);
+            window_state.restore_scratch_element_children_vec(children);
         });
 
         if ui.view_cache_enabled() {
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
 
-        apply_pending_invalidations(ui, pending_invalidations);
+        apply_pending_invalidations(ui, &mut pending_invalidations);
+        ui.restore_scratch_pending_invalidations(pending_invalidations);
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,
@@ -744,8 +843,12 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
-            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
+        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+        let keep_alive_view_cache_elements_from_scratch: bool;
+        if keep_alive_view_cache_scratch_disabled() {
+            keep_alive_view_cache_elements = HashSet::new();
+            keep_alive_view_cache_elements_from_scratch = false;
+
             let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
             let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
 
@@ -757,7 +860,7 @@ where
                     continue;
                 };
                 for &element in elements {
-                    keep_alive.insert(element);
+                    keep_alive_view_cache_elements.insert(element);
                     if !visited_roots.contains(&element)
                         && window_state.view_cache_elements_for_root(element).is_some()
                     {
@@ -765,9 +868,43 @@ where
                     }
                 }
             }
+        } else {
+            keep_alive_view_cache_elements =
+                window_state.take_scratch_view_cache_keep_alive_elements();
+            keep_alive_view_cache_elements_from_scratch = true;
+            keep_alive_view_cache_elements.clear();
 
-            keep_alive
-        };
+            {
+                let mut visited_roots =
+                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                visited_roots.clear();
+                stack.clear();
+                stack.extend(window_state.view_cache_reuse_roots());
+
+                while let Some(root) = stack.pop() {
+                    if !visited_roots.insert(root) {
+                        continue;
+                    }
+                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                        continue;
+                    };
+                    for &element in elements {
+                        keep_alive_view_cache_elements.insert(element);
+                        if !visited_roots.contains(&element)
+                            && window_state.view_cache_elements_for_root(element).is_some()
+                        {
+                            stack.push(element);
+                        }
+                    }
+                }
+
+                visited_roots.clear();
+                stack.clear();
+                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            }
+        }
 
         // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
         // overlay subtree stays alive even if it won't rerender this frame.
@@ -795,10 +932,18 @@ where
             .retained_virtual_list_keep_alive_roots()
             .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+        reachable_from_layers.clear();
+        let mut reachable_from_layers_computed = false;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
-        {
+        let mut reachable_from_view_cache_roots =
+            ui.take_scratch_gc_reachable_from_view_cache_roots();
+        reachable_from_view_cache_roots.clear();
+        let mut reachable_from_view_cache_roots_active = false;
+        let mut gc_stack = ui.take_scratch_gc_stack();
+        gc_stack.clear();
+
+        if view_cache_has_reuse_roots {
             let view_cache_reuse_roots: Vec<GlobalElementId> =
                 window_state.view_cache_reuse_roots().collect();
             let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
@@ -806,32 +951,30 @@ where
                 .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
                 .collect();
 
-            let mut reachable: HashSet<NodeId> = HashSet::new();
-
             if !view_cache_reuse_root_nodes.is_empty() {
-                reachable.extend(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
+                with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc_in_place(
                         ui,
                         window_frame,
                         view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }));
+                        &mut reachable_from_view_cache_roots,
+                        &mut gc_stack,
+                    );
+                });
             }
 
             for root in view_cache_reuse_roots {
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
                         if let Some(entry) = window_state.node_entry(element) {
-                            reachable.insert(entry.node);
+                            reachable_from_view_cache_roots.insert(entry.node);
                         }
                     }
                 }
             }
 
-            Some(reachable)
-        } else {
-            None
-        };
+            reachable_from_view_cache_roots_active = true;
+        }
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -853,31 +996,36 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_layers.get_or_insert_with(|| {
+            if !reachable_from_layers_computed {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
-                        )
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     } else {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             liveness_roots
                                 .iter()
                                 .copied()
                                 .chain(keep_alive_roots.iter().copied()),
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
                         )
                     }
-                })
-            });
-            if reachable.contains(&entry.node) {
+                });
+                reachable_from_layers_computed = true;
+            }
+            if reachable_from_layers.contains(&entry.node) {
                 return true;
             }
-            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
-                && reachable.contains(&entry.node)
+            if reachable_from_view_cache_roots_active
+                && reachable_from_view_cache_roots.contains(&entry.node)
             {
                 return true;
             }
@@ -900,13 +1048,11 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
-                let root_reachable_from_layer_roots = reachable_from_layers
-                    .as_ref()
-                    .is_some_and(|reachable| reachable.contains(&node));
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
-                    .as_ref()
-                    .map(|reachable| reachable.contains(&node));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                let root_reachable_from_layer_roots =
+                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
+                    .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
                     window_state.view_cache_reuse_roots().collect();
                 let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
@@ -930,7 +1076,7 @@ where
                     }
                     let contains = window_frame
                         .children
-                        .get(&parent)
+                        .get(parent)
                         .map(|children| children.contains(&child));
                     path_edge_frame_contains_child[path_edge_len as usize] = match contains {
                         Some(true) => 1,
@@ -945,10 +1091,10 @@ where
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     parent_frame_children_contains_root: parent_frame_children
                         .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_instance_present: window_frame.instances.contains_key(node),
                     root_frame_children_len: window_frame
                         .children
-                        .get(&node)
+                        .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
@@ -979,13 +1125,26 @@ where
                 let window_frame = frame.windows.entry(window).or_default();
                 let any_removed = !removed.is_empty();
                 for removed in removed {
-                    window_frame.instances.remove(&removed);
-                    window_frame.children.remove(&removed);
+                    window_frame.instances.remove(removed);
+                    window_frame.children.remove(removed);
                 }
                 if any_removed {
                     window_frame.revision = window_frame.revision.saturating_add(1);
                 }
             });
+        }
+
+        reachable_from_layers.clear();
+        reachable_from_view_cache_roots.clear();
+        gc_stack.clear();
+        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+        ui.restore_scratch_gc_stack(gc_stack);
+
+        if keep_alive_view_cache_elements_from_scratch {
+            keep_alive_view_cache_elements.clear();
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
         }
 
         if window_state.wants_continuous_frames() {
@@ -1008,8 +1167,10 @@ fn mount_element<H: UiHost + 'static>(
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
+    let mut element = element;
     let id = element.id;
     let semantics_decoration = element.semantics_decoration.clone();
+    let mut children = std::mem::take(&mut element.children);
     let existing_node_entry = window_state.node_entry(id);
     let had_existing_node_entry = existing_node_entry.is_some();
     let had_existing_node = existing_node_entry
@@ -1104,6 +1265,10 @@ fn mount_element<H: UiHost + 'static>(
                 crate::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
             } else if window_state.view_cache_key_mismatch(id) {
                 crate::tree::UiDebugCacheRootReuseReason::CacheKeyMismatch
+            } else if ui.view_cache_node_needs_rerender(node) {
+                crate::tree::UiDebugCacheRootReuseReason::NeedsRerender
+            } else if ui.node_layout_invalidated(node) {
+                crate::tree::UiDebugCacheRootReuseReason::LayoutInvalidated
             } else {
                 crate::tree::UiDebugCacheRootReuseReason::NotMarkedReuseRoot
             };
@@ -1198,7 +1363,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
     );
 
-    let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
+    let previous_instance = window_frame.instances.get(node).map(|r| &r.instance);
     if !reuse_view_cache {
         let mask = declarative_instance_change_mask(previous_instance, &instance);
         if mask != 0 {
@@ -1251,10 +1416,9 @@ fn mount_element<H: UiHost + 'static>(
         };
         let _reuse_guard = reuse_span.enter();
 
-        window_frame
-            .children
-            .entry(node)
-            .or_insert_with(|| Arc::<[NodeId]>::from(ui.children(node)));
+        if window_frame.children.get(node).is_none() {
+            sync_window_frame_children(window_frame, node, ui.children_ref(node));
+        }
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
         let touched =
@@ -1306,6 +1470,7 @@ fn mount_element<H: UiHost + 'static>(
             scroll_bindings,
             node,
         );
+        window_state.restore_scratch_element_children_vec(children);
         return node;
     }
 
@@ -1365,8 +1530,8 @@ fn mount_element<H: UiHost + 'static>(
         };
         let _reuse_guard = reuse_span.enter();
 
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
-        for child in element.children {
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
+        for child in children.drain(..) {
             child_nodes.push(mount_element(
                 ui,
                 _window,
@@ -1380,15 +1545,13 @@ fn mount_element<H: UiHost + 'static>(
             ));
         }
         if use_barrier_set_children {
-            ui.set_children_barrier(node, child_nodes.clone());
+            ui.set_children_barrier(node, child_nodes);
         } else if had_existing_node {
-            ui.set_children(node, child_nodes.clone());
+            ui.set_children(node, child_nodes);
         } else {
-            ui.set_children_in_mount(node, child_nodes.clone());
+            ui.set_children_in_mount(node, child_nodes);
         }
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(child_nodes));
+        sync_window_frame_children(window_frame, node, ui.children_ref(node));
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
         // can refresh liveness without re-running the render closure.
@@ -1397,8 +1560,8 @@ fn mount_element<H: UiHost + 'static>(
             collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node),
         );
     } else {
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
-        for child in element.children {
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
+        for child in children.drain(..) {
             child_nodes.push(mount_element(
                 ui,
                 _window,
@@ -1412,17 +1575,16 @@ fn mount_element<H: UiHost + 'static>(
             ));
         }
         if use_barrier_set_children {
-            ui.set_children_barrier(node, child_nodes.clone());
+            ui.set_children_barrier(node, child_nodes);
         } else if had_existing_node {
-            ui.set_children(node, child_nodes.clone());
+            ui.set_children(node, child_nodes);
         } else {
-            ui.set_children_in_mount(node, child_nodes.clone());
+            ui.set_children_in_mount(node, child_nodes);
         }
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(child_nodes));
+        sync_window_frame_children(window_frame, node, ui.children_ref(node));
     }
 
+    window_state.restore_scratch_element_children_vec(children);
     node
 }
 
@@ -1460,7 +1622,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 let node = window_frame
                     .instances
                     .iter()
-                    .find_map(|(&node, record)| (record.element == element).then_some(node))?;
+                    .find_map(|(node, record)| (record.element == element).then_some(node))?;
                 window_state.set_node_entry(
                     element,
                     NodeEntry {
@@ -1475,7 +1637,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let Some(record) = window_frame.instances.get(&node) else {
+        let Some(record) = window_frame.instances.get(node) else {
             continue;
         };
         let ElementInstance::VirtualList(props) = &record.instance else {
@@ -1598,7 +1760,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         let mut keep_alive_state = window_state.with_state_mut(
             element,
             crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
-            |st| std::mem::take(st),
+            std::mem::take,
         );
         let mut keep_alive_by_key: HashMap<crate::ItemKey, NodeId> = keep_alive_state.by_key;
         let mut keep_alive_order = keep_alive_state.order;
@@ -1724,10 +1886,10 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             .children
             .insert(node, Arc::<[NodeId]>::from(next_children));
 
-        if let Some(record) = window_frame.instances.get_mut(&node) {
-            if let ElementInstance::VirtualList(props) = &mut record.instance {
-                props.visible_items = desired_items;
-            }
+        if let Some(record) = window_frame.instances.get_mut(node)
+            && let ElementInstance::VirtualList(props) = &mut record.instance
+        {
+            props.visible_items = desired_items;
         }
 
         let reconcile_time_us = reconcile_start.elapsed().as_micros().min(u32::MAX as u128) as u32;
@@ -1898,8 +2060,8 @@ fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) 
     }
 }
 
-fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: HashMap<NodeId, u8>) {
-    for (node, mask) in pending {
+fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut HashMap<NodeId, u8>) {
+    for (node, mask) in pending.drain() {
         if (mask & INVALIDATION_HIT_TEST) != 0 {
             ui.invalidate(node, Invalidation::HitTest);
         }
@@ -1927,7 +2089,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
         }
         if let Some(element) = window_frame
             .instances
-            .get(&node)
+            .get(node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
@@ -1967,7 +2129,7 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
             continue;
         }
         if let Some(element) = window_frame
-            .and_then(|window_frame| window_frame.instances.get(&node).map(|r| r.element))
+            .and_then(|window_frame| window_frame.instances.get(node).map(|r| r.element))
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
         {
@@ -2013,14 +2175,13 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
         }
         if let Some(element) = window_frame
             .instances
-            .get(&node)
+            .get(node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
+            && seen.insert(element)
         {
-            if seen.insert(element) {
-                out.push(element);
-            }
+            out.push(element);
         }
 
         push_existing_subtree_children(ui, window_frame, node, &mut stack);
@@ -2028,27 +2189,58 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     out
 }
 
+#[cfg(test)]
 fn collect_reachable_nodes_for_gc<H: UiHost>(
     ui: &UiTree<H>,
     window_frame: Option<&WindowFrame>,
     roots: impl IntoIterator<Item = NodeId>,
 ) -> HashSet<NodeId> {
     let mut out: HashSet<NodeId> = HashSet::new();
-    let mut stack: Vec<NodeId> = roots.into_iter().collect();
+    let mut stack: Vec<NodeId> = Vec::new();
+    collect_reachable_nodes_for_gc_in_place(ui, window_frame, roots, &mut out, &mut stack);
+    out
+}
+
+fn collect_reachable_nodes_for_gc_in_place<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: Option<&WindowFrame>,
+    roots: impl IntoIterator<Item = NodeId>,
+    out: &mut HashSet<NodeId>,
+    stack: &mut Vec<NodeId>,
+) {
+    out.clear();
+    stack.clear();
+    stack.extend(roots);
     while let Some(node) = stack.pop() {
         if !out.insert(node) {
             continue;
         }
         if let Some(window_frame) = window_frame {
-            push_existing_subtree_children(ui, window_frame, node, &mut stack);
+            push_existing_subtree_children(ui, window_frame, node, stack);
         } else {
             stack.extend(ui.children(node));
         }
     }
-    out
+}
+
+fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: &WindowFrame,
+    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = window_frame.instances.get(node) {
+            collect_scroll_handle_bindings(record.element, &record.instance, out);
+        }
+
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
+    }
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 
@@ -2079,9 +2271,9 @@ mod tests {
         ui.set_debug_enabled(true);
         ui.begin_debug_frame_if_needed(FrameId(1));
 
-        let root = ui.create_node(TestWidget::default());
-        let ui_child = ui.create_node(TestWidget::default());
-        let frame_child = ui.create_node(TestWidget::default());
+        let root = ui.create_node(TestWidget);
+        let ui_child = ui.create_node(TestWidget);
+        let frame_child = ui.create_node(TestWidget);
 
         ui.set_root(root);
         ui.set_children(root, vec![ui_child]);
@@ -2122,8 +2314,8 @@ mod tests {
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let root_node = ui.create_node(TestWidget::default());
-        let child_node = ui.create_node(TestWidget::default());
+        let root_node = ui.create_node(TestWidget);
+        let child_node = ui.create_node(TestWidget);
 
         let root_element = GlobalElementId(1);
         let child_element = GlobalElementId(2);
@@ -2157,21 +2349,6 @@ mod tests {
         assert_eq!(entry.root, root_id);
     }
 }
-fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
-    ui: &UiTree<H>,
-    window_frame: &WindowFrame,
-    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
-    root: NodeId,
-) {
-    let mut stack: Vec<NodeId> = vec![root];
-    while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node) {
-            collect_scroll_handle_bindings(record.element, &record.instance, out);
-        }
-
-        push_existing_subtree_children(ui, window_frame, node, &mut stack);
-    }
-}
 
 fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
     ui: &UiTree<H>,
@@ -2180,7 +2357,7 @@ fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
 ) -> bool {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node)
+        if let Some(record) = window_frame.instances.get(node)
             && let ElementInstance::VirtualList(props) = &record.instance
             && props.scroll_handle.deferred_scroll_to_item().is_some()
         {
@@ -2206,7 +2383,7 @@ fn push_existing_subtree_children<H: UiHost>(
     if !ui_children.is_empty() {
         stack.extend(ui_children.iter().copied());
     }
-    if let Some(frame_children) = window_frame.children.get(&node) {
+    if let Some(frame_children) = window_frame.children.get(node) {
         if ui_children.is_empty() {
             stack.extend(frame_children.iter().copied());
         } else {
@@ -2227,7 +2404,7 @@ fn inherit_observations_for_existing_subtree<H: UiHost>(
 ) {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node) {
+        if let Some(record) = window_frame.instances.get(node) {
             let element = record.element;
             window_state.touch_observed_models_for_element_if_recorded(element);
             window_state.touch_observed_globals_for_element_if_recorded(element);

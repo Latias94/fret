@@ -10,6 +10,8 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/localization-i18n-v1.md`
+- `docs/workstreams/localization-i18n-v1-todo.md`
 - `docs/workstreams/state-management-v1.md`
 - `docs/workstreams/state-management-v1-todo.md`
 - `docs/workstreams/component-ecosystem-state-integration-v1.md`
@@ -40,6 +42,9 @@ Active workstreams:
 - `docs/workstreams/control-rack-v1-todo.md`
 - `docs/workstreams/ui-gallery-layout-correctness.md`
 - `docs/workstreams/ui-gallery-perf-scroll-measure.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - `docs/workstreams/scroll-extents-dom-parity.md` (draft)
 - `docs/workstreams/scroll-extents-dom-parity-todo.md` (draft)
 - `docs/workstreams/gpui-parity-refactor.md`

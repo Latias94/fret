@@ -135,40 +135,39 @@ pub(crate) fn prefetch_virtual_range_step(
         // Both sides are "near" (small windows, small overscan, or being close to the list start/end).
         // Prefer the caller's scroll direction hint to avoid prefetch oscillation during slow scroll.
         // If we don't have a direction hint, skip prefetch (the caller can fall back to escape logic).
-        let Some(prefer_forward) = prefer_forward else {
-            return None;
-        };
-        prefer_forward
+        prefer_forward?
     };
 
     let mut start = rendered.start_index;
-    let mut end = rendered.end_index;
 
-    if want_forward {
+    let delta = if want_forward {
         // Ensure the forward shift does not exclude the visible start from the new expanded window.
         let max_delta = visible
             .start_index
             .saturating_add(overscan)
             .saturating_sub(rendered.start_index);
-        let delta = prefetch_step.min(max_delta);
-        if delta == 0 {
-            return None;
-        }
-        start = start.saturating_add(delta);
-        end = end.saturating_add(delta);
+        prefetch_step.min(max_delta)
     } else {
         // Ensure the backward shift does not exclude the visible end from the new expanded window.
         let max_delta = rendered
             .end_index
             .saturating_add(overscan)
             .saturating_sub(visible.end_index);
-        let delta = prefetch_step.min(max_delta);
-        if delta == 0 {
-            return None;
-        }
-        start = start.saturating_sub(delta);
-        end = end.saturating_sub(delta);
+        prefetch_step.min(max_delta)
+    };
+
+    if delta == 0 {
+        return None;
     }
+
+    if want_forward {
+        start = start.saturating_add(delta);
+    } else {
+        start = start.saturating_sub(delta);
+    }
+
+    // Keep the inner length stable across prefetch shifts (especially when saturating at 0).
+    let mut end = start.saturating_add(inner_len);
 
     if end >= count {
         end = count.saturating_sub(1);

@@ -2,6 +2,7 @@ use fret_core::geometry::{Corners, Edges, Rect};
 use fret_core::scene::Color;
 
 use super::ScissorRect;
+use crate::upload_counters::record_svg_upload;
 
 pub(super) fn write_r8_texture_region(
     queue: &wgpu::Queue,
@@ -36,6 +37,7 @@ pub(super) fn write_r8_texture_region(
         &owned
     };
 
+    record_svg_upload(bytes.len());
     queue.write_texture(
         wgpu::TexelCopyTextureInfo {
             texture,

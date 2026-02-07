@@ -3,12 +3,14 @@
 mod capabilities;
 mod error;
 mod images;
+mod perf_store;
 mod renderer;
 mod surface;
 mod svg;
 mod svg_cache;
 mod targets;
 mod text;
+mod upload_counters;
 pub mod viewport_overlay;
 
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
@@ -18,6 +20,7 @@ pub use images::{
     ImageDescriptor, ImageRegistry, UploadedRgba8Image, create_rgba8_image_storage,
     upload_rgba8_image, write_rgba8_texture_region,
 };
+pub use perf_store::{RendererPerfFrameSample, RendererPerfFrameStore};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use renderer::{IntermediatePerfSnapshot, RenderPerfSnapshot, SvgPerfSnapshot};
 pub use surface::SurfaceState;

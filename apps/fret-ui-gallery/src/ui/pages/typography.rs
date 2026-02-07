@@ -105,15 +105,17 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     let blockquote = section_card(cx, "blockquote", blockquote_sample);
 
     let table_example = shadcn::Table::new(vec![
-        shadcn::TableHeader::new(vec![shadcn::TableRow::new(
-            2,
-            vec![
-                shadcn::TableHead::new("King's Treasury").into_element(cx),
-                shadcn::TableHead::new("People's Happiness").into_element(cx),
-            ],
-        )
-        .border_bottom(true)
-        .into_element(cx)])
+        shadcn::TableHeader::new(vec![
+            shadcn::TableRow::new(
+                2,
+                vec![
+                    shadcn::TableHead::new("King's Treasury").into_element(cx),
+                    shadcn::TableHead::new("People's Happiness").into_element(cx),
+                ],
+            )
+            .border_bottom(true)
+            .into_element(cx),
+        ])
         .into_element(cx),
         shadcn::TableBody::new(vec![
             shadcn::TableRow::new(

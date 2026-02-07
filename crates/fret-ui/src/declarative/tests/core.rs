@@ -737,8 +737,10 @@ fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
         bounds,
         "mvp49-sweep-view-cache",
         |cx| {
-            let mut view_cache = crate::element::ViewCacheProps::default();
-            view_cache.cache_key = 1;
+            let view_cache = crate::element::ViewCacheProps {
+                cache_key: 1,
+                ..Default::default()
+            };
             let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
 
             let mut out = vec![cached];
@@ -770,8 +772,10 @@ fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
         bounds,
         "mvp49-sweep-view-cache",
         |cx| {
-            let mut view_cache = crate::element::ViewCacheProps::default();
-            view_cache.cache_key = 1;
+            let view_cache = crate::element::ViewCacheProps {
+                cache_key: 1,
+                ..Default::default()
+            };
             let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
 
             let mut out = vec![cached];
@@ -794,8 +798,10 @@ fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
         bounds,
         "mvp49-sweep-view-cache",
         |cx| {
-            let mut view_cache = crate::element::ViewCacheProps::default();
-            view_cache.cache_key = 1;
+            let view_cache = crate::element::ViewCacheProps {
+                cache_key: 1,
+                ..Default::default()
+            };
             let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
 
             let mut out = vec![cached];
@@ -817,8 +823,10 @@ fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
         bounds,
         "mvp49-sweep-view-cache",
         |cx| {
-            let mut view_cache = crate::element::ViewCacheProps::default();
-            view_cache.cache_key = 1;
+            let view_cache = crate::element::ViewCacheProps {
+                cache_key: 1,
+                ..Default::default()
+            };
             let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
 
             let mut out = vec![cached];
@@ -872,15 +880,19 @@ fn view_cache_subtree_membership_includes_nested_cache_roots() {
             bounds,
             "nested-view-cache-membership",
             move |cx| {
-                let mut outer_props = crate::element::ViewCacheProps::default();
-                outer_props.cache_key = 1;
+                let outer_props = crate::element::ViewCacheProps {
+                    cache_key: 1,
+                    ..Default::default()
+                };
 
                 let ids_for_outer = ids.clone();
                 let outer = cx.view_cache(outer_props, move |cx| {
                     outer_runs.fetch_add(1, Ordering::Relaxed);
 
-                    let mut inner_props = crate::element::ViewCacheProps::default();
-                    inner_props.cache_key = 1;
+                    let inner_props = crate::element::ViewCacheProps {
+                        cache_key: 1,
+                        ..Default::default()
+                    };
 
                     let ids_for_inner = ids_for_outer.clone();
                     let inner_runs = inner_runs.clone();

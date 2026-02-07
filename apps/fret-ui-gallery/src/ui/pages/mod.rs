@@ -4,9 +4,9 @@ mod alert;
 mod alert_dialog;
 mod aspect_ratio;
 mod breadcrumb;
-mod checkbox;
 mod carousel;
 mod chart;
+mod checkbox;
 mod collapsible;
 mod combobox;
 mod command;
@@ -14,6 +14,9 @@ mod context_menu;
 mod data_table;
 mod date_picker;
 mod dialog;
+mod drawer;
+mod dropdown_menu;
+mod empty;
 mod field;
 mod form;
 mod hover_card;
@@ -26,9 +29,6 @@ mod label;
 mod menubar;
 mod native_select;
 mod navigation_menu;
-mod drawer;
-mod dropdown_menu;
-mod empty;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -56,7 +56,10 @@ pub(super) fn preview_breadcrumb(
     breadcrumb::preview_breadcrumb(cx, last_action)
 }
 
-pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+pub(super) fn preview_checkbox(
+    cx: &mut ElementContext<'_, App>,
+    model: Model<bool>,
+) -> Vec<AnyElement> {
     checkbox::preview_checkbox(cx, model)
 }
 
@@ -177,9 +180,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     navigation_menu::preview_navigation_menu(cx)
 }
 
-pub(super) fn preview_drawer(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     drawer::preview_drawer(cx)
 }
 

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-command-palette" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "press_key", "key": "f10" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-command-palette" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-escape-exits-active" }
+  ]
+}
+

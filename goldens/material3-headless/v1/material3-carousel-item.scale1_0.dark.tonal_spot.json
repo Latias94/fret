@@ -1,0 +1,719 @@
+{
+  "cases": {
+    "focus_visible_outline": {
+      "signature": [
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_opacity"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_opacity"
+        }
+      ],
+      "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            1320,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            250,
+            1330,
+            4180,
+            900
+          ],
+          "background": [
+            791,
+            745,
+            815,
+            100
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            190,
+            1270,
+            4300,
+            1020
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "border": [
+            30,
+            30,
+            30,
+            30
+          ],
+          "corner_radii": [
+            330,
+            330,
+            330,
+            330
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            2400,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        }
+      ]
+    },
+    "hover_standard": {
+      "signature": [
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_opacity"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_opacity"
+        }
+      ],
+      "quads": [
+        {
+          "order": 0,
+          "rect": [
+            220,
+            230,
+            4240,
+            960
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            100
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            300,
+            300,
+            300,
+            300
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            230,
+            240,
+            4220,
+            940
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            150
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            290,
+            290,
+            290,
+            290
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            250,
+            4200,
+            920
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            300
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            200,
+            210,
+            4280,
+            1000
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            38
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            320,
+            320,
+            320,
+            320
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            210,
+            220,
+            4260,
+            980
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            50
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            310,
+            310,
+            310,
+            310
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            220,
+            230,
+            4240,
+            960
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            75
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            300,
+            300,
+            300,
+            300
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            230,
+            240,
+            4220,
+            940
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            150
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            290,
+            290,
+            290,
+            290
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            4200,
+            920
+          ],
+          "background": [
+            39,
+            32,
+            59,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            4200,
+            920
+          ],
+          "background": [
+            791,
+            745,
+            815,
+            80
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            1320,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            2400,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        }
+      ]
+    },
+    "idle": {
+      "signature": [
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_opacity"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_opacity"
+        }
+      ],
+      "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            1320,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            2400,
+            4200,
+            920
+          ],
+          "background": [
+            7,
+            6,
+            9,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            280,
+            280,
+            280,
+            280
+          ]
+        }
+      ]
+    }
+  }
+}

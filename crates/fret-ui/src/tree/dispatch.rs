@@ -15,6 +15,100 @@ impl<H: UiHost> UiTree<H> {
         matches!(event, Event::Pointer(PointerEvent::Wheel { .. }))
     }
 
+    fn handle_alt_menu_bar_activation(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        focus_is_text_input: bool,
+        event: &Event,
+    ) -> bool {
+        match event {
+            Event::KeyDown {
+                key: key @ (KeyCode::AltLeft | KeyCode::AltRight),
+                modifiers,
+                repeat: false,
+            } => {
+                let disqualifying_modifiers =
+                    modifiers.shift || modifiers.ctrl || modifiers.meta || modifiers.alt_gr;
+                let in_multi_stroke_shortcut =
+                    self.replaying_pending_shortcut || !self.pending_shortcut.keystrokes.is_empty();
+
+                if disqualifying_modifiers || in_multi_stroke_shortcut {
+                    self.alt_menu_bar_arm_key = None;
+                    self.alt_menu_bar_canceled = false;
+                    return false;
+                }
+
+                self.alt_menu_bar_arm_key = Some(*key);
+                self.alt_menu_bar_canceled = false;
+            }
+            Event::KeyDown { key, .. } => {
+                if self.alt_menu_bar_arm_key.is_some()
+                    && !matches!(*key, KeyCode::AltLeft | KeyCode::AltRight)
+                {
+                    self.alt_menu_bar_canceled = true;
+                }
+            }
+            Event::Pointer(PointerEvent::Down { .. }) => {
+                if self.alt_menu_bar_arm_key.is_some() {
+                    self.alt_menu_bar_canceled = true;
+                }
+            }
+            Event::Ime(_) | Event::TextInput(_) => {
+                if self.alt_menu_bar_arm_key.is_some() {
+                    self.alt_menu_bar_canceled = true;
+                }
+            }
+            Event::WindowFocusChanged(false) => {
+                self.alt_menu_bar_arm_key = None;
+                self.alt_menu_bar_canceled = false;
+            }
+            Event::KeyUp {
+                key: key @ (KeyCode::AltLeft | KeyCode::AltRight),
+                ..
+            } if self.alt_menu_bar_arm_key.is_some() => {
+                let should_activate =
+                    self.alt_menu_bar_arm_key == Some(*key) && !self.alt_menu_bar_canceled;
+
+                self.alt_menu_bar_arm_key = None;
+                self.alt_menu_bar_canceled = false;
+
+                if !should_activate {
+                    return false;
+                }
+
+                if focus_is_text_input {
+                    return false;
+                }
+
+                if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+                    return false;
+                }
+
+                let present = app
+                    .global::<fret_runtime::WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                if !present {
+                    return false;
+                }
+
+                let command = CommandId::from("focus.menu_bar");
+                if app.commands().get(command.clone()).is_none() {
+                    return false;
+                }
+
+                app.push_effect(Effect::Command {
+                    window: Some(window),
+                    command,
+                });
+                return true;
+            }
+            _ => {}
+        }
+
+        false
+    }
+
     fn run_pressable_hover_hook(
         app: &mut H,
         window: AppWindowId,
@@ -108,7 +202,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(record.instance, declarative::ElementInstance::Pressable(_))
                     {
                         return Some(record.element);
@@ -169,7 +263,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover_region;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(
                             record.instance,
                             declarative::ElementInstance::HoverRegion(_)
@@ -379,7 +473,7 @@ impl<H: UiHost> UiTree<H> {
     fn apply_pending_invalidations(
         &mut self,
         pending: HashMap<NodeId, PendingInvalidation>,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut impl InvalidationVisited,
     ) {
         if pending.is_empty() {
             return;
@@ -925,6 +1019,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                /* consume_deferred_scroll_to_item */ false,
+                /* commit_scroll_handle_baselines */ false,
             );
         }
 
@@ -1192,6 +1288,12 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        if let Some(window) = self.window
+            && self.handle_alt_menu_bar_activation(app, window, focus_is_text_input, event)
+        {
+            return;
+        }
+
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut cursor_choice_from_query = false;
         let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
@@ -1204,6 +1306,7 @@ impl<H: UiHost> UiTree<H> {
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
         let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
         let mut focus_requested = false;
+        let mut defer_escape_overlay_dismiss = false;
 
         if let Event::KeyDown {
             key: fret_core::KeyCode::Escape,
@@ -1228,7 +1331,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                     true
                 } else {
-                    self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+                    defer_escape_overlay_dismiss = true;
+                    false
                 }
             }
         {
@@ -1518,7 +1622,7 @@ impl<H: UiHost> UiTree<H> {
                         let window_frame = window_frame?;
                         let mut node = hit?;
                         loop {
-                            if let Some(record) = window_frame.instances.get(&node)
+                            if let Some(record) = window_frame.instances.get(node)
                                 && matches!(
                                     record.instance,
                                     crate::declarative::ElementInstance::InternalDragRegion(p)
@@ -2206,6 +2310,25 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
                 }
+
+                if defer_escape_overlay_dismiss && !stop_propagation_requested {
+                    if let Event::KeyDown {
+                        key: fret_core::KeyCode::Escape,
+                        repeat: false,
+                        ..
+                    } = event
+                        && let Some(window) = self.window
+                        && self.dismiss_topmost_overlay_on_escape(
+                            app,
+                            window,
+                            base_root,
+                            barrier_root,
+                        )
+                    {
+                        self.request_redraw_coalesced(app);
+                        return;
+                    }
+                }
             } else {
                 loop {
                     let (
@@ -2367,7 +2490,7 @@ impl<H: UiHost> UiTree<H> {
         {
             let is_scroll_target = declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
-                let record = window_frame.instances.get(&scroll_target)?;
+                let record = window_frame.instances.get(scroll_target)?;
                 Some(matches!(
                     record.instance,
                     declarative::ElementInstance::Scroll(_)
@@ -2490,19 +2613,6 @@ impl<H: UiHost> UiTree<H> {
             && let Some(pointer_id) = event_pointer_id_for_capture
         {
             self.captured.remove(&pointer_id);
-        }
-
-        if matches!(event, Event::PointerCancel(_))
-            && let Some(window) = self.window
-            && let Some(prev_node) = crate::elements::set_pressed_pressable(app, window, None)
-        {
-            needs_redraw = true;
-            self.mark_invalidation_dedup_with_source(
-                prev_node,
-                Invalidation::Paint,
-                &mut invalidation_visited,
-                UiDebugInvalidationSource::Other,
-            );
         }
 
         if let Event::PointerCancel(e) = event
@@ -2630,6 +2740,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                /* consume_deferred_scroll_to_item */ false,
+                /* commit_scroll_handle_baselines */ false,
             );
 
             self.hit_test_path_cache = None;
@@ -2756,7 +2868,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })

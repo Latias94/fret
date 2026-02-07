@@ -294,9 +294,9 @@ fn model_change_invalidation_dedup_stops_at_shared_ancestors() {
     ui.set_window(AppWindowId::default());
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let left = ui.create_node(TestStack::default());
-    let right = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let left = ui.create_node(TestStack);
+    let right = ui.create_node(TestStack);
     let leaf_a = ui.create_node(PaintObservingWidget {
         model: model.clone(),
     });

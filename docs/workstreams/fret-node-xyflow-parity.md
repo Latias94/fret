@@ -75,6 +75,7 @@ Core suites (code pointers):
 - Viewport helpers + setViewport semantics: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
 - Fit-view invariants: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
 - Portal safety (pointer/keyboard passthrough): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
+- Portal measurement → internals integration: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
 - Paint cache/perf guardrails: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
 
 ## Scope (what “parity” means here)
@@ -352,6 +353,23 @@ Perf/scale targets (placeholders; make these measurable as we add instrumentatio
 - Interaction frame time budget: TBD (document per platform; start with “no visible hitching” + measured numbers).
 - Derived geometry rebuild budget: “no per-frame rebuild while panning” (expressed as counters once available).
 - Spatial index rebuild budget: “no rebuild on pan; rebuild on graph edits only” (unless explicitly forced).
+
+### M6 — Deterministic patch units (collaboration readiness) (P3)
+
+Goal: lock a deterministic, reversible patch unit for future collaboration and refactor safety.
+
+Exit criteria:
+
+- A stable patch unit contract is documented (ADR).
+- `graph_diff(from, to)` is deterministic and apply-safe.
+- Conformance tests lock determinism + roundtrip + cascade semantics.
+
+Evidence anchors:
+
+- Workstream checklist: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`
+- ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+- Diff implementation: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
+- Tests: `ecosystem/fret-node/src/ops/tests.rs`
 
 ## Tracking policy
 

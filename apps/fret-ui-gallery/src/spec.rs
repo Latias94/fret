@@ -81,6 +81,10 @@ pub(crate) const DATA_GRID_ROWS: usize = 200;
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
+pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
+pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
+pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
+pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
@@ -92,6 +96,7 @@ pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
+pub(crate) const PAGE_NODE_GRAPH_CULL_TORTURE: &str = "node_graph_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
@@ -198,6 +203,7 @@ pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
+pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
@@ -210,6 +216,8 @@ pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.tex
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
+pub(crate) const CMD_NAV_NODE_GRAPH_CULL_TORTURE: &str =
+    "ui_gallery.nav.select.node_graph_cull_torture";
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
@@ -361,6 +369,20 @@ pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings
 pub(crate) const CMD_APP_TOGGLE_PREFERENCES_ENABLED: &str =
     "ui_gallery.app.preferences.toggle_enabled";
 
+pub(crate) const CMD_MENU_BAR_OS_AUTO: &str = "ui_gallery.menu_bar.os.auto";
+pub(crate) const CMD_MENU_BAR_OS_ON: &str = "ui_gallery.menu_bar.os.on";
+pub(crate) const CMD_MENU_BAR_OS_OFF: &str = "ui_gallery.menu_bar.os.off";
+
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_AUTO: &str = "ui_gallery.menu_bar.in_window.auto";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_ON: &str = "ui_gallery.menu_bar.in_window.on";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_OFF: &str = "ui_gallery.menu_bar.in_window.off";
+
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_ADD: &str = "ui_gallery.debug.recent.add";
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_CLEAR: &str = "ui_gallery.debug.recent.clear";
+pub(crate) const CMD_GALLERY_DEBUG_WINDOW_OPEN: &str = "ui_gallery.debug.window.open";
+pub(crate) const CMD_GALLERY_RECENT_OPEN_PREFIX: &str = "ui_gallery.recent.open.";
+pub(crate) const CMD_GALLERY_WINDOW_ACTIVATE_PREFIX: &str = "ui_gallery.window.activate.";
+
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
 pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
@@ -443,6 +465,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["cache", "performance", "gpui-parity"],
                 docs::DOC_VIEW_CACHE,
                 docs::USAGE_VIEW_CACHE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_TORTURE,
+                "Hit Test (Torture)",
+                "Hit Test / Spatial Index Harness",
+                "fret-ui (hit testing)",
+                CMD_NAV_HIT_TEST_TORTURE,
+                &["hit_test", "pointer", "dispatch", "performance", "harness"],
+                docs::DOC_HIT_TEST_TORTURE,
+                docs::USAGE_HIT_TEST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,
@@ -588,6 +620,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CANVAS_CULL_TORTURE,
                 docs::USAGE_CANVAS_CULL_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_NODE_GRAPH_CULL_TORTURE,
+                "Node Graph Cull (Torture)",
+                "Node Graph / Pan-Zoom Culling Harness",
+                "fret-node (viewport culling candidate)",
+                CMD_NAV_NODE_GRAPH_CULL_TORTURE,
+                &[
+                    "node_graph",
+                    "canvas",
+                    "culling",
+                    "pan_zoom",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_NODE_GRAPH_CULL_TORTURE,
+                docs::USAGE_NODE_GRAPH_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CHROME_TORTURE,

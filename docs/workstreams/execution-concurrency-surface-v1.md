@@ -1,6 +1,6 @@
 # Execution & Concurrency Surface v1 (Implementation Plan)
 
-This document is a workstream note that expands `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+This document is a workstream note that expands `docs/adr/0199-execution-and-concurrency-surface-v1.md`
 into a concrete implementation/migration plan. It is **not** a stable contract; the ADR is.
 
 ## Why this exists
@@ -28,7 +28,7 @@ Status legend:
 
 ### Phase 0 (docs only)
 
-- `[x]` ADR: lock the surface and semantics (`docs/adr/0190-execution-and-concurrency-surface-v1.md`)
+- `[x]` ADR: lock the surface and semantics (`docs/adr/0199-execution-and-concurrency-surface-v1.md`)
 - `[x]` Portability keys: add `exec.*` to the capabilities matrix (`docs/adr/0054-platform-capabilities-and-portability-matrix.md`)
 - `[x]` Runtime matrix: add an execution/wake/timers portability line (`docs/runtime-contract-matrix.md`)
 - `[x]` Docs: update `docs/crate-usage-guide.md` ("Background work" recommended surface)
@@ -216,3 +216,4 @@ See `## Tracking (living TODOs)` at the top of this file for the authoritative p
 
 - What is the minimal timer vocabulary that avoids split-brain between effects and dispatcher scheduling?
 - What is the minimal "priority/backpressure" surface we want to reserve in v1?
+

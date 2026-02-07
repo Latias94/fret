@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
-use super::{ColumnDef, ColumnId, RowKey, RowModel, TableOptions};
+use super::{ColumnDef, ColumnId, RowId, RowKey, RowModel, TableOptions};
 
 /// TanStack-compatible grouping state: an ordered list of grouped column ids.
 pub type GroupingState = Vec<ColumnId>;
@@ -173,6 +174,7 @@ pub enum GroupedRowKind {
 
 #[derive(Debug, Clone)]
 pub struct GroupedRow {
+    pub id: RowId,
     pub key: RowKey,
     pub kind: GroupedRowKind,
     pub depth: usize,
@@ -186,6 +188,7 @@ pub struct GroupedRowModel {
     root_rows: Vec<GroupedRowIndex>,
     flat_rows: Vec<GroupedRowIndex>,
     rows_by_key: HashMap<RowKey, GroupedRowIndex>,
+    rows_by_id: HashMap<RowId, GroupedRowIndex>,
     arena: Vec<GroupedRow>,
 }
 
@@ -204,6 +207,10 @@ impl GroupedRowModel {
 
     pub fn row_by_key(&self, key: RowKey) -> Option<GroupedRowIndex> {
         self.rows_by_key.get(&key).copied()
+    }
+
+    pub fn row_by_id(&self, id: &str) -> Option<GroupedRowIndex> {
+        self.rows_by_id.get(id).copied()
     }
 
     pub fn is_leaf(&self, index: GroupedRowIndex) -> bool {
@@ -254,14 +261,31 @@ fn alloc_group_row_key(
     unreachable!("u64 key space exhausted")
 }
 
-fn grouping_value_for_row<TData>(column: &ColumnDef<TData>, row: &TData) -> u64 {
+#[derive(Debug, Clone)]
+struct GroupingValue {
+    key: u64,
+    label: Arc<str>,
+}
+
+fn grouping_value_for_row<TData>(column: &ColumnDef<TData>, row: &TData) -> GroupingValue {
     if let Some(f) = column.facet_key_fn.as_ref() {
-        return f(row);
+        let key = f(row);
+        return GroupingValue {
+            key,
+            label: Arc::from(key.to_string()),
+        };
     }
     if let Some(f) = column.facet_str_fn.as_ref() {
-        return fnv1a64_bytes(f(row).as_bytes());
+        let label = f(row);
+        return GroupingValue {
+            key: fnv1a64_bytes(label.as_bytes()),
+            label: Arc::from(label),
+        };
     }
-    0
+    GroupingValue {
+        key: 0,
+        label: Arc::from(""),
+    }
 }
 
 pub fn grouped_row_model_from_leaf<'a, TData>(row_model: &RowModel<'a, TData>) -> GroupedRowModel {
@@ -276,7 +300,9 @@ pub fn grouped_row_model_from_leaf<'a, TData>(row_model: &RowModel<'a, TData>) -
             continue;
         };
         let index = out.arena.len();
+        let id = row.id.clone();
         out.arena.push(GroupedRow {
+            id: id.clone(),
             key: row.key,
             kind: GroupedRowKind::Leaf { row_key: row.key },
             depth: 0,
@@ -287,6 +313,7 @@ pub fn grouped_row_model_from_leaf<'a, TData>(row_model: &RowModel<'a, TData>) -
         out.root_rows.push(index);
         out.flat_rows.push(index);
         out.rows_by_key.insert(row.key, index);
+        out.rows_by_id.insert(id, index);
     }
 
     out
@@ -322,6 +349,7 @@ pub fn group_row_model<'a, TData>(
         used_keys: &mut HashSet<RowKey>,
         parent: Option<GroupedRowIndex>,
         parent_key: Option<RowKey>,
+        parent_id: Option<RowId>,
         depth: usize,
         row_keys: &[RowKey],
         out: &mut GroupedRowModel,
@@ -333,8 +361,8 @@ pub fn group_row_model<'a, TData>(
             return Vec::new();
         };
 
-        let mut buckets: Vec<(u64, Vec<RowKey>)> = Vec::new();
-        let mut bucket_index_by_value: HashMap<u64, usize> = HashMap::new();
+        let mut buckets: Vec<(GroupingValue, Vec<RowKey>)> = Vec::new();
+        let mut bucket_index_by_label: HashMap<Arc<str>, usize> = HashMap::new();
 
         for &row_key in row_keys {
             let Some(i) = row_model.row_by_key(row_key) else {
@@ -345,12 +373,12 @@ pub fn group_row_model<'a, TData>(
             };
             let value = grouping_value_for_row(column, row.original);
 
-            let bucket_idx = match bucket_index_by_value.get(&value).copied() {
+            let bucket_idx = match bucket_index_by_label.get(&value.label).copied() {
                 Some(i) => i,
                 None => {
                     let i = buckets.len();
-                    buckets.push((value, Vec::new()));
-                    bucket_index_by_value.insert(value, i);
+                    buckets.push((value.clone(), Vec::new()));
+                    bucket_index_by_label.insert(value.label.clone(), i);
                     i
                 }
             };
@@ -362,14 +390,20 @@ pub fn group_row_model<'a, TData>(
         for (value, rows) in buckets {
             let first_leaf_row_key = rows.first().copied().unwrap_or(RowKey(0));
             let leaf_row_count = rows.len();
-            let group_key = alloc_group_row_key(used_keys, parent_key, &column.id, value);
+            let group_key = alloc_group_row_key(used_keys, parent_key, &column.id, value.key);
+            let segment = format!("{}:{}", column.id.as_ref(), value.label.as_ref());
+            let id = match parent_id.as_ref() {
+                None => RowId::new(segment),
+                Some(parent_id) => RowId::new(format!("{}>{segment}", parent_id.as_str())),
+            };
 
             let index = out.arena.len();
             out.arena.push(GroupedRow {
+                id: id.clone(),
                 key: group_key,
                 kind: GroupedRowKind::Group {
                     grouping_column: column.id.clone(),
-                    grouping_value: value,
+                    grouping_value: value.key,
                     first_leaf_row_key,
                     leaf_row_count,
                 },
@@ -379,6 +413,7 @@ pub fn group_row_model<'a, TData>(
                 sub_rows: Vec::new(),
             });
             out.rows_by_key.insert(group_key, index);
+            out.rows_by_id.insert(id.clone(), index);
 
             let sub_rows: Vec<GroupedRowIndex> = if grouping.len() > 1 {
                 build_groups(
@@ -388,6 +423,7 @@ pub fn group_row_model<'a, TData>(
                     used_keys,
                     Some(index),
                     Some(group_key),
+                    Some(id),
                     depth + 1,
                     &rows,
                     out,
@@ -395,8 +431,13 @@ pub fn group_row_model<'a, TData>(
             } else {
                 let mut leaf_nodes: Vec<GroupedRowIndex> = Vec::with_capacity(rows.len());
                 for &leaf_key in &rows {
+                    let leaf_id = row_model
+                        .row_by_key(leaf_key)
+                        .and_then(|i| row_model.row(i).map(|r| r.id.clone()))
+                        .unwrap_or_else(|| RowId::new(leaf_key.0.to_string()));
                     let leaf_index = out.arena.len();
                     out.arena.push(GroupedRow {
+                        id: leaf_id.clone(),
                         key: leaf_key,
                         kind: GroupedRowKind::Leaf { row_key: leaf_key },
                         depth: depth + 1,
@@ -405,6 +446,7 @@ pub fn group_row_model<'a, TData>(
                         sub_rows: Vec::new(),
                     });
                     out.rows_by_key.insert(leaf_key, leaf_index);
+                    out.rows_by_id.insert(leaf_id, leaf_index);
                     leaf_nodes.push(leaf_index);
                     // TanStack-compatible: leaf rows are included in flat rows during recursion,
                     // and may appear again when their parent group appends its `subRows`.
@@ -438,6 +480,7 @@ pub fn group_row_model<'a, TData>(
         &columns_by_id,
         grouping,
         &mut used_keys,
+        None,
         None,
         None,
         0,

@@ -677,6 +677,7 @@ fn page_preview(
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
+        PAGE_NODE_GRAPH_CULL_TORTURE => preview_node_graph_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
             cx,
             theme,
@@ -762,7 +763,7 @@ fn page_preview(
         PAGE_CONTEXT_MENU => preview_context_menu(cx, context_menu_open, last_action.clone()),
         PAGE_DIALOG => preview_dialog(cx, dialog_open),
         PAGE_DRAWER => preview_drawer(cx),
-        PAGE_DROPDOWN_MENU => preview_dropdown_menu(cx, dropdown_open, last_action.clone())
+        PAGE_DROPDOWN_MENU => preview_dropdown_menu(cx, dropdown_open, last_action.clone()),
         PAGE_EMPTY => preview_empty(cx),
         PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_HOVER_CARD => preview_hover_card(cx),
@@ -2327,21 +2328,80 @@ fn preview_code_editor_mvp(
         .get_model_copied(&soft_wrap, Invalidation::Layout)
         .unwrap_or(false);
 
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let word_handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
+    #[derive(Clone)]
+    struct CodeEditorMvpHandles {
+        main: code_editor::CodeEditorHandle,
+        word_fixture: code_editor::CodeEditorHandle,
+        word_gate: code_editor::CodeEditorHandle,
+        a11y_selection_gate: code_editor::CodeEditorHandle,
+        a11y_composition_gate: code_editor::CodeEditorHandle,
+        a11y_selection_wrap_gate: code_editor::CodeEditorHandle,
+        a11y_composition_wrap_gate: code_editor::CodeEditorHandle,
+        a11y_composition_drag_gate: code_editor::CodeEditorHandle,
     }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+
+    fn code_editor_wrap_gate_fixture() -> String {
+        let mut s = String::new();
+        for _ in 0..20 {
+            s.push_str("0123456789");
+        }
+        s
+    }
+
+    let handles = cx.with_state(
+        || CodeEditorMvpHandles {
+            main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+            word_fixture: code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
+            word_gate: code_editor::CodeEditorHandle::new("can't"),
+            a11y_selection_gate: code_editor::CodeEditorHandle::new("hello world"),
+            a11y_composition_gate: {
+                let handle = code_editor::CodeEditorHandle::new("hello world");
+                handle.set_caret(2);
+                handle
+            },
+            a11y_selection_wrap_gate: {
+                let handle = code_editor::CodeEditorHandle::new(code_editor_wrap_gate_fixture());
+                handle
+            },
+            a11y_composition_wrap_gate: {
+                let handle = code_editor::CodeEditorHandle::new(code_editor_wrap_gate_fixture());
+                handle.set_caret(78);
+                handle
+            },
+            a11y_composition_drag_gate: {
+                let handle = code_editor::CodeEditorHandle::new(code_editor_wrap_gate_fixture());
+                handle.set_caret(78);
+                handle
+            },
+        },
+        |h| h.clone(),
+    );
+    let handle = handles.main;
+    let word_handle = handles.word_fixture;
+    let word_gate_handle = handles.word_gate;
+    let a11y_selection_gate_handle = handles.a11y_selection_gate;
+    let a11y_composition_gate_handle = handles.a11y_composition_gate;
+    let a11y_selection_wrap_gate_handle = handles.a11y_selection_wrap_gate;
+    let a11y_composition_wrap_gate_handle = handles.a11y_composition_wrap_gate;
+    let a11y_composition_drag_gate_handle = handles.a11y_composition_drag_gate;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    struct CodeEditorMvpAppliedFlags {
+        syntax_enabled: Option<bool>,
+        boundary_identifier_enabled: Option<bool>,
+    }
+
+    let applied = cx.with_state(
+        || Rc::new(Cell::new(CodeEditorMvpAppliedFlags::default())),
+        |v| v.clone(),
+    );
+    let mut applied_flags = applied.get();
+    if applied_flags.syntax_enabled != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        applied_flags.syntax_enabled = Some(syntax_enabled);
+        applied.set(applied_flags);
+    }
+    if applied_flags.boundary_identifier_enabled != Some(boundary_identifier_enabled) {
         let mode = if boundary_identifier_enabled {
             fret_runtime::TextBoundaryMode::Identifier
         } else {
@@ -2349,7 +2409,14 @@ fn preview_code_editor_mvp(
         };
         handle.set_text_boundary_mode(mode);
         word_handle.set_text_boundary_mode(mode);
-        last_boundaries.set(Some(boundary_identifier_enabled));
+        word_gate_handle.set_text_boundary_mode(mode);
+        a11y_selection_gate_handle.set_text_boundary_mode(mode);
+        a11y_composition_gate_handle.set_text_boundary_mode(mode);
+        a11y_selection_wrap_gate_handle.set_text_boundary_mode(mode);
+        a11y_composition_wrap_gate_handle.set_text_boundary_mode(mode);
+        a11y_composition_drag_gate_handle.set_text_boundary_mode(mode);
+        applied_flags.boundary_identifier_enabled = Some(boundary_identifier_enabled);
+        applied.set(applied_flags);
     }
 
     let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
@@ -2364,8 +2431,14 @@ fn preview_code_editor_mvp(
     let boundary_identifier_for_harness = boundary_identifier.clone();
     let soft_wrap_switch = soft_wrap.clone();
     let word_handle_for_harness = word_handle.clone();
+    let word_gate_handle_for_harness = word_gate_handle.clone();
     let word_debug_for_harness = word_debug.clone();
     let word_debug_for_render = word_debug.clone();
+    let a11y_selection_gate_handle_for_harness = a11y_selection_gate_handle.clone();
+    let a11y_composition_gate_handle_for_harness = a11y_composition_gate_handle.clone();
+    let a11y_selection_wrap_gate_handle_for_harness = a11y_selection_wrap_gate_handle.clone();
+    let a11y_composition_wrap_gate_handle_for_harness = a11y_composition_wrap_gate_handle.clone();
+    let a11y_composition_drag_gate_handle_for_harness = a11y_composition_drag_gate_handle.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2398,6 +2471,7 @@ fn preview_code_editor_mvp(
                         vec![
                             shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
+                                .test_id("ui-gallery-code-editor-boundary-identifier-switch")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
                                 "Word boundaries: Identifier"
@@ -2423,6 +2497,7 @@ fn preview_code_editor_mvp(
                                 .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
                                 .into_element(cx),
                             shadcn::Switch::new(soft_wrap_switch.clone())
+                                .test_id("ui-gallery-code-editor-mvp-soft-wrap")
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
                             cx.text(if soft_wrap_enabled {
@@ -2433,6 +2508,437 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                cx.keyed("word-boundary-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(word_gate_handle_for_harness.clone())
+                        .key(2)
+                        .overscan(8)
+                        .soft_wrap_cols(None)
+                        .a11y_label("Code editor word gate")
+                        .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
+                        .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
+                cx.keyed("a11y-selection-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_selection_gate_handle_for_harness.clone(),
+                    )
+                    .key(3)
+                    .overscan(8)
+                    .soft_wrap_cols(None)
+                    .a11y_label("Code editor a11y selection gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-selection-gate-viewport")
+                    .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
+                cx.keyed("a11y-composition-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_composition_gate_handle_for_harness.clone(),
+                    )
+                    .key(4)
+                    .overscan(8)
+                    .soft_wrap_cols(None)
+                    .a11y_label("Code editor a11y composition gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-composition-gate-viewport")
+                    .into_element(cx);
+
+                    const COMPOSITION_CARET: usize = 2;
+
+                    let inject = {
+                        let handle = a11y_composition_gate_handle_for_harness.clone();
+                        Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      action_cx: fret_ui::action::ActionCx,
+                                      _up: fret_ui::action::PointerUpCx| {
+                            handle.set_caret(COMPOSITION_CARET);
+                            handle.set_preedit_debug("ab", None);
+                            if let Some(region_id) = handle.region_id() {
+                                host.request_focus(region_id);
+                            }
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            true
+                        })
+                    };
+
+                    let clear = {
+                        let handle = a11y_composition_gate_handle_for_harness.clone();
+                        Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      action_cx: fret_ui::action::ActionCx,
+                                      _up: fret_ui::action::PointerUpCx| {
+                            handle.set_caret(COMPOSITION_CARET);
+                            handle.set_preedit_debug("", None);
+                            if let Some(region_id) = handle.region_id() {
+                                host.request_focus(region_id);
+                            }
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            true
+                        })
+                    };
+
+                    let inject = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(
+                                    |host, _cx, _down| {
+                                        host.prevent_default(
+                                            fret_runtime::DefaultAction::FocusOnPointerDown,
+                                        );
+                                        true
+                                    },
+                                ));
+                                cx.pointer_region_on_pointer_up(inject.clone());
+                                vec![cx.text("Inject preedit")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-inject-preedit")
+                                .label("Inject preedit"),
+                        );
+
+                    let clear = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(
+                                    |host, _cx, _down| {
+                                        host.prevent_default(
+                                            fret_runtime::DefaultAction::FocusOnPointerDown,
+                                        );
+                                        true
+                                    },
+                                ));
+                                cx.pointer_region_on_pointer_up(clear.clone());
+                                vec![cx.text("Clear preedit")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-clear-preedit")
+                                .label("Clear preedit"),
+                        );
+
+                    let controls = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |_cx| vec![inject.clone(), clear.clone()],
+                    );
+
+                    let panel = cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    );
+
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        |_cx| vec![controls, panel],
+                    )
+                }),
+                cx.keyed("a11y-selection-wrap-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_selection_wrap_gate_handle_for_harness.clone(),
+                    )
+                    .key(5)
+                    .overscan(8)
+                    .soft_wrap_cols(Some(80))
+                    .a11y_label("Code editor a11y selection wrap gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-selection-wrap-gate-viewport")
+                    .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
+                cx.keyed("a11y-composition-wrap-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_composition_wrap_gate_handle_for_harness.clone(),
+                    )
+                    .key(6)
+                    .overscan(8)
+                    .soft_wrap_cols(Some(80))
+                    .a11y_label("Code editor a11y composition wrap gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-composition-wrap-gate-viewport")
+                    .into_element(cx);
+
+                    const WRAP_CARET: usize = 78;
+
+                    let inject = {
+                        let handle = a11y_composition_wrap_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
+                                handle.set_preedit_debug("ab", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let clear = {
+                        let handle = a11y_composition_wrap_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
+                                handle.set_preedit_debug("", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let inject = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(inject.clone());
+                                vec![cx.text("Inject preedit (wrap)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id(
+                                    "ui-gallery-code-editor-a11y-composition-wrap-inject-preedit",
+                                )
+                                .label("Inject preedit (wrap)"),
+                        );
+
+                    let clear = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(clear.clone());
+                                vec![cx.text("Clear preedit (wrap)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id(
+                                    "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit",
+                                )
+                                .label("Clear preedit (wrap)"),
+                        );
+
+                    let controls = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |_cx| vec![inject.clone(), clear.clone()],
+                    );
+
+                    let panel = cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    );
+
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        |_cx| vec![controls, panel],
+                    )
+                }),
+                cx.keyed("a11y-composition-drag-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_composition_drag_gate_handle_for_harness.clone(),
+                    )
+                    .key(7)
+                    .overscan(8)
+                    .soft_wrap_cols(Some(80))
+                    .a11y_label("Code editor a11y composition drag gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-composition-drag-gate-viewport")
+                    .into_element(cx);
+
+                    const WRAP_CARET: usize = 78;
+
+                    let inject = {
+                        let handle = a11y_composition_drag_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
+                                handle.set_preedit_debug("ab", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let clear = {
+                        let handle = a11y_composition_drag_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
+                                handle.set_preedit_debug("", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let inject = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(inject.clone());
+                                vec![cx.text("Inject preedit (drag)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-drag-inject-preedit")
+                                .label("Inject preedit (drag)"),
+                        );
+
+                    let clear = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(clear.clone());
+                                vec![cx.text("Clear preedit (drag)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-drag-clear-preedit")
+                                .label("Clear preedit (drag)"),
+                        );
+
+                    let controls = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |_cx| vec![inject.clone(), clear.clone()],
+                    );
+
+                    let panel = cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    );
+
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        |_cx| vec![controls, panel],
+                    )
+                }),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -2814,6 +3320,7 @@ fn preview_code_editor_torture(
                                 .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
                                 .into_element(cx),
                             shadcn::Switch::new(soft_wrap.clone())
+                                .test_id("ui-gallery-code-editor-torture-soft-wrap")
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
                             cx.text(if soft_wrap_enabled {
@@ -2846,6 +3353,14 @@ fn preview_code_editor_torture(
         });
         last_boundaries.set(Some(boundary_identifier_enabled));
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    cx.app.with_global_mut(
+        crate::harness::UiGalleryCodeEditorHandlesStore::default,
+        |store, _app| {
+            store.per_window.insert(cx.window, handle.clone());
+        },
+    );
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
@@ -4320,13 +4835,14 @@ fn preview_text_measure_overlay(
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
     use delinea::data::{Column, DataTable};
-    use delinea::engine::ChartEngine;
     use delinea::{
         AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale,
         ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
         TimeAxisScale,
     };
-    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+    use fret_chart::ChartCanvas;
+    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+    use fret_ui::retained_bridge::RetainedSubtreeProps;
 
     let header = stack::vstack(
         cx,
@@ -4341,150 +4857,133 @@ fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Ve
         },
     );
 
-    struct EngineState {
-        model: Option<Model<ChartEngine>>,
-        spec: Option<ChartSpec>,
-    }
+    let chart =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let dataset_id = delinea::ids::DatasetId::new(1);
+            let grid_id = delinea::ids::GridId::new(1);
+            let x_axis = delinea::AxisId::new(1);
+            let y_axis = delinea::AxisId::new(2);
+            let series_id = delinea::ids::SeriesId::new(1);
+            let x_field = delinea::FieldId::new(1);
+            let y_field = delinea::FieldId::new(2);
 
-    impl Default for EngineState {
-        fn default() -> Self {
-            Self {
-                model: None,
-                spec: None,
-            }
-        }
-    }
-
-    let existing = cx.with_state(EngineState::default, |st| {
-        match (st.model.clone(), st.spec.clone()) {
-            (Some(engine), Some(spec)) => Some((engine, spec)),
-            _ => None,
-        }
-    });
-
-    let (engine, spec) = if let Some((engine, spec)) = existing {
-        (engine, spec)
-    } else {
-        let dataset_id = delinea::ids::DatasetId::new(1);
-        let grid_id = delinea::ids::GridId::new(1);
-        let x_axis = delinea::AxisId::new(1);
-        let y_axis = delinea::AxisId::new(2);
-        let series_id = delinea::ids::SeriesId::new(1);
-        let x_field = delinea::FieldId::new(1);
-        let y_field = delinea::FieldId::new(2);
-
-        let spec = ChartSpec {
-            id: delinea::ids::ChartId::new(1),
-            viewport: None,
-            datasets: vec![DatasetSpec {
-                id: dataset_id,
-                fields: vec![
-                    FieldSpec {
-                        id: x_field,
-                        column: 0,
+            let spec = ChartSpec {
+                id: delinea::ids::ChartId::new(1),
+                viewport: None,
+                datasets: vec![DatasetSpec {
+                    id: dataset_id,
+                    fields: vec![
+                        FieldSpec {
+                            id: x_field,
+                            column: 0,
+                        },
+                        FieldSpec {
+                            id: y_field,
+                            column: 1,
+                        },
+                    ],
+                }],
+                grids: vec![GridSpec { id: grid_id }],
+                axes: vec![
+                    delinea::AxisSpec {
+                        id: x_axis,
+                        name: Some("Time".to_string()),
+                        kind: AxisKind::X,
+                        grid: grid_id,
+                        position: None,
+                        scale: AxisScale::Time(TimeAxisScale),
+                        range: Some(AxisRange::Auto),
                     },
-                    FieldSpec {
-                        id: y_field,
-                        column: 1,
+                    delinea::AxisSpec {
+                        id: y_axis,
+                        name: Some("Value".to_string()),
+                        kind: AxisKind::Y,
+                        grid: grid_id,
+                        position: None,
+                        scale: Default::default(),
+                        range: Some(AxisRange::Auto),
                     },
                 ],
-            }],
-            grids: vec![GridSpec { id: grid_id }],
-            axes: vec![
-                delinea::AxisSpec {
-                    id: x_axis,
-                    name: Some("Time".to_string()),
-                    kind: AxisKind::X,
-                    grid: grid_id,
-                    position: None,
-                    scale: AxisScale::Time(TimeAxisScale),
-                    range: Some(AxisRange::Auto),
+                data_zoom_x: vec![],
+                data_zoom_y: vec![],
+                tooltip: None,
+                axis_pointer: Some(AxisPointerSpec {
+                    enabled: true,
+                    trigger: AxisPointerTrigger::Axis,
+                    pointer_type: AxisPointerType::Line,
+                    label: Default::default(),
+                    snap: false,
+                    trigger_distance_px: 12.0,
+                    throttle_px: 0.75,
+                }),
+                visual_maps: vec![],
+                series: vec![SeriesSpec {
+                    id: series_id,
+                    name: Some("Series".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                }],
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(520.0));
+
+            let props = RetainedSubtreeProps::new::<App>(move |ui| {
+                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+
+                let mut canvas =
+                    ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
+                canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+
+                let base_ms = 1_735_689_600_000.0;
+                let interval_ms = 60_000.0;
+
+                let n = 200_000usize;
+                let mut x: Vec<f64> = Vec::with_capacity(n);
+                let mut y: Vec<f64> = Vec::with_capacity(n);
+                for i in 0..n {
+                    let t = i as f64 / (n - 1) as f64;
+                    let xi = base_ms + interval_ms * i as f64;
+                    let theta = t * std::f64::consts::TAU;
+                    let yi = (theta * 8.0).sin() * 0.8;
+                    x.push(xi);
+                    y.push(yi);
+                }
+
+                let mut table = DataTable::default();
+                table.push_column(Column::F64(x));
+                table.push_column(Column::F64(y));
+                canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+
+                let node = ui.create_node_retained(canvas);
+                ui.set_node_view_cache_flags(node, true, true, false);
+                node
+            })
+            .with_layout(layout);
+
+            let subtree = cx.retained_subtree(props);
+            vec![cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-chart-torture-root")),
+                    ..Default::default()
                 },
-                delinea::AxisSpec {
-                    id: y_axis,
-                    name: Some("Value".to_string()),
-                    kind: AxisKind::Y,
-                    grid: grid_id,
-                    position: None,
-                    scale: Default::default(),
-                    range: Some(AxisRange::Auto),
-                },
-            ],
-            data_zoom_x: vec![],
-            data_zoom_y: vec![],
-            tooltip: None,
-            axis_pointer: Some(AxisPointerSpec {
-                enabled: true,
-                trigger: AxisPointerTrigger::Axis,
-                pointer_type: AxisPointerType::Line,
-                label: Default::default(),
-                snap: false,
-                trigger_distance_px: 12.0,
-                throttle_px: 0.75,
-            }),
-            visual_maps: vec![],
-            series: vec![SeriesSpec {
-                id: series_id,
-                name: Some("Series".to_string()),
-                kind: SeriesKind::Line,
-                dataset: dataset_id,
-                encode: SeriesEncode {
-                    x: x_field,
-                    y: y_field,
-                    y2: None,
-                },
-                x_axis,
-                y_axis,
-                stack: None,
-                stack_strategy: Default::default(),
-                bar_layout: Default::default(),
-                area_baseline: None,
-                lod: None,
-            }],
-        };
-
-        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
-
-        let base_ms = 1_735_689_600_000.0;
-        let interval_ms = 60_000.0;
-
-        let n = 200_000usize;
-        let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y: Vec<f64> = Vec::with_capacity(n);
-        for i in 0..n {
-            let t = i as f64 / (n - 1) as f64;
-            let xi = base_ms + interval_ms * i as f64;
-            let theta = t * std::f64::consts::TAU;
-            let yi = (theta * 8.0).sin() * 0.8;
-            x.push(xi);
-            y.push(yi);
-        }
-
-        let mut table = DataTable::default();
-        table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y));
-        engine.datasets_mut().insert(dataset_id, table);
-
-        let engine = cx.app.models_mut().insert(engine);
-        cx.with_state(EngineState::default, |st| {
-            st.model = Some(engine.clone());
-            st.spec = Some(spec.clone());
+                |_cx| vec![subtree],
+            )]
         });
-
-        (engine, spec)
-    };
-
-    cx.observe_model(&engine, Invalidation::Paint);
-
-    let mut props = ChartCanvasPanelProps::new(spec);
-    props.engine = Some(engine);
-    props.input_map = fret_chart::input_map::ChartInputMap::default();
-
-    let chart = chart_canvas_panel(cx, props).attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Group)
-            .test_id("ui-gallery-chart-torture-root"),
-    );
 
     vec![header, chart]
 }
@@ -4656,6 +5155,311 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         });
 
     vec![header, canvas]
+}
+
+fn preview_node_graph_cull_torture(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_core::{Px, SemanticsRole};
+    use fret_node::io::NodeGraphViewState;
+    use fret_node::ui::NodeGraphCanvas;
+    use fret_node::{
+        Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
+        PortDirection, PortId, PortKey, PortKind, TypeDesc,
+    };
+    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+    use fret_ui::retained_bridge::RetainedSubtreeProps;
+
+    fn uuid_from_tag(tag: u64, ix: u64) -> uuid::Uuid {
+        uuid::Uuid::from_u128(((tag as u128) << 64) | (ix as u128))
+    }
+
+    fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
+        let mut graph = Graph::new(graph_id);
+
+        let add_nodes = target_nodes.saturating_sub(1) / 2;
+        let float_nodes = add_nodes.saturating_add(1);
+
+        let cols: usize = 64;
+        let x_step = 360.0f32;
+        let y_step = 220.0f32;
+
+        let float_x_offset = -260.0f32;
+        let float_y_offset = 40.0f32;
+
+        let node_tag = u64::from_le_bytes(*b"NODEGRAF");
+        let port_tag = u64::from_le_bytes(*b"PORTGRAF");
+        let edge_tag = u64::from_le_bytes(*b"EDGEGRAF");
+
+        let node_id = |ix: u64| NodeId(uuid_from_tag(node_tag, ix));
+        let port_id = |ix: u64| PortId(uuid_from_tag(port_tag, ix));
+        let edge_id = |ix: u64| EdgeId(uuid_from_tag(edge_tag, ix));
+
+        let mut next_node_ix: u64 = 1;
+        let mut next_port_ix: u64 = 1;
+        let mut next_edge_ix: u64 = 1;
+
+        let mut float_out_ports: Vec<PortId> = Vec::with_capacity(float_nodes);
+        for i in 0..float_nodes {
+            let node_id = {
+                let id = node_id(next_node_ix);
+                next_node_ix = next_node_ix.saturating_add(1);
+                id
+            };
+            let port_out = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+
+            let col = i % cols;
+            let row = i / cols;
+            let x = col as f32 * x_step + float_x_offset;
+            let y = row as f32 * y_step + float_y_offset;
+            let value = (i as f64) * 0.001;
+
+            graph.nodes.insert(
+                node_id,
+                Node {
+                    kind: NodeKindKey::new("demo.float"),
+                    kind_version: 1,
+                    pos: fret_node::CanvasPoint { x, y },
+                    selectable: None,
+                    draggable: None,
+                    connectable: None,
+                    deletable: None,
+                    parent: None,
+                    extent: None,
+                    expand_parent: None,
+                    size: None,
+                    hidden: false,
+                    collapsed: false,
+                    ports: vec![port_out],
+                    data: serde_json::json!({ "value": value }),
+                },
+            );
+            graph.ports.insert(
+                port_out,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Multi,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+
+            float_out_ports.push(port_out);
+        }
+
+        let mut prev_out: Option<PortId> = None;
+        for i in 0..add_nodes {
+            let node_id = {
+                let id = node_id(next_node_ix);
+                next_node_ix = next_node_ix.saturating_add(1);
+                id
+            };
+            let port_a = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+            let port_b = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+            let port_out = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+
+            let col = i % cols;
+            let row = i / cols;
+            let x = col as f32 * x_step;
+            let y = row as f32 * y_step;
+
+            graph.nodes.insert(
+                node_id,
+                Node {
+                    kind: NodeKindKey::new("demo.add"),
+                    kind_version: 1,
+                    pos: fret_node::CanvasPoint { x, y },
+                    selectable: None,
+                    draggable: None,
+                    connectable: None,
+                    deletable: None,
+                    parent: None,
+                    extent: None,
+                    expand_parent: None,
+                    size: None,
+                    hidden: false,
+                    collapsed: false,
+                    ports: vec![port_a, port_b, port_out],
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_a,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("a"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_b,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("b"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_out,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Multi,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+
+            let port_a_source = prev_out.unwrap_or(float_out_ports[0]);
+            let port_b_source =
+                float_out_ports[(i + 1).min(float_out_ports.len().saturating_sub(1))];
+
+            let edge_a = edge_id(next_edge_ix);
+            next_edge_ix = next_edge_ix.saturating_add(1);
+            graph.edges.insert(
+                edge_a,
+                Edge {
+                    kind: EdgeKind::Data,
+                    from: port_a_source,
+                    to: port_a,
+                    selectable: None,
+                    deletable: None,
+                    reconnectable: None,
+                },
+            );
+
+            let edge_b = edge_id(next_edge_ix);
+            next_edge_ix = next_edge_ix.saturating_add(1);
+            graph.edges.insert(
+                edge_b,
+                Edge {
+                    kind: EdgeKind::Data,
+                    from: port_b_source,
+                    to: port_b,
+                    selectable: None,
+                    deletable: None,
+                    reconnectable: None,
+                },
+            );
+
+            prev_out = Some(port_out);
+        }
+
+        graph
+    }
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress a large node-graph canvas with viewport-driven culling (candidate for prepaint-windowed cull windows)."),
+                cx.text("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles."),
+            ]
+        },
+    );
+
+    #[derive(Default)]
+    struct HarnessState {
+        graph: Option<Model<Graph>>,
+        view: Option<Model<NodeGraphViewState>>,
+    }
+
+    let existing = cx.with_state(HarnessState::default, |st| {
+        match (st.graph.clone(), st.view.clone()) {
+            (Some(graph), Some(view)) => Some((graph, view)),
+            _ => None,
+        }
+    });
+
+    let (graph, view) = if let Some((graph, view)) = existing {
+        (graph, view)
+    } else {
+        let graph_id = GraphId::from_u128(1);
+        let graph = build_stress_graph(graph_id, 8_000);
+        let graph = cx.app.models_mut().insert(graph);
+        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
+
+        cx.with_state(HarnessState::default, |st| {
+            st.graph = Some(graph.clone());
+            st.view = Some(view.clone());
+        });
+
+        (graph, view)
+    };
+
+    let surface =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let graph = graph.clone();
+            let view = view.clone();
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(520.0));
+
+            let props = RetainedSubtreeProps::new::<App>(move |ui| {
+                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+                let canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+                ui.create_node_retained(canvas)
+            })
+            .with_layout(layout);
+
+            let subtree = cx.retained_subtree(props);
+            vec![cx.semantics(
+                SemanticsProps {
+                    role: SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-node-graph-cull-root")),
+                    ..Default::default()
+                },
+                |_cx| vec![subtree],
+            )]
+        });
+
+    vec![header, surface]
 }
 
 fn preview_chrome_torture(
@@ -10098,6 +10902,9 @@ fn material3_state_matrix_content(
         material3_text_field_error,
     ));
 
+    out.push(cx.text("— Search View —"));
+    out.extend(preview_material3_search_view(cx));
+
     out.push(cx.text("— Tabs —"));
     out.extend(preview_material3_tabs(cx, material3_tabs_value));
 
@@ -10111,6 +10918,80 @@ fn material3_state_matrix_content(
     out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
 
     out
+}
+
+fn preview_material3_search_view(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids::ui as ui_icons;
+
+    #[derive(Default)]
+    struct SearchViewPageModels {
+        open: Option<Model<bool>>,
+        query: Option<Model<String>>,
+        selected: Option<Model<Arc<str>>>,
+    }
+
+    let open = cx.with_state(SearchViewPageModels::default, |st| st.open.clone());
+    let open = match open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SearchViewPageModels::default, |st| {
+                st.open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let query = cx.with_state(SearchViewPageModels::default, |st| st.query.clone());
+    let query = match query {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(SearchViewPageModels::default, |st| {
+                st.query = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected = cx.with_state(SearchViewPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("alpha"));
+            cx.with_state(SearchViewPageModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let suggestions = material3::List::new(selected)
+        .a11y_label("Suggestions")
+        .test_id("ui-gallery-material3-search-view-suggestions")
+        .items(vec![
+            material3::ListItem::new("alpha", "Alpha")
+                .leading_icon(ui_icons::SEARCH)
+                .test_id("ui-gallery-material3-search-view-option-alpha"),
+            material3::ListItem::new("bravo", "Bravo")
+                .leading_icon(ui_icons::SEARCH)
+                .test_id("ui-gallery-material3-search-view-option-bravo"),
+            material3::ListItem::new("charlie", "Charlie")
+                .leading_icon(ui_icons::SEARCH)
+                .test_id("ui-gallery-material3-search-view-option-charlie"),
+        ])
+        .into_element(cx);
+
+    let view = material3::SearchView::new(open, query)
+        .leading_icon(ui_icons::SEARCH)
+        .trailing_icon(ui_icons::CLOSE)
+        .placeholder("Search")
+        .a11y_label("Search")
+        .test_id("ui-gallery-material3-search-view")
+        .overlay_test_id("ui-gallery-material3-search-view-panel")
+        .into_element(cx, |_cx| vec![suggestions]);
+
+    vec![view]
 }
 
 fn preview_material3_chip(
@@ -13727,6 +14608,27 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .side(material3::TooltipSide::Left)
         .into_element(cx);
 
+        let rich = material3::RichTooltip::new(
+            material3::Button::new("Hover (Rich)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-rich-tooltip-trigger")
+                .into_element(cx),
+            "Rich tooltip supporting text (body medium).",
+        )
+        .title("Rich tooltip title")
+        .side(material3::TooltipSide::Top)
+        .into_element(cx);
+
+        let rich_no_title = material3::RichTooltip::new(
+            material3::Button::new("Hover (Rich / no title)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-rich-tooltip-no-title-trigger")
+                .into_element(cx),
+            "Rich tooltip supporting text only.",
+        )
+        .side(material3::TooltipSide::Bottom)
+        .into_element(cx);
+
         vec![
                 stack::hstack(
                     cx,
@@ -13734,6 +14636,13 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .gap(Space::N4)
                         .layout(LayoutRefinement::default().w_full()),
                     |_cx| [top, right, bottom, left],
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| [rich, rich_no_title],
                 ),
                 cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
             ]
@@ -13743,7 +14652,7 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Tooltip").into_element(cx),
             shadcn::CardDescription::new(
-                "Plain tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling.",
+                "Tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling (plain + rich).",
             )
             .into_element(cx),
         ])
@@ -15883,6 +16792,8 @@ fn preview_ai_transcript_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+
     let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -15890,15 +16801,29 @@ fn preview_ai_transcript_torture(
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(5_000);
+    let append_batch: usize = 100;
 
     #[derive(Default)]
     struct TranscriptModels {
-        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+        messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
     }
 
-    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
-    let messages = match messages {
-        Some(messages) => messages,
+    let message_text = |i: u64| -> Arc<str> {
+        if variable_height && i % 7 == 0 {
+            Arc::<str>::from(format!(
+                "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                (i * 31) % 97,
+                16 + (i % 64),
+                10 + (i % 120)
+            ))
+        } else {
+            Arc::<str>::from(format!("Message {i}: hello world"))
+        }
+    };
+
+    let messages_model = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages_model = match messages_model {
+        Some(model) => model,
         None => {
             let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
             for i in 0..message_count as u64 {
@@ -15908,25 +16833,51 @@ fn preview_ai_transcript_torture(
                     2 => ui_ai::MessageRole::Tool,
                     _ => ui_ai::MessageRole::System,
                 };
-                let text = if variable_height && i % 7 == 0 {
-                    Arc::<str>::from(format!(
-                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
-                        (i * 31) % 97,
-                        16 + (i % 64),
-                        10 + (i % 120)
-                    ))
+                out.push(ui_ai::ConversationMessage::new(i, role, message_text(i)));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            let model = cx.app.models_mut().insert(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(model.clone())
+            });
+            model
+        }
+    };
+    let messages = cx
+        .get_model_cloned(&messages_model, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::from([]));
+
+    let append_messages_on_activate: OnActivate = {
+        let messages_model = messages_model.clone();
+        Arc::new(move |host, acx, _reason| {
+            let existing = host
+                .models_mut()
+                .get_cloned(&messages_model)
+                .unwrap_or_else(|| Arc::from([]));
+            let start = existing.len() as u64;
+
+            let mut out: Vec<ui_ai::ConversationMessage> = existing.iter().cloned().collect();
+            out.reserve(append_batch);
+            for i in start..start + append_batch as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 5 == 0 {
+                    Arc::<str>::from(format!("Appended {i}\n(extra line)"))
                 } else {
-                    Arc::<str>::from(format!("Message {i}: hello world"))
+                    Arc::<str>::from(format!("Appended {i}"))
                 };
                 out.push(ui_ai::ConversationMessage::new(i, role, text));
             }
 
             let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
-            cx.with_state(TranscriptModels::default, |st| {
-                st.messages = Some(out.clone())
-            });
-            out
-        }
+            let _ = host.models_mut().update(&messages_model, |v| *v = out);
+            host.request_redraw(acx.window);
+        })
     };
 
     let header = stack::vstack(
@@ -15938,6 +16889,10 @@ fn preview_ai_transcript_torture(
             vec![
                 cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+                fret_ui_shadcn::Button::new(format!("Append {append_batch} messages"))
+                    .test_id("ui-gallery-ai-transcript-append")
+                    .on_activate(append_messages_on_activate)
+                    .into_element(cx),
             ]
         },
     );

@@ -1,19 +1,20 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
+    AttributedText, Color, Corners, DecorationLineStyle, Edges, FontId, FontWeight, Px,
+    SemanticsRole, Size, TextOverflow, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{
     CommandId, CommandScope, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem,
-    Platform, PlatformCapabilities, WhenExpr, WindowCommandGatingSnapshot,
-    best_effort_snapshot_for_window_with_input_ctx_fallback, format_sequence,
+    MenuItemToggle, MenuItemToggleKind, Platform, PlatformCapabilities, WhenExpr,
+    WindowCommandGatingSnapshot, best_effort_snapshot_for_window_with_input_ctx_fallback,
+    format_sequence,
 };
 use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, SizeStyle, TextProps,
+    SemanticsProps, SizeStyle, StyledTextProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -55,6 +56,66 @@ fn diag_test_id(prefix: &str, raw: &str) -> Arc<str> {
     Arc::<str>::from(format!("{prefix}-{}", diag_test_id_suffix(raw)))
 }
 
+fn fnv1a_64(s: &str) -> u64 {
+    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x00000100000001B3;
+
+    let mut hash = OFFSET_BASIS;
+    for b in s.as_bytes() {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
+fn stable_menu_key(raw: &str) -> String {
+    let slug = diag_test_id_suffix(raw);
+    if slug != "x" {
+        return slug;
+    }
+    format!("u{:016x}", fnv1a_64(raw))
+}
+
+fn attributed_title_with_mnemonic_underline(
+    title: Arc<str>,
+    mnemonic: char,
+    underline_color: Color,
+) -> Option<AttributedText> {
+    let mnemonic = mnemonic.to_ascii_lowercase();
+
+    let mut start: Option<usize> = None;
+    let mut len: usize = 0;
+    for (ix, ch) in title.char_indices() {
+        if ch.to_ascii_lowercase() == mnemonic {
+            start = Some(ix);
+            len = ch.len_utf8();
+            break;
+        }
+    }
+    let start = start?;
+
+    let underline = UnderlineStyle {
+        color: Some(underline_color),
+        style: DecorationLineStyle::Solid,
+    };
+
+    let mut spans: Vec<TextSpan> = Vec::with_capacity(3);
+    if start > 0 {
+        spans.push(TextSpan::new(start));
+    }
+    spans.push(TextSpan {
+        len,
+        shaping: Default::default(),
+        paint: fret_core::TextPaintStyle::default().with_underline(underline),
+    });
+    let after_start = start.saturating_add(len);
+    if after_start < title.len() {
+        spans.push(TextSpan::new(title.len().saturating_sub(after_start)));
+    }
+
+    Some(AttributedText::new(title, spans))
+}
+
 #[derive(Debug, Clone)]
 pub struct MenubarFromRuntimeOptions {
     pub platform: Platform,
@@ -83,6 +144,7 @@ struct InWindowMenuItem {
     value: Arc<str>,
     disabled: bool,
     command: Option<CommandId>,
+    toggle: Option<MenuItemToggle>,
     shortcut: Option<Arc<str>>,
     has_submenu: bool,
     keep_if_empty_submenu: bool,
@@ -105,6 +167,7 @@ enum InWindowMenuEntry {
 struct InWindowMenu {
     title: Arc<str>,
     enabled: bool,
+    mnemonic: Option<char>,
     entries: Arc<[InWindowMenuEntry]>,
 }
 
@@ -112,11 +175,57 @@ struct InWindowMenu {
 pub struct InWindowMenubarFocusHandle {
     pub group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
     pub trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+    pub last_focus_before_menubar: fret_runtime::Model<Option<GlobalElementId>>,
+    pub focus_is_trigger: fret_runtime::Model<bool>,
 }
 
 #[derive(Default)]
 struct InWindowMenubarMenuState {
     open: Option<fret_runtime::Model<bool>>,
+}
+
+#[derive(Default)]
+struct InWindowMenubarBridgeState {
+    last_focus_before_menubar: Option<fret_runtime::Model<Option<GlobalElementId>>>,
+    focus_is_trigger: Option<fret_runtime::Model<bool>>,
+}
+
+#[track_caller]
+fn ensure_last_focus_before_menubar_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: GlobalElementId,
+) -> fret_runtime::Model<Option<GlobalElementId>> {
+    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.last_focus_before_menubar.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(None);
+    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.last_focus_before_menubar = Some(model.clone());
+    });
+    model
+}
+
+#[track_caller]
+fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: GlobalElementId,
+) -> fret_runtime::Model<bool> {
+    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.focus_is_trigger.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(false);
+    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.focus_is_trigger = Some(model.clone());
+    });
+    model
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -193,6 +302,7 @@ fn command_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
     item_when: Option<&WhenExpr>,
+    toggle: Option<MenuItemToggle>,
     gating: &WindowCommandGatingSnapshot,
     shortcut_base_ctx: &InputContext,
     opts: &MenubarFromRuntimeOptions,
@@ -236,6 +346,7 @@ fn command_item<H: UiHost>(
         value: Arc::<str>::from(command.as_str()),
         disabled,
         command: Some(command.clone()),
+        toggle,
         shortcut,
         has_submenu: false,
         keep_if_empty_submenu: false,
@@ -248,8 +359,22 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
         value,
         disabled,
         command: None,
+        toggle: None,
         shortcut: None,
         has_submenu: true,
+        keep_if_empty_submenu: false,
+    }
+}
+
+fn label_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMenuItem {
+    InWindowMenuItem {
+        label: title,
+        value,
+        disabled,
+        command: None,
+        toggle: None,
+        shortcut: None,
+        has_submenu: false,
         keep_if_empty_submenu: false,
     }
 }
@@ -265,6 +390,7 @@ fn system_menu_placeholder_item(
             value,
             disabled: true,
             command: None,
+            toggle: None,
             shortcut: None,
             has_submenu: true,
             keep_if_empty_submenu: true,
@@ -318,7 +444,7 @@ fn build_entries<H: UiHost>(
     prefix: &str,
 ) -> Vec<InWindowMenuEntry> {
     let mut out = Vec::new();
-    for (idx, item) in items.iter().enumerate() {
+    for item in items.iter() {
         match item {
             MenuItem::Separator => out.push(InWindowMenuEntry::Separator),
             MenuItem::SystemMenu {
@@ -327,26 +453,44 @@ fn build_entries<H: UiHost>(
             } => {
                 // In-window surfaces cannot materialize OS-owned menus. Keep a disabled placeholder
                 // entry so the authored menu shape remains visible.
-                let value: Arc<str> = Arc::from(format!("{prefix}.system_menu.{idx}"));
+                let value: Arc<str> = Arc::from(format!(
+                    "{prefix}.system_menu.{}",
+                    stable_menu_key(title.as_ref())
+                ));
                 out.push(system_menu_placeholder_item(
                     title.clone(),
                     value,
                     Vec::new(),
                 ));
             }
-            MenuItem::Command { command, when } => out.push(InWindowMenuEntry::Item(command_item(
+            MenuItem::Label { title } => {
+                let child_key = stable_menu_key(title.as_ref());
+                let value: Arc<str> = Arc::from(format!("{prefix}.label.{child_key}"));
+                out.push(InWindowMenuEntry::Item(label_item(
+                    title.clone(),
+                    value,
+                    true,
+                )));
+            }
+            MenuItem::Command {
+                command,
+                when,
+                toggle,
+            } => out.push(InWindowMenuEntry::Item(command_item(
                 cx,
                 command,
                 when.as_ref(),
+                *toggle,
                 gating,
                 shortcut_base_ctx,
                 opts,
             ))),
             MenuItem::Submenu { title, when, items } => {
-                let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{idx}"));
+                let child_key = stable_menu_key(title.as_ref());
+                let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{child_key}"));
                 let disabled = when.as_ref().is_some_and(|w| !w.eval(gating.input_ctx()));
                 let trigger = submenu_item(title.clone(), value, disabled);
-                let child_prefix = format!("{prefix}.submenu.{idx}");
+                let child_prefix = format!("{prefix}.submenu.{child_key}");
                 let entries =
                     build_entries(cx, items, gating, shortcut_base_ctx, opts, &child_prefix);
                 out.push(InWindowMenuEntry::Submenu(InWindowSubmenu {
@@ -377,6 +521,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     menu_bar: &MenuBar,
     opts: MenubarFromRuntimeOptions,
 ) -> (AnyElement, InWindowMenubarFocusHandle) {
+    let normalized_menu_bar = menu_bar.clone().normalized();
     let group = cx.root_id();
 
     let theme = Theme::global(&*cx.app).clone();
@@ -388,23 +533,25 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
 
     let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
+    let last_focus_before_menubar = ensure_last_focus_before_menubar_model(cx, group);
+    let focus_is_trigger = ensure_menubar_focus_is_trigger_model(cx, group);
 
     let fallback_ctx = menu_fallback_input_context(cx, opts.platform);
     let gating =
         best_effort_snapshot_for_window_with_input_ctx_fallback(cx.app, cx.window, fallback_ctx);
     let shortcut_base_ctx = menu_shortcut_display_input_context(&gating, opts.platform);
-    let menus: Vec<InWindowMenu> = menu_bar
+    let menus: Vec<InWindowMenu> = normalized_menu_bar
         .menus
         .iter()
-        .enumerate()
-        .map(|(idx, menu)| {
+        .map(|menu| {
+            let menu_key = stable_menu_key(menu.title.as_ref());
             let entries = build_entries(
                 cx,
                 &menu.items,
                 &gating,
                 &shortcut_base_ctx,
                 &opts,
-                &format!("menu.{idx}"),
+                &format!("menu.{menu_key}"),
             );
             let enabled = entries
                 .iter()
@@ -412,6 +559,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             InWindowMenu {
                 title: menu.title.clone(),
                 enabled,
+                mnemonic: menu.mnemonic,
                 entries: Arc::from(entries.into_boxed_slice()),
             }
         })
@@ -434,6 +582,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
 
     let group_active_for_render = group_active.clone();
     let trigger_registry_for_render = trigger_registry.clone();
+    let last_focus_for_render = last_focus_before_menubar.clone();
+    let focus_is_trigger_for_render = focus_is_trigger.clone();
 
     let element = cx.semantics(
         SemanticsProps {
@@ -445,6 +595,61 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
         move |cx| {
             let group_active = group_active_for_render.clone();
             let trigger_registry = trigger_registry_for_render.clone();
+            let last_focus_before_menubar = last_focus_for_render.clone();
+            let focus_is_trigger = focus_is_trigger_for_render.clone();
+
+            let focused = cx.focused_element();
+            let focused_is_trigger = focused.is_some_and(|id| {
+                cx.app
+                    .models()
+                    .read(&trigger_registry, |v| v.iter().any(|e| e.trigger == id))
+                    .ok()
+                    .unwrap_or(false)
+            });
+            let cur_focused_is_trigger = cx
+                .app
+                .models()
+                .read(&focus_is_trigger, |v| *v)
+                .ok()
+                .unwrap_or(false);
+            if cur_focused_is_trigger != focused_is_trigger {
+                let _ = cx.app.models_mut().update(&focus_is_trigger, |v| {
+                    *v = focused_is_trigger;
+                });
+            }
+
+            let active = cx
+                .app
+                .models()
+                .read(&group_active, |v| v.clone())
+                .ok()
+                .flatten();
+            if let Some(active) = active.as_ref() {
+                let is_open = cx
+                    .app
+                    .models()
+                    .read(&active.open, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                if !is_open && !focused_is_trigger {
+                    let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
+                }
+            } else if let Some(focused) = focused {
+                if !focused_is_trigger {
+                    let current = cx
+                        .app
+                        .models()
+                        .read(&last_focus_before_menubar, |v| *v)
+                        .ok()
+                        .flatten();
+                    if current != Some(focused) {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&last_focus_before_menubar, |v| *v = Some(focused));
+                    }
+                }
+            }
 
             vec![cx.container(
                 ContainerProps {
@@ -507,6 +712,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
         InWindowMenubarFocusHandle {
             group_active,
             trigger_registry,
+            last_focus_before_menubar,
+            focus_is_trigger,
         },
     )
 }
@@ -561,6 +768,9 @@ fn render_menu_from_runtime<H: UiHost>(
 
         cx.pressable_with_id_props(|cx, st, trigger_id| {
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+            let group_has_active = cx.watch_model(&group_active).cloned().is_some();
+            let show_mnemonics =
+                matches!(opts.platform, Platform::Windows | Platform::Linux) && group_has_active;
 
             menubar_trigger_row::register_trigger_in_registry(
                 cx,
@@ -568,6 +778,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 trigger_id,
                 open.clone(),
                 enabled,
+                menu.mnemonic,
             );
             menubar_trigger_row::sync_trigger_row_state(
                 cx,
@@ -638,14 +849,32 @@ fn render_menu_from_runtime<H: UiHost>(
                 );
             }
 
-            let content = cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: menu.title.clone(),
-                style: Some(text_style),
-                color: Some(if enabled { fg } else { fg_disabled }),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            });
+            let text_color = if enabled { fg } else { fg_disabled };
+            let content = if show_mnemonics
+                && let Some(mnemonic) = menu.mnemonic
+                && let Some(rich) = attributed_title_with_mnemonic_underline(
+                    menu.title.clone(),
+                    mnemonic,
+                    text_color,
+                ) {
+                cx.styled_text_props(StyledTextProps {
+                    layout: LayoutStyle::default(),
+                    rich,
+                    style: Some(text_style),
+                    color: Some(text_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })
+            } else {
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: menu.title.clone(),
+                    style: Some(text_style),
+                    color: Some(text_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })
+            };
 
             let content = cx.container(
                 ContainerProps {
@@ -1118,6 +1347,16 @@ fn render_menu_item<H: UiHost>(
         layout.size.width = Length::Fill;
         layout.size.min_height = Some(Px(28.0));
 
+        let (role, checked) = match item.toggle {
+            Some(toggle) => match toggle.kind {
+                MenuItemToggleKind::Checkbox => {
+                    (SemanticsRole::MenuItemCheckbox, Some(toggle.checked))
+                }
+                MenuItemToggleKind::Radio => (SemanticsRole::MenuItemRadio, Some(toggle.checked)),
+            },
+            None => (SemanticsRole::MenuItem, None),
+        };
+
         let props = PressableProps {
             layout,
             enabled: !disabled,
@@ -1125,10 +1364,11 @@ fn render_menu_item<H: UiHost>(
             focus_ring: None,
             focus_ring_bounds: None,
             a11y: PressableA11y {
-                role: Some(SemanticsRole::MenuItem),
+                role: Some(role),
                 label: Some(item.label.clone()),
                 test_id: Some(diag_test_id("menubar-item", item.value.as_ref())),
                 expanded,
+                checked,
                 controls_element,
                 ..Default::default()
             },
@@ -1172,6 +1412,53 @@ fn render_menu_item<H: UiHost>(
             color: Some(text_color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+        });
+
+        let item_text_for_leading = item_text.clone();
+        let leading = item.toggle.map(|toggle| {
+            let item_text_for_leading = item_text_for_leading.clone();
+            let symbol: Arc<str> = match toggle.kind {
+                MenuItemToggleKind::Checkbox => {
+                    if toggle.checked {
+                        Arc::from("✓")
+                    } else {
+                        Arc::from("")
+                    }
+                }
+                MenuItemToggleKind::Radio => {
+                    if toggle.checked {
+                        Arc::from("●")
+                    } else {
+                        Arc::from("")
+                    }
+                }
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(16.0));
+            layout.size.height = Length::Fill;
+
+            cx.flex(
+                FlexProps {
+                    layout,
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: symbol.clone(),
+                        style: Some(item_text_for_leading.clone()),
+                        color: Some(text_color),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    })]
+                },
+            )
         });
 
         let trailing = if let Some(shortcut) = item.shortcut.clone() {
@@ -1225,8 +1512,26 @@ fn render_menu_item<H: UiHost>(
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| {
-                        let mut out = vec![label];
+                    move |cx| {
+                        let mut left_children: Vec<AnyElement> = Vec::new();
+                        if let Some(leading) = leading {
+                            left_children.push(leading);
+                        }
+                        left_children.push(label);
+                        let left = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(8.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| left_children,
+                        );
+
+                        let mut out = vec![left];
                         if let Some(trailing) = trailing {
                             out.push(trailing);
                         }
@@ -1292,6 +1597,9 @@ impl Default for MenubarFromRuntimeOptions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{Point, Px, Rect, Size};
+    use fret_runtime::{CommandId, Menu, MenuBar, MenuItem};
+    use fret_ui::tree::UiTree;
 
     fn plain_item(label: &str) -> InWindowMenuItem {
         InWindowMenuItem {
@@ -1299,6 +1607,7 @@ mod tests {
             value: Arc::from(label),
             disabled: false,
             command: None,
+            toggle: None,
             shortcut: None,
             has_submenu: false,
             keep_if_empty_submenu: false,
@@ -1350,5 +1659,370 @@ mod tests {
             InWindowMenuEntry::Submenu(sub) => assert!(sub.trigger.keep_if_empty_submenu),
             _ => panic!("expected submenu placeholder"),
         }
+    }
+
+    #[test]
+    fn mnemonic_underline_creates_valid_attributed_text() {
+        let title: Arc<str> = Arc::from("File");
+        let rich = attributed_title_with_mnemonic_underline(
+            title.clone(),
+            'i',
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        )
+        .expect("expected mnemonic underline match");
+        assert!(rich.is_valid());
+        assert_eq!(rich.text, title);
+        assert_eq!(rich.spans.len(), 3);
+        assert!(rich.spans[0].paint.underline.is_none());
+        assert!(rich.spans[1].paint.underline.is_some());
+        assert!(rich.spans[2].paint.underline.is_none());
+
+        let miss = attributed_title_with_mnemonic_underline(
+            title.clone(),
+            'z',
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+        assert!(
+            miss.is_none(),
+            "expected no underline when mnemonic not present"
+        );
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn escape_unwinds_submenu_then_menu_and_restores_focus() {
+        use fret_app::App;
+        use fret_runtime::Effect;
+        use fret_ui_kit::OverlayController;
+        use fret_ui_shadcn::shadcn_themes::{
+            ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4,
+        };
+
+        #[derive(Default)]
+        struct FakeServices;
+
+        impl fret_core::TextService for FakeServices {
+            fn prepare(
+                &mut self,
+                _input: &fret_core::TextInput,
+                _constraints: fret_core::TextConstraints,
+            ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+                (
+                    fret_core::TextBlobId::default(),
+                    fret_core::TextMetrics {
+                        size: Size::new(Px(10.0), Px(10.0)),
+                        baseline: Px(8.0),
+                    },
+                )
+            }
+
+            fn release(&mut self, _blob: fret_core::TextBlobId) {}
+        }
+
+        impl fret_core::PathService for FakeServices {
+            fn prepare(
+                &mut self,
+                _commands: &[fret_core::PathCommand],
+                _style: fret_core::PathStyle,
+                _constraints: fret_core::PathConstraints,
+            ) -> (fret_core::PathId, fret_core::PathMetrics) {
+                (
+                    fret_core::PathId::default(),
+                    fret_core::PathMetrics::default(),
+                )
+            }
+
+            fn release(&mut self, _path: fret_core::PathId) {}
+        }
+
+        impl fret_core::SvgService for FakeServices {
+            fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+                fret_core::SvgId::default()
+            }
+
+            fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+                true
+            }
+        }
+
+        fn bounds() -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            )
+        }
+
+        fn menu_bar() -> MenuBar {
+            MenuBar {
+                menus: vec![Menu {
+                    title: Arc::from("Window"),
+                    role: None,
+                    mnemonic: None,
+                    items: vec![
+                        MenuItem::Submenu {
+                            title: Arc::from("Split"),
+                            when: None,
+                            items: vec![MenuItem::Command {
+                                command: CommandId::from("workspace.pane.split.right"),
+                                when: None,
+                                toggle: None,
+                            }],
+                        },
+                        MenuItem::Command {
+                            command: CommandId::from("test.noop"),
+                            when: None,
+                            toggle: None,
+                        },
+                    ],
+                }],
+            }
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: fret_core::AppWindowId,
+            bounds: Rect,
+            bar: &MenuBar,
+        ) -> fret_core::SemanticsSnapshot {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            apply_shadcn_new_york_v4(app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+            OverlayController::begin_frame(app, window);
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "menu",
+                |cx| {
+                    vec![menubar_from_runtime(
+                        cx,
+                        bar,
+                        MenubarFromRuntimeOptions::default(),
+                    )]
+                },
+            );
+            ui.set_root(root);
+
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+
+            ui.semantics_snapshot().expect("semantics snapshot").clone()
+        }
+
+        fn node_by_test_id<'a>(
+            snap: &'a fret_core::SemanticsSnapshot,
+            id: &str,
+        ) -> &'a fret_core::SemanticsNode {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .unwrap_or_else(|| {
+                    let available: Vec<&str> = snap
+                        .nodes
+                        .iter()
+                        .filter_map(|n| n.test_id.as_deref())
+                        .collect();
+                    panic!(
+                        "expected semantics node with test_id={id:?}; available_test_ids={available:?}"
+                    )
+                })
+        }
+
+        fn assert_focus_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            let node_id = node_by_test_id(snap, id).id;
+            assert_eq!(snap.focus, Some(node_id), "expected focus to be {id:?}");
+        }
+
+        fn assert_exists(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            assert!(
+                snap.nodes.iter().any(|n| n.test_id.as_deref() == Some(id)),
+                "expected a semantics node with test_id={id:?}"
+            );
+        }
+
+        fn assert_not_exists(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            assert!(
+                !snap.nodes.iter().any(|n| n.test_id.as_deref() == Some(id)),
+                "expected no semantics node with test_id={id:?}"
+            );
+        }
+
+        fn press_key(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            key: fret_core::KeyCode,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyDown {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyUp {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                },
+            );
+        }
+
+        fn pointer_up(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            at: Point,
+            is_click: bool,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                    pointer_id: fret_core::PointerId(0),
+                    position: at,
+                    button: fret_core::MouseButton::Left,
+                    modifiers: fret_core::Modifiers::default(),
+                    is_click,
+                    click_count: 1,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        fn pointer_down(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            at: Point,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                    pointer_id: fret_core::PointerId(0),
+                    position: at,
+                    button: fret_core::MouseButton::Left,
+                    modifiers: fret_core::Modifiers::default(),
+                    click_count: 1,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        fn rect_center(r: Rect) -> Point {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        }
+
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = bounds();
+        let bar = menu_bar();
+
+        // Open the menu by clicking the menubar trigger (pointer-up activation).
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        let window_trigger_bounds = node_by_test_id(&snap, "menubar-trigger-window").bounds;
+        let window_trigger_center = rect_center(window_trigger_bounds);
+        pointer_down(&mut ui, &mut app, &mut services, window_trigger_center);
+        pointer_up(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window_trigger_center,
+            true,
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert!(
+            node_by_test_id(&snap, "menubar-trigger-window")
+                .flags
+                .expanded,
+            "expected menubar trigger to be expanded after click"
+        );
+        assert_exists(&snap, "menubar-item-menu-window-submenu-split");
+
+        // Focus the submenu trigger item without activating it.
+        let split_trigger_bounds =
+            node_by_test_id(&snap, "menubar-item-menu-window-submenu-split").bounds;
+        let split_trigger_center = rect_center(split_trigger_bounds);
+        pointer_down(&mut ui, &mut app, &mut services, split_trigger_center);
+        pointer_up(
+            &mut ui,
+            &mut app,
+            &mut services,
+            split_trigger_center,
+            false,
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-item-menu-window-submenu-split");
+
+        // ArrowRight opens the submenu and (after focus-delay timer) focuses its first item.
+        press_key(
+            &mut ui,
+            &mut app,
+            &mut services,
+            fret_core::KeyCode::ArrowRight,
+        );
+        let _snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        let focus_timer = app
+            .flush_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if after.is_zero() => Some(token),
+                _ => None,
+            })
+            .expect("submenu focus timer");
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: focus_timer },
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_exists(&snap, "menubar-item-workspace-pane-split-right");
+        assert_focus_test_id(&snap, "menubar-item-workspace-pane-split-right");
+
+        // Escape closes submenu and returns focus to the submenu trigger.
+        press_key(&mut ui, &mut app, &mut services, fret_core::KeyCode::Escape);
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-item-menu-window-submenu-split");
+        assert_not_exists(&snap, "menubar-item-workspace-pane-split-right");
+
+        // Escape closes menu and returns focus to the menubar trigger.
+        press_key(&mut ui, &mut app, &mut services, fret_core::KeyCode::Escape);
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-trigger-window");
+        assert_not_exists(&snap, "menubar-item-menu-window-submenu-split");
+
+        // Avoid unused warnings if the effect buffer changes across versions.
+        let _ = app.flush_effects();
     }
 }

@@ -195,8 +195,14 @@ The web runner SHOULD provide lightweight debug counters to explain failures:
 
 2) Web clipboard + selection UX:
    - Some browsers provide better native selection handles when the DOM element visibly matches the text.
-     We currently choose the “proxy textarea” approach; if selection UX becomes a priority, we may need a v2
-     path using `contenteditable` for visible text surfaces.
+      We currently choose the “proxy textarea” approach; if selection UX becomes a priority, we may need a v2
+      path using `contenteditable` for visible text surfaces.
+
+## Evidence anchors (implementation)
+
+- UTF-16 ↔ UTF-8 conversion + clamping: `crates/fret-core/src/utf.rs` (tests included).
+- Hidden textarea bridge + effects mapping: `crates/fret-platform-web/src/wasm.rs` (`WebPlatformServices` handles `Effect::ImeAllow` / `Effect::ImeSetCursorArea`).
+- Web harness: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`), `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`).
 
 ## References
 

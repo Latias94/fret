@@ -3,15 +3,18 @@
 //! Overlays are transient, screen-space affordances that should not be serialized into the graph
 //! asset. They are hosted outside the canvas render transform (ADR 0135) so they can use regular
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
-
+mod blackboard;
 mod controls;
 mod group_rename;
 mod minimap;
 mod toolbars;
 
+pub use blackboard::NodeGraphBlackboardOverlay;
 pub use controls::NodeGraphControlsOverlay;
 pub use controls::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
-pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState};
+pub use group_rename::{
+    GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState, SymbolRenameOverlay,
+};
 pub use minimap::{
     NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay,
 };

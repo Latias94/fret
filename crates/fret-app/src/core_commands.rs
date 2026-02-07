@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, OsAction,
@@ -8,6 +10,7 @@ pub const COMMAND_PALETTE: &str = "app.command_palette";
 pub const COMMAND_PALETTE_LEGACY: &str = "command_palette.toggle";
 pub const APP_ABOUT: &str = "app.about";
 pub const APP_PREFERENCES: &str = "app.preferences";
+pub const APP_LOCALE_SWITCH_NEXT: &str = "app.locale.switch_next";
 pub const APP_QUIT: &str = "app.quit";
 pub const APP_HIDE: &str = "app.hide";
 pub const APP_HIDE_OTHERS: &str = "app.hide_others";
@@ -37,13 +40,19 @@ pub fn register_core_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_app_commands(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
-    let mut meta_alt_mods = Modifiers::default();
-    meta_alt_mods.meta = true;
-    meta_alt_mods.alt = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
+    let meta_alt_mods = Modifiers {
+        meta: true,
+        alt: true,
+        ..Default::default()
+    };
 
     registry.register(
         CommandId::new(APP_ABOUT),
@@ -62,6 +71,51 @@ pub fn register_app_commands(registry: &mut CommandRegistry) {
                 sequence: vec![KeyChord::new(KeyCode::Comma, meta_mods)],
                 when: None,
             }]),
+    );
+
+    registry.register(
+        CommandId::new(APP_LOCALE_SWITCH_NEXT),
+        CommandMeta::new("Switch Language")
+            .with_category("App")
+            .with_keywords(["locale", "language", "i18n", "translation"])
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::KeyL,
+                        Modifiers {
+                            ctrl: true,
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::KeyL,
+                        Modifiers {
+                            ctrl: true,
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Macos,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::KeyL,
+                        Modifiers {
+                            meta: true,
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+            ]),
     );
 
     registry.register(
@@ -121,10 +175,14 @@ pub fn register_app_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_command_palette(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
 
     let meta = CommandMeta::new("Command Palette")
         .with_category("App")
@@ -197,10 +255,14 @@ pub fn register_focus_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
 
     let when_text = WhenExpr::parse("focus.is_text_input").expect("valid when expression");
 
@@ -368,4 +430,254 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
             .with_when(WhenExpr::parse("edit.can_redo").expect("valid when expression"))
             .with_os_action(OsAction::Redo),
     );
+}
+
+const CORE_COMMAND_CATEGORY_APP_KEY: &str = "core-command-category-app";
+
+const CORE_COMMAND_LOCALIZATION_SPECS: &[(&str, &str, Option<&str>)] = &[
+    (
+        COMMAND_PALETTE,
+        "core-command-title-app-command-palette",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_ABOUT,
+        "core-command-title-app-about",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_PREFERENCES,
+        "core-command-title-app-preferences",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_LOCALE_SWITCH_NEXT,
+        "core-command-title-app-locale-switch-next",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_HIDE,
+        "core-command-title-app-hide",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_HIDE_OTHERS,
+        "core-command-title-app-hide-others",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_SHOW_ALL,
+        "core-command-title-app-show-all",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+    (
+        APP_QUIT,
+        "core-command-title-app-quit",
+        Some(CORE_COMMAND_CATEGORY_APP_KEY),
+    ),
+];
+
+pub fn ensure_core_i18n_backend(service: &mut fret_runtime::fret_i18n::I18nService) {
+    if service.lookup().is_none() {
+        service.set_lookup(Some(core_i18n_lookup()));
+    }
+}
+
+pub fn apply_core_command_localization(app: &mut crate::App) {
+    let Some(service) = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .cloned()
+    else {
+        return;
+    };
+
+    let mut updates: Vec<(CommandId, CommandMeta)> = Vec::new();
+    for (command, title_key, category_key) in CORE_COMMAND_LOCALIZATION_SPECS {
+        let id = CommandId::new(*command);
+        let Some(mut meta) = app.commands().get(id.clone()).cloned() else {
+            continue;
+        };
+
+        meta.title = localized_or_fallback(&service, title_key, meta.title.clone());
+
+        if let Some(category_key) = category_key {
+            let fallback = meta.category.clone().unwrap_or_else(|| Arc::from("App"));
+            meta.category = Some(localized_or_fallback(&service, category_key, fallback));
+        }
+
+        updates.push((id, meta));
+    }
+
+    for (id, meta) in updates {
+        app.commands_mut().register(id, meta);
+    }
+}
+
+pub fn handle_locale_cycle_command(app: &mut crate::App, command: &CommandId) -> bool {
+    if command.as_str() != APP_LOCALE_SWITCH_NEXT {
+        return false;
+    }
+
+    let mut service = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .cloned()
+        .unwrap_or_default();
+    let mut locales = service.preferred_locales().to_vec();
+    if locales.is_empty() {
+        locales.push(fret_runtime::fret_i18n::LocaleId::default());
+    }
+    if locales.len() == 1 {
+        let zh_cn = fret_runtime::fret_i18n::LocaleId::parse("zh-CN")
+            .expect("hardcoded locale zh-CN must parse");
+        let en_us = fret_runtime::fret_i18n::LocaleId::parse("en-US")
+            .expect("hardcoded locale en-US must parse");
+        let alt = if locales[0] == zh_cn { en_us } else { zh_cn };
+        locales.push(alt);
+    }
+
+    locales.rotate_left(1);
+    service.set_preferred_locales(locales.clone());
+    ensure_core_i18n_backend(&mut service);
+    app.set_global(service);
+
+    if let Some(mut settings) = app.global::<crate::SettingsFileV1>().cloned()
+        && let Some((primary, fallbacks)) = locales.split_first()
+    {
+        settings.locale.primary = primary.to_string();
+        settings.locale.fallbacks = fallbacks.iter().map(ToString::to_string).collect();
+        app.set_global(settings);
+    }
+
+    apply_core_command_localization(app);
+    true
+}
+
+fn localized_or_fallback(
+    service: &fret_runtime::fret_i18n::I18nService,
+    key: &str,
+    fallback: Arc<str>,
+) -> Arc<str> {
+    let value = service.t(key.to_string());
+    if value == key {
+        fallback
+    } else {
+        Arc::from(value)
+    }
+}
+
+fn core_i18n_lookup() -> Arc<dyn fret_runtime::fret_i18n::I18nLookup + 'static> {
+    let mut catalog = fret_runtime::fret_i18n_fluent::FluentCatalog::new();
+    catalog
+        .add_locale_ftl(
+            fret_runtime::fret_i18n::LocaleId::parse("en-US")
+                .expect("hardcoded locale en-US must parse"),
+            CORE_COMMANDS_FTL_EN_US,
+        )
+        .expect("en-US i18n resource must load");
+    catalog
+        .add_locale_ftl(
+            fret_runtime::fret_i18n::LocaleId::parse("zh-CN")
+                .expect("hardcoded locale zh-CN must parse"),
+            CORE_COMMANDS_FTL_ZH_CN,
+        )
+        .expect("zh-CN i18n resource must load");
+
+    let lookup = fret_runtime::fret_i18n_fluent::FluentLookup::new(Arc::new(catalog));
+    Arc::new(lookup)
+}
+
+const CORE_COMMANDS_FTL_EN_US: &str = r#"
+core-command-category-app = App
+workspace-menu-file = File
+workspace-menu-edit = Edit
+workspace-menu-view = View
+workspace-menu-window = Window
+
+core-command-title-app-command-palette = Command Palette
+core-command-title-app-about = About
+core-command-title-app-preferences = Preferences...
+core-command-title-app-locale-switch-next = Switch Language
+core-command-title-app-hide = Hide
+core-command-title-app-hide-others = Hide Others
+core-command-title-app-show-all = Show All
+core-command-title-app-quit = Quit
+"#;
+
+const CORE_COMMANDS_FTL_ZH_CN: &str = r#"
+core-command-category-app = 应用
+workspace-menu-file = 文件
+workspace-menu-edit = 编辑
+workspace-menu-view = 视图
+workspace-menu-window = 窗口
+
+core-command-title-app-command-palette = 命令面板
+core-command-title-app-about = 关于
+core-command-title-app-preferences = 偏好设置...
+core-command-title-app-locale-switch-next = 切换语言
+core-command-title-app-hide = 隐藏
+core-command-title-app-hide-others = 隐藏其他应用
+core-command-title-app-show-all = 显示全部
+core-command-title-app-quit = 退出
+"#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn core_command_localization_uses_current_locale() {
+        let mut app = crate::App::new();
+        let mut settings = crate::SettingsFileV1::default();
+        settings.locale.primary = "zh-CN".to_string();
+        settings.locale.fallbacks = vec!["en-US".to_string()];
+        crate::settings::apply_settings_globals(&mut app, &settings);
+
+        let about = app
+            .commands()
+            .get(CommandId::new(APP_ABOUT))
+            .expect("app.about should be registered");
+        assert_eq!(about.title.as_ref(), "关于");
+
+        let switch = app
+            .commands()
+            .get(CommandId::new(APP_LOCALE_SWITCH_NEXT))
+            .expect("app.locale.switch_next should be registered");
+        assert_eq!(switch.title.as_ref(), "切换语言");
+    }
+
+    #[test]
+    fn locale_cycle_command_rotates_locale_and_relocalizes() {
+        let mut app = crate::App::new();
+        let mut settings = crate::SettingsFileV1::default();
+        settings.locale.primary = "en-US".to_string();
+        settings.locale.fallbacks = vec!["zh-CN".to_string()];
+        crate::settings::apply_settings_globals(&mut app, &settings);
+
+        let before = app
+            .commands()
+            .get(CommandId::new(APP_ABOUT))
+            .expect("app.about should be registered");
+        assert_eq!(before.title.as_ref(), "About");
+
+        assert!(handle_locale_cycle_command(
+            &mut app,
+            &CommandId::new(APP_LOCALE_SWITCH_NEXT)
+        ));
+
+        let locales = app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .expect("i18n service should exist")
+            .preferred_locales()
+            .to_vec();
+        assert_eq!(
+            locales[0],
+            fret_runtime::fret_i18n::LocaleId::parse("zh-CN").expect("valid locale")
+        );
+
+        let after = app
+            .commands()
+            .get(CommandId::new(APP_ABOUT))
+            .expect("app.about should be registered");
+        assert_eq!(after.title.as_ref(), "关于");
+    }
 }

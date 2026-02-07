@@ -134,6 +134,13 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let background = {
+        let refresh_icon = icon(cx, "lucide.refresh-cw");
+        let refresh_text = cx.text("Refresh");
+        let refresh_button = shadcn::Button::new("Refresh")
+            .variant(shadcn::ButtonVariant::Outline)
+            .children([refresh_icon, refresh_text])
+            .into_element(cx);
+
         let empty = shadcn::Empty::new([
             shadcn::empty::EmptyHeader::new([
                 shadcn::empty::EmptyMedia::new([icon(cx, "lucide.bell")])
@@ -146,11 +153,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::empty::EmptyContent::new([shadcn::Button::new("Refresh")
-                .variant(shadcn::ButtonVariant::Outline)
-                .leading(icon(cx, "lucide.refresh-cw"))
-                .into_element(cx)])
-            .into_element(cx),
+            shadcn::empty::EmptyContent::new([refresh_button]).into_element(cx),
         ])
         .refine_style(
             ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("muted"))),
@@ -190,6 +193,13 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let avatar_group = {
+        let invite_icon = icon(cx, "lucide.user-plus");
+        let invite_text = cx.text("Invite Members");
+        let invite_button = shadcn::Button::new("Invite Members")
+            .size(shadcn::ButtonSize::Sm)
+            .children([invite_icon, invite_text])
+            .into_element(cx);
+
         let avatars = stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N1).items_center(),
@@ -218,11 +228,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::empty::EmptyContent::new([shadcn::Button::new("Invite Members")
-                .size(shadcn::ButtonSize::Sm)
-                .leading(icon(cx, "lucide.user-plus"))
-                .into_element(cx)])
-            .into_element(cx),
+            shadcn::empty::EmptyContent::new([invite_button]).into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
@@ -301,50 +307,47 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         section_card(cx, "RTL", rtl_content)
     };
 
-    let component_panel = shell(
+    let component_panel_body = stack::vstack(
         cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::muted(
-                        cx,
-                        "Preview follows shadcn Empty docs order: Demo, Outline, Background, Avatar, Avatar Group, InputGroup, RTL.",
-                    ),
-                    demo,
-                    outline,
-                    background,
-                    avatar,
-                    avatar_group,
-                    input_group,
-                    rtl,
-                ]
-            },
-        ),
-    )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-component"));
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::typography::muted(
+                    cx,
+                    "Preview follows shadcn Empty docs order: Demo, Outline, Background, Avatar, Avatar Group, InputGroup, RTL.",
+                ),
+                demo,
+                outline,
+                background,
+                avatar,
+                avatar_group,
+                input_group,
+                rtl,
+            ]
+        },
+    );
+    let component_panel = shell(cx, component_panel_body).attach_semantics(
+        SemanticsDecoration::default().test_id("ui-gallery-empty-component"),
+    );
 
-    let code_panel = shell(
+    let code_panel_body = stack::vstack(
         cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Basic Empty").into_element(cx)])
-                            .into_element(cx),
-                        shadcn::CardContent::new(vec![
-                            ui::text_block(
-                                cx,
-                                r#"shadcn::Empty::new([
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Basic Empty").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text_block(
+                            cx,
+                            r#"shadcn::Empty::new([
     shadcn::empty::EmptyHeader::new([
         shadcn::empty::EmptyMedia::new([icon]).variant(shadcn::empty::EmptyMediaVariant::Icon).into_element(cx),
         shadcn::empty::EmptyTitle::new("No data").into_element(cx),
@@ -354,21 +357,21 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         shadcn::Button::new("Create").into_element(cx),
     ]).into_element(cx),
 ]).into_element(cx);"#,
-                            )
-                            .into_element(cx),
-                        ])
+                        )
                         .into_element(cx),
                     ])
                     .into_element(cx),
-                    shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![
-                            shadcn::CardTitle::new("Avatar Group + InputGroup").into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::CardContent::new(vec![
-                            ui::text_block(
-                                cx,
-                                r#"let avatars = stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |cx| {
+                ])
+                .into_element(cx),
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Avatar Group + InputGroup").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text_block(
+                            cx,
+                            r#"let avatars = stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |cx| {
     vec![avatar_a, avatar_b, avatar_c]
 });
 
@@ -376,44 +379,42 @@ let search = shadcn::InputGroup::new(query)
     .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
     .trailing([shadcn::InputGroupText::new("/").into_element(cx)])
     .into_element(cx);"#,
-                            )
-                            .into_element(cx),
-                        ])
+                        )
                         .into_element(cx),
                     ])
                     .into_element(cx),
-                ]
-            },
-        ),
+                ])
+                .into_element(cx),
+            ]
+        },
     );
+    let code_panel = shell(cx, code_panel_body);
 
-    let notes_panel = shell(
+    let notes_panel_body = stack::vstack(
         cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::h4(cx, "Notes"),
-                    shadcn::typography::muted(
-                        cx,
-                        "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
-                    ),
-                    shadcn::typography::muted(
-                        cx,
-                        "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
-                    ),
-                    shadcn::typography::muted(
-                        cx,
-                        "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "Empty page mirrors docs example sequence so parity audit can compare section-by-section.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Outline/background recipes are currently style approximations because utility-level dashed/gradient tokens are not fully exposed here.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Avatar and InputGroup scenarios keep state local to this page and expose stable test IDs for automation.",
+                ),
+            ]
+        },
     );
+    let notes_panel = shell(cx, notes_panel_body);
 
     super::render_component_page_tabs(
         cx,

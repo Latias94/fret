@@ -8,10 +8,10 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, Elements, HoverRegionProps, LayoutStyle,
+    AnyElement, ContainerProps, ElementKind, Elements, FlexProps, HoverRegionProps, LayoutStyle,
     PointerRegionProps, SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
@@ -189,6 +189,337 @@ struct TooltipTriggerHoverEdgeState {
     was_hovered: bool,
 }
 
+fn tooltip_policy_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: Theme,
+    base_trigger: AnyElement,
+    trigger_id: fret_ui::elements::GlobalElementId,
+    anchor_id: fret_ui::elements::GlobalElementId,
+    content: AnyElement,
+    align: TooltipAlign,
+    side: TooltipSide,
+    side_offset: Px,
+    window_margin: Px,
+    hide_when_detached: bool,
+    open_delay_frames_override: Option<u32>,
+    close_delay_frames_override: Option<u32>,
+    disable_hoverable_content_override: Option<bool>,
+) -> AnyElement {
+    let content_id = content.id;
+
+    cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+        let focused = cx.is_focused_element(trigger_id);
+        let event_models = tooltip_trigger_event_models(cx);
+
+        let close_requested = cx
+            .watch_model(&event_models.close_requested)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+        let has_pointer_move_opened = cx
+            .watch_model(&event_models.has_pointer_move_opened)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+        let suppress_hover_open = cx
+            .watch_model(&event_models.suppress_hover_open)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+        let suppress_focus_open = cx
+            .watch_model(&event_models.suppress_focus_open)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+
+        let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+            let left = st.was_hovered && !hovered;
+            st.was_hovered = hovered;
+            left
+        });
+
+        if left_hover && (has_pointer_move_opened || suppress_hover_open) {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&event_models.has_pointer_move_opened, |v| *v = false);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&event_models.suppress_hover_open, |v| *v = false);
+        }
+
+        if !focused && suppress_focus_open {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&event_models.suppress_focus_open, |v| *v = false);
+        }
+
+        if close_requested {
+            if has_pointer_move_opened && !suppress_hover_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_hover_open, |v| *v = true);
+            }
+            if focused && !suppress_focus_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_focus_open, |v| *v = true);
+            }
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&event_models.close_requested, |v| *v = false);
+        }
+
+        let provider_cfg = tooltip_provider::current_config(cx);
+        let disable_hoverable_content =
+            disable_hoverable_content_override.unwrap_or(provider_cfg.disable_hoverable_content);
+        let last_pointer = tooltip_prim::tooltip_last_pointer_model(cx);
+
+        let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
+        let trigger_focused = focused && !suppress_focus_open;
+
+        let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
+        let floating_bounds = anchor_bounds.and_then(|anchor| {
+            let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+            let estimated_size = Size::new(Px(240.0), Px(32.0));
+            let content_size = last_content_size.unwrap_or(estimated_size);
+
+            let outer =
+                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+
+            let align = match align {
+                TooltipAlign::Start => Align::Start,
+                TooltipAlign::Center => Align::Center,
+                TooltipAlign::End => Align::End,
+            };
+            let side = match side {
+                TooltipSide::Top => Side::Top,
+                TooltipSide::Right => Side::Right,
+                TooltipSide::Bottom => Side::Bottom,
+                TooltipSide::Left => Side::Left,
+            };
+
+            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let layout = popper::popper_content_layout_sized(
+                outer,
+                anchor,
+                content_size,
+                popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                    .with_shift_cross_axis(true),
+            );
+
+            Some(layout.rect)
+        });
+
+        let update = tooltip_prim::tooltip_update_interaction(
+            cx,
+            trigger_hovered,
+            trigger_focused,
+            close_requested,
+            last_pointer.clone(),
+            anchor_bounds,
+            floating_bounds,
+            tooltip_prim::TooltipInteractionConfig {
+                disable_hoverable_content,
+                open_delay_ticks_override: open_delay_frames_override.map(|v| v as u64),
+                close_delay_ticks_override: close_delay_frames_override.map(|v| v as u64),
+                safe_hover_buffer: Px(5.0),
+            },
+        );
+
+        scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+
+        let open = event_models.open.clone();
+        let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+        if update.open != open_now {
+            let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+        }
+
+        let trigger =
+            tooltip_prim::apply_tooltip_trigger_a11y(base_trigger.clone(), update.open, content_id);
+
+        cx.pressable_add_on_activate_for(
+            trigger_id,
+            Arc::new({
+                let close_requested = event_models.close_requested.clone();
+                let suppress_focus_open = event_models.suppress_focus_open.clone();
+                move |host, acx, _reason| {
+                    let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                    let _ = host
+                        .models_mut()
+                        .update(&suppress_focus_open, |v| *v = true);
+                    host.request_redraw(acx.window);
+                }
+            }),
+        );
+
+        cx.key_add_on_key_down_for(
+            trigger_id,
+            Arc::new({
+                let close_requested = event_models.close_requested.clone();
+                let suppress_focus_open = event_models.suppress_focus_open.clone();
+                move |host, acx, down| {
+                    if down.repeat || down.key != KeyCode::Escape {
+                        return false;
+                    }
+                    let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                    let _ = host
+                        .models_mut()
+                        .update(&suppress_focus_open, |v| *v = true);
+                    host.request_redraw(acx.window);
+                    true
+                }
+            }),
+        );
+
+        let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+            cx.pointer_region_on_pointer_move(Arc::new({
+                let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                move |host, acx, mv| {
+                    if mv.pointer_type == PointerType::Touch {
+                        return false;
+                    }
+
+                    let geometry = host
+                        .models_mut()
+                        .read(&pointer_transit_geometry, |v| *v)
+                        .ok()
+                        .flatten();
+                    if let Some((anchor, floating)) = geometry
+                        && tooltip_prim::tooltip_pointer_in_transit(
+                            mv.position,
+                            anchor,
+                            floating,
+                            Px(5.0),
+                        )
+                    {
+                        return false;
+                    }
+
+                    let already = host
+                        .models_mut()
+                        .read(&has_pointer_move_opened, |v| *v)
+                        .ok()
+                        .unwrap_or(false);
+                    if !already {
+                        let _ = host.models_mut().update(&has_pointer_move_opened, |v| {
+                            *v = true;
+                        });
+                        host.request_redraw(acx.window);
+                    }
+
+                    false
+                }
+            }));
+
+            vec![trigger]
+        });
+
+        let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
+        let motion = drive_overlay_open_close_motion(cx, &theme, update.open, close_grace_frames);
+
+        let overlay_presence = OverlayPresence {
+            present: motion.present,
+            interactive: update.open,
+        };
+
+        let out = vec![trigger];
+        if !overlay_presence.present {
+            return out;
+        }
+
+        let tooltip_id = cx.root_id();
+        let overlay_root_name = tooltip_prim::tooltip_root_name(tooltip_id);
+        let opacity = motion.alpha;
+        let scale = motion.scale;
+        let direction = direction_prim::use_direction_in_scope(cx, None);
+
+        let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+            let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
+            let Some(anchor) = anchor else {
+                return Vec::new();
+            };
+
+            let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+            let estimated_size = Size::new(Px(240.0), Px(32.0));
+            let content_size = last_content_size.unwrap_or(estimated_size);
+
+            let outer =
+                fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+
+            let align = match align {
+                TooltipAlign::Start => Align::Start,
+                TooltipAlign::Center => Align::Center,
+                TooltipAlign::End => Align::End,
+            };
+            let side = match side {
+                TooltipSide::Top => Side::Top,
+                TooltipSide::Right => Side::Right,
+                TooltipSide::Bottom => Side::Bottom,
+                TooltipSide::Left => Side::Left,
+            };
+
+            let placement =
+                popper::PopperContentPlacement::new(direction, side, align, side_offset)
+                    .with_shift_cross_axis(true)
+                    .with_hide_when_detached(hide_when_detached);
+            let reference_hidden = placement.reference_hidden(outer, anchor);
+
+            let layout =
+                popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+            let placed = layout.rect;
+
+            let wrapper = popper_content::popper_wrapper_panel_at(
+                cx,
+                placed,
+                Edges::all(Px(0.0)),
+                fret_ui::element::Overflow::Visible,
+                move |_cx| vec![content.clone()],
+            );
+
+            let origin = popper::popper_content_transform_origin(&layout, anchor, None);
+            let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
+            let transform = fret_core::Transform2D::translation(origin)
+                * fret_core::Transform2D::scale_uniform(scale)
+                * fret_core::Transform2D::translation(origin_inv);
+
+            let opacity = if reference_hidden { 0.0 } else { opacity };
+            vec![
+                fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
+                    cx,
+                    opacity,
+                    transform,
+                    !reference_hidden,
+                    vec![wrapper],
+                ),
+            ]
+        });
+
+        let mut request =
+            tooltip_prim::tooltip_request(tooltip_id, open, overlay_presence, overlay_children);
+        request.trigger = Some(trigger_id);
+        request.dismissible_on_dismiss_request = Some(dismissable_layer_prim::handler({
+            let close_requested = event_models.close_requested.clone();
+            move |host, acx, _reason| {
+                let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                host.request_redraw(acx.window);
+            }
+        }));
+        if !disable_hoverable_content {
+            tooltip_prim::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
+        }
+        tooltip_prim::request_tooltip(cx, request);
+
+        out
+    })
+}
+
 /// Material 3 Plain Tooltip (MVP).
 ///
 /// This is a policy wrapper built on `fret-ui-kit` tooltip primitives.
@@ -335,8 +666,9 @@ impl PlainTooltip {
         let container_bg = surface.background;
         let shadow = surface.shadow;
 
-        let body_small = theme
-            .text_style_by_key("md.sys.typescale.body-small")
+        let supporting_text_style = theme
+            .text_style_by_key("md.comp.plain-tooltip.supporting-text")
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
             .unwrap_or_default();
         let content_max_width = tooltip_tokens::max_width(&theme);
         let container_padding = tooltip_tokens::plain_container_padding(&theme);
@@ -346,7 +678,7 @@ impl PlainTooltip {
                 PlainTooltipContent::Text(text) => cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text,
-                    style: Some(body_small),
+                    style: Some(supporting_text_style),
                     color: Some(text_fg),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
@@ -724,5 +1056,265 @@ impl PlainTooltip {
 
             out
         })
+    }
+}
+
+#[derive(Clone)]
+enum RichTooltipContent {
+    Text {
+        title: Option<Arc<str>>,
+        supporting_text: Arc<str>,
+    },
+    Element(AnyElement),
+}
+
+/// Material 3 Rich Tooltip (MVP).
+///
+/// Notes:
+/// - Rich tooltips remain click-through because `OverlayKind::Tooltip` is not hit-testable in Fret.
+/// - Action rows are therefore out-of-scope until we have a concrete consumer that requires an
+///   interactive outcome (mechanism follow-up candidate).
+#[derive(Clone)]
+pub struct RichTooltip {
+    trigger: AnyElement,
+    content: RichTooltipContent,
+    align: TooltipAlign,
+    side: TooltipSide,
+    side_offset: Px,
+    window_margin: Px,
+    hide_when_detached: bool,
+    anchor_override: Option<fret_ui::elements::GlobalElementId>,
+    open_delay_frames_override: Option<u32>,
+    close_delay_frames_override: Option<u32>,
+    disable_hoverable_content_override: Option<bool>,
+}
+
+impl std::fmt::Debug for RichTooltip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RichTooltip")
+            .field("trigger_id", &self.trigger.id)
+            .field("align", &self.align)
+            .field("side", &self.side)
+            .field("side_offset", &self.side_offset)
+            .field("window_margin", &self.window_margin)
+            .field("hide_when_detached", &self.hide_when_detached)
+            .field("anchor_override", &self.anchor_override)
+            .field(
+                "open_delay_frames_override",
+                &self.open_delay_frames_override,
+            )
+            .field(
+                "close_delay_frames_override",
+                &self.close_delay_frames_override,
+            )
+            .field(
+                "disable_hoverable_content_override",
+                &self.disable_hoverable_content_override,
+            )
+            .finish()
+    }
+}
+
+impl RichTooltip {
+    pub fn new(trigger: AnyElement, supporting_text: impl Into<Arc<str>>) -> Self {
+        Self {
+            trigger,
+            content: RichTooltipContent::Text {
+                title: None,
+                supporting_text: supporting_text.into(),
+            },
+            align: TooltipAlign::default(),
+            side: TooltipSide::default(),
+            side_offset: Px(4.0),
+            window_margin: Px(0.0),
+            hide_when_detached: false,
+            anchor_override: None,
+            open_delay_frames_override: None,
+            close_delay_frames_override: None,
+            disable_hoverable_content_override: None,
+        }
+    }
+
+    pub fn title(mut self, title: impl Into<Arc<str>>) -> Self {
+        if let RichTooltipContent::Text { title: t, .. } = &mut self.content {
+            *t = Some(title.into());
+        }
+        self
+    }
+
+    pub fn content_element(mut self, content: AnyElement) -> Self {
+        self.content = RichTooltipContent::Element(content);
+        self
+    }
+
+    pub fn align(mut self, align: TooltipAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: TooltipSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = offset;
+        self
+    }
+
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin = margin;
+        self
+    }
+
+    pub fn hide_when_detached(mut self, hide: bool) -> Self {
+        self.hide_when_detached = hide;
+        self
+    }
+
+    pub fn anchor_element(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
+        self.anchor_override = Some(element);
+        self
+    }
+
+    pub fn open_delay_frames(mut self, frames: Option<u32>) -> Self {
+        self.open_delay_frames_override = frames;
+        self
+    }
+
+    pub fn close_delay_frames(mut self, frames: Option<u32>) -> Self {
+        self.close_delay_frames_override = frames;
+        self
+    }
+
+    pub fn disable_hoverable_content(mut self, disable: Option<bool>) -> Self {
+        self.disable_hoverable_content_override = disable;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let align = self.align;
+        let side = self.side;
+        let side_offset = self.side_offset;
+        let window_margin = self.window_margin;
+        let hide_when_detached = self.hide_when_detached;
+        let anchor_override = self.anchor_override;
+        let open_delay_frames_override = self.open_delay_frames_override;
+        let close_delay_frames_override = self.close_delay_frames_override;
+        let disable_hoverable_content_override = self.disable_hoverable_content_override;
+
+        let base_trigger = self.trigger;
+        let content_spec = self.content;
+        let trigger_id = base_trigger.id;
+        let anchor_id = anchor_override.unwrap_or(trigger_id);
+
+        let container_bg = tooltip_tokens::rich_container_background(&theme);
+        let subhead_fg = tooltip_tokens::rich_subhead_color(&theme);
+        let supporting_fg = tooltip_tokens::rich_supporting_text_color(&theme);
+        let radius = tooltip_tokens::rich_container_shape_radius(&theme);
+        let corner_radii = Corners::all(radius);
+        let elevation = tooltip_tokens::rich_container_elevation(&theme);
+        let shadow_color = tooltip_tokens::rich_container_shadow_color(&theme);
+        let surface = material_surface_style(
+            &theme,
+            container_bg,
+            elevation,
+            Some(shadow_color),
+            corner_radii,
+        );
+        let container_bg = surface.background;
+        let shadow = surface.shadow;
+
+        let subhead_style = theme
+            .text_style_by_key("md.comp.rich-tooltip.subhead")
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.title-small"))
+            .unwrap_or_default();
+        let supporting_style = theme
+            .text_style_by_key("md.comp.rich-tooltip.supporting-text")
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-medium"))
+            .unwrap_or_default();
+
+        let content_max_width = tooltip_tokens::max_width(&theme);
+        let container_padding = tooltip_tokens::rich_container_padding(&theme);
+        let text_gap = tooltip_tokens::rich_text_gap(&theme);
+
+        let content = cx.named("content", move |cx| {
+            let child = match content_spec {
+                RichTooltipContent::Text {
+                    title,
+                    supporting_text,
+                } => {
+                    let mut props = FlexProps::default();
+                    props.direction = Axis::Vertical;
+                    props.gap = text_gap;
+
+                    cx.flex(props, move |cx| {
+                        let mut children = Vec::new();
+                        if let Some(title) = title.clone() {
+                            children.push(cx.text_props(TextProps {
+                                layout: LayoutStyle::default(),
+                                text: title,
+                                style: Some(subhead_style),
+                                color: Some(subhead_fg),
+                                wrap: TextWrap::Word,
+                                overflow: TextOverflow::Clip,
+                            }));
+                        }
+                        children.push(cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: supporting_text.clone(),
+                            style: Some(supporting_style),
+                            color: Some(supporting_fg),
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                        }));
+                        children
+                    })
+                }
+                RichTooltipContent::Element(el) => apply_tooltip_inherited_fg(el, supporting_fg),
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.max_width = Some(content_max_width);
+
+            let container = cx.container(
+                ContainerProps {
+                    layout,
+                    padding: container_padding,
+                    background: Some(container_bg),
+                    shadow,
+                    corner_radii,
+                    ..Default::default()
+                },
+                move |_cx| vec![child],
+            );
+
+            cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Tooltip,
+                    ..Default::default()
+                },
+                move |_cx| vec![container],
+            )
+        });
+
+        tooltip_policy_root(
+            cx,
+            theme,
+            base_trigger,
+            trigger_id,
+            anchor_id,
+            content,
+            align,
+            side,
+            side_offset,
+            window_margin,
+            hide_when_detached,
+            open_delay_frames_override,
+            close_delay_frames_override,
+            disable_hoverable_content_override,
+        )
     }
 }

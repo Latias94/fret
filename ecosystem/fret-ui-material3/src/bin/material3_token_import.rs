@@ -62,6 +62,9 @@ impl Args {
             "md.comp.plain-tooltip.".to_string(),
             "md.comp.rich-tooltip.".to_string(),
             "md.comp.snackbar.".to_string(),
+            "md.comp.search-bar.".to_string(),
+            "md.comp.search-view.".to_string(),
+            "md.comp.carousel-item.".to_string(),
             "md.comp.top-app-bar.small.".to_string(),
             "md.comp.top-app-bar.small.centered.".to_string(),
             "md.comp.top-app-bar.medium.".to_string(),
@@ -733,6 +736,30 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_search_bar_scalars",
+        "md.comp.search-bar.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.search-bar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_search_view_scalars",
+        "md.comp.search-view.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.search-view."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_carousel_item_scalars",
+        "md.comp.carousel-item.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.carousel-item."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_dialog_scalars",
         "md.comp.dialog.",
         defs.iter()
@@ -1054,6 +1081,30 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.snackbar.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.snackbar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_search_bar_colors_from_sys",
+        "md.comp.search-bar.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.search-bar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_search_view_colors_from_sys",
+        "md.comp.search-view.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.search-view."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_carousel_item_colors_from_sys",
+        "md.comp.carousel-item.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.carousel-item."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(

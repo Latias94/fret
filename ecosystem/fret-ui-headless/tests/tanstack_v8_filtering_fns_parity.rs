@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    BuiltInFilterFn, ColumnDef, FilteringFnSpec, RowKey, Table, TanStackTableOptions,
+    BuiltInFilterFn, ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TanStackTableOptions,
     TanStackTableState, TanStackValue, set_column_filter_value_tanstack,
 };
 use serde::Deserialize;
@@ -189,6 +189,7 @@ fn tanstack_v8_filtering_fns_parity() {
             .filter_fn_builtin("custom_text", BuiltInFilterFn::IncludesStringSensitive)
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();

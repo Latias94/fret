@@ -329,6 +329,7 @@ impl<'a> CanvasPainter<'a> {
     /// - `key` must be stable across frames for the *same* logical text instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
     ///   explicit policy decision of the caller (ADR 0156).
+    #[allow(clippy::too_many_arguments)]
     pub fn text(
         &mut self,
         key: u64,
@@ -358,10 +359,45 @@ impl<'a> CanvasPainter<'a> {
         )
     }
 
+    /// Draw a cached text blob keyed by (content, style, constraints).
+    ///
+    /// This is intended for repeated labels where callers do not have a stable per-instance key.
+    /// High-entropy or scroll-driven surfaces (code editors, large virtual lists, etc.) should
+    /// prefer `text(...)` with stable keys to avoid churn in the shared cache.
+    pub fn shared_text(
+        &mut self,
+        order: DrawOrder,
+        origin: Point,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> TextMetrics {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let (services, scene) = self.host.services_and_scene();
+        self.cache
+            .shared_text_draw(
+                services,
+                order,
+                origin,
+                text,
+                style,
+                color,
+                constraints,
+                raster_scale_factor,
+                font_stack_key,
+                scene,
+            )
+            .metrics
+    }
+
     /// Draw a cached text blob prepared at `raster_scale_factor` and return its `TextBlobId`.
     ///
     /// This is intended for advanced paint handlers that need to query text geometry (caret stops,
     /// selection rects, hit-testing, etc.) using the returned blob.
+    #[allow(clippy::too_many_arguments)]
     pub fn text_with_blob(
         &mut self,
         key: u64,
@@ -392,6 +428,36 @@ impl<'a> CanvasPainter<'a> {
         (draw.blob, draw.metrics)
     }
 
+    /// Variant of `shared_text` that returns its prepared `TextBlobId`.
+    pub fn shared_text_with_blob(
+        &mut self,
+        order: DrawOrder,
+        origin: Point,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let (services, scene) = self.host.services_and_scene();
+        let draw = self.cache.shared_text_draw(
+            services,
+            order,
+            origin,
+            text,
+            style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            scene,
+        );
+        (draw.blob, draw.metrics)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn rich_text(
         &mut self,
         key: u64,
@@ -424,6 +490,7 @@ impl<'a> CanvasPainter<'a> {
     ///
     /// This is intended for advanced paint handlers that need to query text geometry (caret stops,
     /// selection rects, hit-testing, etc.) using the returned blob.
+    #[allow(clippy::too_many_arguments)]
     pub fn rich_text_with_blob(
         &mut self,
         key: u64,
@@ -458,6 +525,7 @@ impl<'a> CanvasPainter<'a> {
     /// - `key` must be stable across frames for the *same* logical path instance.
     /// - `raster_scale_factor` should usually be `device_scale_factor * zoom`, where zoom is an
     ///   explicit policy decision of the caller (ADR 0156).
+    #[allow(clippy::too_many_arguments)]
     pub fn path(
         &mut self,
         key: u64,
@@ -482,6 +550,7 @@ impl<'a> CanvasPainter<'a> {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn svg_mask_icon(
         &mut self,
         key: u64,
@@ -664,10 +733,8 @@ impl CanvasCache {
 
         self.text_by_key.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep {
-                if let Some(blob) = entry.blob.take() {
-                    services.text().release(blob);
-                }
+            if !keep && let Some(blob) = entry.blob.take() {
+                services.text().release(blob);
             }
             keep
         });
@@ -694,10 +761,10 @@ impl CanvasCache {
         candidates.sort_by_key(|(last, _)| *last);
 
         for (_, key) in candidates.into_iter().take(over) {
-            if let Some(mut entry) = self.text_by_key.remove(&key) {
-                if let Some(blob) = entry.blob.take() {
-                    services.text().release(blob);
-                }
+            if let Some(mut entry) = self.text_by_key.remove(&key)
+                && let Some(blob) = entry.blob.take()
+            {
+                services.text().release(blob);
             }
         }
     }
@@ -709,10 +776,8 @@ impl CanvasCache {
 
         self.path_by_key.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep {
-                if let Some(path) = entry.path.take() {
-                    services.path().release(path);
-                }
+            if !keep && let Some(path) = entry.path.take() {
+                services.path().release(path);
             }
             keep
         });
@@ -739,10 +804,10 @@ impl CanvasCache {
         candidates.sort_by_key(|(last, _)| *last);
 
         for (_, key) in candidates.into_iter().take(over) {
-            if let Some(mut entry) = self.path_by_key.remove(&key) {
-                if let Some(path) = entry.path.take() {
-                    services.path().release(path);
-                }
+            if let Some(mut entry) = self.path_by_key.remove(&key)
+                && let Some(path) = entry.path.take()
+            {
+                services.path().release(path);
             }
         }
     }
@@ -754,10 +819,8 @@ impl CanvasCache {
 
         self.svg_by_key.retain(|_, entry| {
             let keep = now.saturating_sub(entry.last_used_frame) <= keep_frames;
-            if !keep {
-                if let Some(svg) = entry.svg.take() {
-                    let _ = services.svg().unregister_svg(svg);
-                }
+            if !keep && let Some(svg) = entry.svg.take() {
+                let _ = services.svg().unregister_svg(svg);
             }
             keep
         });
@@ -824,6 +887,94 @@ impl CanvasCache {
     }
 
     #[allow(clippy::too_many_arguments)]
+    fn shared_text_draw(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        order: DrawOrder,
+        origin: Point,
+        text: Arc<str>,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+        font_stack_key: u64,
+        scene: &mut Scene,
+    ) -> TextDraw {
+        let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
+        let scale_bits = raster_scale_factor.to_bits();
+
+        if self.policy.shared_text.max_entries == 0 {
+            let text_constraints = TextConstraints {
+                max_width: constraints.max_width,
+                wrap: constraints.wrap,
+                overflow: constraints.overflow,
+                scale_factor: raster_scale_factor,
+            };
+
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(text.as_ref(), &style, text_constraints);
+            scene.push(SceneOp::Text {
+                order,
+                origin,
+                text: blob,
+                color,
+            });
+            return TextDraw { blob, metrics };
+        }
+
+        let shared_key = SharedTextFingerprintKey {
+            content: SharedTextContentKey::Plain(Arc::clone(&text)),
+            style: TextStyleCacheKey::from_style(&style),
+            constraints: CanvasTextConstraintsKey::from_constraints(constraints),
+            font_stack_key,
+            scale_bits,
+        };
+
+        if let Some(entry) = self.shared_text_by_fingerprint.get_mut(&shared_key) {
+            entry.last_used_frame = self.frame;
+            scene.push(SceneOp::Text {
+                order,
+                origin,
+                text: entry.blob,
+                color,
+            });
+            return TextDraw {
+                blob: entry.blob,
+                metrics: entry.metrics,
+            };
+        }
+
+        let text_constraints = TextConstraints {
+            max_width: constraints.max_width,
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+            scale_factor: raster_scale_factor,
+        };
+
+        let (blob, metrics) = services
+            .text()
+            .prepare_str(text.as_ref(), &style, text_constraints);
+        self.shared_text_by_fingerprint.insert(
+            shared_key,
+            SharedTextEntry {
+                blob,
+                metrics,
+                last_used_frame: self.frame,
+            },
+        );
+
+        scene.push(SceneOp::Text {
+            order,
+            origin,
+            text: blob,
+            color,
+        });
+        TextDraw { blob, metrics }
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn text_draw(
         &mut self,
         services: &mut dyn fret_core::UiServices,
@@ -840,60 +991,6 @@ impl CanvasCache {
     ) -> TextDraw {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
-
-        if let HostedTextContent::Plain(text) = &content
-            && self.policy.shared_text.max_entries > 0
-        {
-            let shared_key = SharedTextFingerprintKey {
-                content: SharedTextContentKey::Plain(Arc::clone(text)),
-                style: TextStyleCacheKey::from_style(&style),
-                constraints: CanvasTextConstraintsKey::from_constraints(constraints),
-                font_stack_key,
-                scale_bits,
-            };
-
-            if let Some(entry) = self.shared_text_by_fingerprint.get_mut(&shared_key) {
-                entry.last_used_frame = self.frame;
-                scene.push(SceneOp::Text {
-                    order,
-                    origin,
-                    text: entry.blob,
-                    color,
-                });
-                return TextDraw {
-                    blob: entry.blob,
-                    metrics: entry.metrics,
-                };
-            }
-
-            let text_constraints = TextConstraints {
-                max_width: constraints.max_width,
-                wrap: constraints.wrap,
-                overflow: constraints.overflow,
-                scale_factor: raster_scale_factor,
-            };
-
-            let (blob, metrics) =
-                services
-                    .text()
-                    .prepare_str(text.as_ref(), &style, text_constraints);
-            self.shared_text_by_fingerprint.insert(
-                shared_key,
-                SharedTextEntry {
-                    blob,
-                    metrics,
-                    last_used_frame: self.frame,
-                },
-            );
-
-            scene.push(SceneOp::Text {
-                order,
-                origin,
-                text: blob,
-                color,
-            });
-            return TextDraw { blob, metrics };
-        }
 
         let cache_key = CanvasTextCacheKey { key, scale_bits };
         let entry = self.text_by_key.entry(cache_key).or_default();
@@ -1024,7 +1121,7 @@ impl CanvasCache {
     ) -> fret_core::SvgId {
         match svg {
             SvgSource::Id(id) => *id,
-            SvgSource::Static(bytes) => self.svg_bytes(services, key, SvgBytesKey::Static(*bytes)),
+            SvgSource::Static(bytes) => self.svg_bytes(services, key, SvgBytesKey::Static(bytes)),
             SvgSource::Bytes(bytes) => {
                 self.svg_bytes(services, key, SvgBytesKey::Bytes(bytes.clone()))
             }

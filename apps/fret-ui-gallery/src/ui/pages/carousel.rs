@@ -67,7 +67,11 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let items = vec![
             slide(cx, 1, "Drag to swipe or use previous/next controls."),
             slide(cx, 2, "Item sizing uses `item_basis_main_px`."),
-            slide(cx, 3, "Spacing uses `track_start_neg_margin` + `item_padding_start`."),
+            slide(
+                cx,
+                3,
+                "Spacing uses `track_start_neg_margin` + `item_padding_start`.",
+            ),
             slide(cx, 4, "Orientation can be horizontal or vertical."),
             slide(cx, 5, "Wrap with direction provider for RTL locales."),
         ];
@@ -273,7 +277,18 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             .gap(Space::N6)
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![preview_hint, demo, sizes, spacing, orientation, api, plugins, rtl],
+        |_cx| {
+            vec![
+                preview_hint,
+                demo,
+                sizes,
+                spacing,
+                orientation,
+                api,
+                plugins,
+                rtl,
+            ]
+        },
     );
     let component_panel = shell(cx, component_stack)
         .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-carousel-component"));

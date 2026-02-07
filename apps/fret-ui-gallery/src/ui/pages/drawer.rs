@@ -226,6 +226,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let scrollable_content = {
         let trigger_open = scroll_open.clone();
         let close_open = scroll_open.clone();
+        let theme_for_scrollable_content = theme.clone();
 
         let drawer = shadcn::Drawer::new(scroll_open.clone())
             .side(shadcn::DrawerSide::Right)
@@ -261,7 +262,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                         cx.container(
                             decl_style::container_props(
-                                &theme,
+                                &theme_for_scrollable_content,
                                 ChromeRefinement::default().px(Space::N4),
                                 LayoutRefinement::default().w_full(),
                             ),
@@ -331,46 +332,43 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             )
         };
 
-        let buttons = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .wrap()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center(),
-            |cx| {
-                vec![
-                    side_button(
-                        cx,
-                        "Top",
-                        shadcn::DrawerSide::Top,
-                        side_top_open.clone(),
-                        "ui-gallery-drawer-side-top",
-                    ),
-                    side_button(
-                        cx,
-                        "Right",
-                        shadcn::DrawerSide::Right,
-                        side_right_open.clone(),
-                        "ui-gallery-drawer-side-right",
-                    ),
-                    side_button(
-                        cx,
-                        "Bottom",
-                        shadcn::DrawerSide::Bottom,
-                        side_bottom_open.clone(),
-                        "ui-gallery-drawer-side-bottom",
-                    ),
-                    side_button(
-                        cx,
-                        "Left",
-                        shadcn::DrawerSide::Left,
-                        side_left_open.clone(),
-                        "ui-gallery-drawer-side-left",
-                    ),
-                ]
-            },
-        )
+        let buttons = ui::h_flex(cx, |cx| {
+            vec![
+                side_button(
+                    cx,
+                    "Top",
+                    shadcn::DrawerSide::Top,
+                    side_top_open.clone(),
+                    "ui-gallery-drawer-side-top",
+                ),
+                side_button(
+                    cx,
+                    "Right",
+                    shadcn::DrawerSide::Right,
+                    side_right_open.clone(),
+                    "ui-gallery-drawer-side-right",
+                ),
+                side_button(
+                    cx,
+                    "Bottom",
+                    shadcn::DrawerSide::Bottom,
+                    side_bottom_open.clone(),
+                    "ui-gallery-drawer-side-bottom",
+                ),
+                side_button(
+                    cx,
+                    "Left",
+                    shadcn::DrawerSide::Left,
+                    side_left_open.clone(),
+                    "ui-gallery-drawer-side-left",
+                ),
+            ]
+        })
+        .gap(Space::N2)
+        .wrap()
+        .w_full()
+        .items_center()
+        .into_element(cx)
         .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-sides"));
 
         section_card(cx, "Sides", buttons)
@@ -448,15 +446,12 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             },
         );
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .wrap()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center(),
-            move |_cx| [desktop_dialog, mobile_drawer],
-        );
+        let row = ui::h_flex(cx, move |_cx| [desktop_dialog, mobile_drawer])
+            .gap(Space::N2)
+            .wrap()
+            .w_full()
+            .items_center()
+            .into_element(cx);
 
         let body = stack::vstack(
             cx,
