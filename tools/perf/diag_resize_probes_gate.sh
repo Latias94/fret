@@ -35,7 +35,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 out_dir="target/fret-diag-resize-probes-gate-$(date +%s)"
-baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json"
+baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
 launch_bin="target/release/fret-ui-gallery"
 timeout_ms=300000
 repeat=7
