@@ -27,6 +27,7 @@ Conventions:
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
+    - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 

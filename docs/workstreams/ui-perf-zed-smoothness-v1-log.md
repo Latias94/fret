@@ -6069,3 +6069,49 @@ Observed (in this bundle):
 Follow-ups:
 - Some resize-critical layout hotspots still have `element_path=null` (even with `element_kind` present). Fixing this
   is important so we can reliably jump from the perf bundle to the exact callsite that declares the hot `Scroll`.
+
+## 2026-02-07 14:55 — Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains
+
+Commit:
+- `fix(diag): keep debug identity parent chain alive` (`e46b8df08`)
+
+Root cause:
+- `debug_path_for_element()` depends on the full parent chain being present in the debug-identity registry.
+- During cache-hit frames we were “touching” (bumping `last_seen_frame`) only the leaf element entry that GC liveness
+  bookkeeping happened to mention, so ancestor entries could be pruned after `gc_lag_frames`.
+- Result: perf bundles would show `element_kind=Scroll` but `element_path=null` for some of the hottest resize
+  contributors, blocking “jump to callsite” attribution.
+
+Fix:
+- Make `touch_debug_identity_for_element()` bump `last_seen_frame` for the element **and its ancestors**, stopping
+  early when the chain has already been touched on this frame.
+
+Correctness evidence:
+```bash
+cargo test -p fret-ui --lib --features diagnostics debug_paths_survive_gc_when_touching_only_leaf_elements
+```
+
+Perf evidence run (resize probes gate):
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r9 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r9/summary.json`)
+
+Attribution confirmation (resize-stress worst bundle now has a `Scroll` `element_path`):
+- Bundle: `target/fret-diag-resize-probes-gate-r9/1770449114652-ui-gallery-window-resize-stress-steady/bundle.json`
+```bash
+jq '(.windows[0].snapshots | max_by(.debug.stats.layout_time_us)) as $s |
+  ($s.debug.layout_hotspots | .[0]) | {element_kind, element_path, layout_time_us, inclusive_time_us}' \
+  target/fret-diag-resize-probes-gate-r9/1770449114652-ui-gallery-window-resize-stress-steady/bundle.json
+```
+Observed:
+- `element_kind=Scroll`
+- `element_path` is now a concrete callsite chain into `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, unblocking the
+  next phase of “fearless refactor” work on the actual hot scroll policy/implementation.
