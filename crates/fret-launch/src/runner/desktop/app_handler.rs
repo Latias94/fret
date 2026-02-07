@@ -53,6 +53,14 @@ fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
+fn quantize_logical_px(value: f32) -> f32 {
+    if !value.is_finite() || value <= 0.0 {
+        return 0.0;
+    }
+    let quantum = 64.0f32;
+    (value * quantum).round() / quantum
+}
+
 struct HitchLogWriter {
     file: std::io::BufWriter<std::fs::File>,
 }
@@ -847,10 +855,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let physical = state.window.surface_size();
                     let logical: winit::dpi::LogicalSize<f32> =
                         physical.to_logical(state.window.scale_factor());
+                    let logical_width = quantize_logical_px(logical.width);
+                    let logical_height = quantize_logical_px(logical.height);
 
                     let bounds = Rect::new(
                         Point::new(Px(0.0), Px(0.0)),
-                        Size::new(Px(logical.width), Px(logical.height)),
+                        Size::new(Px(logical_width), Px(logical_height)),
                     );
 
                     self.driver.gpu_frame_prepare(

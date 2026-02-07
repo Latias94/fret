@@ -741,8 +741,8 @@ impl WinitInputState {
             WindowEvent::SurfaceResized(size) => {
                 let logical: LogicalSize<f32> = size.to_logical(window_scale_factor);
                 out.push(Event::WindowResized {
-                    width: Px(logical.width),
-                    height: Px(logical.height),
+                    width: Px(quantize_logical_px(logical.width)),
+                    height: Px(quantize_logical_px(logical.height)),
                 });
             }
             WindowEvent::ScaleFactorChanged {
@@ -816,6 +816,14 @@ impl WinitInputState {
 pub struct WheelConfig {
     pub line_delta_px: f32,
     pub pixel_delta_scale: f32,
+}
+
+fn quantize_logical_px(value: f32) -> f32 {
+    if !value.is_finite() || value <= 0.0 {
+        return 0.0;
+    }
+    let quantum = 64.0f32;
+    (value * quantum).round() / quantum
 }
 
 impl Default for WheelConfig {
