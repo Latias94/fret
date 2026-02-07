@@ -52,7 +52,7 @@ Legend:
 - [x] Translate `compositionstart/update/end` to `Event::Ime` (preedit/commit).
 - [x] Translate `beforeinput`/`input` to `Event::TextInput` for committed insertions.
 - [x] Filter control characters from `TextInput` (ADR 0012).
-- [~] Implement command-path suppression to avoid “command executes + DOM inserts text” (shortcut suppression landed; keep auditing edge cases).
+- [x] Implement command-path suppression to avoid “command executes + DOM inserts text” (shortcut suppression + ordering suppression landed; keep auditing edge cases via the web harness).
 
 ### UTF-16 ↔ UTF-8 conversion
 
