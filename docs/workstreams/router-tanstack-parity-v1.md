@@ -11,6 +11,7 @@ Related workstreams:
 References:
 
 - TanStack Router concepts (in-repo snapshot): `repo-ref/router`
+- ADR 1168: `docs/adr/1168-router-transitions-and-guards-v1.md`
 
 ## Why this exists
 
@@ -130,8 +131,10 @@ Standardize a transition snapshot (portable; diagnostics-friendly):
 - `blocked_by`: optional (future guards)
 - `RouterUpdate`: `navigate` / `sync` returns a structured “changed vs no-op” result
 - `RouterEvent`: a deterministic event stream (`Router::take_events()`) for diagnostics and tests
-- `guard`: optional app/ecosystem policy hook (v1 contract: only runs for `Push`/`Replace`, because
-  `HistoryAdapter` does not expose “peek next entry” for `Back`/`Forward`)
+- `guard`: optional app/ecosystem policy hook:
+  - `Push`/`Replace`: pre-guard (can `Allow`/`Block`/`Redirect`)
+  - `Back`/`Forward`: pre-guard if the `HistoryAdapter` can `peek`; otherwise post-guard with a
+    soft-block fallback (`Replace(from)`)
 
 ### History adapters
 
