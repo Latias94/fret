@@ -168,6 +168,24 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-platform-web/README.md`
     - `crates/fret-platform-web/src/lib.rs`
 
+- [x] BU-FR-runner-060 Add a module ownership map for `crates/fret-runner-winit` and document the intended public surface.
+  - Goal: make runner glue discoverable without dragging policy/renderer responsibilities into the wrong layer.
+  - Evidence:
+    - `crates/fret-runner-winit/README.md`
+    - `crates/fret-runner-winit/src/lib.rs`
+
+- [x] BU-FR-runner-061 Add a module ownership map for `crates/fret-runner-web` and document the intended public surface.
+  - Goal: keep wasm runner posture explicit and avoid accidental cross-target coupling.
+  - Evidence:
+    - `crates/fret-runner-web/README.md`
+    - `crates/fret-runner-web/src/lib.rs`
+
+- [x] BU-FR-launch-062 Add a module ownership map for `crates/fret-launch` and document the intended public surface.
+  - Goal: make the runner facade entrypoints easy to navigate while keeping runner internals behind a stable facade.
+  - Evidence:
+    - `crates/fret-launch/README.md`
+    - `crates/fret-launch/src/lib.rs`
+
 ## M4 — Ecosystem rationalization
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
