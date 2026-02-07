@@ -26,7 +26,7 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 ## Current state (as of 2026-02-07)
 
-- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`.
+- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
 - P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
@@ -118,7 +118,7 @@ must keep a clear order of operations based on *how often the hot path executes*
 
 | Milestone | Status | Scope | Required evidence |
 | --- | --- | --- | --- |
-| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v18.json`, selection summary in perf log (2026-02-07 00:35) |
+| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v19.json`, selection summary in perf log (2026-02-07 16:05) |
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
 | M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |

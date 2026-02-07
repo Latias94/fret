@@ -6115,3 +6115,68 @@ Observed:
 - `element_kind=Scroll`
 - `element_path` is now a concrete callsite chain into `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, unblocking the
   next phase of “fearless refactor” work on the actual hot scroll policy/implementation.
+
+## 2026-02-07 15:56 — Make unbounded scroll probe deferral default during viewport resize (P0 resize smoothness)
+
+Commit:
+- `perf(fret-ui): defer unbounded scroll probe on resize by default` (`43678c9e3`)
+
+Change:
+- Previously, “defer unbounded scroll probe while viewport is changing” was behind
+  `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+- Now, resize-driven deferral is **default-on** (opt-out via `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE=0`).
+- The invalidation-driven deferral remains separately env-gated via
+  `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+
+Evidence run (resize probes gate):
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r10 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r10/summary.json`)
+
+Worst totals (compare previous run `r9` → `r10`):
+- resize-stress: `18538us` → `16533us` (−`2005us`, ~−`10.8%`)
+- drag-jitter: `17644us` → `15508us` (−`2136us`, ~−`12.1%`)
+
+Attribution (resize-stress worst bundle):
+- Bundle: `target/fret-diag-resize-probes-gate-r10/1770449773226-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot highlights:
+  - `layout_time_us=9596` (previously ~`11877` in `r9`)
+  - top exclusive hotspot `Scroll` `layout_time_us=2916` (previously ~`4521` in `r9`)
+
+Interpretation:
+- This confirms a large portion of resize hitches were driven by “unbounded probe” scroll measurement (deep `measure()`
+  walks) being recomputed during live-drag frames. Deferring until the viewport stabilizes recovers ~2ms on the
+  current P0 probes.
+
+## 2026-02-07 16:05 — Refresh canonical `ui-gallery-steady` baseline after instrumentation + policy changes
+
+Symptom:
+- `ui-gallery-steady` checks started failing against `ui-gallery-steady.macos-m4.v18.json` (small margins across
+  multiple scripts), indicating baseline drift.
+- Evidence runs:
+  - `target/fret-diag-ui-gallery-steady-check-r1/check.perf_thresholds.json` (`failures=10`)
+  - `target/fret-diag-ui-gallery-steady-check-r2/check.perf_thresholds.json` (`failures=8`)
+
+Baseline selection run:
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json \
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v19 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result:
+- Canonical baseline updated: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v19/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v19/candidate-results.json`
+- Both candidates validated `3/3` with `failures=0`; winner chosen by lower resize p90.

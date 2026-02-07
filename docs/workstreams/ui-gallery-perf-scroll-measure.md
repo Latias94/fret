@@ -100,6 +100,11 @@ Enable:
 $env:FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1
 ```
 
+Notes (updated 2026-02-07):
+- Unbounded-probe deferral during **viewport resize** is now default-on (set
+  `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE=0` to disable).
+- The `...ON_INVALIDATION` env gate still controls the separate “defer after invalidation” behavior.
+
 Evidence bundles (same script; “second click”):
 
 - Baseline: `target/fret-diag/1769937482628-ui-gallery-nav-card-click-latency-second/bundle.json`

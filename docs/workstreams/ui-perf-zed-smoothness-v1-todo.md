@@ -95,6 +95,8 @@ Execution plan:
   - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
+- [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
+  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 - [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
@@ -609,18 +611,21 @@ Perf acceptance:
   - Selection summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`.
   - Stability: both candidates validated `3/3` with `failures=0`; winner copied to v18 baseline.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Refresh the canonical steady baseline after diagnostics/perf instrumentation changes.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`.
+  - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v19/selection-summary.json`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 16:05.
 
 
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
   - Commit: `beb2fa315`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:20.
-- [ ] Decide whether “deferred unbounded scroll probes on resize” should become default behavior.
-  - Current mechanism (env-gated):
-    - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
-    - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
-  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:45.
-  - TODO:
+- [x] Make “deferred unbounded scroll probes on resize” the default behavior (keep an opt-out).
+  - Default: enabled (set `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE=0` to disable).
+  - Invalidation-only gate (separate): `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+  - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2` (default).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 15:56.
     - [x] Add a correctness probe to ensure resize stress does not clamp scroll offsets incorrectly.
       - Script: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
       - Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
