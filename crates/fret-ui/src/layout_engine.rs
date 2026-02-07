@@ -398,9 +398,18 @@ impl TaffyLayoutEngine {
         scale_factor: f32,
         mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
     ) {
+        fn quantize_size_key_bits(value: f32) -> u32 {
+            if !value.is_finite() || value <= 0.0 {
+                return 0;
+            }
+            let quantum = 64.0f32;
+            let quantized = (value * quantum).round() / quantum;
+            quantized.to_bits()
+        }
+
         fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
             match avail {
-                taffy::style::AvailableSpace::Definite(v) => (0, v.to_bits()),
+                taffy::style::AvailableSpace::Definite(v) => (0, quantize_size_key_bits(v)),
                 taffy::style::AvailableSpace::MinContent => (1, 0),
                 taffy::style::AvailableSpace::MaxContent => (2, 0),
             }
@@ -473,8 +482,8 @@ impl TaffyLayoutEngine {
                     measure_calls = measure_calls.saturating_add(1);
                     let key = LayoutMeasureKey {
                         node: ctx.node,
-                        known_w: known.width.map(|v| v.to_bits()),
-                        known_h: known.height.map(|v| v.to_bits()),
+                        known_w: known.width.map(quantize_size_key_bits),
+                        known_h: known.height.map(quantize_size_key_bits),
                         avail_w: avail_key(avail.width),
                         avail_h: avail_key(avail.height),
                     };
