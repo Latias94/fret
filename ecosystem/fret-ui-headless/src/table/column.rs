@@ -11,6 +11,7 @@ pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
 pub type SortIsUndefinedFn<TData> = Arc<dyn Fn(&TData) -> bool>;
 pub type SortValueFn<TData> = Arc<dyn Fn(&TData) -> TanStackValue>;
 pub type FilterFn<TData> = Arc<dyn Fn(&TData, &Value) -> bool>;
+pub type FilterFnWithMeta<TData> = Arc<dyn Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool>;
 pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
 pub type FacetStrFn<TData> = Arc<dyn for<'r> Fn(&'r TData) -> &'r str>;
 pub type ValueU64Fn<TData> = Arc<dyn Fn(&TData) -> u64>;
@@ -98,6 +99,7 @@ pub struct ColumnDef<TData> {
     pub sort_is_undefined: Option<SortIsUndefinedFn<TData>>,
     pub filtering_fn: Option<FilteringFnSpec>,
     pub filter_fn: Option<FilterFn<TData>>,
+    pub filter_fn_with_meta: Option<FilterFnWithMeta<TData>>,
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
     pub value_u64_fn: Option<ValueU64Fn<TData>>,
@@ -131,6 +133,7 @@ impl<TData> Clone for ColumnDef<TData> {
             sort_is_undefined: self.sort_is_undefined.clone(),
             filtering_fn: self.filtering_fn.clone(),
             filter_fn: self.filter_fn.clone(),
+            filter_fn_with_meta: self.filter_fn_with_meta.clone(),
             facet_key_fn: self.facet_key_fn.clone(),
             facet_str_fn: self.facet_str_fn.clone(),
             value_u64_fn: self.value_u64_fn.clone(),
@@ -174,6 +177,7 @@ impl<TData> ColumnDef<TData> {
             sort_is_undefined: None,
             filtering_fn: None,
             filter_fn: None,
+            filter_fn_with_meta: None,
             facet_key_fn: None,
             facet_str_fn: None,
             value_u64_fn: None,
@@ -339,12 +343,23 @@ impl<TData> ColumnDef<TData> {
 
     pub fn filter_by(mut self, f: impl Fn(&TData, &str) -> bool + 'static) -> Self {
         let f = Arc::new(f);
+        self.filter_fn_with_meta = None;
         self.filter_fn = Some(Arc::new(move |row, value| {
             let Some(s) = value.as_str() else {
                 return false;
             };
             f(row, s)
         }));
+        self
+    }
+
+    /// Configure a custom filterFn with TanStack-like `addMeta` support.
+    pub fn filter_by_with_meta(
+        mut self,
+        f: impl Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool + 'static,
+    ) -> Self {
+        self.filter_fn = None;
+        self.filter_fn_with_meta = Some(Arc::new(f));
         self
     }
 

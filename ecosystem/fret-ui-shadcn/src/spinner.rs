@@ -1,7 +1,8 @@
 use fret_core::{Point, Px, Transform2D};
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
+use fret_ui_kit::declarative::icon as icon_runtime;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement};
@@ -31,7 +32,7 @@ impl Spinner {
         Self {
             layout: LayoutRefinement::default(),
             color: None,
-            icon: IconId::new_static("lucide.loader-circle"),
+            icon: ids::ui::LOADER,
             speed: 0.12,
         }
     }
@@ -72,15 +73,11 @@ impl Spinner {
             .or_else(|| theme.color_by_key("foreground"))
             .unwrap_or_else(|| theme.color_required("foreground"));
 
-        let svg: SvgSource =
-            cx.app
-                .with_global_mut(IconRegistry::default, |icons, _app| {
-                    match icons.resolve_svg(&self.icon) {
-                        Some(ResolvedSvg::Static(bytes)) => SvgSource::Static(bytes),
-                        Some(ResolvedSvg::Bytes(bytes)) => SvgSource::Bytes(bytes.clone()),
-                        None => SvgSource::Static(MISSING_ICON_SVG),
-                    }
-                });
+        let svg: SvgSource = icon_runtime::resolve_svg_source_from_globals(
+            cx.app,
+            &self.icon,
+            "fret_ui_shadcn.spinner",
+        );
 
         let mut center = Point::new(Px(8.0), Px(8.0));
         if let (Length::Px(w), Length::Px(h)) = (layout.size.width, layout.size.height) {

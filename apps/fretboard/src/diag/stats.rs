@@ -156,6 +156,7 @@ pub(super) struct BundleStatsReport {
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     pub(super) snapshots_with_hover_layout_invalidations: u32,
+    pub(super) snapshots_with_query_snapshot: u32,
     /// Whether the bundle includes `pointer.move` events (so the derived “pointer move” frame set
     /// can be identified from the event log rather than inferred from dispatch-only frames).
     pub(super) pointer_move_frames_present: bool,
@@ -188,10 +189,20 @@ pub(super) struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     pub(super) sum_hover_layout_invalidations: u64,
+    pub(super) query_entries_total: u64,
+    pub(super) query_entries_stale: u64,
+    pub(super) query_entries_inflight: u64,
+    pub(super) query_entries_idle: u64,
+    pub(super) query_entries_loading: u64,
+    pub(super) query_entries_success: u64,
+    pub(super) query_entries_error: u64,
+    pub(super) query_entries_retry_pending: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    pub(super) max_paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) max_paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -200,6 +211,7 @@ pub(super) struct BundleStatsReport {
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
+    query_namespace_hotspots: Vec<BundleStatsQueryNamespaceHotspot>,
     pub(super) top: Vec<BundleStatsSnapshotRow>,
 }
 
@@ -218,6 +230,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_roots_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
     pub(super) layout_contained_view_cache_roots_time_us: u64,
@@ -299,6 +312,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
     pub(super) paint_cache_misses: u32,
+    pub(super) paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) paint_cache_replay_time_us: u64,
     pub(super) paint_cache_bounds_translate_time_us: u64,
     pub(super) paint_cache_bounds_translated_nodes: u32,
@@ -340,6 +355,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_scene_encoding_cache_misses: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_engine_child_rect_queries: u64,
+    pub(super) layout_engine_child_rect_time_us: u64,
     pub(super) changed_models: u32,
     pub(super) changed_globals: u32,
     pub(super) changed_global_types_sample: Vec<String>,
@@ -552,6 +569,12 @@ struct BundleStatsModelSourceHotspot {
     count: u64,
 }
 
+#[derive(Debug, Default, Clone)]
+struct BundleStatsQueryNamespaceHotspot {
+    namespace: String,
+    count: u64,
+}
+
 impl BundleStatsReport {
     pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
@@ -612,6 +635,20 @@ impl BundleStatsReport {
                 self.snapshots_with_hover_layout_invalidations
             );
         }
+        if self.snapshots_with_query_snapshot > 0 || self.query_entries_total > 0 {
+            println!(
+                "query snapshots: frames_with_query_snapshot={} entries(total/stale/inflight)={}/{}/{} status(idle/loading/success/error)={}/{}/{}/{} retry_pending={}",
+                self.snapshots_with_query_snapshot,
+                self.query_entries_total,
+                self.query_entries_stale,
+                self.query_entries_inflight,
+                self.query_entries_idle,
+                self.query_entries_loading,
+                self.query_entries_success,
+                self.query_entries_error,
+                self.query_entries_retry_pending
+            );
+        }
 
         if !self.global_type_hotspots.is_empty() {
             let items: Vec<String> = self
@@ -628,6 +665,14 @@ impl BundleStatsReport {
                 .map(|h| format!("{}={}", h.source, h.count))
                 .collect();
             println!("changed_models_top: {}", items.join(" | "));
+        }
+        if !self.query_namespace_hotspots.is_empty() {
+            let items: Vec<String> = self
+                .query_namespace_hotspots
+                .iter()
+                .map(|h| format!("{}={}", h.namespace, h.count))
+                .collect();
+            println!("query_namespaces_top: {}", items.join(" | "));
         }
 
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -1198,6 +1243,10 @@ impl BundleStatsReport {
             "snapshots_with_hover_layout_invalidations".to_string(),
             Value::from(self.snapshots_with_hover_layout_invalidations),
         );
+        root.insert(
+            "snapshots_with_query_snapshot".to_string(),
+            Value::from(self.snapshots_with_query_snapshot),
+        );
 
         root.insert(
             "pointer_move".to_string(),
@@ -1265,6 +1314,38 @@ impl BundleStatsReport {
         sum.insert(
             "hover_layout_invalidations".to_string(),
             Value::from(self.sum_hover_layout_invalidations),
+        );
+        sum.insert(
+            "query_entries_total".to_string(),
+            Value::from(self.query_entries_total),
+        );
+        sum.insert(
+            "query_entries_stale".to_string(),
+            Value::from(self.query_entries_stale),
+        );
+        sum.insert(
+            "query_entries_inflight".to_string(),
+            Value::from(self.query_entries_inflight),
+        );
+        sum.insert(
+            "query_entries_idle".to_string(),
+            Value::from(self.query_entries_idle),
+        );
+        sum.insert(
+            "query_entries_loading".to_string(),
+            Value::from(self.query_entries_loading),
+        );
+        sum.insert(
+            "query_entries_success".to_string(),
+            Value::from(self.query_entries_success),
+        );
+        sum.insert(
+            "query_entries_error".to_string(),
+            Value::from(self.query_entries_error),
+        );
+        sum.insert(
+            "query_entries_retry_pending".to_string(),
+            Value::from(self.query_entries_retry_pending),
         );
         root.insert("sum".to_string(), Value::Object(sum));
 
@@ -1334,6 +1415,21 @@ impl BundleStatsReport {
         root.insert(
             "model_source_hotspots".to_string(),
             Value::Array(model_source_hotspots),
+        );
+
+        let query_namespace_hotspots = self
+            .query_namespace_hotspots
+            .iter()
+            .map(|h| {
+                let mut obj = Map::new();
+                obj.insert("namespace".to_string(), Value::from(h.namespace.clone()));
+                obj.insert("count".to_string(), Value::from(h.count));
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+        root.insert(
+            "query_namespace_hotspots".to_string(),
+            Value::Array(query_namespace_hotspots),
         );
 
         let top = self
@@ -1539,12 +1635,28 @@ impl BundleStatsReport {
                     Value::from(row.paint_cache_misses),
                 );
                 obj.insert(
+                    "paint_cache_hit_test_only_replay_allowed".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_allowed),
+                );
+                obj.insert(
+                    "paint_cache_hit_test_only_replay_rejected_key_mismatch".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_rejected_key_mismatch),
+                );
+                obj.insert(
                     "layout_engine_solves".to_string(),
                     Value::from(row.layout_engine_solves),
                 );
                 obj.insert(
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_queries".to_string(),
+                    Value::from(row.layout_engine_child_rect_queries),
+                );
+                obj.insert(
+                    "layout_engine_child_rect_time_us".to_string(),
+                    Value::from(row.layout_engine_child_rect_time_us),
                 );
                 obj.insert(
                     "layout_collect_roots_time_us".to_string(),
@@ -1561,6 +1673,10 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_request_build_roots_time_us".to_string(),
                     Value::from(row.layout_request_build_roots_time_us),
+                );
+                obj.insert(
+                    "layout_roots_time_us".to_string(),
+                    Value::from(row.layout_roots_time_us),
                 );
                 obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),
@@ -2931,7 +3047,7 @@ fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value)
 }
 
 fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
-    // Higher is “more useful for debugging”.
+    // Higher is 鈥渕ore useful for debugging鈥?
     let mut score: u64 = 0;
     if node.get("test_id").and_then(|v| v.as_str()).is_some() {
         score += 10_000;
@@ -3612,6 +3728,302 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
     msg.push_str(
         "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
     );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_scroll_offset_stable(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scroll_offset_stable_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scroll_offset_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_target = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        let mut target_node_id: Option<u64> = None;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            if let Some(node_id) = semantics_node_id_for_test_id(s, test_id) {
+                target_node_id = Some(node_id);
+                break;
+            }
+        }
+        let Some(target_node_id) = target_node_id else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} error=missing_semantics_or_test_id (ensure FRET_DIAG_SEMANTICS=1)"
+            ));
+            continue;
+        };
+
+        let mut baseline: Option<(f32, f32)> = None;
+        let mut baseline_frame: u64 = 0;
+        let mut samples = 0u64;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let entry = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_nodes"))
+                .and_then(|v| v.as_array())
+                .and_then(|nodes| {
+                    nodes.iter().find(|n| {
+                        n.get("node")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|id| id == target_node_id)
+                    })
+                });
+            let Some(entry) = entry else {
+                continue;
+            };
+
+            let Some(x) = entry
+                .get("offset_x")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+            let Some(y) = entry
+                .get("offset_y")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+
+            samples += 1;
+            if baseline.is_none() {
+                baseline = Some((x, y));
+                baseline_frame = frame_id;
+                continue;
+            }
+            let (bx, by) = baseline.unwrap();
+            if (x - bx).abs() > EPS || (y - by).abs() > EPS {
+                failures.push(format!(
+                    "window={window_id} test_id={test_id} target_node={target_node_id} error=offset_changed frame_id={frame_id} baseline_frame={baseline_frame} baseline=({bx:.2},{by:.2}) cur=({x:.2},{y:.2}) eps={EPS:.2}"
+                ));
+            }
+        }
+
+        if samples > 0 {
+            any_target = true;
+        } else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} target_node={target_node_id} error=no_scroll_nodes_samples (ensure scroll telemetry is enabled in the bundle)"
+            ));
+        }
+    }
+
+    if !any_target {
+        let mut msg = String::new();
+        msg.push_str("scroll offset stable check failed (no samples)\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        for line in failures {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scroll offset stable check failed (expected offset to remain stable)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_scrollbar_thumb_valid(
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scrollbar_thumb_valid_json(&bundle, bundle_path, selector, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scrollbar_thumb_valid_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    if selector != "all" {
+        return Err(format!(
+            "scrollbar thumb validity check only supports selector=all for now (got {selector})"
+        ));
+    }
+
+    fn rect_f32(v: &serde_json::Value) -> Option<(f32, f32, f32, f32)> {
+        let x = v.get("x")?.as_f64()? as f32;
+        let y = v.get("y")?.as_f64()? as f32;
+        let w = v.get("w")?.as_f64()? as f32;
+        let h = v.get("h")?.as_f64()? as f32;
+        if !(x.is_finite() && y.is_finite() && w.is_finite() && h.is_finite()) {
+            return None;
+        }
+        Some((x, y, w, h))
+    }
+
+    fn rect_contains(outer: (f32, f32, f32, f32), inner: (f32, f32, f32, f32), eps: f32) -> bool {
+        let (ox, oy, ow, oh) = outer;
+        let (ix, iy, iw, ih) = inner;
+        (ix + eps) >= ox
+            && (iy + eps) >= oy
+            && (ix + iw) <= (ox + ow + eps)
+            && (iy + ih) <= (oy + oh + eps)
+    }
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_scrollbar_samples = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            let scrollbars = s
+                .get("debug")
+                .and_then(|v| v.get("scrollbars"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if scrollbars.is_empty() {
+                continue;
+            }
+            any_scrollbar_samples = true;
+
+            for sb in scrollbars {
+                let node = sb.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+                let axis = sb.get("axis").and_then(|v| v.as_str()).unwrap_or("?");
+                let Some(track) = sb.get("track").and_then(rect_f32) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_track_rect"
+                    ));
+                    continue;
+                };
+                let (_tx, _ty, tw, th) = track;
+                if tw < -EPS || th < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_track_size track=({tw:.2},{th:.2}) eps={EPS:.2}"
+                    ));
+                }
+
+                let Some(thumb_v) = sb.get("thumb") else {
+                    continue;
+                };
+                if thumb_v.is_null() {
+                    continue;
+                }
+
+                let Some(thumb) = rect_f32(thumb_v) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_thumb_rect"
+                    ));
+                    continue;
+                };
+                let (_x, _y, w, h) = thumb;
+                if w < -EPS || h < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_thumb_size thumb=({w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                    continue;
+                }
+                if !rect_contains(track, thumb, EPS) {
+                    let (tx, ty, tw, th) = track;
+                    let (x, y, w, h) = thumb;
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=thumb_out_of_track track=({tx:.2},{ty:.2},{tw:.2},{th:.2}) thumb=({x:.2},{y:.2},{w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if !any_scrollbar_samples {
+        return Err(format!(
+            "scrollbar thumb validity check failed (no samples). bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scrollbar thumb validity check failed\n");
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
         msg.push_str("  ");
@@ -6731,6 +7143,8 @@ pub(super) fn bundle_stats_from_json_with_options(
         std::collections::HashMap::new();
     let mut model_source_counts: std::collections::HashMap<String, u64> =
         std::collections::HashMap::new();
+    let mut query_namespace_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let pointer_move_frame_ids: HashSet<u64> = w
@@ -6810,6 +7224,56 @@ pub(super) fn bundle_stats_from_json_with_options(
                     let count = item.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
                     let key = format!("{}@{}:{}:{}", type_name, file, line, column);
                     *model_source_counts.entry(key).or_insert(0) += count;
+                }
+            }
+
+            if let Some(query_entries) = s
+                .get("query_snapshot")
+                .and_then(|v| v.get("entries"))
+                .and_then(|v| v.as_array())
+            {
+                out.snapshots_with_query_snapshot =
+                    out.snapshots_with_query_snapshot.saturating_add(1);
+                for entry in query_entries {
+                    out.query_entries_total = out.query_entries_total.saturating_add(1);
+                    if entry
+                        .get("stale")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        out.query_entries_stale = out.query_entries_stale.saturating_add(1);
+                    }
+                    if entry.get("inflight").is_some_and(|v| !v.is_null()) {
+                        out.query_entries_inflight = out.query_entries_inflight.saturating_add(1);
+                    }
+                    match entry.get("status").and_then(|v| v.as_str()) {
+                        Some("Idle") => {
+                            out.query_entries_idle = out.query_entries_idle.saturating_add(1);
+                        }
+                        Some("Loading") => {
+                            out.query_entries_loading = out.query_entries_loading.saturating_add(1);
+                        }
+                        Some("Success") => {
+                            out.query_entries_success = out.query_entries_success.saturating_add(1);
+                        }
+                        Some("Error") => {
+                            out.query_entries_error = out.query_entries_error.saturating_add(1);
+                        }
+                        _ => {}
+                    }
+                    if entry
+                        .get("retry")
+                        .and_then(|v| v.get("next_retry_at_unix_ms"))
+                        .is_some_and(|v| !v.is_null())
+                    {
+                        out.query_entries_retry_pending =
+                            out.query_entries_retry_pending.saturating_add(1);
+                    }
+                    if let Some(namespace) = entry.get("namespace").and_then(|v| v.as_str()) {
+                        *query_namespace_counts
+                            .entry(namespace.to_string())
+                            .or_insert(0) += 1;
+                    }
                 }
             }
 
@@ -7193,6 +7657,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_cache_hit_test_only_replay_allowed = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_allowed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_cache_hit_test_only_replay_rejected_key_mismatch = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_rejected_key_mismatch"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_cache_replay_time_us = stats
                 .and_then(|m| m.get("paint_cache_replay_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7358,6 +7834,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_engine_child_rect_queries = stats
+                .and_then(|m| m.get("layout_engine_child_rect_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_engine_child_rect_time_us = stats
+                .and_then(|m| m.get("layout_engine_child_rect_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_collect_roots_time_us = stats
                 .and_then(|m| m.get("layout_collect_roots_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7372,6 +7856,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let layout_request_build_roots_time_us = stats
                 .and_then(|m| m.get("layout_request_build_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_pending_barrier_relayouts_time_us = stats
@@ -7713,6 +8201,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_paint_cache_hit_test_only_replay_allowed = out
+                .max_paint_cache_hit_test_only_replay_allowed
+                .max(paint_cache_hit_test_only_replay_allowed);
+            out.max_paint_cache_hit_test_only_replay_rejected_key_mismatch = out
+                .max_paint_cache_hit_test_only_replay_rejected_key_mismatch
+                .max(paint_cache_hit_test_only_replay_rejected_key_mismatch);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
@@ -7728,6 +8222,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_invalidate_scroll_handle_bindings_time_us,
                 layout_expand_view_cache_invalidations_time_us,
                 layout_request_build_roots_time_us,
+                layout_roots_time_us,
                 layout_pending_barrier_relayouts_time_us,
                 layout_repair_view_cache_bounds_time_us,
                 layout_contained_view_cache_roots_time_us,
@@ -7809,6 +8304,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_nodes_performed,
                 paint_nodes_performed,
                 paint_cache_misses,
+                paint_cache_hit_test_only_replay_allowed,
+                paint_cache_hit_test_only_replay_rejected_key_mismatch,
                 paint_cache_replay_time_us,
                 paint_cache_bounds_translate_time_us,
                 paint_cache_bounds_translated_nodes,
@@ -7850,6 +8347,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_scene_encoding_cache_misses,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_engine_child_rect_queries,
+                layout_engine_child_rect_time_us,
                 changed_models,
                 changed_globals,
                 changed_global_types_sample,
@@ -8178,6 +8677,18 @@ pub(super) fn bundle_stats_from_json_with_options(
     model_hotspots.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.source.cmp(&b.source)));
     model_hotspots.truncate(top);
     out.model_source_hotspots = model_hotspots;
+
+    let mut query_hotspots: Vec<BundleStatsQueryNamespaceHotspot> = query_namespace_counts
+        .into_iter()
+        .map(|(namespace, count)| BundleStatsQueryNamespaceHotspot { namespace, count })
+        .collect();
+    query_hotspots.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.namespace.cmp(&b.namespace))
+    });
+    query_hotspots.truncate(8);
+    out.query_namespace_hotspots = query_hotspots;
 
     out.top = rows.into_iter().take(top).collect();
     Ok(out)

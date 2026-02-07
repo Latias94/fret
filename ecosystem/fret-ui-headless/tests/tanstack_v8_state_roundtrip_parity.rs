@@ -239,7 +239,7 @@ fn load_fixture(path: &PathBuf) -> Fixture {
 fn state_roundtrip(state_json: &serde_json::Value) -> TableState {
     let tanstack = TanStackTableState::from_json(state_json).expect("tanstack state");
     let state = tanstack.to_table_state().expect("to_table_state");
-    let json2 = TanStackTableState::from_table_state(&state)
+    let json2 = TanStackTableState::from_table_state_with_shape(&state, &tanstack)
         .to_json()
         .expect("to_json");
     let tanstack2 = TanStackTableState::from_json(&json2).expect("tanstack state 2");

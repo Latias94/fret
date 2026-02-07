@@ -160,7 +160,7 @@ Exit criteria:
 
 - No legacy shaping backend remains (Parley-only; no runtime/feature gates).
 - The text module surface is canonical for Parley shaping + wrapping:
-  - `crates/fret-render/src/text/*` hosts the shaper + wrapper used by `TextSystem`.
+  - `crates/fret-render-wgpu/src/text/*` hosts the shaper + wrapper used by `TextSystem`.
   - no legacy namespace remains in code.
 - All text conformance and UI integration tests pass:
   - `cargo nextest run -p fret-render`
@@ -208,12 +208,12 @@ Current:
     `apps/fret-demo-web` feature `emoji-fonts`.
 - Automated conformance (unit): emoji sequences (VS16/ZWJ/flags/keycaps) produce
   `GlyphQuadKind::Color` and populate the `color_atlas` when a bundled color emoji font is available
-  (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
+  (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text.rs`).
 - Manual CJK conformance harness exists: `apps/fret-examples/src/cjk_conformance_demo.rs`.
   - Web runner supports `?demo=cjk_conformance_demo` and optional bundled CJK fonts via
     `apps/fret-demo-web` feature `cjk-lite-fonts`.
 - Automated conformance (unit): CJK glyphs populate `mask_atlas`/`subpixel_atlas` when a bundled CJK
-  font is available (`cargo nextest run -p fret-render`; `crates/fret-render/src/text.rs`).
+  font is available (`cargo nextest run -p fret-render`; `crates/fret-render-wgpu/src/text.rs`).
 
 ## Acceptance Checklist (what “done” means)
 
@@ -274,11 +274,11 @@ Legend:
 
 **B1 — Font + fallback + stable keys**
 - [x] Define a “font stack key” / revision model that invalidates caches on font DB changes.
-  - Evidence: `crates/fret-render/src/text.rs` (`font_stack_key`, `font_db_revision`, `add_fonts`,
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`font_stack_key`, `font_db_revision`, `add_fonts`,
     `set_font_families`), `crates/fret-runtime/src/font_catalog.rs` (`TextFontStackKey`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (observes `TextFontStackKey`).
 - [x] Implement family overrides (`TextFontFamilyConfig`) in the new system.
-  - Evidence: `crates/fret-render/src/text.rs` (`TextSystem::set_font_families`),
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`TextSystem::set_font_families`),
     `crates/fret-launch/src/runner/desktop/mod.rs` + `crates/fret-launch/src/runner/web.rs`
     (applies config + publishes `TextFontStackKey`).
 
@@ -288,11 +288,11 @@ Legend:
   - caret stops
   - hit-testing
   - span-aware paint assignment
-  - Evidence: `crates/fret-render/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
-    `crates/fret-render/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
+  - Evidence: `crates/fret-render-wgpu/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
+    `crates/fret-render-wgpu/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render-wgpu/src/text.rs`
     (`caret_stops_for_slice`, `paint_span_for_text_range`).
-  - Tests: `crates/fret-render/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
-    `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+  - Tests: `crates/fret-render-wgpu/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
+    `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
 - [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
@@ -311,15 +311,15 @@ Legend:
 
 **B5 — Quality baseline**
 - [x] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
-  - Evidence: `crates/fret-render/src/text.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
 - [x] Add shader gamma/contrast correction uniforms (GPUI-aligned).
-  - Evidence: `crates/fret-render/src/text.rs` (`TextQualitySettings`),
-    `crates/fret-render/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`).
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`TextQualitySettings`),
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`).
 - [x] Ensure quality knobs participate in cache keys (layout/raster).
   - Evidence: subpixel binning participates in `GlyphKey` (`x_bin`, `y_bin`) and atlas residency.
   - Evidence: gamma/contrast participates in scene encoding cache keys:
-    `crates/fret-render/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey.text_quality_key`),
-    test `crates/fret-render/src/renderer/tests.rs` (`scene_encoding_cache_is_busted_by_text_quality_changes`).
+    `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey.text_quality_key`),
+    test `crates/fret-render-wgpu/src/renderer/tests.rs` (`scene_encoding_cache_is_busted_by_text_quality_changes`).
 
 **B6 — Cache boundary refactor (ADR 0158)**
 - [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
@@ -387,12 +387,12 @@ Legend:
 ### E) Tests & conformance
 
 - [x] Unit tests: span invariant validation and clamping behavior.
-  - Evidence: `crates/fret-render/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
-  - Evidence: `crates/fret-render/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
-    `crates/fret-render/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
+  - Evidence: `crates/fret-render-wgpu/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
+    `crates/fret-render-wgpu/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
-  - Evidence: `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+  - Evidence: `crates/fret-render-wgpu/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
   - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
@@ -414,7 +414,7 @@ Legend:
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
 - 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
-- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render/src/text/parley_shaper.rs`).
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render-wgpu/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).

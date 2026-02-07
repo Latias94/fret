@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, SemanticsRole, TextOverflow, TextWrap};
-use fret_icons::IconId;
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps, TextProps};
@@ -173,7 +173,7 @@ impl SourcesBlock {
                         .as_ref()
                         .is_some_and(|id| id.as_ref() == item.id.as_ref());
 
-                    let icon = decl_icon::icon(cx, IconId::new_static("lucide.book"));
+                    let icon = decl_icon::icon(cx, ids::ui::BOOK);
 
                     let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
                         (Some(url), Some(handler)) => {
@@ -308,9 +308,9 @@ impl SourcesBlock {
 
                 let label = cx.text(format!("Used {count} sources"));
                 let chevron_id = if is_open {
-                    IconId::new_static("lucide.chevron-up")
+                    ids::ui::CHEVRON_UP
                 } else {
-                    IconId::new_static("lucide.chevron-down")
+                    ids::ui::CHEVRON_DOWN
                 };
                 let chevron = decl_icon::icon(cx, chevron_id);
                 let row = stack::hstack(

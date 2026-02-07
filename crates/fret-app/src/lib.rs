@@ -1,3 +1,13 @@
+//! Application runtime glue for Fret apps.
+//!
+//! This crate wires together models, commands, settings/config files, menu integration, and
+//! effect draining into a convenient runtime surface for apps and templates.
+//!
+//! It must remain backend-agnostic (no direct `winit`/`wgpu`/`web-sys` dependencies) and should not
+//! force a specific async runtime in its public contract surface.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-app/README.md`.
+
 pub mod app;
 pub mod app_display_name;
 pub mod config_files;
@@ -14,6 +24,9 @@ pub mod settings;
 pub mod ui_host;
 pub mod when_expr;
 
+// -----------------------------------------------------------------------------
+// Stable re-exports (app runtime facade surface)
+// -----------------------------------------------------------------------------
 pub use app::App;
 pub use app_display_name::AppDisplayName;
 pub use font_catalog_cache::FontCatalogCache;
@@ -44,8 +57,8 @@ pub use plugins::{Plugin, PluginHost, PluginId, PluginRegistrar, install_plugins
 
 pub use settings::{
     DockDragInversionModifierV1, DockDragInversionPolicyV1, DockDragInversionSettingsV1,
-    DockingSettingsV1, FontsSettingsV1, MenuBarIntegrationModeV1, MenuBarSettingsV1, SettingsError,
-    SettingsFileV1,
+    DockingSettingsV1, FontsSettingsV1, LocaleSettingsV1, MenuBarIntegrationModeV1,
+    MenuBarSettingsV1, SettingsError, SettingsFileV1,
 };
 
 pub use dock_layout_file::{DockLayoutError, DockLayoutFileV1};

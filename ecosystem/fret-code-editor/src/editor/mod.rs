@@ -5,7 +5,6 @@ use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
@@ -17,8 +16,8 @@ use fret_core::{
     Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
     TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
-use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
-use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActionHost};
+use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
+use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{
@@ -47,78 +46,6 @@ use geom::{
     caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
     map_row_local_to_buffer_byte, preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
 };
-
-const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
-
-fn scale_vertical_mouse_autoscroll_delta(delta_px: f32) -> f32 {
-    (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0)
-}
-
-fn drag_autoscroll_delta_y(viewport_h: Px, row_h: Px, viewport_y: Px) -> Px {
-    if viewport_h.0 <= 0.0 {
-        return Px(0.0);
-    }
-    let vertical_margin = Px(row_h.0.min(viewport_h.0 / 3.0));
-    if vertical_margin.0 <= 0.0 {
-        return Px(0.0);
-    }
-
-    let top = vertical_margin.0;
-    let bottom = viewport_h.0 - vertical_margin.0;
-
-    if viewport_y.0 < top {
-        Px(-scale_vertical_mouse_autoscroll_delta(top - viewport_y.0))
-    } else if viewport_y.0 > bottom {
-        Px(scale_vertical_mouse_autoscroll_delta(viewport_y.0 - bottom))
-    } else {
-        Px(0.0)
-    }
-}
-
-fn viewport_pos_for_pointer(
-    bounds: Rect,
-    scroll_handle: &fret_ui::scroll::ScrollHandle,
-    pos: fret_core::Point,
-) -> fret_core::Point {
-    let offset = scroll_handle.offset();
-    let viewport = scroll_handle.viewport_size();
-    let viewport_w = Px(viewport.width.0.max(0.0));
-    let viewport_h = Px(viewport.height.0.max(0.0));
-
-    let local_x = Px(pos.x.0 - bounds.origin.x.0);
-    let local_y = Px(pos.y.0 - bounds.origin.y.0);
-
-    let y_viewport = local_y;
-    let y_content = Px(local_y.0 - offset.y.0);
-
-    // Pointer event positions are mapped through transforms. Within scroll containers, descendants
-    // typically see "content space" coordinates already. Prefer the interpretation that places the
-    // cursor position closer to the viewport.
-    let range_min = -viewport_h.0;
-    let range_max = viewport_h.0 * 2.0;
-    let plausible = |y: Px| y.0 >= range_min && y.0 <= range_max;
-    let score = |y: Px| (y.0 - (viewport_h.0 / 2.0)).abs();
-
-    let y = match (plausible(y_viewport), plausible(y_content)) {
-        (true, false) => y_viewport,
-        (false, true) => y_content,
-        _ => {
-            if score(y_content) < score(y_viewport) {
-                y_content
-            } else {
-                y_viewport
-            }
-        }
-    };
-
-    let x = if viewport_w.0 > 0.0 {
-        Px(local_x.0.clamp(0.0, viewport_w.0))
-    } else {
-        local_x
-    };
-
-    fret_core::Point::new(x, y)
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Selection {
@@ -235,8 +162,8 @@ struct CodeEditorState {
     undo_group: Option<UndoGroup>,
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
-    drag_autoscroll_timer: Option<TimerToken>,
-    drag_autoscroll_viewport_pos: Option<fret_core::Point>,
+    drag_last_pointer_pos: Option<fret_core::Point>,
+    drag_last_scroll_offset: fret_core::Point,
     last_bounds: Option<Rect>,
     cache_stats: CodeEditorCacheStats,
     row_text_cache_rev: fret_code_editor_buffer::Revision,
@@ -287,6 +214,42 @@ impl CodeEditorState {
     }
 }
 
+fn drag_autoscroll_delta_y(row_h: Px, viewport_h: Px, offset_y: Px, pointer_y: Px) -> Px {
+    if row_h.0 <= 0.0 || viewport_h.0 <= 0.0 {
+        return Px(0.0);
+    }
+
+    let vertical_margin = Px(row_h.0.min(viewport_h.0 / 3.0));
+    let top = Px(offset_y.0 + vertical_margin.0);
+    let bottom = Px(offset_y.0 + viewport_h.0 - vertical_margin.0);
+
+    let scale_vertical_delta =
+        |delta_px: f32| -> f32 { (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0) };
+
+    if pointer_y.0 < top.0 {
+        Px(-scale_vertical_delta(top.0 - pointer_y.0))
+    } else if pointer_y.0 > bottom.0 {
+        Px(scale_vertical_delta(pointer_y.0 - bottom.0))
+    } else {
+        Px(0.0)
+    }
+}
+
+fn display_row_for_pointer_y(
+    bounds: Rect,
+    row_h: Px,
+    pointer_y: Px,
+    content_len: usize,
+) -> Option<usize> {
+    if content_len == 0 || row_h.0 <= 0.0 {
+        return None;
+    }
+
+    let local_y = pointer_y.0 - bounds.origin.y.0;
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+    Some(row.min(content_len.saturating_sub(1)))
+}
+
 #[derive(Clone)]
 pub struct CodeEditorHandle {
     state: Rc<RefCell<CodeEditorState>>,
@@ -314,8 +277,8 @@ impl CodeEditorHandle {
                 undo_group: None,
                 dragging: false,
                 drag_pointer: None,
-                drag_autoscroll_timer: None,
-                drag_autoscroll_viewport_pos: None,
+                drag_last_pointer_pos: None,
+                drag_last_scroll_offset: fret_core::Point::new(Px(0.0), Px(0.0)),
                 last_bounds: None,
                 cache_stats: CodeEditorCacheStats::default(),
                 row_text_cache_rev: fret_code_editor_buffer::Revision(0),
@@ -378,6 +341,8 @@ impl CodeEditorHandle {
         st.undo_group = None;
         st.dragging = false;
         st.drag_pointer = None;
+        st.drag_last_pointer_pos = None;
+        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(0.0));
     }
 
     pub fn set_caret(&self, caret: usize) {
@@ -445,6 +410,8 @@ impl CodeEditorHandle {
         st.undo_group = None;
         st.dragging = false;
         st.drag_pointer = None;
+        st.drag_last_pointer_pos = None;
+        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(0.0));
         st.last_bounds = None;
         st.cache_stats = CodeEditorCacheStats::default();
         st.refresh_display_map();
@@ -696,7 +663,7 @@ impl CodeEditor {
                 path: CanvasCacheTuning::transient(),
                 svg: CanvasCacheTuning::transient(),
             };
-            surface_props.on_paint_frame = torture.map(|torture| {
+            let torture_on_paint_frame = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
                 let scroll_dir = scroll_dir.clone();
                 let text_style = text_style.clone();
@@ -743,30 +710,30 @@ impl CodeEditor {
 
                                 let prev = prev_stats.get();
                                 prev_stats.set(stats);
-                            let delta = CodeEditorCacheStats {
-                                row_text_get_calls: stats
-                                    .row_text_get_calls
-                                    .saturating_sub(prev.row_text_get_calls),
-                                row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
-                                row_text_misses: stats
-                                    .row_text_misses
-                                    .saturating_sub(prev.row_text_misses),
-                                row_text_evictions: stats
-                                    .row_text_evictions
-                                    .saturating_sub(prev.row_text_evictions),
-                                row_text_resets: stats
-                                    .row_text_resets
-                                    .saturating_sub(prev.row_text_resets),
-                                syntax_get_calls: stats
-                                    .syntax_get_calls
-                                    .saturating_sub(prev.syntax_get_calls),
-                                syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
-                                syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
-                                syntax_evictions: stats
-                                    .syntax_evictions
-                                    .saturating_sub(prev.syntax_evictions),
-                                syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
-                            };
+                                let delta = CodeEditorCacheStats {
+                                    row_text_get_calls: stats
+                                        .row_text_get_calls
+                                        .saturating_sub(prev.row_text_get_calls),
+                                    row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
+                                    row_text_misses: stats
+                                        .row_text_misses
+                                        .saturating_sub(prev.row_text_misses),
+                                    row_text_evictions: stats
+                                        .row_text_evictions
+                                        .saturating_sub(prev.row_text_evictions),
+                                    row_text_resets: stats
+                                        .row_text_resets
+                                        .saturating_sub(prev.row_text_resets),
+                                    syntax_get_calls: stats
+                                        .syntax_get_calls
+                                        .saturating_sub(prev.syntax_get_calls),
+                                    syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
+                                    syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
+                                    syntax_evictions: stats
+                                        .syntax_evictions
+                                        .saturating_sub(prev.syntax_evictions),
+                                    syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
+                                };
                                 (
                                     stats,
                                     delta,
@@ -775,7 +742,7 @@ impl CodeEditor {
                                     caret_stops,
                                     geom_cached,
                                 )
-                        };
+                            };
 
                         let bounds = painter.bounds();
                         let origin = fret_core::Point::new(
@@ -838,6 +805,85 @@ impl CodeEditor {
                     },
                 );
                 hook
+            });
+            surface_props.on_paint_frame = Some({
+                let scroll_handle = scroll_handle.clone();
+                let editor_state = editor_state.clone();
+                let cell_w = cell_w.clone();
+                let torture_on_paint_frame = torture_on_paint_frame.clone();
+                Arc::new(
+                    move |painter: &mut fret_ui::canvas::CanvasPainter<'_>,
+                          frame: WindowedRowsPaintFrame| {
+                        if let Some(torture_hook) = &torture_on_paint_frame {
+                            torture_hook(painter, frame);
+                        }
+
+                        let mut should_request_frame = false;
+                        {
+                            let mut st = editor_state.borrow_mut();
+                            if !st.dragging {
+                                return;
+                            }
+                            let Some(pointer) = st.drag_last_pointer_pos else {
+                                return;
+                            };
+
+                            let bounds = painter.bounds();
+                            st.last_bounds = Some(bounds);
+
+                            let offset_before = scroll_handle.offset();
+                            let offset_delta_y = offset_before.y.0 - st.drag_last_scroll_offset.y.0;
+                            let mut pointer = fret_core::Point::new(pointer.x, Px(pointer.y.0 + offset_delta_y));
+                            st.drag_last_scroll_offset = offset_before;
+
+                            let scroll_delta_y = drag_autoscroll_delta_y(
+                                row_h,
+                                frame.viewport_height,
+                                offset_before.y,
+                                pointer.y,
+                            );
+                            if scroll_delta_y.0 != 0.0 {
+                                scroll_handle.set_offset(fret_core::Point::new(
+                                    offset_before.x,
+                                    Px(offset_before.y.0 + scroll_delta_y.0),
+                                ));
+                                let offset_after = scroll_handle.offset();
+                                let applied_delta_y = offset_after.y.0 - offset_before.y.0;
+                                if applied_delta_y.abs() > 0.0 {
+                                    pointer = fret_core::Point::new(
+                                        pointer.x,
+                                        Px(pointer.y.0 + applied_delta_y),
+                                    );
+                                    st.drag_last_scroll_offset = offset_after;
+                                    should_request_frame = true;
+                                }
+                            }
+
+                            st.drag_last_pointer_pos = Some(pointer);
+
+                            let Some(row) = display_row_for_pointer_y(
+                                bounds,
+                                row_h,
+                                pointer.y,
+                                content_len,
+                            ) else {
+                                return;
+                            };
+                            let cell_w = cell_w.get();
+                            let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                            let caret = caret_for_pointer(&st, row, bounds, pointer, cell_w);
+                            if caret != st.selection.focus {
+                                st.selection.focus = caret;
+                                st.caret_preferred_x = None;
+                                should_request_frame = true;
+                            }
+                        }
+
+                        if should_request_frame {
+                            painter.request_animation_frame();
+                        }
+                    },
+                )
             });
 
             cx.text_input_region(region_props, |cx| {
@@ -969,11 +1015,8 @@ impl CodeEditor {
                         st.last_bounds = Some(bounds);
                         st.dragging = true;
                         st.drag_pointer = Some(down.pointer_id);
-                        st.drag_autoscroll_viewport_pos = Some(viewport_pos_for_pointer(
-                            bounds,
-                            &on_pointer_down_scroll,
-                            down.position,
-                        ));
+                        st.drag_last_pointer_pos = Some(down.position);
+                        st.drag_last_scroll_offset = on_pointer_down_scroll.offset();
                         st.undo_group = None;
 
                         let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
@@ -1024,58 +1067,51 @@ impl CodeEditor {
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
+                        let offset_before = on_pointer_move_scroll.offset();
+                        let offset_delta_y = offset_before.y.0 - st.drag_last_scroll_offset.y.0;
+                        let mut pointer = fret_core::Point::new(
+                            mv.position.x,
+                            Px(mv.position.y.0 + offset_delta_y),
+                        );
+                        st.drag_last_scroll_offset = offset_before;
+
                         let mut changed = false;
-                        let viewport_pos =
-                            viewport_pos_for_pointer(bounds, &on_pointer_move_scroll, mv.position);
-                        st.drag_autoscroll_viewport_pos = Some(viewport_pos);
-
-                        let viewport_h = Px(on_pointer_move_scroll.viewport_size().height.0.max(0.0));
-                        let scroll_delta_y = drag_autoscroll_delta_y(viewport_h, row_h, viewport_pos.y);
+                        let viewport_h =
+                            Px(on_pointer_move_scroll.viewport_size().height.0.max(0.0));
+                        let scroll_delta_y = drag_autoscroll_delta_y(
+                            row_h,
+                            viewport_h,
+                            offset_before.y,
+                            pointer.y,
+                        );
                         if scroll_delta_y.0 != 0.0 {
-                            let offset = on_pointer_move_scroll.offset();
                             on_pointer_move_scroll.set_offset(fret_core::Point::new(
-                                offset.x,
-                                Px(offset.y.0 + scroll_delta_y.0),
+                                offset_before.x,
+                                Px(offset_before.y.0 + scroll_delta_y.0),
                             ));
-                            changed = true;
-
-                            if st.drag_autoscroll_timer.is_none() {
-                                let token = host.next_timer_token();
-                                st.drag_autoscroll_timer = Some(token);
-                                host.push_effect(Effect::SetTimer {
-                                    window: Some(action_cx.window),
-                                    token,
-                                    after: DRAG_AUTOSCROLL_TICK,
-                                    repeat: Some(DRAG_AUTOSCROLL_TICK),
-                                });
+                            let offset_after = on_pointer_move_scroll.offset();
+                            let applied_delta_y = offset_after.y.0 - offset_before.y.0;
+                            if applied_delta_y.abs() > 0.0 {
+                                pointer = fret_core::Point::new(
+                                    pointer.x,
+                                    Px(pointer.y.0 + applied_delta_y),
+                                );
+                                host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+                                st.drag_last_scroll_offset = offset_after;
+                                changed = true;
                             }
-                        } else if let Some(token) = st.drag_autoscroll_timer.take() {
-                            st.drag_autoscroll_viewport_pos = None;
-                            host.push_effect(Effect::CancelTimer { token });
                         }
+
+                        st.drag_last_pointer_pos = Some(pointer);
+
+                        let Some(row) = display_row_for_pointer_y(bounds, row_h, pointer.y, content_len)
+                        else {
+                            return false;
+                        };
 
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-
-                        let viewport_y = if viewport_h.0 > 0.0 {
-                            Px(viewport_pos.y.0.clamp(0.0, viewport_h.0))
-                        } else {
-                            Px(0.0)
-                        };
-                        let offset = on_pointer_move_scroll.offset();
-                        let content_y = offset.y.0 + viewport_y.0;
-                        let mut row = if row_h.0 > 0.0 {
-                            (content_y / row_h.0).floor().max(0.0) as usize
-                        } else {
-                            0
-                        };
-                        row = row.min(st.display_map.row_count().saturating_sub(1));
-
-                        let caret_pos = fret_core::Point::new(
-                            Px(bounds.origin.x.0 + viewport_pos.x.0),
-                            Px(bounds.origin.y.0 + viewport_y.0),
-                        );
-                        let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
+                        let caret = caret_for_pointer(&st, row, bounds, pointer, cell_w);
                         if caret != st.selection.focus {
                             st.selection.focus = caret;
                             st.caret_preferred_x = None;
@@ -1114,11 +1150,9 @@ impl CodeEditor {
                         let mut st = on_pointer_up_state.borrow_mut();
                         st.dragging = false;
                         st.drag_pointer = None;
+                        st.drag_last_pointer_pos = None;
+                        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(0.0));
                         st.undo_group = None;
-                        st.drag_autoscroll_viewport_pos = None;
-                        if let Some(token) = st.drag_autoscroll_timer.take() {
-                            host.push_effect(Effect::CancelTimer { token });
-                        }
                         host.release_pointer_capture();
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -1133,12 +1167,10 @@ impl CodeEditor {
                         if st.drag_pointer == Some(cancel.pointer_id) {
                             st.dragging = false;
                             st.drag_pointer = None;
+                            st.drag_last_pointer_pos = None;
+                            st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(0.0));
                         }
                         st.undo_group = None;
-                        st.drag_autoscroll_viewport_pos = None;
-                        if let Some(token) = st.drag_autoscroll_timer.take() {
-                            host.push_effect(Effect::CancelTimer { token });
-                        }
                         host.release_pointer_capture();
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -1146,102 +1178,12 @@ impl CodeEditor {
                     },
                 );
 
-                let on_timer_state = editor_state.clone();
-                let on_timer_scroll = scroll_handle.clone();
-                let on_timer_cell_w = cell_w.clone();
-                let on_timer: OnTimer = Arc::new(move |host, action_cx, token| {
-                    let mut st = on_timer_state.borrow_mut();
-                    if st.drag_autoscroll_timer != Some(token) {
-                        return false;
-                    }
-
-                    if !st.dragging {
-                        st.drag_autoscroll_timer = None;
-                        st.drag_autoscroll_viewport_pos = None;
-                        host.push_effect(Effect::CancelTimer { token });
-                        return true;
-                    }
-
-                    let Some(bounds) = st.last_bounds else {
-                        st.drag_autoscroll_timer = None;
-                        st.drag_autoscroll_viewport_pos = None;
-                        host.push_effect(Effect::CancelTimer { token });
-                        return true;
-                    };
-
-                    let Some(viewport_pos) = st.drag_autoscroll_viewport_pos else {
-                        st.drag_autoscroll_timer = None;
-                        host.push_effect(Effect::CancelTimer { token });
-                        return true;
-                    };
-
-                    let viewport_h = Px(on_timer_scroll.viewport_size().height.0.max(0.0));
-                    let scroll_delta_y = drag_autoscroll_delta_y(viewport_h, row_h, viewport_pos.y);
-                    if scroll_delta_y.0 == 0.0 {
-                        st.drag_autoscroll_timer = None;
-                        st.drag_autoscroll_viewport_pos = None;
-                        host.push_effect(Effect::CancelTimer { token });
-                        return true;
-                    }
-
-                    let offset = on_timer_scroll.offset();
-                    on_timer_scroll.set_offset(fret_core::Point::new(
-                        offset.x,
-                        Px(offset.y.0 + scroll_delta_y.0),
-                    ));
-
-                    let viewport_y = if viewport_h.0 > 0.0 {
-                        Px(viewport_pos.y.0.clamp(0.0, viewport_h.0))
-                    } else {
-                        Px(0.0)
-                    };
-                    let offset = on_timer_scroll.offset();
-                    let content_y = offset.y.0 + viewport_y.0;
-                    let mut row = if row_h.0 > 0.0 {
-                        (content_y / row_h.0).floor().max(0.0) as usize
-                    } else {
-                        0
-                    };
-                    row = row.min(st.display_map.row_count().saturating_sub(1));
-
-                    let cell_w = on_timer_cell_w.get();
-                    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-
-                    let caret_pos = fret_core::Point::new(
-                        Px(bounds.origin.x.0 + viewport_pos.x.0),
-                        Px(bounds.origin.y.0 + viewport_y.0),
-                    );
-                    let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
-                    if caret != st.selection.focus {
-                        st.selection.focus = caret;
-                        st.caret_preferred_x = None;
-                    }
-
-                    let caret_rect = caret_rect_for_selection(
-                        &st,
-                        row_h,
-                        cell_w,
-                        bounds,
-                        &on_timer_scroll,
-                    );
-                    if let Some(rect) = caret_rect {
-                        host.push_effect(Effect::ImeSetCursorArea {
-                            window: action_cx.window,
-                            rect,
-                        });
-                    }
-
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                });
-
                 let handlers = WindowedRowsSurfacePointerHandlers {
                     on_pointer_down: Some(on_pointer_down),
                     on_pointer_move: Some(on_pointer_move),
                     on_pointer_up: Some(on_pointer_up),
                     on_pointer_cancel: Some(on_pointer_cancel),
-                    on_timer: Some(on_timer),
+                    on_timer: None,
                 };
 
                 let text_state = editor_state.clone();

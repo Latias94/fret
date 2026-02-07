@@ -106,6 +106,17 @@ foreach ($pkg in $metadata.packages) {
     }
 }
 
+$kernelNameSet = @{}
+foreach ($pkg in $metadata.packages) {
+    if (-not $workspaceIds.ContainsKey($pkg.id)) {
+        continue
+    }
+    $manifest = [string]$pkg.manifest_path
+    if ($manifest -match "\\\\crates\\\\" -or $manifest -match "/crates/") {
+        $kernelNameSet[$pkg.name] = $true
+    }
+}
+
 # 1) `fret-core` must not depend on any other workspace crate.
 if ($depsByFrom.ContainsKey("fret-core")) {
     foreach ($to in $depsByFrom["fret-core"]) {
@@ -142,8 +153,30 @@ foreach ($kv in $depsByFrom.GetEnumerator()) {
     AssertNoWorkspaceDepsMatching -From $from -Rule "ecosystem-no-backends" -Deps $kv.Value -ForbiddenPatterns ($platformPatterns + $rendererPatterns + $runnerPatterns)
 }
 
+# 3.75) Kernel (`crates/*`) must not depend on ecosystem crates.
+#
+# Rationale: ecosystem crates are incubated in-tree but should remain extractable (docs/repo-structure.md).
+foreach ($kv in $depsByFrom.GetEnumerator()) {
+    $from = [string]$kv.Key
+    if (-not $kernelNameSet.ContainsKey($from)) {
+        continue
+    }
+    foreach ($to in $kv.Value) {
+        if ($ecosystemNameSet.ContainsKey($to)) {
+            Write-RuleViolation -Rule "kernel-no-ecosystem" -From $from -To $to
+        }
+    }
+}
+
 # 4) Backend crates must not depend on UI/component crates.
-foreach ($from in @("fret-render", "fret-platform", "fret-platform-native", "fret-platform-web")) {
+foreach ($from in @(
+    "fret-render",
+    "fret-render-core",
+    "fret-render-wgpu",
+    "fret-platform",
+    "fret-platform-native",
+    "fret-platform-web"
+)) {
     if (-not $depsByFrom.ContainsKey($from)) {
         continue
     }
@@ -187,6 +220,31 @@ AssertNoExternalDeps -Crate "fret-core" -Rule "core-portable-deps" -ForbiddenDep
 AssertNoExternalDeps -Crate "fret-runtime" -Rule "runtime-portable-deps" -ForbiddenDepNames $forbiddenInPortable
 AssertNoExternalDeps -Crate "fret-app" -Rule "app-portable-deps" -ForbiddenDepNames $forbiddenInPortable
 AssertNoExternalDeps -Crate "fret-platform" -Rule "platform-contracts-portable-deps" -ForbiddenDepNames $forbiddenInPortable
+
+# Feature usage policy: retained bridge must remain explicitly opt-in and tightly scoped.
+$unstableRetainedBridgeAllowlist = @(
+    "fret-chart",
+    "fret-docking",
+    "fret-node",
+    "fret-plot",
+    "fret-plot3d"
+)
+foreach ($pkg in $metadata.packages) {
+    if (-not $workspaceIds.ContainsKey($pkg.id)) {
+        continue
+    }
+    foreach ($dep in $pkg.dependencies) {
+        if ($dep.name -ne "fret-ui") {
+            continue
+        }
+        if ($dep.features -contains "unstable-retained-bridge") {
+            if (-not ($unstableRetainedBridgeAllowlist -contains $pkg.name)) {
+                Write-Error -ErrorAction Continue ("Layering violation (unstable-retained-bridge-allowlist): {0} must not enable fret-ui/unstable-retained-bridge" -f $pkg.name)
+                $script:HadErrors = $true
+            }
+        }
+    }
+}
 
 if ($script:HadErrors) {
     exit 1

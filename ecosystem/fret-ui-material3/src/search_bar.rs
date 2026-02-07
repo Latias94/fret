@@ -392,7 +392,7 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
         .app
         .with_global_mut(IconRegistry::default, |icons, _app| {
             icons
-                .resolve_svg_owned(icon)
+                .resolve_owned(icon)
                 .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
         });
 

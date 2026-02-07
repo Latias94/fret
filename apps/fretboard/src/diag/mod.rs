@@ -10,11 +10,12 @@ mod stats;
 mod util;
 
 use compare::{
-    CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt,
-    apply_perf_baseline_headroom, cargo_run_inject_feature, compare_bundles, ensure_env_var,
-    find_latest_export_dir, maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer,
-    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
-    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
+    CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt, apply_perf_baseline_floor,
+    apply_perf_baseline_headroom, apply_perf_baseline_headroom_with_slack_and_quantum,
+    cargo_run_inject_feature, compare_bundles, ensure_env_var, find_latest_export_dir,
+    maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file,
+    resolve_threshold, run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
+    wait_for_files_with_extensions,
 };
 use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
@@ -22,16 +23,27 @@ use gates::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
+    apply_pick_to_script, bundle_stats_from_path,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
+    check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
-    check_bundle_for_retained_vlist_reconcile_no_notify_min,
-    check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_retained_vlist_reconcile_no_notify_min, check_bundle_for_scroll_offset_stable,
+    check_bundle_for_scrollbar_thumb_valid, check_bundle_for_semantics_changed_repainted,
+    check_bundle_for_stale_paint, check_bundle_for_stale_scene,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_drag,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
+    check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
     check_bundle_for_vlist_visible_range_refreshes_max,
@@ -40,9 +52,10 @@ use stats::{
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_bundle_for_wheel_scroll_hit_changes, check_report_for_hover_layout_invalidations,
-    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
-    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
+    check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -59,6 +72,37 @@ struct LaunchedDemo {
     launched_instant: Instant,
     launch_cmd: Vec<String>,
 }
+
+const PERF_SUITE_UI_GALLERY_SCRIPTS: &[&str] = &[
+    "tools/diag-scripts/ui-gallery-overlay-torture.json",
+    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
+    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
+    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
+];
+
+const PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS: &[&str] = &[
+    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
+    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+];
+
+const PERF_SUITE_UI_RESIZE_PROBES_SCRIPTS: &[&str] = &[
+    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+    "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+];
 
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
@@ -89,31 +133,50 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
     let mut perf_repeat: u64 = 1;
+    let mut reuse_launch: bool = false;
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
     let mut max_pointer_move_dispatch_us: Option<u64> = None;
     let mut max_pointer_move_hit_test_us: Option<u64> = None;
     let mut max_pointer_move_global_changes: Option<u64> = None;
+    let mut min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64> = None;
+    let mut max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64> = None;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
+    let mut perf_baseline_seed_rule_specs: Vec<String> = Vec::new();
+    let mut perf_baseline_seed_preset_paths: Vec<PathBuf> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
+    let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
+    let mut check_ui_gallery_code_editor_word_boundary: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_drag: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
+    let mut check_scroll_offset_stable_test_id: Option<String> = None;
+    let mut check_scrollbar_thumb_valid_selector: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_max: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
@@ -122,6 +185,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_window_shifts_prefetch_max: Option<u64> = None;
     let mut check_vlist_window_shifts_escape_max: Option<u64> = None;
     let mut check_vlist_policy_key_stable: bool = false;
+    let mut check_windowed_rows_offset_changes_min: Option<u64> = None;
+    let mut check_windowed_rows_offset_changes_eps: f32 = 0.5;
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_notify_hotspot_file_max: Vec<(String, u64)> = Vec::new();
@@ -439,6 +504,31 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--min-run-paint-cache-hit-test-only-replay-allowed-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --min-run-paint-cache-hit-test-only-replay-allowed-max"
+                            .to_string(),
+                    );
+                };
+                min_run_paint_cache_hit_test_only_replay_allowed_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --min-run-paint-cache-hit-test-only-replay-allowed-max".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max".to_string());
+                };
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max".to_string()
+                    })?);
+                i += 1;
+            }
             "--max-working-set-bytes" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -501,6 +591,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map_err(|_| "invalid value for --perf-baseline-headroom-pct".to_string())?;
                 i += 1;
             }
+            "--perf-baseline-seed" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed".to_string());
+                };
+                perf_baseline_seed_rule_specs.push(v);
+                i += 1;
+            }
+            "--perf-baseline-seed-preset" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed-preset".to_string());
+                };
+                perf_baseline_seed_preset_paths.push(PathBuf::from(v));
+                i += 1;
+            }
             "--check-idle-no-paint-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -556,6 +662,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_pixels_changed_test_id = Some(v);
                 i += 1;
             }
+            "--check-ui-gallery-code-editor-torture-marker-present" => {
+                check_ui_gallery_code_editor_torture_marker_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-undo-redo" => {
+                check_ui_gallery_code_editor_torture_undo_redo = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-word-boundary" => {
+                check_ui_gallery_code_editor_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection" => {
+                check_ui_gallery_code_editor_a11y_selection = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition" => {
+                check_ui_gallery_code_editor_a11y_composition = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection-wrap" => {
+                check_ui_gallery_code_editor_a11y_selection_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap-scroll" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap_scroll = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-drag" => {
+                check_ui_gallery_code_editor_a11y_composition_drag = true;
+                i += 1;
+            }
             "--check-semantics-changed-repainted" => {
                 check_semantics_changed_repainted = true;
                 i += 1;
@@ -579,6 +721,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --check-wheel-scroll-hit-changes".to_string());
                 };
                 check_wheel_scroll_hit_changes_test_id = Some(v);
+                i += 1;
+            }
+            "--check-scroll-offset-stable" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-scroll-offset-stable".to_string());
+                };
+                check_scroll_offset_stable_test_id = Some(v);
+                i += 1;
+            }
+            "--check-scrollbar-thumb-valid" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-scrollbar-thumb-valid".to_string());
+                };
+                check_scrollbar_thumb_valid_selector = Some(v);
                 i += 1;
             }
             "--check-vlist-visible-range-refreshes-max" => {
@@ -655,6 +813,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_vlist_policy_key_stable = true;
                 i += 1;
             }
+            "--check-windowed-rows-offset-changes-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-min".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-eps".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_eps = v.parse::<f32>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-eps".to_string()
+                })?;
+                i += 1;
+            }
             "--check-layout-fast-path-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -675,6 +857,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-chart-sampling-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-chart-sampling-window-shifts-min".to_string()
+                    );
+                };
+                check_chart_sampling_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-chart-sampling-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-min".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-max".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-max".to_string()
+                })?);
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -946,6 +1164,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("invalid value for --env (empty KEY)".to_string());
                 }
                 launch_env.push((key.to_string(), value.to_string()));
+                i += 1;
+            }
+            "--reuse-launch" => {
+                reuse_launch = true;
                 i += 1;
             }
             "--launch" => {
@@ -1371,10 +1593,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_scroll_offset_stable_test_id.is_some()
+                    || check_scrollbar_thumb_valid_selector.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
@@ -1383,6 +1619,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_window_shifts_prefetch_max.is_some()
                     || check_vlist_window_shifts_escape_max.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1419,11 +1656,25 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id.as_deref(),
+                        check_scroll_offset_stable_test_id.as_deref(),
+                        check_scrollbar_thumb_valid_selector.as_deref(),
                         check_prepaint_actions_min,
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
@@ -1432,6 +1683,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_window_shifts_prefetch_max,
                         check_vlist_window_shifts_escape_max,
                         check_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1716,10 +1969,24 @@ See: `docs/tracy.md`.\n";
                         || check_stale_scene_test_id.is_some()
                         || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
+                        || check_ui_gallery_code_editor_torture_marker_present
+                        || check_ui_gallery_code_editor_torture_undo_redo
+                        || check_ui_gallery_code_editor_word_boundary
+                        || check_ui_gallery_code_editor_a11y_selection
+                        || check_ui_gallery_code_editor_a11y_composition
+                        || check_ui_gallery_code_editor_a11y_selection_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                        || check_ui_gallery_code_editor_a11y_composition_drag
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
+                        || check_scroll_offset_stable_test_id.is_some()
+                        || check_scrollbar_thumb_valid_selector.is_some()
                         || check_prepaint_actions_min.is_some()
+                        || check_chart_sampling_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_max.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
@@ -1728,6 +1995,7 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_window_shifts_prefetch_max.is_some()
                         || check_vlist_window_shifts_escape_max.is_some()
                         || check_vlist_policy_key_stable
+                        || check_windowed_rows_offset_changes_min.is_some()
                         || check_layout_fast_path_min.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
@@ -1762,11 +2030,25 @@ See: `docs/tracy.md`.\n";
                             check_stale_scene_test_id.as_deref(),
                             check_stale_scene_eps,
                             check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
+                            check_ui_gallery_code_editor_a11y_composition,
+                            check_ui_gallery_code_editor_a11y_selection_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                            check_ui_gallery_code_editor_a11y_composition_drag,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
                             check_wheel_scroll_hit_changes_test_id.as_deref(),
+                            check_scroll_offset_stable_test_id.as_deref(),
+                            check_scrollbar_thumb_valid_selector.as_deref(),
                             check_prepaint_actions_min,
+                            check_chart_sampling_window_shifts_min,
+                            check_node_graph_cull_window_shifts_min,
+                            check_node_graph_cull_window_shifts_max,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
@@ -1775,6 +2057,8 @@ See: `docs/tracy.md`.\n";
                             check_vlist_window_shifts_prefetch_max,
                             check_vlist_window_shifts_escape_max,
                             check_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
                             check_layout_fast_path_min,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -2720,7 +3004,7 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
@@ -2830,14 +3114,30 @@ See: `docs/tracy.md`.\n";
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_scroll_offset_stable_test_id.is_some()
+                    || check_scrollbar_thumb_valid_selector.is_some()
+                    || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -3034,13 +3334,27 @@ See: `docs/tracy.md`.\n";
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
+                        check_scroll_offset_stable_test_id.as_deref(),
+                        check_scrollbar_thumb_valid_selector.as_deref(),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
@@ -3056,6 +3370,8 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_escape_max
                             .or(suite_vlist_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -3100,21 +3416,25 @@ See: `docs/tracy.md`.\n";
                 );
             }
 
+            let mut perf_suite_labels: Vec<&'static str> = Vec::new();
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
+                perf_suite_labels.push("ui-gallery");
+                PERF_SUITE_UI_GALLERY_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-steady" {
+                perf_suite_labels.push("ui-gallery-steady");
+                PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-resize-probes" {
+                perf_suite_labels.push("ui-resize-probes");
+                PERF_SUITE_UI_RESIZE_PROBES_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -3123,7 +3443,7 @@ See: `docs/tracy.md`.\n";
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let cli_thresholds = PerfThresholds {
                 max_top_total_us,
                 max_top_layout_us,
@@ -3131,6 +3451,8 @@ See: `docs/tracy.md`.\n";
                 max_pointer_move_dispatch_us,
                 max_pointer_move_hit_test_us,
                 max_pointer_move_global_changes,
+                min_run_paint_cache_hit_test_only_replay_allowed_max,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
             };
             let perf_baseline = perf_baseline_path
                 .clone()
@@ -3140,6 +3462,12 @@ See: `docs/tracy.md`.\n";
             let perf_baseline_out = perf_baseline_out
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
+            let baseline_seed_policy = build_perf_baseline_seed_policy(
+                &workspace_root,
+                &perf_suite_labels,
+                &perf_baseline_seed_preset_paths,
+                &perf_baseline_seed_rule_specs,
+            )?;
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child = if reuse_process {
                 maybe_launch_demo(
@@ -3285,20 +3613,45 @@ See: `docs/tracy.md`.\n";
                         let top = report.top.first();
                         let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                         let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                        let top_layout_request_build_roots = top
+                            .map(|r| r.layout_request_build_roots_time_us)
+                            .unwrap_or(0);
+                        let top_layout_roots = top.map(|r| r.layout_roots_time_us).unwrap_or(0);
                         let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
                         let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
+                        let top_layout_engine_child_rect_queries =
+                            top.map(|r| r.layout_engine_child_rect_queries).unwrap_or(0);
+                        let top_layout_engine_child_rect_time_us =
+                            top.map(|r| r.layout_engine_child_rect_time_us).unwrap_or(0);
                         let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
-                        let pointer_move_max_dispatch_time_us =
-                            report.pointer_move_max_dispatch_time_us;
-                        let pointer_move_max_hit_test_time_us =
-                            report.pointer_move_max_hit_test_time_us;
-                        let pointer_move_snapshots_with_global_changes =
-                            u64::from(report.pointer_move_snapshots_with_global_changes);
                         let top_view_cache_contained_relayouts =
                             top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                        let top_view_cache_roots_total =
+                            top.map(|r| r.view_cache_roots_total).unwrap_or(0);
+                        let top_view_cache_roots_reused =
+                            top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                        let top_view_cache_roots_cache_key_mismatch = top
+                            .map(|r| r.view_cache_roots_cache_key_mismatch)
+                            .unwrap_or(0);
+                        let top_view_cache_roots_needs_rerender =
+                            top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
+                        let top_view_cache_roots_layout_invalidated = top
+                            .map(|r| r.view_cache_roots_layout_invalidated)
+                            .unwrap_or(0);
+                        let top_paint_cache_hit_test_only_replay_allowed = top
+                            .map(|r| r.paint_cache_hit_test_only_replay_allowed)
+                            .unwrap_or(0);
+                        let top_paint_cache_hit_test_only_replay_rejected_key_mismatch = top
+                            .map(|r| r.paint_cache_hit_test_only_replay_rejected_key_mismatch)
+                            .unwrap_or(0);
+                        let run_paint_cache_hit_test_only_replay_allowed_max =
+                            report.max_paint_cache_hit_test_only_replay_allowed as u64;
+                        let run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = report
+                            .max_paint_cache_hit_test_only_replay_rejected_key_mismatch
+                            as u64;
                         let top_cache_roots_contained_relayout =
                             top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
@@ -3313,6 +3666,15 @@ See: `docs/tracy.md`.\n";
                         let top_virtual_list_visible_range_refreshes = top
                             .map(|r| r.virtual_list_visible_range_refreshes)
                             .unwrap_or(0);
+                        let pointer_move_frames_present = report.pointer_move_frames_present;
+                        let pointer_move_frames_considered =
+                            report.pointer_move_frames_considered as u64;
+                        let pointer_move_max_dispatch_time_us =
+                            report.pointer_move_max_dispatch_time_us;
+                        let pointer_move_max_hit_test_time_us =
+                            report.pointer_move_max_hit_test_time_us;
+                        let pointer_move_snapshots_with_global_changes =
+                            report.pointer_move_snapshots_with_global_changes as u64;
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
@@ -3320,16 +3682,26 @@ See: `docs/tracy.md`.\n";
                                 "sort": sort.as_str(),
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
+                                "top_layout_request_build_roots_time_us": top_layout_request_build_roots,
+                                "top_layout_roots_time_us": top_layout_roots,
                                 "top_layout_engine_solve_time_us": top_solve,
                                 "top_layout_engine_solves": top_solves,
+                                "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                                "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
                                 "top_prepaint_time_us": top_prepaint,
                                 "top_paint_time_us": top_paint,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
-                                "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                                "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                                "top_view_cache_roots_total": top_view_cache_roots_total,
+                                "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                                "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                                "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
+                                "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                                "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
+                                "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -3364,6 +3736,28 @@ See: `docs/tracy.md`.\n";
                                     "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
                                     "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
                                     "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                },
+                                "p90": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                },
+                                "p95": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 },
                             }));
                         }
@@ -3399,15 +3793,38 @@ See: `docs/tracy.md`.\n";
                                     cli_thresholds.max_pointer_move_global_changes,
                                     baseline_thresholds.max_pointer_move_global_changes,
                                 );
+                            let (
+                                thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                src_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                            ) = resolve_threshold(
+                                cli_thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                baseline_thresholds
+                                    .min_run_paint_cache_hit_test_only_replay_allowed_max,
+                            );
+                            let (
+                                thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                src_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            ) = resolve_threshold(
+                                cli_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                                baseline_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            );
                             let run = serde_json::json!({
                                 "run_index": 0,
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
+                                "top_layout_request_build_roots_time_us": top_layout_request_build_roots,
+                                "top_layout_roots_time_us": top_layout_roots,
                                 "top_layout_engine_solve_time_us": top_solve,
                                 "top_layout_engine_solves": top_solves,
+                                "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                                "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
+                                "pointer_move_frames_present": pointer_move_frames_present,
+                                "pointer_move_frames_considered": pointer_move_frames_considered,
                                 "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
                                 "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
                                 "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "bundle": bundle_path.display().to_string(),
@@ -3424,6 +3841,8 @@ See: `docs/tracy.md`.\n";
                                     "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
                                     "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
                                     "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 },
                                 "thresholds": {
                                     "max_top_total_us": thr_total,
@@ -3432,6 +3851,8 @@ See: `docs/tracy.md`.\n";
                                     "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                     "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                     "max_pointer_move_global_changes": thr_pointer_move_global_changes,
+                                    "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 },
                                 "threshold_sources": {
                                     "max_top_total_us": src_total,
@@ -3440,6 +3861,8 @@ See: `docs/tracy.md`.\n";
                                     "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
                                     "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
                                     "max_pointer_move_global_changes": src_pointer_move_global_changes,
+                                    "min_run_paint_cache_hit_test_only_replay_allowed_max": src_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                    "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                                 },
                             });
                             perf_threshold_rows.push(row);
@@ -3451,9 +3874,12 @@ See: `docs/tracy.md`.\n";
                                 top_total,
                                 top_layout,
                                 top_solve,
+                                pointer_move_frames_present,
                                 pointer_move_max_dispatch_time_us,
                                 pointer_move_max_hit_test_time_us,
                                 pointer_move_snapshots_with_global_changes,
+                                run_paint_cache_hit_test_only_replay_allowed_max,
+                                run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             ));
                         }
 
@@ -3488,14 +3914,18 @@ See: `docs/tracy.md`.\n";
                 let mut runs_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
-                let mut runs_pointer_move_max_dispatch_time_us: Vec<u64> =
+                let mut runs_dispatch: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_hit_test: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_pointer_move_dispatch: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_pointer_move_hit_test: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_pointer_move_global_changes: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_paint_cache_hit_test_only_replay_allowed_max: Vec<u64> =
                     Vec::with_capacity(repeat);
-                let mut runs_pointer_move_max_hit_test_time_us: Vec<u64> =
-                    Vec::with_capacity(repeat);
-                let mut runs_pointer_move_snapshots_with_global_changes: Vec<u64> =
+                let mut runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Vec<u64> =
                     Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf)> = None;
+                let mut any_pointer_move_frames_present: bool = false;
 
                 for run_index in 0..repeat {
                     if !reuse_process {
@@ -3620,20 +4050,57 @@ See: `docs/tracy.md`.\n";
                     let top = report.top.first();
                     let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                     let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                    let top_layout_request_build_roots = top
+                        .map(|r| r.layout_request_build_roots_time_us)
+                        .unwrap_or(0);
+                    let top_layout_roots = top.map(|r| r.layout_roots_time_us).unwrap_or(0);
                     let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
                     let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
+                    let top_layout_engine_child_rect_queries =
+                        top.map(|r| r.layout_engine_child_rect_queries).unwrap_or(0);
+                    let top_layout_engine_child_rect_time_us =
+                        top.map(|r| r.layout_engine_child_rect_time_us).unwrap_or(0);
                     let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                    let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
+                    let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
-                    let pointer_move_max_dispatch_time_us =
-                        report.pointer_move_max_dispatch_time_us;
-                    let pointer_move_max_hit_test_time_us =
-                        report.pointer_move_max_hit_test_time_us;
-                    let pointer_move_snapshots_with_global_changes =
-                        u64::from(report.pointer_move_snapshots_with_global_changes);
+                    let top_frame_arena_capacity_estimate_bytes = top
+                        .map(|r| r.frame_arena_capacity_estimate_bytes)
+                        .unwrap_or(0);
+                    let top_frame_arena_grow_events =
+                        top.map(|r| r.frame_arena_grow_events as u64).unwrap_or(0);
+                    let top_element_children_vec_pool_reuses = top
+                        .map(|r| r.element_children_vec_pool_reuses as u64)
+                        .unwrap_or(0);
+                    let top_element_children_vec_pool_misses = top
+                        .map(|r| r.element_children_vec_pool_misses as u64)
+                        .unwrap_or(0);
                     let top_view_cache_contained_relayouts =
                         top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                    let top_view_cache_roots_total =
+                        top.map(|r| r.view_cache_roots_total).unwrap_or(0);
+                    let top_view_cache_roots_reused =
+                        top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                    let top_view_cache_roots_cache_key_mismatch = top
+                        .map(|r| r.view_cache_roots_cache_key_mismatch)
+                        .unwrap_or(0);
+                    let top_view_cache_roots_needs_rerender =
+                        top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
+                    let top_view_cache_roots_layout_invalidated = top
+                        .map(|r| r.view_cache_roots_layout_invalidated)
+                        .unwrap_or(0);
+                    let top_paint_cache_hit_test_only_replay_allowed = top
+                        .map(|r| r.paint_cache_hit_test_only_replay_allowed)
+                        .unwrap_or(0);
+                    let top_paint_cache_hit_test_only_replay_rejected_key_mismatch = top
+                        .map(|r| r.paint_cache_hit_test_only_replay_rejected_key_mismatch)
+                        .unwrap_or(0);
+                    let run_paint_cache_hit_test_only_replay_allowed_max =
+                        report.max_paint_cache_hit_test_only_replay_allowed as u64;
+                    let run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                        report.max_paint_cache_hit_test_only_replay_rejected_key_mismatch as u64;
                     let top_cache_roots_contained_relayout =
                         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
@@ -3648,36 +4115,159 @@ See: `docs/tracy.md`.\n";
                     let top_virtual_list_visible_range_refreshes = top
                         .map(|r| r.virtual_list_visible_range_refreshes)
                         .unwrap_or(0);
+                    let top_renderer_encode_scene_us =
+                        top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
+                    let top_renderer_prepare_text_us =
+                        top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
+                    let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
+                    let top_renderer_pipeline_switches =
+                        top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
+                    let top_renderer_bind_group_switches =
+                        top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
+                    let top_renderer_scene_encoding_cache_misses = top
+                        .map(|r| r.renderer_scene_encoding_cache_misses)
+                        .unwrap_or(0);
+                    let top_renderer_text_atlas_upload_bytes =
+                        top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
+                    let top_renderer_text_atlas_evicted_pages = top
+                        .map(|r| r.renderer_text_atlas_evicted_pages)
+                        .unwrap_or(0);
+                    let top_renderer_svg_upload_bytes =
+                        top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
+                    let top_renderer_image_upload_bytes =
+                        top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
+                    let top_renderer_svg_raster_cache_misses =
+                        top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
+                    let top_renderer_svg_raster_budget_evictions = top
+                        .map(|r| r.renderer_svg_raster_budget_evictions)
+                        .unwrap_or(0);
+                    let top_renderer_svg_rasters_live =
+                        top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
+                    let top_renderer_svg_mask_atlas_pages_live = top
+                        .map(|r| r.renderer_svg_mask_atlas_pages_live)
+                        .unwrap_or(0);
+                    let top_renderer_svg_mask_atlas_used_px =
+                        top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
+                    let top_renderer_intermediate_budget_bytes = top
+                        .map(|r| r.renderer_intermediate_budget_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_in_use_bytes = top
+                        .map(|r| r.renderer_intermediate_in_use_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_peak_in_use_bytes = top
+                        .map(|r| r.renderer_intermediate_peak_in_use_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_release_targets = top
+                        .map(|r| r.renderer_intermediate_release_targets)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_allocations = top
+                        .map(|r| r.renderer_intermediate_pool_allocations)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_reuses = top
+                        .map(|r| r.renderer_intermediate_pool_reuses)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_releases = top
+                        .map(|r| r.renderer_intermediate_pool_releases)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_evictions = top
+                        .map(|r| r.renderer_intermediate_pool_evictions)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_free_bytes = top
+                        .map(|r| r.renderer_intermediate_pool_free_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_free_textures = top
+                        .map(|r| r.renderer_intermediate_pool_free_textures)
+                        .unwrap_or(0);
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
                     runs_solve.push(top_solve);
                     runs_prepaint.push(top_prepaint);
                     runs_paint.push(top_paint);
-                    runs_pointer_move_max_dispatch_time_us.push(pointer_move_max_dispatch_time_us);
-                    runs_pointer_move_max_hit_test_time_us.push(pointer_move_max_hit_test_time_us);
-                    runs_pointer_move_snapshots_with_global_changes
+                    runs_dispatch.push(top_dispatch);
+                    runs_hit_test.push(top_hit_test);
+                    let pointer_move_frames_present = report.pointer_move_frames_present;
+                    any_pointer_move_frames_present |= pointer_move_frames_present;
+                    let pointer_move_frames_considered =
+                        report.pointer_move_frames_considered as u64;
+                    let pointer_move_max_dispatch_time_us =
+                        report.pointer_move_max_dispatch_time_us;
+                    let pointer_move_max_hit_test_time_us =
+                        report.pointer_move_max_hit_test_time_us;
+                    let pointer_move_snapshots_with_global_changes =
+                        report.pointer_move_snapshots_with_global_changes as u64;
+                    runs_pointer_move_dispatch.push(pointer_move_max_dispatch_time_us);
+                    runs_pointer_move_hit_test.push(pointer_move_max_hit_test_time_us);
+                    runs_pointer_move_global_changes
                         .push(pointer_move_snapshots_with_global_changes);
+                    runs_paint_cache_hit_test_only_replay_allowed_max
+                        .push(run_paint_cache_hit_test_only_replay_allowed_max);
+                    runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
+                        .push(run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "top_total_time_us": top_total,
                         "top_layout_time_us": top_layout,
+                        "top_layout_request_build_roots_time_us": top_layout_request_build_roots,
+                        "top_layout_roots_time_us": top_layout_roots,
                         "top_layout_engine_solve_time_us": top_solve,
                         "top_layout_engine_solves": top_solves,
+                        "top_layout_engine_child_rect_queries": top_layout_engine_child_rect_queries,
+                        "top_layout_engine_child_rect_time_us": top_layout_engine_child_rect_time_us,
                         "top_prepaint_time_us": top_prepaint,
                         "top_paint_time_us": top_paint,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
-                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
-                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
-                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+                        "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
+                        "top_frame_arena_grow_events": top_frame_arena_grow_events,
+                        "top_element_children_vec_pool_reuses": top_element_children_vec_pool_reuses,
+                        "top_element_children_vec_pool_misses": top_element_children_vec_pool_misses,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                        "top_view_cache_roots_total": top_view_cache_roots_total,
+                        "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                        "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                        "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
+                        "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                        "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
+                        "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                        "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+                        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
                         "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                         "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                         "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                        "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
+                        "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
+                        "top_renderer_draw_calls": top_renderer_draw_calls,
+                        "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
+                        "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
+                        "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
+                        "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
+                        "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
+                        "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
+                        "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
+                        "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
+                        "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
+                        "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
+                        "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
+                        "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
+                        "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
+                        "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
+                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
+                        "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
+                        "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
+                        "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
+                        "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
+                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
+                        "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
+                        "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
+                        "pointer_move_frames_present": pointer_move_frames_present,
+                        "pointer_move_frames_considered": pointer_move_frames_considered,
+                        "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+                        "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+                        "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
                         "bundle": bundle_path.display().to_string(),
                     }));
 
@@ -3698,8 +4288,32 @@ See: `docs/tracy.md`.\n";
 
                 if runs_total.len() == repeat {
                     if stats_json {
+                        let mut top_frame_arena_capacity_estimate_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_frame_arena_grow_events: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_element_children_vec_pool_reuses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_element_children_vec_pool_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
                         let mut top_view_cache_contained_relayouts: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_view_cache_roots_total: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_view_cache_roots_reused: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_view_cache_roots_cache_key_mismatch: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_view_cache_roots_needs_rerender: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_view_cache_roots_layout_invalidated: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_paint_cache_hit_test_only_replay_allowed: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_paint_cache_hit_test_only_replay_rejected_key_mismatch: Vec<
+                            u64,
+                        > = Vec::with_capacity(repeat);
+                        let mut run_paint_cache_hit_test_only_replay_allowed_max: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max:
+                            Vec<u64> = Vec::with_capacity(repeat);
                         let mut top_cache_roots_contained_relayout: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_set_children_barrier_writes: Vec<u64> =
@@ -3712,11 +4326,127 @@ See: `docs/tracy.md`.\n";
                             Vec::with_capacity(repeat);
                         let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_pipeline_switches: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_bind_group_switches: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_text_atlas_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_text_atlas_evicted_pages: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_image_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_raster_cache_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_raster_budget_evictions: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_rasters_live: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_mask_atlas_pages_live: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_mask_atlas_used_px: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_budget_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_in_use_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_release_targets: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_allocations: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_reuses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_releases: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_evictions: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_free_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_free_textures: Vec<u64> =
+                            Vec::with_capacity(repeat);
                         for run in &runs_json {
+                            top_frame_arena_capacity_estimate_bytes.push(
+                                run.get("top_frame_arena_capacity_estimate_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_frame_arena_grow_events.push(
+                                run.get("top_frame_arena_grow_events")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_element_children_vec_pool_reuses.push(
+                                run.get("top_element_children_vec_pool_reuses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_element_children_vec_pool_misses.push(
+                                run.get("top_element_children_vec_pool_misses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_view_cache_contained_relayouts.push(
                                 run.get("top_view_cache_contained_relayouts")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
+                            );
+                            top_view_cache_roots_total.push(
+                                run.get("top_view_cache_roots_total")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_view_cache_roots_reused.push(
+                                run.get("top_view_cache_roots_reused")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_view_cache_roots_cache_key_mismatch.push(
+                                run.get("top_view_cache_roots_cache_key_mismatch")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_view_cache_roots_needs_rerender.push(
+                                run.get("top_view_cache_roots_needs_rerender")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_view_cache_roots_layout_invalidated.push(
+                                run.get("top_view_cache_roots_layout_invalidated")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_paint_cache_hit_test_only_replay_allowed.push(
+                                run.get("top_paint_cache_hit_test_only_replay_allowed")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_paint_cache_hit_test_only_replay_rejected_key_mismatch.push(
+                                run.get(
+                                    "top_paint_cache_hit_test_only_replay_rejected_key_mismatch",
+                                )
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0),
+                            );
+                            run_paint_cache_hit_test_only_replay_allowed_max.push(
+                                run.get("run_paint_cache_hit_test_only_replay_allowed_max")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max.push(
+                                run.get(
+                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
+                                )
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0),
                             );
                             top_cache_roots_contained_relayout.push(
                                 run.get("top_cache_roots_contained_relayout")
@@ -3748,6 +4478,131 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_encode_scene_us.push(
+                                run.get("top_renderer_encode_scene_us")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_prepare_text_us.push(
+                                run.get("top_renderer_prepare_text_us")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_draw_calls.push(
+                                run.get("top_renderer_draw_calls")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_pipeline_switches.push(
+                                run.get("top_renderer_pipeline_switches")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_bind_group_switches.push(
+                                run.get("top_renderer_bind_group_switches")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_scene_encoding_cache_misses.push(
+                                run.get("top_renderer_scene_encoding_cache_misses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_text_atlas_upload_bytes.push(
+                                run.get("top_renderer_text_atlas_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_text_atlas_evicted_pages.push(
+                                run.get("top_renderer_text_atlas_evicted_pages")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_upload_bytes.push(
+                                run.get("top_renderer_svg_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_image_upload_bytes.push(
+                                run.get("top_renderer_image_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_raster_cache_misses.push(
+                                run.get("top_renderer_svg_raster_cache_misses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_raster_budget_evictions.push(
+                                run.get("top_renderer_svg_raster_budget_evictions")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_rasters_live.push(
+                                run.get("top_renderer_svg_rasters_live")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_mask_atlas_pages_live.push(
+                                run.get("top_renderer_svg_mask_atlas_pages_live")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_mask_atlas_used_px.push(
+                                run.get("top_renderer_svg_mask_atlas_used_px")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_budget_bytes.push(
+                                run.get("top_renderer_intermediate_budget_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_in_use_bytes.push(
+                                run.get("top_renderer_intermediate_in_use_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_peak_in_use_bytes.push(
+                                run.get("top_renderer_intermediate_peak_in_use_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_release_targets.push(
+                                run.get("top_renderer_intermediate_release_targets")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_allocations.push(
+                                run.get("top_renderer_intermediate_pool_allocations")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_reuses.push(
+                                run.get("top_renderer_intermediate_pool_reuses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_releases.push(
+                                run.get("top_renderer_intermediate_pool_releases")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_evictions.push(
+                                run.get("top_renderer_intermediate_pool_evictions")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_free_bytes.push(
+                                run.get("top_renderer_intermediate_pool_free_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_free_textures.push(
+                                run.get("top_renderer_intermediate_pool_free_textures")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                         }
                         perf_json_rows.push(serde_json::json!({
                             "script": src.display().to_string(),
@@ -3760,13 +4615,56 @@ See: `docs/tracy.md`.\n";
                                 "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
                                 "prepaint_time_us": summarize_times_us(&runs_prepaint),
                                 "paint_time_us": summarize_times_us(&runs_paint),
+                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
+                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
+                                "pointer_move_max_dispatch_time_us": summarize_times_us(&runs_pointer_move_dispatch),
+                                "pointer_move_max_hit_test_time_us": summarize_times_us(&runs_pointer_move_hit_test),
+                                "pointer_move_snapshots_with_global_changes": summarize_times_us(&runs_pointer_move_global_changes),
+                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
+                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
+                                "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
+                                "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
                                 "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+                                "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
+                                "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
+                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
+                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
+                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
+                                "top_paint_cache_hit_test_only_replay_allowed": summarize_times_us(&top_paint_cache_hit_test_only_replay_allowed),
+                                "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": summarize_times_us(&top_paint_cache_hit_test_only_replay_rejected_key_mismatch),
+                                "run_paint_cache_hit_test_only_replay_allowed_max": summarize_times_us(&run_paint_cache_hit_test_only_replay_allowed_max),
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": summarize_times_us(&run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max),
                                 "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
                                 "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
                                 "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
                                 "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
                                 "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
                                 "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+                                "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
+                                "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
+                                "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),
+                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
+                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
+                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
+                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
+                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
+                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
+                                "top_renderer_image_upload_bytes": summarize_times_us(&top_renderer_image_upload_bytes),
+                                "top_renderer_svg_raster_cache_misses": summarize_times_us(&top_renderer_svg_raster_cache_misses),
+                                "top_renderer_svg_raster_budget_evictions": summarize_times_us(&top_renderer_svg_raster_budget_evictions),
+                                "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),
+                                "top_renderer_svg_mask_atlas_pages_live": summarize_times_us(&top_renderer_svg_mask_atlas_pages_live),
+                                "top_renderer_svg_mask_atlas_used_px": summarize_times_us(&top_renderer_svg_mask_atlas_used_px),
+                                "top_renderer_intermediate_budget_bytes": summarize_times_us(&top_renderer_intermediate_budget_bytes),
+                                "top_renderer_intermediate_in_use_bytes": summarize_times_us(&top_renderer_intermediate_in_use_bytes),
+                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
+                                "top_renderer_intermediate_release_targets": summarize_times_us(&top_renderer_intermediate_release_targets),
+                                "top_renderer_intermediate_pool_allocations": summarize_times_us(&top_renderer_intermediate_pool_allocations),
+                                "top_renderer_intermediate_pool_reuses": summarize_times_us(&top_renderer_intermediate_pool_reuses),
+                                "top_renderer_intermediate_pool_releases": summarize_times_us(&top_renderer_intermediate_pool_releases),
+                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
+                                "top_renderer_intermediate_pool_free_bytes": summarize_times_us(&top_renderer_intermediate_pool_free_bytes),
+                                "top_renderer_intermediate_pool_free_textures": summarize_times_us(&top_renderer_intermediate_pool_free_textures),
                             },
                             "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
                                 "top_total_time_us": us,
@@ -3805,19 +4703,76 @@ See: `docs/tracy.md`.\n";
                     let max_total = *runs_total.iter().max().unwrap_or(&0);
                     let max_layout = *runs_layout.iter().max().unwrap_or(&0);
                     let max_solve = *runs_solve.iter().max().unwrap_or(&0);
-                    let max_pointer_move_dispatch_time_us = *runs_pointer_move_max_dispatch_time_us
-                        .iter()
-                        .max()
-                        .unwrap_or(&0);
-                    let max_pointer_move_hit_test_time_us = *runs_pointer_move_max_hit_test_time_us
-                        .iter()
-                        .max()
-                        .unwrap_or(&0);
+                    let max_pointer_move_dispatch =
+                        *runs_pointer_move_dispatch.iter().max().unwrap_or(&0);
+                    let max_pointer_move_hit_test =
+                        *runs_pointer_move_hit_test.iter().max().unwrap_or(&0);
                     let max_pointer_move_global_changes =
-                        *runs_pointer_move_snapshots_with_global_changes
+                        *runs_pointer_move_global_changes.iter().max().unwrap_or(&0);
+                    let max_run_paint_cache_hit_test_only_replay_allowed =
+                        *runs_paint_cache_hit_test_only_replay_allowed_max
                             .iter()
                             .max()
                             .unwrap_or(&0);
+                    let max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
+                        *runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
+                            .iter()
+                            .max()
+                            .unwrap_or(&0);
+                    let p90_total =
+                        percentile_linear_interpolated(&runs_total, 0.90).unwrap_or(max_total);
+                    let p90_layout =
+                        percentile_linear_interpolated(&runs_layout, 0.90).unwrap_or(max_layout);
+                    let p90_solve =
+                        percentile_linear_interpolated(&runs_solve, 0.90).unwrap_or(max_solve);
+                    let p90_pointer_move_dispatch =
+                        percentile_linear_interpolated(&runs_pointer_move_dispatch, 0.90)
+                            .unwrap_or(max_pointer_move_dispatch);
+                    let p90_pointer_move_hit_test =
+                        percentile_linear_interpolated(&runs_pointer_move_hit_test, 0.90)
+                            .unwrap_or(max_pointer_move_hit_test);
+                    let p90_pointer_move_global_changes =
+                        percentile_linear_interpolated(&runs_pointer_move_global_changes, 0.90)
+                            .unwrap_or(max_pointer_move_global_changes);
+                    let p90_run_paint_cache_hit_test_only_replay_allowed =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_allowed_max,
+                            0.90,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_allowed);
+                    let p90_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            0.90,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch);
+                    let p95_total =
+                        percentile_linear_interpolated(&runs_total, 0.95).unwrap_or(max_total);
+                    let p95_layout =
+                        percentile_linear_interpolated(&runs_layout, 0.95).unwrap_or(max_layout);
+                    let p95_solve =
+                        percentile_linear_interpolated(&runs_solve, 0.95).unwrap_or(max_solve);
+                    let p95_pointer_move_dispatch =
+                        percentile_linear_interpolated(&runs_pointer_move_dispatch, 0.95)
+                            .unwrap_or(max_pointer_move_dispatch);
+                    let p95_pointer_move_hit_test =
+                        percentile_linear_interpolated(&runs_pointer_move_hit_test, 0.95)
+                            .unwrap_or(max_pointer_move_hit_test);
+                    let p95_pointer_move_global_changes =
+                        percentile_linear_interpolated(&runs_pointer_move_global_changes, 0.95)
+                            .unwrap_or(max_pointer_move_global_changes);
+                    let p95_run_paint_cache_hit_test_only_replay_allowed =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_allowed_max,
+                            0.95,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_allowed);
+                    let p95_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            0.95,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch);
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
                     if perf_baseline_out.is_some() {
@@ -3827,9 +4782,31 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
-                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test_time_us,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                            },
+                            "p90": {
+                                "top_total_time_us": p90_total,
+                                "top_layout_time_us": p90_layout,
+                                "top_layout_engine_solve_time_us": p90_solve,
+                                "pointer_move_max_dispatch_time_us": p90_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": p90_pointer_move_hit_test,
+                                "pointer_move_snapshots_with_global_changes": p90_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": p90_run_paint_cache_hit_test_only_replay_allowed,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": p90_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                            },
+                            "p95": {
+                                "top_total_time_us": p95_total,
+                                "top_layout_time_us": p95_layout,
+                                "top_layout_engine_solve_time_us": p95_solve,
+                                "pointer_move_max_dispatch_time_us": p95_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": p95_pointer_move_hit_test,
+                                "pointer_move_snapshots_with_global_changes": p95_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": p95_run_paint_cache_hit_test_only_replay_allowed,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": p95_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                             },
                         }));
                     }
@@ -3866,6 +4843,23 @@ See: `docs/tracy.md`.\n";
                                 cli_thresholds.max_pointer_move_global_changes,
                                 baseline_thresholds.max_pointer_move_global_changes,
                             );
+                        let (
+                            thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                            src_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                        ) = resolve_threshold(
+                            cli_thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max,
+                            baseline_thresholds
+                                .min_run_paint_cache_hit_test_only_replay_allowed_max,
+                        );
+                        let (
+                            thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            src_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        ) = resolve_threshold(
+                            cli_thresholds
+                                .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            baseline_thresholds
+                                .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                        );
                         let row = serde_json::json!({
                             "script": script_key.clone(),
                             "sort": sort.as_str(),
@@ -3875,9 +4869,11 @@ See: `docs/tracy.md`.\n";
                                 "top_total_time_us": max_total,
                                 "top_layout_time_us": max_layout,
                                 "top_layout_engine_solve_time_us": max_solve,
-                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch_time_us,
-                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test_time_us,
+                                "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
+                                "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                             },
                             "thresholds": {
                                 "max_top_total_us": thr_total,
@@ -3886,6 +4882,8 @@ See: `docs/tracy.md`.\n";
                                 "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": thr_pointer_move_global_changes,
+                                "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             },
                             "threshold_sources": {
                                 "max_top_total_us": src_total,
@@ -3894,6 +4892,8 @@ See: `docs/tracy.md`.\n";
                                 "max_pointer_move_dispatch_us": src_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": src_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": src_pointer_move_global_changes,
+                                "min_run_paint_cache_hit_test_only_replay_allowed_max": src_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": src_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             },
                         });
                         perf_threshold_rows.push(row);
@@ -3905,9 +4905,12 @@ See: `docs/tracy.md`.\n";
                             max_total,
                             max_layout,
                             max_solve,
-                            max_pointer_move_dispatch_time_us,
-                            max_pointer_move_hit_test_time_us,
+                            any_pointer_move_frames_present,
+                            max_pointer_move_dispatch,
+                            max_pointer_move_hit_test,
                             max_pointer_move_global_changes,
+                            max_run_paint_cache_hit_test_only_replay_allowed,
+                            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                         ));
                     }
                 }
@@ -3930,30 +4933,118 @@ See: `docs/tracy.md`.\n";
                         let max_layout = max.get("top_layout_time_us")?.as_u64()?;
                         let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
                         let max_pointer_move_dispatch =
-                            max.get("pointer_move_max_dispatch_time_us").and_then(|v| v.as_u64());
+                            max.get("pointer_move_max_dispatch_time_us")?.as_u64()?;
                         let max_pointer_move_hit_test =
-                            max.get("pointer_move_max_hit_test_time_us").and_then(|v| v.as_u64());
+                            max.get("pointer_move_max_hit_test_time_us")?.as_u64()?;
                         let max_pointer_move_global_changes = max
-                            .get("pointer_move_snapshots_with_global_changes")
-                            .and_then(|v| v.as_u64());
-                        let thr_total =
-                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
-                        let thr_layout =
-                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
-                        let thr_solve =
-                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+                            .get("pointer_move_snapshots_with_global_changes")?
+                            .as_u64()?;
+                        let max_run_paint_cache_hit_test_only_replay_allowed = max
+                            .get("run_paint_cache_hit_test_only_replay_allowed_max")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        let max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch = max
+                            .get("run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0);
+                        let p90 = row.get("p90");
+                        let p90_total = p90
+                            .and_then(|m| m.get("top_total_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_total);
+                        let p90_layout = p90
+                            .and_then(|m| m.get("top_layout_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_layout);
+                        let p90_solve = p90
+                            .and_then(|m| m.get("top_layout_engine_solve_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_solve);
+                        let p95 = row.get("p95");
+                        let p95_total = p95
+                            .and_then(|m| m.get("top_total_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_total);
+                        let p95_layout = p95
+                            .and_then(|m| m.get("top_layout_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_layout);
+                        let p95_solve = p95
+                            .and_then(|m| m.get("top_layout_engine_solve_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_solve);
+                        let (seed_total, seed_total_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
+                            script.as_str(),
+                            "top_total_time_us",
+                            max_total,
+                            p90_total,
+                            p95_total,
+                        );
+                        let (seed_layout, seed_layout_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
+                            script.as_str(),
+                            "top_layout_time_us",
+                            max_layout,
+                            p90_layout,
+                            p95_layout,
+                        );
+                        let (seed_solve, seed_solve_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
+                            script.as_str(),
+                            "top_layout_engine_solve_time_us",
+                            max_solve,
+                            p90_solve,
+                            p95_solve,
+                        );
+                        // Quantize the big-frame thresholds so 1–2us jitter doesn't cause flaky
+                        // regressions (while keeping the headroom pct semantics intact).
+                        let thr_total = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_total,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
+                        let thr_layout = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_layout,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
+                        let thr_solve = apply_perf_baseline_headroom_with_slack_and_quantum(
+                            seed_solve,
+                            perf_baseline_headroom_pct,
+                            0,
+                            4,
+                        );
                         let thr_pointer_move_dispatch =
-                            max_pointer_move_dispatch.map(|v| {
-                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
-                            });
+                            apply_perf_baseline_headroom_with_slack_and_quantum(
+                                max_pointer_move_dispatch,
+                                perf_baseline_headroom_pct,
+                                8,
+                                4,
+                            );
                         let thr_pointer_move_hit_test =
-                            max_pointer_move_hit_test.map(|v| {
-                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
-                            });
-                        let thr_pointer_move_global_changes =
-                            max_pointer_move_global_changes.map(|v| {
-                                apply_perf_baseline_headroom(v, perf_baseline_headroom_pct)
-                            });
+                            apply_perf_baseline_headroom_with_slack_and_quantum(
+                                max_pointer_move_hit_test,
+                                perf_baseline_headroom_pct,
+                                2,
+                                2,
+                            );
+                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
+                            max_pointer_move_global_changes,
+                            perf_baseline_headroom_pct,
+                        );
+                        let thr_min_run_paint_cache_hit_test_only_replay_allowed_max =
+                            apply_perf_baseline_floor(
+                                max_run_paint_cache_hit_test_only_replay_allowed,
+                                perf_baseline_headroom_pct,
+                            );
+                        let thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max =
+                            apply_perf_baseline_headroom(
+                                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                                perf_baseline_headroom_pct,
+                            );
                         Some(serde_json::json!({
                             "script": script,
                             "thresholds": {
@@ -3963,6 +5054,8 @@ See: `docs/tracy.md`.\n";
                                 "max_pointer_move_dispatch_us": thr_pointer_move_dispatch,
                                 "max_pointer_move_hit_test_us": thr_pointer_move_hit_test,
                                 "max_pointer_move_global_changes": thr_pointer_move_global_changes,
+                                "min_run_paint_cache_hit_test_only_replay_allowed_max": thr_min_run_paint_cache_hit_test_only_replay_allowed_max,
+                                "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": thr_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                             },
                             "measured_max": {
                                 "top_total_time_us": max_total,
@@ -3971,6 +5064,28 @@ See: `docs/tracy.md`.\n";
                                 "pointer_move_max_dispatch_time_us": max_pointer_move_dispatch,
                                 "pointer_move_max_hit_test_time_us": max_pointer_move_hit_test,
                                 "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
+                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
+                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+                            },
+                            "measured_p90": {
+                                "top_total_time_us": p90_total,
+                                "top_layout_time_us": p90_layout,
+                                "top_layout_engine_solve_time_us": p90_solve,
+                            },
+                            "measured_p95": {
+                                "top_total_time_us": p95_total,
+                                "top_layout_time_us": p95_layout,
+                                "top_layout_engine_solve_time_us": p95_solve,
+                            },
+                            "threshold_seed": {
+                                "top_total_time_us": seed_total,
+                                "top_layout_time_us": seed_layout,
+                                "top_layout_engine_solve_time_us": seed_solve,
+                            },
+                            "threshold_seed_source": {
+                                "top_total_time_us": seed_total_source,
+                                "top_layout_time_us": seed_layout_source,
+                                "top_layout_engine_solve_time_us": seed_solve_source,
                             },
                         }))
                     })
@@ -3984,6 +5099,7 @@ See: `docs/tracy.md`.\n";
                     "sort": sort.as_str(),
                     "repeat": repeat,
                     "headroom_pct": perf_baseline_headroom_pct,
+                    "threshold_seed_policy": baseline_seed_policy.to_json(),
                     "rows": rows,
                 });
                 write_json_value(out_path, &payload)?;
@@ -4007,6 +5123,8 @@ See: `docs/tracy.md`.\n";
                         "max_pointer_move_dispatch_us": cli_thresholds.max_pointer_move_dispatch_us,
                         "max_pointer_move_hit_test_us": cli_thresholds.max_pointer_move_hit_test_us,
                         "max_pointer_move_global_changes": cli_thresholds.max_pointer_move_global_changes,
+                        "min_run_paint_cache_hit_test_only_replay_allowed_max": cli_thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max,
+                        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": cli_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
                     },
                     "baseline": perf_baseline.as_ref().map(|b| serde_json::json!({
                         "path": b.path.display().to_string(),
@@ -4122,6 +5240,20 @@ See: `docs/tracy.md`.\n";
                 check_bundle_for_wheel_scroll_hit_changes(
                     bundle_path.as_path(),
                     test_id,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(test_id) = check_scroll_offset_stable_test_id.as_deref() {
+                check_bundle_for_scroll_offset_stable(
+                    bundle_path.as_path(),
+                    test_id,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(selector) = check_scrollbar_thumb_valid_selector.as_deref() {
+                check_bundle_for_scrollbar_thumb_valid(
+                    bundle_path.as_path(),
+                    selector,
                     warmup_frames,
                 )?;
             }
@@ -5812,11 +6944,25 @@ fn apply_post_run_checks(
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
     check_pixels_changed_test_id: Option<&str>,
+    check_ui_gallery_code_editor_torture_marker_present: bool,
+    check_ui_gallery_code_editor_torture_undo_redo: bool,
+    check_ui_gallery_code_editor_word_boundary: bool,
+    check_ui_gallery_code_editor_a11y_selection: bool,
+    check_ui_gallery_code_editor_a11y_composition: bool,
+    check_ui_gallery_code_editor_a11y_selection_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool,
+    check_ui_gallery_code_editor_a11y_composition_drag: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
     check_wheel_scroll_hit_changes_test_id: Option<&str>,
+    check_scroll_offset_stable_test_id: Option<&str>,
+    check_scrollbar_thumb_valid_selector: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
+    check_chart_sampling_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_max: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
@@ -5825,6 +6971,8 @@ fn apply_post_run_checks(
     check_vlist_window_shifts_prefetch_max: Option<u64>,
     check_vlist_window_shifts_escape_max: Option<u64>,
     check_vlist_policy_key_stable: bool,
+    check_windowed_rows_offset_changes_min: Option<u64>,
+    check_windowed_rows_offset_changes_eps: f32,
     check_layout_fast_path_min: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -5854,6 +7002,39 @@ fn apply_post_run_checks(
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
     }
+    if check_ui_gallery_code_editor_torture_marker_present {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_present(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_undo_redo {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_word_boundary {
+        check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap_scroll {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_drag {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(bundle_path, warmup_frames)?;
+    }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
             bundle_path,
@@ -5867,8 +7048,38 @@ fn apply_post_run_checks(
     if let Some(test_id) = check_wheel_scroll_hit_changes_test_id {
         check_bundle_for_wheel_scroll_hit_changes(bundle_path, test_id, warmup_frames)?;
     }
+    if let Some(test_id) = check_scroll_offset_stable_test_id {
+        check_bundle_for_scroll_offset_stable(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(selector) = check_scrollbar_thumb_valid_selector {
+        check_bundle_for_scrollbar_thumb_valid(bundle_path, selector, warmup_frames)?;
+    }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
+    }
+    if let Some(min) = check_chart_sampling_window_shifts_min {
+        check_bundle_for_chart_sampling_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(min) = check_node_graph_cull_window_shifts_min {
+        check_bundle_for_node_graph_cull_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max) = check_node_graph_cull_window_shifts_max {
+        check_bundle_for_node_graph_cull_window_shifts_max(
+            bundle_path,
+            out_dir,
+            max,
+            warmup_frames,
+        )?;
     }
     if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
         check_bundle_for_vlist_visible_range_refreshes_min(
@@ -5924,6 +7135,15 @@ fn apply_post_run_checks(
     }
     if check_vlist_policy_key_stable {
         check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if let Some(min_total_offset_changes) = check_windowed_rows_offset_changes_min {
+        check_bundle_for_windowed_rows_offset_changes_min(
+            bundle_path,
+            out_dir,
+            min_total_offset_changes,
+            warmup_frames,
+            check_windowed_rows_offset_changes_eps,
+        )?;
     }
     if let Some(min_frames) = check_layout_fast_path_min {
         check_bundle_for_layout_fast_path_min(bundle_path, out_dir, min_frames, warmup_frames)?;
@@ -6569,6 +7789,461 @@ fn summarize_times_us(values: &[u64]) -> serde_json::Value {
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BaselineSeedKind {
+    Max,
+    P90,
+    P95,
+}
+
+impl BaselineSeedKind {
+    fn parse(raw: &str) -> Option<Self> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "max" => Some(Self::Max),
+            "p90" => Some(Self::P90),
+            "p95" => Some(Self::P95),
+            _ => None,
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Max => "max",
+            Self::P90 => "p90",
+            Self::P95 => "p95",
+        }
+    }
+
+    fn pick_value(self, max_value: u64, p90_value: u64, p95_value: u64) -> u64 {
+        match self {
+            Self::Max => max_value,
+            Self::P90 => p90_value,
+            Self::P95 => p95_value,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct BaselineSeedRule {
+    script: String,
+    metric: String,
+    seed: BaselineSeedKind,
+    source: &'static str,
+}
+
+#[derive(Debug, Clone)]
+struct BaselineSeedPolicy {
+    default_seed: BaselineSeedKind,
+    rules: Vec<BaselineSeedRule>,
+}
+
+#[derive(Debug, Clone)]
+struct BaselineSeedPreset {
+    default_seed: Option<BaselineSeedKind>,
+    rules: Vec<BaselineSeedRule>,
+}
+
+impl BaselineSeedPolicy {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": 1,
+            "default_seed": self.default_seed.as_str(),
+            "rules": self
+                .rules
+                .iter()
+                .map(|rule| serde_json::json!({
+                    "script": rule.script,
+                    "metric": rule.metric,
+                    "seed": rule.seed.as_str(),
+                    "source": rule.source,
+                }))
+                .collect::<Vec<_>>(),
+        })
+    }
+}
+
+fn perf_suite_scripts_by_name(name: &str) -> Option<&'static [&'static str]> {
+    match name {
+        "ui-gallery" => Some(PERF_SUITE_UI_GALLERY_SCRIPTS),
+        "ui-gallery-steady" => Some(PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS),
+        "ui-resize-probes" => Some(PERF_SUITE_UI_RESIZE_PROBES_SCRIPTS),
+        _ => None,
+    }
+}
+
+fn normalize_script_match_key(workspace_root: &Path, script: &str) -> String {
+    if script == "*" {
+        return "*".to_string();
+    }
+    let resolved = resolve_path(workspace_root, PathBuf::from(script));
+    normalize_repo_relative_path(workspace_root, &resolved)
+}
+
+fn default_perf_baseline_seed_rules(workspace_root: &Path) -> Vec<BaselineSeedRule> {
+    [
+        "top_total_time_us",
+        "top_layout_time_us",
+        "top_layout_engine_solve_time_us",
+    ]
+    .into_iter()
+    .map(|metric| BaselineSeedRule {
+        script: normalize_script_match_key(
+            workspace_root,
+            "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        ),
+        metric: metric.to_string(),
+        seed: BaselineSeedKind::P95,
+        source: "default",
+    })
+    .collect::<Vec<_>>()
+}
+
+fn load_perf_baseline_seed_preset(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    preset_path: &Path,
+) -> Result<BaselineSeedPreset, String> {
+    let resolved_path = resolve_path(workspace_root, preset_path.to_path_buf());
+    let value = read_json_value(&resolved_path).ok_or_else(|| {
+        format!(
+            "failed to read --perf-baseline-seed-preset `{}`",
+            resolved_path.display()
+        )
+    })?;
+    parse_perf_baseline_seed_preset_json(workspace_root, active_suites, &resolved_path, &value)
+}
+
+fn parse_perf_baseline_seed_preset_json(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    path: &Path,
+    value: &serde_json::Value,
+) -> Result<BaselineSeedPreset, String> {
+    let schema_version = value
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: missing `schema_version`",
+                path.display()
+            )
+        })?;
+    if schema_version != 1 {
+        return Err(format!(
+            "invalid --perf-baseline-seed-preset `{}`: unsupported `schema_version` `{schema_version}` (expected 1)",
+            path.display()
+        ));
+    }
+
+    let kind = value.get("kind").and_then(|v| v.as_str()).ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed-preset `{}`: missing `kind`",
+            path.display()
+        )
+    })?;
+    if kind != "perf_baseline_seed_policy" {
+        return Err(format!(
+            "invalid --perf-baseline-seed-preset `{}`: unsupported `kind` `{kind}` (expected `perf_baseline_seed_policy`)",
+            path.display()
+        ));
+    }
+
+    let default_seed = if let Some(default_seed_value) = value.get("default_seed") {
+        let default_seed_raw = default_seed_value.as_str().ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: `default_seed` must be a string",
+                path.display()
+            )
+        })?;
+        Some(BaselineSeedKind::parse(default_seed_raw).ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: `default_seed` must be one of max|p90|p95",
+                path.display()
+            )
+        })?)
+    } else {
+        None
+    };
+
+    let rules = value
+        .get("rules")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: missing `rules` array",
+                path.display()
+            )
+        })?;
+
+    let mut parsed_rules: Vec<BaselineSeedRule> = Vec::new();
+    for (index, rule_value) in rules.iter().enumerate() {
+        let scope = rule_value
+            .get("scope")
+            .or_else(|| rule_value.get("script"))
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `scope` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+        let metric = rule_value
+            .get("metric")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `metric` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+        let seed = rule_value
+            .get("seed")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `seed` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+
+        let spec = format!("{}@{}={}", scope.trim(), metric.trim(), seed.trim());
+        parsed_rules.extend(
+            parse_perf_baseline_seed_rule_spec_with_source(
+                workspace_root,
+                active_suites,
+                spec.as_str(),
+                "preset",
+                "preset-suite",
+            )
+            .map_err(|err| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: {err}",
+                    path.display(),
+                    index + 1
+                )
+            })?,
+        );
+    }
+
+    Ok(BaselineSeedPreset {
+        default_seed,
+        rules: parsed_rules,
+    })
+}
+
+fn build_perf_baseline_seed_policy(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    preset_paths: &[PathBuf],
+    specs: &[String],
+) -> Result<BaselineSeedPolicy, String> {
+    let mut default_seed = BaselineSeedKind::Max;
+    let mut rules = default_perf_baseline_seed_rules(workspace_root);
+
+    for preset_path in preset_paths {
+        let preset = load_perf_baseline_seed_preset(workspace_root, active_suites, preset_path)?;
+        if let Some(seed) = preset.default_seed {
+            default_seed = seed;
+        }
+        rules.extend(preset.rules);
+    }
+
+    for spec in specs {
+        rules.extend(parse_perf_baseline_seed_rule_spec(
+            workspace_root,
+            active_suites,
+            spec,
+        )?);
+    }
+
+    Ok(BaselineSeedPolicy {
+        default_seed,
+        rules,
+    })
+}
+
+fn parse_perf_baseline_seed_rule_spec(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    spec: &str,
+) -> Result<Vec<BaselineSeedRule>, String> {
+    parse_perf_baseline_seed_rule_spec_with_source(
+        workspace_root,
+        active_suites,
+        spec,
+        "cli",
+        "cli-suite",
+    )
+}
+
+fn parse_perf_baseline_seed_rule_spec_with_source(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    spec: &str,
+    source: &'static str,
+    suite_source: &'static str,
+) -> Result<Vec<BaselineSeedRule>, String> {
+    let (lhs, seed_raw) = spec.split_once('=').ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed spec `{spec}` (expected <scope>@<metric>=<max|p90|p95>)"
+        )
+    })?;
+    let (scope_raw, metric_raw) = lhs.rsplit_once('@').ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed spec `{spec}` (expected <scope>@<metric>=<max|p90|p95>)"
+        )
+    })?;
+
+    let seed = BaselineSeedKind::parse(seed_raw).ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed seed `{}` (expected max|p90|p95)",
+            seed_raw.trim()
+        )
+    })?;
+
+    let metric = metric_raw.trim();
+    if metric.is_empty() {
+        return Err(format!(
+            "invalid --perf-baseline-seed spec `{spec}` (metric cannot be empty)"
+        ));
+    }
+
+    let scope = scope_raw.trim();
+    if scope.is_empty() {
+        return Err(format!(
+            "invalid --perf-baseline-seed spec `{spec}` (scope cannot be empty)"
+        ));
+    }
+
+    let mut targets: Vec<(String, &'static str)> = Vec::new();
+    if scope == "*" {
+        targets.push(("*".to_string(), source));
+    } else if scope == "this-suite" {
+        if active_suites.is_empty() {
+            return Err(
+                "invalid --perf-baseline-seed scope `this-suite` (requires a named perf suite such as `ui-gallery`, `ui-gallery-steady`, or `ui-resize-probes`)".to_string(),
+            );
+        }
+        for suite in active_suites {
+            if let Some(scripts) = perf_suite_scripts_by_name(suite) {
+                for script in scripts {
+                    targets.push((
+                        normalize_script_match_key(workspace_root, script),
+                        suite_source,
+                    ));
+                }
+            }
+        }
+    } else if let Some(scope_suite) = scope.strip_prefix("suite:") {
+        let scope_suite = scope_suite.trim();
+        let Some(scripts) = perf_suite_scripts_by_name(scope_suite) else {
+            return Err(format!(
+                "unknown --perf-baseline-seed suite `{scope_suite}` (expected one of: ui-gallery, ui-gallery-steady, ui-resize-probes)"
+            ));
+        };
+        for script in scripts {
+            targets.push((
+                normalize_script_match_key(workspace_root, script),
+                suite_source,
+            ));
+        }
+    } else if let Some(scripts) = perf_suite_scripts_by_name(scope) {
+        for script in scripts {
+            targets.push((
+                normalize_script_match_key(workspace_root, script),
+                suite_source,
+            ));
+        }
+    } else {
+        targets.push((normalize_script_match_key(workspace_root, scope), source));
+    }
+
+    let mut rules: Vec<BaselineSeedRule> = Vec::new();
+    for (target, source) in targets {
+        rules.push(BaselineSeedRule {
+            script: target,
+            metric: metric.to_string(),
+            seed,
+            source,
+        });
+    }
+    Ok(rules)
+}
+
+fn baseline_seed_rule_matches_script(rule_script: &str, script: &str) -> bool {
+    if rule_script == "*" || rule_script == script {
+        return true;
+    }
+    if !rule_script.contains('/') && !rule_script.contains('\\') {
+        return script.ends_with(&format!("/{rule_script}"));
+    }
+    false
+}
+
+fn baseline_threshold_seed_kind_for_metric(
+    policy: &BaselineSeedPolicy,
+    script: &str,
+    metric: &str,
+) -> BaselineSeedKind {
+    let mut seed = policy.default_seed;
+    for rule in &policy.rules {
+        if rule.metric == metric && baseline_seed_rule_matches_script(rule.script.as_str(), script)
+        {
+            seed = rule.seed;
+        }
+    }
+    seed
+}
+
+fn baseline_threshold_seed_for_metric(
+    policy: &BaselineSeedPolicy,
+    script: &str,
+    metric: &str,
+    max_value: u64,
+    p90_value: u64,
+    p95_value: u64,
+) -> (u64, String) {
+    let seed_kind = baseline_threshold_seed_kind_for_metric(policy, script, metric);
+    (
+        seed_kind.pick_value(max_value, p90_value, p95_value),
+        seed_kind.as_str().to_string(),
+    )
+}
+
+fn percentile_linear_interpolated(values: &[u64], percentile: f64) -> Option<u64> {
+    if values.is_empty() {
+        return None;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    Some(percentile_linear_interpolated_sorted(&sorted, percentile))
+}
+
+fn percentile_linear_interpolated_sorted(sorted: &[u64], percentile: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    if sorted.len() == 1 {
+        return sorted[0];
+    }
+
+    let percentile = percentile.clamp(0.0, 1.0);
+    let max_index = (sorted.len() - 1) as f64;
+    let rank = percentile * max_index;
+    let lower_index = rank.floor() as usize;
+    let upper_index = rank.ceil() as usize;
+    if lower_index == upper_index {
+        return sorted[lower_index];
+    }
+
+    let lower = sorted[lower_index] as f64;
+    let upper = sorted[upper_index] as f64;
+    (lower + (upper - lower) * (rank - lower_index as f64)).round() as u64
+}
+
 fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
     if sorted.is_empty() {
         return 0;
@@ -6877,6 +8552,317 @@ mod tests {
     }
 
     #[test]
+    fn perf_percentile_linear_interpolated_reduces_small_sample_tail_noise() {
+        let values = vec![10u64, 20, 30, 40, 50, 60, 120];
+        assert_eq!(percentile_linear_interpolated(&values, 0.95), Some(102));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_for_resize_script() {
+        let policy = build_perf_baseline_seed_policy(Path::new("."), &[], &[], &[]).unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                22645,
+                15000,
+                15856,
+            ),
+            (15856, "p95".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "pointer_move_max_dispatch_time_us",
+                3673,
+                3400,
+                3200,
+            ),
+            (3673, "max".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                7000,
+                7000,
+            ),
+            (7153, "max".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_can_override_with_p90() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[],
+            &[],
+            &[
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90"
+                    .to_string(),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_bad_spec() {
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[],
+            &[],
+            &[
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p80"
+                    .to_string(),
+            ],
+        )
+        .unwrap_err();
+        assert!(err.contains("expected max|p90|p95"));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_supports_suite_scope() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[],
+            &["ui-gallery-steady@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                "top_total_time_us",
+                7000,
+                6600,
+                6800,
+            ),
+            (7000, "max".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_supports_this_suite_scope() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                15763,
+                15683,
+                15723,
+            ),
+            (15683, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_this_suite_without_named_suite() {
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[],
+            &[],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap_err();
+        assert!(err.contains("requires a named perf suite"));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_supports_preset_file() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "default_seed": "max",
+            "rules": [
+                {
+                    "scope": "ui-gallery-steady",
+                    "metric": "top_total_time_us",
+                    "seed": "p90"
+                },
+                {
+                    "scope": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                    "metric": "top_layout_time_us",
+                    "seed": "p95"
+                }
+            ]
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &[],
+        )
+        .unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_layout_time_us",
+                5400,
+                5100,
+                5200,
+            ),
+            (5200, "p95".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_bad_preset_schema() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_bad_schema");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 2,
+            "kind": "perf_baseline_seed_policy",
+            "rules": []
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &[],
+        )
+        .unwrap_err();
+        assert!(err.contains("unsupported `schema_version`"));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_cli_overrides_preset_rule() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_cli_override");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "rules": [
+                {
+                    "scope": "ui-gallery-steady",
+                    "metric": "top_total_time_us",
+                    "seed": "p95"
+                }
+            ]
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_preset_can_override_default_seed() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_default_seed");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "default_seed": "p90",
+            "rules": []
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy =
+            build_perf_baseline_seed_policy(Path::new("."), &[], &[preset_path], &[]).unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "pointer_move_max_dispatch_time_us",
+                3673,
+                3400,
+                3200,
+            ),
+            (3400, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                15763,
+                15683,
+                15723,
+            ),
+            (15723, "p95".to_string())
+        );
+    }
+    #[test]
     fn bundle_stats_tracks_hover_declarative_layout_invalidations() {
         let bundle = json!({
             "schema_version": 1,
@@ -6954,6 +8940,122 @@ mod tests {
         );
     }
 
+    #[test]
+    fn bundle_stats_aggregates_query_snapshot_entries() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Loading",
+                                        "stale": false,
+                                        "inflight": { "attempt": 1 }
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 1,
+                                    "invalidation_walk_nodes": 1,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Success",
+                                        "stale": true,
+                                        "retry": { "next_retry_at_unix_ms": 1000 }
+                                    },
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Error",
+                                        "stale": false,
+                                        "retry": { "next_retry_at_unix_ms": 2000 }
+                                    },
+                                    {
+                                        "namespace": "users",
+                                        "status": "Idle",
+                                        "stale": false
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 2,
+                                    "invalidation_walk_nodes": 2,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            3,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(report.snapshots_with_query_snapshot, 2);
+        assert_eq!(report.query_entries_total, 4);
+        assert_eq!(report.query_entries_stale, 1);
+        assert_eq!(report.query_entries_inflight, 1);
+        assert_eq!(report.query_entries_idle, 1);
+        assert_eq!(report.query_entries_loading, 1);
+        assert_eq!(report.query_entries_success, 1);
+        assert_eq!(report.query_entries_error, 1);
+        assert_eq!(report.query_entries_retry_pending, 2);
+
+        let report_json = report.to_json();
+        assert_eq!(
+            report_json["snapshots_with_query_snapshot"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(report_json["sum"]["query_entries_total"].as_u64(), Some(4));
+        assert_eq!(report_json["sum"]["query_entries_stale"].as_u64(), Some(1));
+        assert_eq!(
+            report_json["sum"]["query_entries_inflight"].as_u64(),
+            Some(1)
+        );
+        assert_eq!(
+            report_json["sum"]["query_entries_retry_pending"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(
+            report_json["query_namespace_hotspots"][0]["namespace"],
+            "todos"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][0]["count"], 3);
+        assert_eq!(
+            report_json["query_namespace_hotspots"][1]["namespace"],
+            "users"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][1]["count"], 1);
+    }
     #[test]
     fn json_pointer_set_updates_object_field() {
         let mut v = json!({
@@ -8674,14 +10776,19 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
-                max_pointer_move_dispatch_us: None,
-                max_pointer_move_hit_test_us: None,
-                max_pointer_move_global_changes: None,
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
+                max_pointer_move_global_changes: Some(0),
+                min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
             PerfThresholds::default(),
             99,
             79,
             49,
+            true,
+            1_999,
+            1_499,
             0,
             0,
             0,
@@ -8698,15 +10805,104 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
-                max_pointer_move_dispatch_us: None,
-                max_pointer_move_hit_test_us: None,
-                max_pointer_move_global_changes: None,
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
+                max_pointer_move_global_changes: Some(0),
+                min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
             },
             PerfThresholds::default(),
             101,
             81,
             51,
+            true,
+            2_001,
+            1_501,
+            1,
             0,
+            0,
+        );
+        assert_eq!(failures.len(), 6);
+        let metrics: Vec<String> = failures
+            .iter()
+            .filter_map(|v| {
+                v.get("metric")
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+        assert!(metrics.contains(&"top_total_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_max_dispatch_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_max_hit_test_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_snapshots_with_global_changes".to_string()));
+    }
+
+    #[test]
+    fn perf_threshold_scan_reports_hit_test_only_replay_gate_metrics() {
+        let failures = scan_perf_threshold_failures(
+            "script.json",
+            BundleStatsSort::Time,
+            PerfThresholds {
+                max_top_total_us: None,
+                max_top_layout_us: None,
+                max_top_solve_us: None,
+                max_pointer_move_dispatch_us: None,
+                max_pointer_move_hit_test_us: None,
+                max_pointer_move_global_changes: None,
+                min_run_paint_cache_hit_test_only_replay_allowed_max: Some(10),
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Some(0),
+            },
+            PerfThresholds::default(),
+            0,
+            0,
+            0,
+            true,
+            0,
+            0,
+            0,
+            9,
+            1,
+        );
+        assert_eq!(failures.len(), 2);
+        let metrics: Vec<String> = failures
+            .iter()
+            .filter_map(|v| {
+                v.get("metric")
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+        assert!(metrics.contains(&"run_paint_cache_hit_test_only_replay_allowed_max".to_string()));
+        assert!(metrics.contains(
+            &"run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max".to_string()
+        ));
+    }
+
+    #[test]
+    fn perf_threshold_scan_skips_pointer_move_metrics_when_no_pointer_move_frames() {
+        let failures = scan_perf_threshold_failures(
+            "script.json",
+            BundleStatsSort::Time,
+            PerfThresholds {
+                max_top_total_us: Some(100),
+                max_top_layout_us: Some(80),
+                max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: Some(2000),
+                max_pointer_move_hit_test_us: Some(1500),
+                max_pointer_move_global_changes: Some(0),
+                min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            },
+            PerfThresholds::default(),
+            101,
+            81,
+            51,
+            false,
+            2001,
+            1501,
+            1,
             0,
             0,
         );
@@ -8722,6 +10918,9 @@ mod tests {
         assert!(metrics.contains(&"top_total_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_max_dispatch_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_max_hit_test_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_snapshots_with_global_changes".to_string()));
     }
 
     #[test]
@@ -8729,6 +10928,18 @@ mod tests {
         assert_eq!(apply_perf_baseline_headroom(100, 20), 120);
         assert_eq!(apply_perf_baseline_headroom(101, 20), 122);
         assert_eq!(apply_perf_baseline_headroom(0, 20), 0);
+    }
+
+    #[test]
+    fn perf_baseline_big_thresholds_quantize_to_4us() {
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(9828, 20, 0, 4),
+            11796
+        );
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(15437, 20, 0, 4),
+            18528
+        );
     }
 
     #[test]
@@ -8745,7 +10956,12 @@ mod tests {
                 "thresholds": {
                     "max_top_total_us": 25000,
                     "max_top_layout_us": 15000,
-                    "max_top_solve_us": 8000
+                    "max_top_solve_us": 8000,
+                    "max_pointer_move_dispatch_us": 3000,
+                    "max_pointer_move_hit_test_us": 2000,
+                    "max_pointer_move_global_changes": 1,
+                    "min_run_paint_cache_hit_test_only_replay_allowed_max": 12,
+                    "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0
                 }
             }]
         });
@@ -8761,6 +10977,17 @@ mod tests {
         assert_eq!(t.max_top_total_us, Some(25_000));
         assert_eq!(t.max_top_layout_us, Some(15_000));
         assert_eq!(t.max_top_solve_us, Some(8_000));
+        assert_eq!(t.max_pointer_move_dispatch_us, Some(3_000));
+        assert_eq!(t.max_pointer_move_hit_test_us, Some(2_000));
+        assert_eq!(t.max_pointer_move_global_changes, Some(1));
+        assert_eq!(
+            t.min_run_paint_cache_hit_test_only_replay_allowed_max,
+            Some(12)
+        );
+        assert_eq!(
+            t.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+            Some(0)
+        );
     }
 
     #[test]

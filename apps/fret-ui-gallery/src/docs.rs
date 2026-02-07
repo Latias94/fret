@@ -102,6 +102,30 @@ std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+## Hit-test-only paint-cache probe
+
+This page is a focused probe for the `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment:
+
+- pointer moves intentionally trigger `Invalidation::HitTestOnly` on a cache-eligible subtree,
+- layout stays stable,
+- paint output stays stable.
+
+Goal: make the new diagnostics counters non-zero in a deterministic script so A/B results are
+causally attributable to the gate path.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+```rust
+// Recommended run flags for this probe:
+// - start directly on the probe page
+// - disable gallery view-cache wrappers to keep paint-cache gating simple
+std::env::set_var("FRET_UI_GALLERY_START_PAGE", "hit_test_only_paint_cache_probe");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE", "0");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "0");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 
@@ -1450,6 +1474,13 @@ pub(crate) const DOC_RESIZABLE: &str = r#"
 
 Resizable panel groups are runtime-owned drag surfaces (splitter handles).
 
+Upstream shadcn/ui docs examples:
+
+- Demo (nested groups)
+- Vertical
+- Handle (`with_handle(true)` in Fret; approximated chrome)
+- RTL (via a direction provider)
+
 This page validates:
 
 - fraction model (`Model<Vec<f32>>`) persistence
@@ -1458,13 +1489,24 @@ This page validates:
 
 pub(crate) const USAGE_RESIZABLE: &str = r#"
 ```rust
-let fractions = app.models_mut().insert(vec![0.3, 0.7]);
+let h = app.models_mut().insert(vec![0.5, 0.5]);
+let v = app.models_mut().insert(vec![0.25, 0.75]);
 
-let group = shadcn::ResizablePanelGroup::new(fractions).entries(vec![
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-    shadcn::ResizableHandle::new().into(),
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-]);
+let nested = shadcn::ResizablePanelGroup::new(v)
+    .axis(fret_core::Axis::Vertical)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+    ]);
+
+let group = shadcn::ResizablePanelGroup::new(h)
+    .axis(fret_core::Axis::Horizontal)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([nested]).into(),
+    ]);
 ```
 "#;
 
@@ -1743,21 +1785,39 @@ pub(crate) const DOC_SLIDER: &str = r#"
 Slider is a pointer-driven control with support for:
 
 - single value
-- multi-thumb range (`min_steps_between_thumbs`)
+- range / multiple thumbs (`step` + `min_steps_between_thumbs`)
 - `orientation` (horizontal / vertical)
 - direction-aware mapping (`dir` + `inverted`, Radix-aligned)
 - `on_value_commit` (Radix `onValueCommit`)
 
-This page uses `Slider::new_controllable` to keep demo state local to the subtree.
+Upstream shadcn/ui docs examples:
+
+- Range
+- Multiple Thumbs
+- Vertical
+- Controlled
+- Disabled
+- RTL
+
+This page demonstrates both uncontrolled (`Slider::new_controllable`) and controlled (`Slider::new(model)`) usage.
 "#;
 
 pub(crate) const USAGE_SLIDER: &str = r#"
 ```rust
-let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+// Uncontrolled (state in element subtree):
+let slider = shadcn::Slider::new_controllable(cx, None, || vec![33.0])
     .range(0.0, 100.0)
+    .step(1.0)
     .on_value_commit(|_host, _cx, _values| {
         // Called on pointer up and keyboard commits.
     })
+    .into_element(cx);
+
+// Controlled (state in the model store):
+let values = app.models_mut().insert(vec![0.3, 0.7]);
+let slider = shadcn::Slider::new(values)
+    .range(0.0, 1.0)
+    .step(0.1)
     .into_element(cx);
 ```
 "#;

@@ -25,6 +25,7 @@ contracts early to avoid large rewrites later.
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`
@@ -102,7 +103,7 @@ so the default authoring story lives in ecosystem crates.
    - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
 - UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
-- Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer/mod.rs`
+- Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render-wgpu/src/renderer/mod.rs`
 
 ## Repository references
 

@@ -1,8 +1,10 @@
-//! A small curated set of Lucide SVG icons (vendored) for Fret demos/components.
+//! A vendored Lucide SVG icon pack for Fret demos/components.
 
 use fret_icons::{IconId, IconRegistry, ids};
 use rust_embed::RustEmbed;
 use std::{borrow::Cow, sync::Arc};
+
+pub mod generated_ids;
 
 #[derive(RustEmbed)]
 #[folder = "assets"]
@@ -44,7 +46,7 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {
         Cow::Owned(v) => Arc::from(v),
     };
 
-    reg.register_svg_bytes(IconId::new(format!("lucide.{icon_name}")), bytes);
+    let _ = reg.register_svg_bytes(IconId::new(format!("lucide.{icon_name}")), bytes);
 }
 
 #[cfg(feature = "semantic-ui")]
@@ -52,16 +54,29 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
-        reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
-        reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
-        reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
-        reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
-        reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
-        reg.alias(ids::ui::MORE_HORIZONTAL, IconId::new("lucide.ellipsis"));
-        reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
-        reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
-        reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
-        reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
-        reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
+        let _ = reg.alias(ids::ui::ARROW_LEFT, IconId::new("lucide.arrow-left"));
+        let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("lucide.arrow-right"));
+        let _ = reg.alias(ids::ui::BOOK, IconId::new("lucide.book"));
+        let _ = reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
+        let _ = reg.alias(ids::ui::CHEVRON_LEFT, IconId::new("lucide.chevron-left"));
+        let _ = reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
+        let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
+        let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
+        let _ = reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
+        let _ = reg.alias(ids::ui::LOADER, IconId::new("lucide.loader-circle"));
+        let _ = reg.alias(ids::ui::MORE_HORIZONTAL, IconId::new("lucide.ellipsis"));
+        let _ = reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
+        let _ = reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
+        let _ = reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
+        let _ = reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
+        let _ = reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
+        let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("lucide.circle-x"));
+        let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("lucide.circle"));
+        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("lucide.clock"));
+        let _ = reg.alias(
+            ids::ui::STATUS_SUCCEEDED,
+            IconId::new("lucide.circle-check"),
+        );
+        let _ = reg.alias(ids::ui::TOOL, IconId::new("lucide.wrench"));
     }
 }

@@ -3,6 +3,7 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
+use fret_query::{QueryClientSnapshot, QuerySnapshotEntry};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -236,6 +237,47 @@ impl UiDiagnosticsService {
         provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     ) {
         self.app_snapshot_provider = provider;
+    }
+
+    /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
+    /// semantics snapshot for `window` on this frame.
+    ///
+    /// This is a performance knob: semantics snapshots are expensive, and many scripted steps only
+    /// need semantics for *initial target resolution*. Once a step has cached its target geometry
+    /// (via `v2_step_state`), we can often skip requesting semantics until a selector-based step is
+    /// about to run again.
+    pub fn wants_semantics_snapshot(&mut self, window: AppWindowId) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+        self.poll_script_trigger();
+
+        if self.cfg.capture_semantics {
+            return true;
+        }
+
+        if self.pick_armed_run_id.is_some()
+            || self
+                .pending_pick
+                .as_ref()
+                .is_some_and(|p| p.window == window)
+            || self.inspect_enabled
+            || self.inspect_locked_windows.contains(&window)
+            || self.inspect_toast.contains_key(&window)
+        {
+            return true;
+        }
+
+        if self.pending_script.is_some() {
+            return true;
+        }
+
+        self.active_scripts
+            .get(&window)
+            .is_some_and(active_script_needs_semantics_snapshot)
     }
 
     pub fn poll_exit_trigger(&mut self) -> bool {
@@ -601,8 +643,8 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         }
 
-        self.poll_script_trigger();
         self.ensure_ready_file();
+        self.poll_script_trigger();
 
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
@@ -682,7 +724,6 @@ impl UiDiagnosticsService {
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
 
-        // Some steps need per-frame state even when running schema v1 scripts.
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::EnsureVisible { .. }
@@ -690,9 +731,10 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
-                | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::DragPointer { .. }
+                | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
+                | UiActionStepV2::MovePointerSweep { .. }
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;
@@ -914,6 +956,29 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::PressShortcut { shortcut, repeat } => match parse_shortcut(&shortcut) {
+                Ok((key, modifiers)) => {
+                    output
+                        .events
+                        .extend(press_key_events(key, modifiers, repeat));
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-press_shortcut"));
+                    }
+                }
+                Err(reason) => {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-press_shortcut-invalid"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some(reason);
+                    output.request_redraw = true;
+                }
+            },
             UiActionStepV2::TypeText { text } => {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
@@ -1039,7 +1104,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.extend(click_events(pos, button));
 
                 active.wait_until = None;
@@ -1096,7 +1161,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
@@ -1114,9 +1179,10 @@ impl UiDiagnosticsService {
                 delta_y,
                 steps,
             } => {
-                // `drag_pointer` is intentionally multi-frame so the element tree can rebuild and
-                // observe intermediate drag state (e.g. pointer capture, floating window moves,
-                // docking drop indicators).
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+
                 let mut state = match active.v2_step_state.take() {
                     Some(V2StepState::DragPointer(state)) if state.step_index == step_index => {
                         state
@@ -1170,99 +1236,23 @@ impl UiDiagnosticsService {
                             return output;
                         };
 
-                        let start = center_of_rect(node.bounds);
+                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
                         );
                         V2DragPointerState {
                             step_index,
-                            phase: 0,
                             steps: steps.max(1),
+                            button,
                             start,
                             end,
-                            button,
+                            frame: 0,
                         }
                     }
                 };
 
-                active.wait_until = None;
-                active.screenshot_wait = None;
-
-                let pointer_id = PointerId(0);
-                let modifiers = Modifiers::default();
-                let pointer_type = PointerType::Mouse;
-
-                let button = match state.button {
-                    UiMouseButtonV1::Left => MouseButton::Left,
-                    UiMouseButtonV1::Right => MouseButton::Right,
-                    UiMouseButtonV1::Middle => MouseButton::Middle,
-                };
-
-                let mut pressed_buttons = MouseButtons::default();
-                match button {
-                    MouseButton::Left => pressed_buttons.left = true,
-                    MouseButton::Right => pressed_buttons.right = true,
-                    MouseButton::Middle => pressed_buttons.middle = true,
-                    _ => {}
-                }
-
-                let done = if state.phase == 0 {
-                    output.events.push(move_pointer_event(state.start));
-                    output.events.push(Event::Pointer(PointerEvent::Down {
-                        pointer_id,
-                        position: state.start,
-                        button,
-                        modifiers,
-                        click_count: 1,
-                        pointer_type,
-                    }));
-                    state.phase = 1;
-                    false
-                } else if state.phase <= state.steps {
-                    let t = state.phase as f32 / state.steps as f32;
-                    let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
-                    let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
-                    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
-                    output.events.push(Event::Pointer(PointerEvent::Move {
-                        pointer_id,
-                        position,
-                        buttons: pressed_buttons,
-                        modifiers,
-                        pointer_type,
-                    }));
-                    output
-                        .events
-                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
-                            pointer_id,
-                            position,
-                            kind: fret_core::InternalDragKind::Over,
-                            modifiers,
-                        }));
-                    state.phase = state.phase.saturating_add(1);
-                    false
-                } else {
-                    output.events.push(Event::Pointer(PointerEvent::Up {
-                        pointer_id,
-                        position: state.end,
-                        button,
-                        modifiers,
-                        is_click: false,
-                        click_count: 1,
-                        pointer_type,
-                    }));
-                    output
-                        .events
-                        .push(Event::InternalDrag(fret_core::InternalDragEvent {
-                            pointer_id,
-                            position: state.end,
-                            kind: fret_core::InternalDragKind::Drop,
-                            modifiers,
-                        }));
-                    true
-                };
-
-                output.request_redraw = true;
+                let done = push_drag_playback_frame(&mut state, &mut output.events);
                 if done {
                     active.v2_step_state = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -1272,6 +1262,114 @@ impl UiDiagnosticsService {
                     }
                 } else {
                     active.v2_step_state = Some(V2StepState::DragPointer(state));
+                }
+            }
+            UiActionStepV2::MovePointerSweep {
+                target,
+                delta_x,
+                delta_y,
+                steps,
+                frames_per_step,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let Some(snapshot) = semantics_snapshot else {
+                    output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-move_pointer_sweep-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::MovePointerSweep(state))
+                        if state.step_index == step_index =>
+                    {
+                        state
+                    }
+                    _ => {
+                        let Some(node) =
+                            select_semantics_node(snapshot, window, element_runtime, &target)
+                        else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+
+                        let start = center_of_rect(node.bounds);
+                        let end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        V2MovePointerSweepState {
+                            step_index,
+                            start,
+                            end,
+                            steps: steps.max(1),
+                            next_step: 0,
+                            frames_per_step: frames_per_step.max(1),
+                            wait_frames_remaining: 0,
+                        }
+                    }
+                };
+
+                if state.wait_frames_remaining > 0 {
+                    state.wait_frames_remaining = state.wait_frames_remaining.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
+                } else if state.next_step > state.steps {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-move_pointer_sweep"));
+                    }
+                } else {
+                    let t = state.next_step as f32 / state.steps as f32;
+                    let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                    let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                    output.events.push(move_pointer_event(position));
+
+                    state.next_step = state.next_step.saturating_add(1);
+                    state.wait_frames_remaining = state.frames_per_step.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Wheel {
@@ -1323,7 +1421,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
@@ -1462,7 +1560,10 @@ impl UiDiagnosticsService {
                         let container_node =
                             select_semantics_node(snapshot, window, element_runtime, &container);
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect(container_node.bounds);
+                            let pos = center_of_rect_clamped_to_rect(
+                                container_node.bounds,
+                                window_bounds,
+                            );
                             output.events.push(wheel_event(pos, delta_x, delta_y));
                         }
 
@@ -1529,7 +1630,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &target)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1680,7 +1782,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &menu)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1761,34 +1864,67 @@ impl UiDiagnosticsService {
                         _ => V2DragToState {
                             step_index,
                             remaining_frames: timeout_frames,
+                            playback: None,
                         },
                     };
 
-                    let from_node = select_semantics_node(snapshot, window, element_runtime, &from);
-                    let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
-                    if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                        let start = center_of_rect(from_node.bounds);
-                        let end = center_of_rect(to_node.bounds);
-                        output
-                            .events
-                            .extend(drag_events(start, end, button, steps.max(1)));
+                    let mut playback = if let Some(playback) = state.playback.take() {
+                        playback
+                    } else {
+                        let from_node =
+                            select_semantics_node(snapshot, window, element_runtime, &from);
+                        let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
+                        if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
+                            let start =
+                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
+                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
+                            V2DragPointerState {
+                                step_index,
+                                steps: steps.max(1),
+                                button,
+                                start,
+                                end,
+                                frame: 0,
+                            }
+                        } else if state.remaining_frames == 0 {
+                            output.request_redraw = true;
+                            let label = format!("script-step-{step_index:04}-drag_to-timeout");
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("drag_to_timeout".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        } else {
+                            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                            active.v2_step_state = Some(V2StepState::DragTo(state));
+                            output.request_redraw = true;
+                            return output;
+                        }
+                    };
+
+                    let done = push_drag_playback_frame(&mut playback, &mut output.events);
+                    output.request_redraw = true;
+                    if done {
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
-                        output.request_redraw = true;
                         if self.cfg.script_auto_dump {
                             force_dump_label = Some(format!("script-step-{step_index:04}-drag_to"));
                         }
-                    } else if state.remaining_frames == 0 {
-                        force_dump_label =
-                            Some(format!("script-step-{step_index:04}-drag_to-timeout"));
-                        stop_script = true;
-                        failure_reason = Some("drag_to_timeout".to_string());
-                        active.v2_step_state = None;
-                        output.request_redraw = true;
                     } else {
-                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        state.playback = Some(playback);
                         active.v2_step_state = Some(V2StepState::DragTo(state));
-                        output.request_redraw = true;
                     }
                 } else {
                     force_dump_label =
@@ -1823,7 +1959,7 @@ impl UiDiagnosticsService {
                             step_index,
                             remaining_frames: timeout_frames,
                             phase: 0,
-                            last_drag_x: None,
+                            last_drag_axis: None,
                         },
                     };
 
@@ -1839,23 +1975,178 @@ impl UiDiagnosticsService {
                             output.request_redraw = true;
                         } else {
                             let bounds = node.bounds;
-                            let left = bounds.origin.x.0;
-                            let width = bounds.size.width.0.max(0.0);
-                            let right = left + width;
+                            let center = center_of_rect(bounds);
+                            let axis = if bounds.size.width.0 >= bounds.size.height.0 {
+                                fret_core::Axis::Horizontal
+                            } else {
+                                fret_core::Axis::Vertical
+                            };
+                            let (axis_origin, axis_len, cross_center) = match axis {
+                                fret_core::Axis::Horizontal => {
+                                    (bounds.origin.x.0, bounds.size.width.0.max(0.0), center.y.0)
+                                }
+                                fret_core::Axis::Vertical => {
+                                    (bounds.origin.y.0, bounds.size.height.0.max(0.0), center.x.0)
+                                }
+                            };
                             let span = (max - min).abs().max(0.0001);
 
-                            let clamp_x = |x: f32| {
-                                let pad = 2.0_f32;
-                                x.clamp(left + pad, right - pad)
+                            #[derive(Debug, Clone, Copy)]
+                            struct ThumbGeom {
+                                thumb_r: f32,
+                                center_axis: f32,
+                                center_cross: f32,
+                                min_at_axis_start: bool,
+                            }
+
+                            let thumb_geom = || -> Option<ThumbGeom> {
+                                let mut by_id: HashMap<u64, &fret_core::SemanticsNode> =
+                                    HashMap::new();
+                                let mut children: HashMap<u64, Vec<u64>> = HashMap::new();
+                                for n in &snapshot.nodes {
+                                    let id = n.id.data().as_ffi();
+                                    by_id.insert(id, n);
+                                    if let Some(parent) = n.parent {
+                                        children
+                                            .entry(parent.data().as_ffi())
+                                            .or_default()
+                                            .push(id);
+                                    }
+                                }
+
+                                let mut subtree: HashSet<u64> = HashSet::new();
+                                collect_subtree_ids(
+                                    node.id.data().as_ffi(),
+                                    &children,
+                                    &mut subtree,
+                                );
+
+                                let mut best: Option<(ThumbGeom, f32)> = None;
+                                for id in subtree.iter().copied() {
+                                    let Some(candidate) = by_id.get(&id).copied() else {
+                                        continue;
+                                    };
+                                    if candidate.role != fret_core::SemanticsRole::Slider {
+                                        continue;
+                                    }
+                                    let Some(candidate_value) = candidate
+                                        .value
+                                        .as_deref()
+                                        .and_then(parse_semantics_numeric_value)
+                                    else {
+                                        continue;
+                                    };
+
+                                    let candidate_bounds = candidate.bounds;
+                                    let (thumb_size, center_axis, center_cross) = match axis {
+                                        fret_core::Axis::Horizontal => (
+                                            candidate_bounds.size.width.0.max(0.0),
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                        ),
+                                        fret_core::Axis::Vertical => (
+                                            candidate_bounds.size.height.0.max(0.0),
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                        ),
+                                    };
+                                    let thumb_r = (thumb_size * 0.5).max(0.0);
+
+                                    // Infer direction by comparing the thumb's normalized position
+                                    // to the observed value. This lets the diagnostics script set
+                                    // values for RTL / inverted / vertical sliders without hard
+                                    // coding a direction rule.
+                                    let usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                    let observed_t =
+                                        ((candidate_value - min) / span).clamp(0.0, 1.0);
+                                    let pointer_t = if usable_len > 0.0 {
+                                        ((center_axis - axis_origin - thumb_r) / usable_len)
+                                            .clamp(0.0, 1.0)
+                                    } else {
+                                        0.0
+                                    };
+                                    let min_at_axis_start = (pointer_t - observed_t).abs()
+                                        <= (pointer_t - (1.0 - observed_t)).abs();
+
+                                    let geom = ThumbGeom {
+                                        thumb_r,
+                                        center_axis,
+                                        center_cross,
+                                        min_at_axis_start,
+                                    };
+                                    let score = (candidate_value - value).abs();
+                                    match best {
+                                        None => best = Some((geom, score)),
+                                        Some((_, best_score)) if score < best_score => {
+                                            best = Some((geom, score))
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                best.map(|(geom, _)| geom)
                             };
-                            let target_t = ((value - min) / span).clamp(0.0, 1.0);
+
+                            let mut thumb_r = 0.0_f32;
+                            let mut usable_len = axis_len;
+                            let mut min_at_axis_start = true;
+                            let mut start_axis_default = match axis {
+                                fret_core::Axis::Horizontal => center.x.0,
+                                fret_core::Axis::Vertical => center.y.0,
+                            };
+                            let mut cross = cross_center;
+
+                            if let Some(thumb) = thumb_geom() {
+                                thumb_r = thumb.thumb_r;
+                                usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                min_at_axis_start = thumb.min_at_axis_start;
+                                start_axis_default = thumb.center_axis;
+                                cross = thumb.center_cross;
+                            }
+
+                            let clamp_axis = |pos: f32| {
+                                let pad = 2.0_f32;
+                                let min_pos = axis_origin + thumb_r + pad;
+                                let max_pos = axis_origin + axis_len - thumb_r - pad;
+                                if max_pos >= min_pos {
+                                    pos.clamp(min_pos, max_pos)
+                                } else {
+                                    pos
+                                }
+                            };
+
+                            let axis_point = |axis_pos: f32| match axis {
+                                fret_core::Axis::Horizontal => {
+                                    Point::new(fret_core::Px(axis_pos), fret_core::Px(cross))
+                                }
+                                fret_core::Axis::Vertical => {
+                                    Point::new(fret_core::Px(cross), fret_core::Px(axis_pos))
+                                }
+                            };
+
+                            let axis_pos_for_value = |desired: f32| {
+                                let value_t = ((desired - min) / span).clamp(0.0, 1.0);
+                                let pointer_t = if min_at_axis_start {
+                                    value_t
+                                } else {
+                                    1.0 - value_t
+                                };
+                                if usable_len > 0.0 {
+                                    axis_origin + thumb_r + usable_len * pointer_t
+                                } else {
+                                    axis_origin + axis_len * pointer_t
+                                }
+                            };
 
                             if state.phase == 0 {
-                                let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect(bounds);
-                                let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                let start = Point::new(fret_core::Px(start_x), start.y);
-                                let end = Point::new(fret_core::Px(x), start.y);
+                                let axis_pos = clamp_axis(axis_pos_for_value(value));
+                                let start_axis = state.last_drag_axis.unwrap_or(start_axis_default);
+                                let start = axis_point(start_axis);
+                                let end = axis_point(axis_pos);
                                 output.events.extend(drag_events(
                                     start,
                                     end,
@@ -1863,7 +2154,7 @@ impl UiDiagnosticsService {
                                     drag_steps.max(1),
                                 ));
                                 state.phase = 1;
-                                state.last_drag_x = Some(x);
+                                state.last_drag_axis = Some(axis_pos);
                                 active.v2_step_state = Some(V2StepState::SetSliderValue(state));
                                 output.request_redraw = true;
                             } else {
@@ -1892,19 +2183,20 @@ impl UiDiagnosticsService {
                                         output.request_redraw = true;
                                     } else {
                                         let error = value - observed;
-                                        let dx = (error / span) * width;
-                                        let start = center_of_rect(bounds);
-                                        let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                        let end_x = clamp_x(start_x + dx);
-                                        let start = Point::new(fret_core::Px(start_x), start.y);
-                                        let end = Point::new(fret_core::Px(end_x), start.y);
+                                        let direction = if min_at_axis_start { 1.0 } else { -1.0 };
+                                        let dx = (error / span) * usable_len * direction;
+                                        let start_axis =
+                                            state.last_drag_axis.unwrap_or(start_axis_default);
+                                        let end_axis = clamp_axis(start_axis + dx);
+                                        let start = axis_point(start_axis);
+                                        let end = axis_point(end_axis);
                                         output.events.extend(drag_events(
                                             start,
                                             end,
                                             UiMouseButtonV1::Left,
                                             drag_steps.max(1),
                                         ));
-                                        state.last_drag_x = Some(end_x);
+                                        state.last_drag_axis = Some(end_axis);
                                         state.remaining_frames =
                                             state.remaining_frames.saturating_sub(1);
                                         active.v2_step_state =
@@ -2485,16 +2777,28 @@ impl UiDiagnosticsService {
         let resource_caches = {
             let icon_svg_cache = icon_svg_cache_stats(app);
             let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
-            (icon_svg_cache.is_some() || !canvas.is_empty()).then_some(UiResourceCachesV1 {
-                icon_svg_cache,
-                canvas,
-            })
+            let render_text = app
+                .global::<fret_core::RendererTextPerfSnapshot>()
+                .copied()
+                .map(UiRendererTextPerfSnapshotV1::from_core);
+            (icon_svg_cache.is_some() || !canvas.is_empty() || render_text.is_some()).then_some(
+                UiResourceCachesV1 {
+                    icon_svg_cache,
+                    canvas,
+                    render_text,
+                },
+            )
         };
+
+        let renderer_perf = app
+            .global::<fret_render::RendererPerfFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
 
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
             app,
             window,
             ui,
+            renderer_perf,
             element_runtime,
             hit_test,
             element_diag,
@@ -2508,12 +2812,19 @@ impl UiDiagnosticsService {
             .as_ref()
             .and_then(|provider| provider(app, window));
 
+        let snapshot_unix_ms = unix_ms_now();
+
+        let query_snapshot = app
+            .global::<fret_query::QueryClient>()
+            .map(fret_query::QueryClient::snapshot)
+            .map(|snapshot| ui_query_snapshot_from_runtime(snapshot, snapshot_unix_ms));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
             frame_id: app.frame_id().0,
             window: window.data().as_ffi(),
-            timestamp_unix_ms: unix_ms_now(),
+            timestamp_unix_ms: snapshot_unix_ms,
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
@@ -2525,6 +2836,7 @@ impl UiDiagnosticsService {
             changed_model_sources_top,
             resource_caches,
             app_snapshot,
+            query_snapshot,
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -2875,6 +3187,45 @@ impl UiDiagnosticsService {
     }
 }
 
+fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
+    if active.wait_until.is_some() {
+        return true;
+    }
+
+    if active.v2_step_state.is_some() {
+        return false;
+    }
+
+    let Some(step) = active.steps.get(active.next_step) else {
+        return false;
+    };
+
+    match step {
+        UiActionStepV2::Click { .. }
+        | UiActionStepV2::MovePointer { .. }
+        | UiActionStepV2::DragPointer { .. }
+        | UiActionStepV2::MovePointerSweep { .. }
+        | UiActionStepV2::Wheel { .. }
+        | UiActionStepV2::WaitUntil { .. }
+        | UiActionStepV2::Assert { .. }
+        | UiActionStepV2::EnsureVisible { .. }
+        | UiActionStepV2::ScrollIntoView { .. }
+        | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::MenuSelectPath { .. }
+        | UiActionStepV2::DragTo { .. }
+        | UiActionStepV2::SetSliderValue { .. } => true,
+        UiActionStepV2::ResetDiagnostics
+        | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressShortcut { .. }
+        | UiActionStepV2::TypeText { .. }
+        | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::CaptureBundle { .. }
+        | UiActionStepV2::CaptureScreenshot { .. }
+        | UiActionStepV2::SetWindowInnerSize { .. } => false,
+    }
+}
+
 fn read_touch_stamp(path: &Path) -> Option<u64> {
     let bytes = std::fs::read(path).ok()?;
     let text = std::str::from_utf8(&bytes).ok()?;
@@ -3060,6 +3411,9 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_snapshot: Option<serde_json::Value>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query_snapshot: Option<UiQuerySnapshotV1>,
+
     pub debug: UiTreeDebugSnapshotV1,
 }
 
@@ -3076,6 +3430,69 @@ pub struct UiResourceCachesV1 {
     pub icon_svg_cache: Option<UiRetainedSvgCacheStatsV1>,
     #[serde(default)]
     pub canvas: Vec<UiCanvasCacheEntryV1>,
+    #[serde(default)]
+    pub render_text: Option<UiRendererTextPerfSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotV1 {
+    pub captured_at_unix_ms: u64,
+    pub entries: Vec<UiQuerySnapshotEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotEntryV1 {
+    pub namespace: String,
+    pub hash: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debug_label: Option<String>,
+    pub type_name: String,
+    pub model_id: u64,
+    pub stale: bool,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inflight: Option<u64>,
+    pub policy: UiQueryPolicyV1,
+    pub retry: UiQueryRetryV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryPolicyV1 {
+    pub stale_time_ms: u64,
+    pub cache_time_ms: u64,
+    pub dedupe_inflight: bool,
+    pub keep_previous_data_while_loading: bool,
+    pub cancel_mode: String,
+    pub retry_policy: UiQueryRetryPolicyV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryPolicyV1 {
+    pub kind: String,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_delay_ms: Option<u64>,
+    pub retry_on: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryV1 {
+    pub failures: u32,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_retry_at_unix_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -3101,6 +3518,101 @@ pub struct UiCacheStatsV1 {
     pub release_prune_budget: u64,
     pub release_clear: u64,
     pub release_evict: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererTextPerfSnapshotV1 {
+    pub frame_id: u64,
+
+    pub font_stack_key: u64,
+    pub font_db_revision: u64,
+
+    pub blobs_live: u64,
+    pub blob_cache_entries: u64,
+    pub shape_cache_entries: u64,
+    pub measure_cache_buckets: u64,
+
+    pub frame_cache_resets: u64,
+    pub frame_blob_cache_hits: u64,
+    pub frame_blob_cache_misses: u64,
+    pub frame_blobs_created: u64,
+    pub frame_shape_cache_hits: u64,
+    pub frame_shape_cache_misses: u64,
+    pub frame_shapes_created: u64,
+
+    pub mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub color_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+}
+
+impl UiRendererTextPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererTextPerfSnapshot) -> Self {
+        Self {
+            frame_id: snapshot.frame_id.0,
+            font_stack_key: snapshot.font_stack_key,
+            font_db_revision: snapshot.font_db_revision,
+            blobs_live: snapshot.blobs_live,
+            blob_cache_entries: snapshot.blob_cache_entries,
+            shape_cache_entries: snapshot.shape_cache_entries,
+            measure_cache_buckets: snapshot.measure_cache_buckets,
+            frame_cache_resets: snapshot.frame_cache_resets,
+            frame_blob_cache_hits: snapshot.frame_blob_cache_hits,
+            frame_blob_cache_misses: snapshot.frame_blob_cache_misses,
+            frame_blobs_created: snapshot.frame_blobs_created,
+            frame_shape_cache_hits: snapshot.frame_shape_cache_hits,
+            frame_shape_cache_misses: snapshot.frame_shape_cache_misses,
+            frame_shapes_created: snapshot.frame_shapes_created,
+            mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
+            color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
+            subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererGlyphAtlasPerfSnapshotV1 {
+    pub width: u32,
+    pub height: u32,
+    pub pages: u32,
+    pub entries: u64,
+
+    pub used_px: u64,
+    pub capacity_px: u64,
+
+    pub frame_hits: u64,
+    pub frame_misses: u64,
+    pub frame_inserts: u64,
+    pub frame_evict_glyphs: u64,
+    pub frame_evict_pages: u64,
+    pub frame_out_of_space: u64,
+    pub frame_too_large: u64,
+
+    pub frame_pending_uploads: u64,
+    pub frame_pending_upload_bytes: u64,
+    pub frame_upload_bytes: u64,
+}
+
+impl UiRendererGlyphAtlasPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererGlyphAtlasPerfSnapshot) -> Self {
+        Self {
+            width: snapshot.width,
+            height: snapshot.height,
+            pages: snapshot.pages,
+            entries: snapshot.entries,
+            used_px: snapshot.used_px,
+            capacity_px: snapshot.capacity_px,
+            frame_hits: snapshot.frame_hits,
+            frame_misses: snapshot.frame_misses,
+            frame_inserts: snapshot.frame_inserts,
+            frame_evict_glyphs: snapshot.frame_evict_glyphs,
+            frame_evict_pages: snapshot.frame_evict_pages,
+            frame_out_of_space: snapshot.frame_out_of_space,
+            frame_too_large: snapshot.frame_too_large,
+            frame_pending_uploads: snapshot.frame_pending_uploads,
+            frame_pending_upload_bytes: snapshot.frame_pending_upload_bytes,
+            frame_upload_bytes: snapshot.frame_upload_bytes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -3165,26 +3677,14 @@ pub struct UiCacheKindSnapshotV1 {
 
 #[cfg(feature = "preload-icon-svgs")]
 fn icon_svg_cache_stats(app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
-    let cache = app.global::<crate::icon_preload::PreloadedIconSvgCache>()?;
-    let (entries, bytes_ready, stats) = cache.diagnostics_snapshot();
+    let diagnostics = app.global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()?;
     Some(UiRetainedSvgCacheStatsV1 {
-        entries,
-        bytes_ready,
+        entries: diagnostics.entries,
+        bytes_ready: diagnostics.bytes_ready,
         stats: UiCacheStatsV1 {
-            get_calls: stats.get_calls,
-            get_hits: stats.get_hits,
-            get_misses: stats.get_misses,
-            prepare_calls: stats.prepare_calls,
-            prepare_hits: stats.prepare_hits,
-            prepare_misses: stats.prepare_misses,
-            prune_calls: stats.prune_calls,
-            clear_calls: stats.clear_calls,
-            evict_calls: stats.evict_calls,
-            release_replaced: stats.release_replaced,
-            release_prune_age: stats.release_prune_age,
-            release_prune_budget: stats.release_prune_budget,
-            release_clear: stats.release_clear,
-            release_evict: stats.release_evict,
+            prepare_calls: diagnostics.register_calls,
+            prepare_misses: diagnostics.register_calls,
+            ..UiCacheStatsV1::default()
         },
     })
 }
@@ -3389,6 +3889,19 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_drag_steps")]
         steps: u32,
     },
+    /// Move the pointer along a straight line over multiple frames (one move event per frame).
+    ///
+    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
+    /// `drag_pointer` emits multiple pointer move events in a single frame.
+    MovePointerSweep {
+        target: UiSelectorV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        #[serde(default = "default_move_frames_per_step")]
+        frames_per_step: u32,
+    },
     Wheel {
         target: UiSelectorV1,
         #[serde(default)]
@@ -3400,6 +3913,11 @@ pub enum UiActionStepV2 {
         key: String,
         #[serde(default)]
         modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
+    PressShortcut {
+        shortcut: String,
         #[serde(default)]
         repeat: bool,
     },
@@ -3561,6 +4079,10 @@ impl From<UiActionStepV1> for UiActionStepV2 {
 
 fn default_drag_steps() -> u32 {
     8
+}
+
+fn default_move_frames_per_step() -> u32 {
+    1
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -3924,9 +4446,10 @@ enum V2StepState {
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
-    DragTo(V2DragToState),
     DragPointer(V2DragPointerState),
+    DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
+    MovePointerSweep(V2MovePointerSweepState),
 }
 
 #[derive(Debug, Clone)]
@@ -3963,19 +4486,25 @@ struct V2MenuSelectPathState {
 }
 
 #[derive(Debug, Clone)]
-struct V2DragToState {
+struct V2DragPointerState {
     step_index: usize,
-    remaining_frames: u32,
+    /// Total move segments (not counting the initial `move+down` frame and the final `up` frame).
+    steps: u32,
+    button: UiMouseButtonV1,
+    start: Point,
+    end: Point,
+    /// Playback cursor:
+    /// - `0`: emit `move+down` at `start`
+    /// - `1..=steps`: emit a pressed `move` (and `InternalDrag::Over`) at interpolated positions
+    /// - `steps + 1`: emit `up` at `end` (and `InternalDrag::Drop`)
+    frame: u32,
 }
 
 #[derive(Debug, Clone)]
-struct V2DragPointerState {
+struct V2DragToState {
     step_index: usize,
-    phase: u32,
-    steps: u32,
-    start: Point,
-    end: Point,
-    button: UiMouseButtonV1,
+    remaining_frames: u32,
+    playback: Option<V2DragPointerState>,
 }
 
 #[derive(Debug, Clone)]
@@ -3983,7 +4512,18 @@ struct V2SetSliderValueState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
-    last_drag_x: Option<f32>,
+    last_drag_axis: Option<f32>,
+}
+
+#[derive(Debug, Clone)]
+struct V2MovePointerSweepState {
+    step_index: usize,
+    start: Point,
+    end: Point,
+    steps: u32,
+    next_step: u32,
+    frames_per_step: u32,
+    wait_frames_remaining: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -4071,6 +4611,10 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
+    pub scroll_nodes: Vec<UiScrollNodeTelemetryV1>,
+    #[serde(default)]
+    pub scrollbars: Vec<UiScrollbarTelemetryV1>,
+    #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
@@ -4105,7 +4649,13 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub layout_hotspots: Vec<UiLayoutHotspotV1>,
     #[serde(default)]
+    pub layout_inclusive_hotspots: Vec<UiLayoutHotspotV1>,
+    #[serde(default)]
     pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
+    #[serde(default)]
+    pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
+    #[serde(default)]
+    pub paint_text_prepare_hotspots: Vec<UiPaintTextPrepareHotspotV1>,
     #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
@@ -4234,6 +4784,7 @@ impl UiTreeDebugSnapshotV1 {
         app: &App,
         window: AppWindowId,
         ui: &UiTree<App>,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
         element_runtime_state: Option<&ElementRuntime>,
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
@@ -4246,7 +4797,7 @@ impl UiTreeDebugSnapshotV1 {
             .copied()
             .collect();
         Self {
-            stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
+            stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
@@ -4297,6 +4848,18 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_scroll_handle_changes()
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
+                .collect(),
+            scroll_nodes: ui
+                .debug_scroll_nodes()
+                .iter()
+                .copied()
+                .map(UiScrollNodeTelemetryV1::from_telemetry)
+                .collect(),
+            scrollbars: ui
+                .debug_scrollbars()
+                .iter()
+                .copied()
+                .map(UiScrollbarTelemetryV1::from_telemetry)
                 .collect(),
             prepaint_actions: ui
                 .debug_prepaint_actions()
@@ -4372,10 +4935,25 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutHotspotV1::from_hotspot)
                 .collect(),
+            layout_inclusive_hotspots: ui
+                .debug_layout_inclusive_hotspots()
+                .iter()
+                .map(UiLayoutHotspotV1::from_hotspot)
+                .collect(),
             widget_measure_hotspots: ui
                 .debug_widget_measure_hotspots()
                 .iter()
                 .map(UiWidgetMeasureHotspotV1::from_hotspot)
+                .collect(),
+            paint_widget_hotspots: ui
+                .debug_paint_widget_hotspots()
+                .iter()
+                .map(UiPaintWidgetHotspotV1::from_hotspot)
+                .collect(),
+            paint_text_prepare_hotspots: ui
+                .debug_paint_text_prepare_hotspots()
+                .iter()
+                .map(UiPaintTextPrepareHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -5057,6 +5635,98 @@ impl UiScrollHandleChangeV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiScrollAxisV1 {
+    X,
+    Y,
+    Both,
+}
+
+impl UiScrollAxisV1 {
+    fn from_axis(axis: fret_ui::tree::UiDebugScrollAxis) -> Self {
+        match axis {
+            fret_ui::tree::UiDebugScrollAxis::X => Self::X,
+            fret_ui::tree::UiDebugScrollAxis::Y => Self::Y,
+            fret_ui::tree::UiDebugScrollAxis::Both => Self::Both,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollNodeTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+}
+
+impl UiScrollNodeTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollNodeTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollbarTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<u64>,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+    pub track: RectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumb: Option<RectV1>,
+    #[serde(default)]
+    pub hovered: bool,
+    #[serde(default)]
+    pub dragging: bool,
+}
+
+impl UiScrollbarTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollbarTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            scroll_target: telemetry.scroll_target.map(|e| e.0),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
+            track: telemetry.track.into(),
+            thumb: telemetry.thumb.map(RectV1::from),
+            hovered: telemetry.hovered,
+            dragging: telemetry.dragging,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiPrepaintActionKindV1 {
     Invalidate,
     RequestRedraw,
@@ -5101,6 +5771,10 @@ pub struct UiPrepaintActionV1 {
     pub virtual_list_window_shift_kind: Option<UiVirtualListWindowShiftKindV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub virtual_list_window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart_sampling_window_key: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_graph_cull_window_key: Option<u64>,
     #[serde(default)]
     pub frame_id: u64,
 }
@@ -5126,6 +5800,8 @@ impl UiPrepaintActionV1 {
             virtual_list_window_shift_reason: action
                 .virtual_list_window_shift_reason
                 .map(UiVirtualListWindowShiftReasonV1::from_reason),
+            chart_sampling_window_key: action.chart_sampling_window_key,
+            node_graph_cull_window_key: action.node_graph_cull_window_key,
             frame_id: action.frame_id.0,
         }
     }
@@ -6064,6 +6740,10 @@ pub struct UiLayoutHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub layout_time_us: u64,
     #[serde(default)]
@@ -6075,6 +6755,8 @@ impl UiLayoutHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -6101,6 +6783,94 @@ impl UiWidgetMeasureHotspotV1 {
             widget_type: h.widget_type.to_string(),
             measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintWidgetHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
+    pub widget_type: String,
+    pub paint_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+    #[serde(default)]
+    pub inclusive_scene_ops_delta: u32,
+    #[serde(default)]
+    pub exclusive_scene_ops_delta: u32,
+}
+
+impl UiPaintWidgetHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintWidgetHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
+            widget_type: h.widget_type.to_string(),
+            paint_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_scene_ops_delta: h.inclusive_scene_ops_delta,
+            exclusive_scene_ops_delta: h.exclusive_scene_ops_delta,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintTextPrepareHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    pub prepare_time_us: u64,
+    pub text_len: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrap: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overflow: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scale_factor: Option<f32>,
+    #[serde(default)]
+    pub reasons_mask: u16,
+}
+
+impl UiPaintTextPrepareHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintTextPrepareHotspot) -> Self {
+        fn wrap_as_str(wrap: fret_core::TextWrap) -> &'static str {
+            match wrap {
+                fret_core::TextWrap::None => "none",
+                fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Grapheme => "grapheme",
+            }
+        }
+
+        fn overflow_as_str(overflow: fret_core::TextOverflow) -> &'static str {
+            match overflow {
+                fret_core::TextOverflow::Clip => "clip",
+                fret_core::TextOverflow::Ellipsis => "ellipsis",
+            }
+        }
+
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            element_kind: Some(h.element_kind.to_string()),
+            prepare_time_us: h.prepare_time.as_micros().min(u64::MAX as u128) as u64,
+            text_len: h.text_len,
+            max_width: h.constraints.max_width.map(|v| v.0),
+            wrap: Some(wrap_as_str(h.constraints.wrap).to_string()),
+            overflow: Some(overflow_as_str(h.constraints.overflow).to_string()),
+            scale_factor: Some(h.constraints.scale_factor),
+            reasons_mask: h.reasons_mask,
         }
     }
 }
@@ -6478,7 +7248,35 @@ impl UiSemanticsNodeV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
+    #[serde(default)]
+    pub frame_arena_capacity_estimate_bytes: u64,
+    #[serde(default)]
+    pub frame_arena_grow_events: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_reuses: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_misses: u32,
     pub layout_time_us: u64,
+    #[serde(default)]
+    pub layout_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_invalidate_scroll_handle_bindings_time_us: u64,
+    #[serde(default)]
+    pub layout_expand_view_cache_invalidations_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_pending_barrier_relayouts_time_us: u64,
+    #[serde(default)]
+    pub layout_repair_view_cache_bounds_time_us: u64,
+    #[serde(default)]
+    pub layout_contained_view_cache_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_collapse_layout_observations_time_us: u64,
+    #[serde(default)]
+    pub layout_prepaint_after_layout_time_us: u64,
+    #[serde(default)]
+    pub layout_skipped_engine_frame: bool,
     #[serde(default)]
     pub layout_roots_time_us: u64,
     #[serde(default)]
@@ -6494,6 +7292,152 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
+    #[serde(default)]
+    pub paint_record_visual_bounds_time_us: u64,
+    #[serde(default)]
+    pub paint_record_visual_bounds_calls: u32,
+    #[serde(default)]
+    pub paint_cache_key_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_hit_check_time_us: u64,
+    #[serde(default)]
+    pub paint_widget_time_us: u64,
+    #[serde(default)]
+    pub paint_observation_record_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_calls: u32,
+    #[serde(default)]
+    pub paint_text_prepare_time_us: u64,
+    #[serde(default)]
+    pub paint_text_prepare_calls: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_blob_missing: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_scale_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_text_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_rich_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_style_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_wrap_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_overflow_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_width_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_font_stack_changed: u32,
+    #[serde(default)]
+    pub paint_input_context_time_us: u64,
+    #[serde(default)]
+    pub paint_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub paint_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub paint_publish_text_input_snapshot_time_us: u64,
+    #[serde(default)]
+    pub paint_collapse_observations_time_us: u64,
+    #[serde(default)]
+    pub dispatch_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_events: u32,
+    #[serde(default)]
+    pub dispatch_pointer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_targeted_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_targeted_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_layers_visited: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_rebuild_visible_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_loop_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_token: Option<u64>,
+    #[serde(default)]
+    pub dispatch_timer_slowest_was_broadcast: bool,
+    #[serde(default)]
+    pub dispatch_other_events: u32,
+    #[serde(default)]
+    pub dispatch_other_event_time_us: u64,
+    #[serde(default)]
+    pub hit_test_time_us: u64,
+    #[serde(default)]
+    pub dispatch_events: u32,
+    #[serde(default)]
+    pub hit_test_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_disabled: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_misses: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_hits: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_candidate_rejected: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_nodes_visited: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_nodes_pushed: u32,
+    #[serde(default)]
+    pub hit_test_path_cache_hits: u32,
+    #[serde(default)]
+    pub hit_test_path_cache_misses: u32,
+    #[serde(default)]
+    pub hit_test_cached_path_time_us: u64,
+    #[serde(default)]
+    pub hit_test_bounds_tree_query_time_us: u64,
+    #[serde(default)]
+    pub hit_test_candidate_self_only_time_us: u64,
+    #[serde(default)]
+    pub hit_test_fallback_traversal_time_us: u64,
+    #[serde(default)]
+    pub dispatch_hover_update_time_us: u64,
+    #[serde(default)]
+    pub dispatch_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub dispatch_active_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_input_context_time_us: u64,
+    #[serde(default)]
+    pub dispatch_event_chain_build_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_capture_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_bubble_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_query_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_move_layer_observers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_synth_hover_observer_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_effect_time_us: u64,
+    #[serde(default)]
+    pub dispatch_post_dispatch_snapshot_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6504,6 +7448,16 @@ pub struct UiFrameStatsV1 {
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
     #[serde(default)]
+    pub paint_cache_hit_test_only_replay_allowed: u32,
+    #[serde(default)]
+    pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
+    #[serde(default)]
+    pub paint_cache_replay_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translate_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translated_nodes: u32,
+    #[serde(default)]
     pub interaction_cache_hits: u32,
     #[serde(default)]
     pub interaction_cache_misses: u32,
@@ -6513,6 +7467,10 @@ pub struct UiFrameStatsV1 {
     pub interaction_records: u32,
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_queries: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
     #[serde(default)]
     pub layout_fast_path_taken: bool,
@@ -6577,6 +7535,24 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
     #[serde(default)]
+    pub view_cache_roots_total: u32,
+    #[serde(default)]
+    pub view_cache_roots_reused: u32,
+    #[serde(default)]
+    pub view_cache_roots_first_mount: u32,
+    #[serde(default)]
+    pub view_cache_roots_node_recreated: u32,
+    #[serde(default)]
+    pub view_cache_roots_cache_key_mismatch: u32,
+    #[serde(default)]
+    pub view_cache_roots_not_marked_reuse_root: u32,
+    #[serde(default)]
+    pub view_cache_roots_needs_rerender: u32,
+    #[serde(default)]
+    pub view_cache_roots_layout_invalidated: u32,
+    #[serde(default)]
+    pub view_cache_roots_manual: u32,
+    #[serde(default)]
     pub set_children_barrier_writes: u32,
     #[serde(default)]
     pub barrier_relayouts_scheduled: u32,
@@ -6598,12 +7574,148 @@ pub struct UiFrameStatsV1 {
     pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
+
+    // Renderer (wgpu) perf sample (best-effort; may be absent or lag a frame).
+    #[serde(default)]
+    pub renderer_tick_id: u64,
+    #[serde(default)]
+    pub renderer_frame_id: u64,
+    #[serde(default)]
+    pub renderer_frames: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_svg_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_us: u64,
+    #[serde(default)]
+    pub renderer_svg_uploads: u64,
+    #[serde(default)]
+    pub renderer_svg_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_image_uploads: u64,
+    #[serde(default)]
+    pub renderer_image_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_svg_rasters_live: u64,
+    #[serde(default)]
+    pub renderer_svg_standalone_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_pages_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_used_px: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_capacity_px: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_budget_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_page_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_entries_evicted: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_revision: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_uploads: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_pages: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_page_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_resets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_peak_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_release_targets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_allocations: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_reuses: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_releases: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_evictions: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_textures: u64,
+    #[serde(default)]
+    pub renderer_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_text_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_quad_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_mask_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_pipeline_switches: u64,
+    #[serde(default)]
+    pub renderer_bind_group_switches: u64,
+    #[serde(default)]
+    pub renderer_scissor_sets: u64,
+    #[serde(default)]
+    pub renderer_uniform_bytes: u64,
+    #[serde(default)]
+    pub renderer_instance_bytes: u64,
+    #[serde(default)]
+    pub renderer_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_misses: u64,
 }
 
 impl UiFrameStatsV1 {
-    fn from_stats(stats: UiDebugFrameStats) -> Self {
-        Self {
+    fn from_stats(
+        stats: UiDebugFrameStats,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
+    ) -> Self {
+        let mut out = Self {
+            frame_arena_capacity_estimate_bytes: stats.frame_arena_capacity_estimate_bytes,
+            frame_arena_grow_events: stats.frame_arena_grow_events,
+            element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
+            element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
             layout_time_us: stats.layout_time.as_micros() as u64,
+            layout_collect_roots_time_us: stats.layout_collect_roots_time.as_micros() as u64,
+            layout_invalidate_scroll_handle_bindings_time_us: stats
+                .layout_invalidate_scroll_handle_bindings_time
+                .as_micros() as u64,
+            layout_expand_view_cache_invalidations_time_us: stats
+                .layout_expand_view_cache_invalidations_time
+                .as_micros() as u64,
+            layout_request_build_roots_time_us: stats.layout_request_build_roots_time.as_micros()
+                as u64,
+            layout_pending_barrier_relayouts_time_us: stats
+                .layout_pending_barrier_relayouts_time
+                .as_micros() as u64,
+            layout_repair_view_cache_bounds_time_us: stats
+                .layout_repair_view_cache_bounds_time
+                .as_micros() as u64,
+            layout_contained_view_cache_roots_time_us: stats
+                .layout_contained_view_cache_roots_time
+                .as_micros() as u64,
+            layout_collapse_layout_observations_time_us: stats
+                .layout_collapse_layout_observations_time
+                .as_micros() as u64,
+            layout_prepaint_after_layout_time_us: stats
+                .layout_prepaint_after_layout_time
+                .as_micros() as u64,
+            layout_skipped_engine_frame: stats.layout_skipped_engine_frame,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
                 as u64,
@@ -6614,6 +7726,116 @@ impl UiFrameStatsV1 {
             layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
+            paint_record_visual_bounds_time_us: stats.paint_record_visual_bounds_time.as_micros()
+                as u64,
+            paint_record_visual_bounds_calls: stats.paint_record_visual_bounds_calls,
+            paint_cache_key_time_us: stats.paint_cache_key_time.as_micros() as u64,
+            paint_cache_hit_check_time_us: stats.paint_cache_hit_check_time.as_micros() as u64,
+            paint_widget_time_us: stats.paint_widget_time.as_micros() as u64,
+            paint_observation_record_time_us: stats.paint_observation_record_time.as_micros()
+                as u64,
+            paint_host_widget_observed_models_time_us: stats
+                .paint_host_widget_observed_models_time
+                .as_micros() as u64,
+            paint_host_widget_observed_models_items: stats.paint_host_widget_observed_models_items,
+            paint_host_widget_observed_globals_time_us: stats
+                .paint_host_widget_observed_globals_time
+                .as_micros() as u64,
+            paint_host_widget_observed_globals_items: stats
+                .paint_host_widget_observed_globals_items,
+            paint_host_widget_instance_lookup_time_us: stats
+                .paint_host_widget_instance_lookup_time
+                .as_micros() as u64,
+            paint_host_widget_instance_lookup_calls: stats.paint_host_widget_instance_lookup_calls,
+            paint_text_prepare_time_us: stats.paint_text_prepare_time.as_micros() as u64,
+            paint_text_prepare_calls: stats.paint_text_prepare_calls,
+            paint_text_prepare_reason_blob_missing: stats.paint_text_prepare_reason_blob_missing,
+            paint_text_prepare_reason_scale_changed: stats.paint_text_prepare_reason_scale_changed,
+            paint_text_prepare_reason_text_changed: stats.paint_text_prepare_reason_text_changed,
+            paint_text_prepare_reason_rich_changed: stats.paint_text_prepare_reason_rich_changed,
+            paint_text_prepare_reason_style_changed: stats.paint_text_prepare_reason_style_changed,
+            paint_text_prepare_reason_wrap_changed: stats.paint_text_prepare_reason_wrap_changed,
+            paint_text_prepare_reason_overflow_changed: stats
+                .paint_text_prepare_reason_overflow_changed,
+            paint_text_prepare_reason_width_changed: stats.paint_text_prepare_reason_width_changed,
+            paint_text_prepare_reason_font_stack_changed: stats
+                .paint_text_prepare_reason_font_stack_changed,
+            paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
+            paint_scroll_handle_invalidation_time_us: stats
+                .paint_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            paint_collect_roots_time_us: stats.paint_collect_roots_time.as_micros() as u64,
+            paint_publish_text_input_snapshot_time_us: stats
+                .paint_publish_text_input_snapshot_time
+                .as_micros() as u64,
+            paint_collapse_observations_time_us: stats.paint_collapse_observations_time.as_micros()
+                as u64,
+            dispatch_time_us: stats.dispatch_time.as_micros() as u64,
+            dispatch_pointer_events: stats.dispatch_pointer_events,
+            dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
+            dispatch_timer_events: stats.dispatch_timer_events,
+            dispatch_timer_event_time_us: stats.dispatch_timer_event_time.as_micros() as u64,
+            dispatch_timer_targeted_events: stats.dispatch_timer_targeted_events,
+            dispatch_timer_targeted_time_us: stats.dispatch_timer_targeted_time.as_micros() as u64,
+            dispatch_timer_broadcast_events: stats.dispatch_timer_broadcast_events,
+            dispatch_timer_broadcast_time_us: stats.dispatch_timer_broadcast_time.as_micros()
+                as u64,
+            dispatch_timer_broadcast_layers_visited: stats.dispatch_timer_broadcast_layers_visited,
+            dispatch_timer_broadcast_rebuild_visible_layers_time_us: stats
+                .dispatch_timer_broadcast_rebuild_visible_layers_time
+                .as_micros()
+                as u64,
+            dispatch_timer_broadcast_loop_time_us: stats
+                .dispatch_timer_broadcast_loop_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_event_time_us: stats
+                .dispatch_timer_slowest_event_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_token: stats.dispatch_timer_slowest_token.map(|t| t.0),
+            dispatch_timer_slowest_was_broadcast: stats.dispatch_timer_slowest_was_broadcast,
+            dispatch_other_events: stats.dispatch_other_events,
+            dispatch_other_event_time_us: stats.dispatch_other_event_time.as_micros() as u64,
+            hit_test_time_us: stats.hit_test_time.as_micros() as u64,
+            dispatch_events: stats.dispatch_events,
+            hit_test_queries: stats.hit_test_queries,
+            hit_test_bounds_tree_queries: stats.hit_test_bounds_tree_queries,
+            hit_test_bounds_tree_disabled: stats.hit_test_bounds_tree_disabled,
+            hit_test_bounds_tree_misses: stats.hit_test_bounds_tree_misses,
+            hit_test_bounds_tree_hits: stats.hit_test_bounds_tree_hits,
+            hit_test_bounds_tree_candidate_rejected: stats.hit_test_bounds_tree_candidate_rejected,
+            hit_test_bounds_tree_nodes_visited: stats.hit_test_bounds_tree_nodes_visited,
+            hit_test_bounds_tree_nodes_pushed: stats.hit_test_bounds_tree_nodes_pushed,
+            hit_test_path_cache_hits: stats.hit_test_path_cache_hits,
+            hit_test_path_cache_misses: stats.hit_test_path_cache_misses,
+            hit_test_cached_path_time_us: stats.hit_test_cached_path_time.as_micros() as u64,
+            hit_test_bounds_tree_query_time_us: stats.hit_test_bounds_tree_query_time.as_micros()
+                as u64,
+            hit_test_candidate_self_only_time_us: stats
+                .hit_test_candidate_self_only_time
+                .as_micros() as u64,
+            hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
+                as u64,
+            dispatch_hover_update_time_us: stats.dispatch_hover_update_time.as_micros() as u64,
+            dispatch_scroll_handle_invalidation_time_us: stats
+                .dispatch_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            dispatch_active_layers_time_us: stats.dispatch_active_layers_time.as_micros() as u64,
+            dispatch_input_context_time_us: stats.dispatch_input_context_time.as_micros() as u64,
+            dispatch_event_chain_build_time_us: stats.dispatch_event_chain_build_time.as_micros()
+                as u64,
+            dispatch_widget_capture_time_us: stats.dispatch_widget_capture_time.as_micros() as u64,
+            dispatch_widget_bubble_time_us: stats.dispatch_widget_bubble_time.as_micros() as u64,
+            dispatch_cursor_query_time_us: stats.dispatch_cursor_query_time.as_micros() as u64,
+            dispatch_pointer_move_layer_observers_time_us: stats
+                .dispatch_pointer_move_layer_observers_time
+                .as_micros() as u64,
+            dispatch_synth_hover_observer_time_us: stats
+                .dispatch_synth_hover_observer_time
+                .as_micros() as u64,
+            dispatch_cursor_effect_time_us: stats.dispatch_cursor_effect_time.as_micros() as u64,
+            dispatch_post_dispatch_snapshot_time_us: stats
+                .dispatch_post_dispatch_snapshot_time
+                .as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,
@@ -6622,12 +7844,24 @@ impl UiFrameStatsV1 {
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            paint_cache_hit_test_only_replay_allowed: stats
+                .paint_cache_hit_test_only_replay_allowed,
+            paint_cache_hit_test_only_replay_rejected_key_mismatch: stats
+                .paint_cache_hit_test_only_replay_rejected_key_mismatch,
+            paint_cache_replay_time_us: stats.paint_cache_replay_time.as_micros() as u64,
+            paint_cache_bounds_translate_time_us: stats
+                .paint_cache_bounds_translate_time
+                .as_micros() as u64,
+            paint_cache_bounds_translated_nodes: stats.paint_cache_bounds_translated_nodes,
             interaction_cache_hits: stats.interaction_cache_hits,
             interaction_cache_misses: stats.interaction_cache_misses,
             interaction_cache_replayed_records: stats.interaction_cache_replayed_records,
             interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
+            layout_engine_child_rect_queries: stats.layout_engine_child_rect_queries,
+            layout_engine_child_rect_time_us: stats.layout_engine_child_rect_time.as_micros()
+                as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             layout_fast_path_taken: stats.layout_fast_path_taken,
             layout_invalidations_count: stats.layout_invalidations_count,
@@ -6661,6 +7895,15 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            view_cache_roots_total: stats.view_cache_roots_total,
+            view_cache_roots_reused: stats.view_cache_roots_reused,
+            view_cache_roots_first_mount: stats.view_cache_roots_first_mount,
+            view_cache_roots_node_recreated: stats.view_cache_roots_node_recreated,
+            view_cache_roots_cache_key_mismatch: stats.view_cache_roots_cache_key_mismatch,
+            view_cache_roots_not_marked_reuse_root: stats.view_cache_roots_not_marked_reuse_root,
+            view_cache_roots_needs_rerender: stats.view_cache_roots_needs_rerender,
+            view_cache_roots_layout_invalidated: stats.view_cache_roots_layout_invalidated,
+            view_cache_roots_manual: stats.view_cache_roots_manual,
             set_children_barrier_writes: stats.set_children_barrier_writes,
             barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
@@ -6673,7 +7916,118 @@ impl UiFrameStatsV1 {
             retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
+            renderer_tick_id: 0,
+            renderer_frame_id: 0,
+            renderer_frames: 0,
+            renderer_encode_scene_us: 0,
+            renderer_prepare_svg_us: 0,
+            renderer_prepare_text_us: 0,
+            renderer_svg_uploads: 0,
+            renderer_svg_upload_bytes: 0,
+            renderer_image_uploads: 0,
+            renderer_image_upload_bytes: 0,
+            renderer_svg_raster_budget_bytes: 0,
+            renderer_svg_rasters_live: 0,
+            renderer_svg_standalone_bytes_live: 0,
+            renderer_svg_mask_atlas_pages_live: 0,
+            renderer_svg_mask_atlas_bytes_live: 0,
+            renderer_svg_mask_atlas_used_px: 0,
+            renderer_svg_mask_atlas_capacity_px: 0,
+            renderer_svg_raster_cache_hits: 0,
+            renderer_svg_raster_cache_misses: 0,
+            renderer_svg_raster_budget_evictions: 0,
+            renderer_svg_mask_atlas_page_evictions: 0,
+            renderer_svg_mask_atlas_entries_evicted: 0,
+            renderer_text_atlas_revision: 0,
+            renderer_text_atlas_uploads: 0,
+            renderer_text_atlas_upload_bytes: 0,
+            renderer_text_atlas_evicted_glyphs: 0,
+            renderer_text_atlas_evicted_pages: 0,
+            renderer_text_atlas_evicted_page_glyphs: 0,
+            renderer_text_atlas_resets: 0,
+            renderer_intermediate_budget_bytes: 0,
+            renderer_intermediate_in_use_bytes: 0,
+            renderer_intermediate_peak_in_use_bytes: 0,
+            renderer_intermediate_release_targets: 0,
+            renderer_intermediate_pool_allocations: 0,
+            renderer_intermediate_pool_reuses: 0,
+            renderer_intermediate_pool_releases: 0,
+            renderer_intermediate_pool_evictions: 0,
+            renderer_intermediate_pool_free_bytes: 0,
+            renderer_intermediate_pool_free_textures: 0,
+            renderer_draw_calls: 0,
+            renderer_text_draw_calls: 0,
+            renderer_quad_draw_calls: 0,
+            renderer_mask_draw_calls: 0,
+            renderer_pipeline_switches: 0,
+            renderer_bind_group_switches: 0,
+            renderer_scissor_sets: 0,
+            renderer_uniform_bytes: 0,
+            renderer_instance_bytes: 0,
+            renderer_vertex_bytes: 0,
+            renderer_scene_encoding_cache_hits: 0,
+            renderer_scene_encoding_cache_misses: 0,
+        };
+
+        if let Some(sample) = renderer_perf {
+            out.renderer_tick_id = sample.tick_id;
+            out.renderer_frame_id = sample.frame_id;
+            out.renderer_frames = sample.perf.frames;
+            out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
+            out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_svg_uploads = sample.perf.svg_uploads;
+            out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
+            out.renderer_image_uploads = sample.perf.image_uploads;
+            out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+            out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
+            out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
+            out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
+            out.renderer_svg_mask_atlas_pages_live = sample.perf.svg_mask_atlas_pages_live;
+            out.renderer_svg_mask_atlas_bytes_live = sample.perf.svg_mask_atlas_bytes_live;
+            out.renderer_svg_mask_atlas_used_px = sample.perf.svg_mask_atlas_used_px;
+            out.renderer_svg_mask_atlas_capacity_px = sample.perf.svg_mask_atlas_capacity_px;
+            out.renderer_svg_raster_cache_hits = sample.perf.svg_raster_cache_hits;
+            out.renderer_svg_raster_cache_misses = sample.perf.svg_raster_cache_misses;
+            out.renderer_svg_raster_budget_evictions = sample.perf.svg_raster_budget_evictions;
+            out.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
+            out.renderer_svg_mask_atlas_entries_evicted =
+                sample.perf.svg_mask_atlas_entries_evicted;
+            out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
+            out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
+            out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
+            out.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;
+            out.renderer_text_atlas_evicted_pages = sample.perf.text_atlas_evicted_pages;
+            out.renderer_text_atlas_evicted_page_glyphs =
+                sample.perf.text_atlas_evicted_page_glyphs;
+            out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
+            out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+            out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
+            out.renderer_intermediate_peak_in_use_bytes =
+                sample.perf.intermediate_peak_in_use_bytes;
+            out.renderer_intermediate_release_targets = sample.perf.intermediate_release_targets;
+            out.renderer_intermediate_pool_allocations = sample.perf.intermediate_pool_allocations;
+            out.renderer_intermediate_pool_reuses = sample.perf.intermediate_pool_reuses;
+            out.renderer_intermediate_pool_releases = sample.perf.intermediate_pool_releases;
+            out.renderer_intermediate_pool_evictions = sample.perf.intermediate_pool_evictions;
+            out.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
+            out.renderer_intermediate_pool_free_textures =
+                sample.perf.intermediate_pool_free_textures;
+            out.renderer_draw_calls = sample.perf.draw_calls;
+            out.renderer_text_draw_calls = sample.perf.text_draw_calls;
+            out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+            out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
+            out.renderer_pipeline_switches = sample.perf.pipeline_switches;
+            out.renderer_bind_group_switches = sample.perf.bind_group_switches;
+            out.renderer_scissor_sets = sample.perf.scissor_sets;
+            out.renderer_uniform_bytes = sample.perf.uniform_bytes;
+            out.renderer_instance_bytes = sample.perf.instance_bytes;
+            out.renderer_vertex_bytes = sample.perf.vertex_bytes;
+            out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
+            out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
         }
+
+        out
     }
 }
 
@@ -7990,6 +9344,36 @@ fn center_of_rect(rect: Rect) -> Point {
     Point::new(x, y)
 }
 
+fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
+    if !rects_intersect(rect, clamp) {
+        return center_of_rect(rect);
+    }
+
+    let rx0 = rect.origin.x.0;
+    let ry0 = rect.origin.y.0;
+    let rx1 = rx0 + rect.size.width.0.max(0.0);
+    let ry1 = ry0 + rect.size.height.0.max(0.0);
+
+    let cx0 = clamp.origin.x.0;
+    let cy0 = clamp.origin.y.0;
+    let cx1 = cx0 + clamp.size.width.0.max(0.0);
+    let cy1 = cy0 + clamp.size.height.0.max(0.0);
+
+    let ix0 = rx0.max(cx0);
+    let iy0 = ry0.max(cy0);
+    let ix1 = rx1.min(cx1);
+    let iy1 = ry1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(rect);
+    }
+
+    Point::new(
+        fret_core::Px((ix0 + ix1) * 0.5),
+        fret_core::Px((iy0 + iy1) * 0.5),
+    )
+}
+
 fn pick_semantics_node_at<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     ui: &UiTree<App>,
@@ -8354,6 +9738,101 @@ fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) ->
     out
 }
 
+fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Event>) -> bool {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let (button, pressed_buttons) = match state.button {
+        UiMouseButtonV1::Left => (
+            MouseButton::Left,
+            MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+        ),
+        UiMouseButtonV1::Right => (
+            MouseButton::Right,
+            MouseButtons {
+                right: true,
+                ..Default::default()
+            },
+        ),
+        UiMouseButtonV1::Middle => (
+            MouseButton::Middle,
+            MouseButtons {
+                middle: true,
+                ..Default::default()
+            },
+        ),
+    };
+
+    let steps = state.steps.max(1);
+    let final_frame = steps.saturating_add(1);
+
+    match state.frame {
+        0 => {
+            events.push(Event::Pointer(PointerEvent::Move {
+                pointer_id,
+                position: state.start,
+                buttons: MouseButtons::default(),
+                modifiers,
+                pointer_type,
+            }));
+            events.push(Event::Pointer(PointerEvent::Down {
+                pointer_id,
+                position: state.start,
+                button,
+                modifiers,
+                click_count: 1,
+                pointer_type,
+            }));
+            state.frame = 1;
+            false
+        }
+        f if (1..=steps).contains(&f) => {
+            let t = f as f32 / steps as f32;
+            let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+            let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+            let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+            events.push(Event::Pointer(PointerEvent::Move {
+                pointer_id,
+                position,
+                buttons: pressed_buttons,
+                modifiers,
+                pointer_type,
+            }));
+            events.push(Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id,
+                position,
+                kind: fret_core::InternalDragKind::Over,
+                modifiers,
+            }));
+            state.frame = state.frame.saturating_add(1);
+            false
+        }
+        f if f >= final_frame => {
+            events.push(Event::Pointer(PointerEvent::Up {
+                pointer_id,
+                position: state.end,
+                button,
+                modifiers,
+                is_click: false,
+                click_count: 1,
+                pointer_type,
+            }));
+            events.push(Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id,
+                position: state.end,
+                kind: fret_core::InternalDragKind::Drop,
+                modifiers,
+            }));
+            true
+        }
+        _ => true,
+    }
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = Modifiers {
         shift: modifiers.shift,
@@ -8369,6 +9848,41 @@ fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> 
     };
     let up = Event::KeyUp { key, modifiers };
     [down, up]
+}
+
+fn parse_shortcut(shortcut: &str) -> Result<(KeyCode, UiKeyModifiersV1), String> {
+    let mut modifiers = UiKeyModifiersV1::default();
+    let mut key_token: Option<&str> = None;
+
+    for token in shortcut.split('+').map(str::trim).filter(|v| !v.is_empty()) {
+        match token.to_ascii_lowercase().as_str() {
+            "shift" => modifiers.shift = true,
+            "ctrl" | "control" => modifiers.ctrl = true,
+            "alt" | "option" => modifiers.alt = true,
+            "meta" | "cmd" | "command" => modifiers.meta = true,
+            "primary" | "cmd_or_ctrl" | "command_or_control" => {
+                if cfg!(target_os = "macos") {
+                    modifiers.meta = true;
+                } else {
+                    modifiers.ctrl = true;
+                }
+            }
+            _ => {
+                if key_token.is_some() {
+                    return Err(format!("multiple_key_tokens: {shortcut}"));
+                }
+                key_token = Some(token);
+            }
+        }
+    }
+
+    let Some(key_token) = key_token else {
+        return Err(format!("missing_key_token: {shortcut}"));
+    };
+    let Some(key) = parse_key_code(key_token) else {
+        return Err(format!("unknown_key: {key_token}"));
+    };
+    Ok((key, modifiers))
 }
 
 fn parse_key_code(key: &str) -> Option<KeyCode> {
@@ -8615,6 +10129,42 @@ mod tests {
         assert_eq!(parse_key_code("alt_right"), Some(KeyCode::AltRight));
     }
 
+    #[test]
+    fn parse_shortcut_maps_primary_modifier() {
+        let (key, modifiers) = parse_shortcut("primary+p").expect("parse shortcut");
+        assert_eq!(key, KeyCode::KeyP);
+        if cfg!(target_os = "macos") {
+            assert!(modifiers.meta);
+            assert!(!modifiers.ctrl);
+        } else {
+            assert!(modifiers.ctrl);
+            assert!(!modifiers.meta);
+        }
+    }
+
+    #[test]
+    fn parse_shortcut_supports_cmd_or_ctrl_aliases() {
+        let (key, modifiers) =
+            parse_shortcut("cmd_or_ctrl+shift+k").expect("parse cmd_or_ctrl shortcut");
+        assert_eq!(key, KeyCode::KeyK);
+        assert!(modifiers.shift);
+        if cfg!(target_os = "macos") {
+            assert!(modifiers.meta);
+            assert!(!modifiers.ctrl);
+        } else {
+            assert!(modifiers.ctrl);
+            assert!(!modifiers.meta);
+        }
+    }
+
+    #[test]
+    fn parse_shortcut_requires_single_key_token() {
+        let missing = parse_shortcut("ctrl+shift").expect_err("missing key token should fail");
+        assert!(missing.contains("missing_key_token"));
+        let multiple = parse_shortcut("ctrl+x+y").expect_err("multiple key tokens should fail");
+        assert!(multiple.contains("multiple_key_tokens"));
+    }
+
     fn node_id(id: u64) -> NodeId {
         NodeId::from(KeyData::from_ffi(id))
     }
@@ -8716,6 +10266,38 @@ mod tests {
                 [UiActionStepV2::EnsureVisible { .. }]
             ),
             "expected ensure_visible step"
+        );
+    }
+
+    #[test]
+    fn scripts_support_move_pointer_sweep_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"move_pointer_sweep","target":{"kind":"test_id","id":"x"},"delta_x":10.0,"delta_y":-5.0,"steps":3,"frames_per_step":2}]}"#,
+        )
+        .expect("parse move_pointer_sweep step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::MovePointerSweep { .. }]
+            ),
+            "expected move_pointer_sweep step"
+        );
+    }
+
+    #[test]
+    fn scripts_support_press_shortcut_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"press_shortcut","shortcut":"primary+shift+p"}]}"#,
+        )
+        .expect("parse press_shortcut step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::PressShortcut { .. }]
+            ),
+            "expected press_shortcut step"
         );
     }
 
@@ -9668,6 +11250,10 @@ mod tests {
         )
         .expect("parse barrier_roots predicate");
         svc.pending_script = PendingScript::from_v1(script);
+        assert!(
+            svc.pending_script.is_some(),
+            "script schema_version should be valid"
+        );
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
@@ -9681,6 +11267,84 @@ mod tests {
         assert!(
             matches!(result.stage, UiScriptStageV1::Passed),
             "expected drive_script to persist the passed result"
+        );
+    }
+
+    #[test]
+    fn query_snapshot_is_serializable_for_bundle() {
+        let model_id = ModelId::from(KeyData::from_ffi(7));
+        let model_id_ffi = model_id.data().as_ffi();
+
+        let snapshot = QueryClientSnapshot {
+            captured_at: fret_core::time::Instant::now(),
+            entries: vec![QuerySnapshotEntry {
+                namespace: "test.query.v1",
+                hash: 42,
+                debug_label: Some("demo"),
+                type_name: "u32",
+                model_id,
+                policy: fret_query::QueryPolicy {
+                    stale_time: std::time::Duration::from_secs(2),
+                    cache_time: std::time::Duration::from_secs(60),
+                    dedupe_inflight: true,
+                    keep_previous_data_while_loading: true,
+                    cancel_mode: fret_query::QueryCancelMode::CancelInFlight,
+                    retry: fret_query::QueryRetryPolicy::fixed(
+                        2,
+                        std::time::Duration::from_millis(50),
+                    ),
+                },
+                stale: false,
+                status: fret_query::QueryStatus::Success,
+                inflight: None,
+                last_used: fret_core::time::Instant::now(),
+                last_observed_frame: Some(fret_core::FrameId(9)),
+                updated_at: None,
+                last_duration: Some(std::time::Duration::from_millis(8)),
+                retry: fret_query::QueryRetryState {
+                    failures: 0,
+                    max_retries: 2,
+                    next_retry_at: None,
+                },
+                last_error_kind: None,
+                last_error_message: None,
+            }],
+        };
+
+        let ui_snapshot = ui_query_snapshot_from_runtime(snapshot, 1234);
+        let json = serde_json::to_value(&ui_snapshot).expect("query snapshot should serialize");
+
+        assert_eq!(
+            json.get("captured_at_unix_ms").and_then(|v| v.as_u64()),
+            Some(1234)
+        );
+        let entries = json
+            .get("entries")
+            .and_then(|v| v.as_array())
+            .expect("entries should be array");
+        assert_eq!(entries.len(), 1);
+
+        let entry = &entries[0];
+        assert_eq!(
+            entry.get("namespace").and_then(|v| v.as_str()),
+            Some("test.query.v1")
+        );
+        assert_eq!(entry.get("hash").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            entry.get("model_id").and_then(|v| v.as_u64()),
+            Some(model_id_ffi)
+        );
+        assert_eq!(
+            entry.get("status").and_then(|v| v.as_str()),
+            Some("Success")
+        );
+        assert_eq!(
+            entry
+                .get("policy")
+                .and_then(|v| v.get("retry_policy"))
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str()),
+            Some("fixed")
         );
     }
 
@@ -9713,6 +11377,23 @@ mod tests {
                 .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
         );
     }
+
+    #[cfg(feature = "preload-icon-svgs")]
+    #[test]
+    fn icon_svg_cache_stats_reads_preload_diagnostics() {
+        let mut app = App::new();
+        app.set_global(fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics {
+            entries: 12,
+            bytes_ready: 3456,
+            register_calls: 12,
+        });
+
+        let stats = icon_svg_cache_stats(&app).expect("expected preload diagnostics");
+        assert_eq!(stats.entries, 12);
+        assert_eq!(stats.bytes_ready, 3456);
+        assert_eq!(stats.stats.prepare_calls, 12);
+        assert_eq!(stats.stats.prepare_misses, 12);
+    }
 }
 
 fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
@@ -9722,6 +11403,103 @@ fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default()
+}
+
+fn ui_query_snapshot_from_runtime(
+    snapshot: QueryClientSnapshot,
+    now_unix_ms: u64,
+) -> UiQuerySnapshotV1 {
+    UiQuerySnapshotV1 {
+        captured_at_unix_ms: now_unix_ms,
+        entries: snapshot
+            .entries
+            .into_iter()
+            .map(|entry| ui_query_snapshot_entry_from_runtime(entry))
+            .collect(),
+    }
+}
+
+fn ui_query_snapshot_entry_from_runtime(entry: QuerySnapshotEntry) -> UiQuerySnapshotEntryV1 {
+    UiQuerySnapshotEntryV1 {
+        namespace: entry.namespace.to_string(),
+        hash: entry.hash,
+        debug_label: entry.debug_label.map(ToString::to_string),
+        type_name: entry.type_name.to_string(),
+        model_id: entry.model_id.data().as_ffi(),
+        stale: entry.stale,
+        status: format!("{:?}", entry.status),
+        inflight: entry.inflight,
+        policy: UiQueryPolicyV1 {
+            stale_time_ms: duration_millis_u64(entry.policy.stale_time),
+            cache_time_ms: duration_millis_u64(entry.policy.cache_time),
+            dedupe_inflight: entry.policy.dedupe_inflight,
+            keep_previous_data_while_loading: entry.policy.keep_previous_data_while_loading,
+            cancel_mode: format!("{:?}", entry.policy.cancel_mode),
+            retry_policy: match entry.policy.retry {
+                fret_query::QueryRetryPolicy::None => UiQueryRetryPolicyV1 {
+                    kind: "none".to_string(),
+                    max_retries: 0,
+                    delay_ms: None,
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: "transient".to_string(),
+                },
+                fret_query::QueryRetryPolicy::Fixed {
+                    max_retries,
+                    delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "fixed".to_string(),
+                    max_retries,
+                    delay_ms: Some(duration_millis_u64(delay)),
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+                fret_query::QueryRetryPolicy::Exponential {
+                    max_retries,
+                    base_delay,
+                    max_delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "exponential".to_string(),
+                    max_retries,
+                    delay_ms: None,
+                    base_delay_ms: Some(duration_millis_u64(base_delay)),
+                    max_delay_ms: Some(duration_millis_u64(max_delay)),
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+            },
+        },
+        retry: UiQueryRetryV1 {
+            failures: entry.retry.failures,
+            max_retries: entry.retry.max_retries,
+            next_retry_at_unix_ms: entry.retry.next_retry_at.and_then(instant_to_unix_ms),
+        },
+        last_error_kind: entry
+            .last_error_kind
+            .map(|kind| format!("{:?}", kind).to_ascii_lowercase()),
+        last_error_message: entry.last_error_message.map(|message| message.to_string()),
+        updated_at_unix_ms: entry.updated_at.and_then(instant_to_unix_ms),
+        last_duration_ms: entry.last_duration.map(duration_millis_u64),
+    }
+}
+
+fn duration_millis_u64(duration: std::time::Duration) -> u64 {
+    duration.as_millis().min(u128::from(u64::MAX)) as u64
+}
+
+fn instant_to_unix_ms(instant: std::time::Instant) -> Option<u64> {
+    let now_instant = std::time::Instant::now();
+    let now_unix_ms = unix_ms_now();
+
+    if instant >= now_instant {
+        let delta = instant.duration_since(now_instant);
+        return now_unix_ms.checked_add(duration_millis_u64(delta));
+    }
+
+    let delta = now_instant.duration_since(instant);
+    now_unix_ms.checked_sub(duration_millis_u64(delta))
 }
 
 trait PointerEventExt {

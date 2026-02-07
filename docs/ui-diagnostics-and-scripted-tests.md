@@ -15,6 +15,8 @@ Scope note:
   how to author stable, selector-driven repros).
 - For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
   `docs/debugging-ui-with-inspector-and-scripts.md`.
+- For the planned **DevTools GUI** that wraps these same contracts (inspect/pick/scripts/bundles) with a user-facing UI,
+  see: `docs/workstreams/diag-devtools-gui-v1.md`.
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
@@ -375,6 +377,8 @@ Supported selectors (v1 MVP):
   `minus`/`dash`/`-`, `equal`/`=`, `bracket_left`/`left_bracket`/`[`, `bracket_right`/`right_bracket`/`]`,
   `backslash`/`\\`, `backquote`/`grave`/`` ` ``;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
+- `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
+  modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`

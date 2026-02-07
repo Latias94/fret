@@ -14,7 +14,7 @@ use fret_core::{
     Axis, Color, Edges, LayoutDirection, Point, Px, Rect, SemanticsRole, Size, SvgFit,
     TextOverflow, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -23,7 +23,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::elements::ElementContext;
-use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
     resolve_override_slot_with,
@@ -31,6 +31,7 @@ use fret_ui_kit::{
 
 use crate::foundation::context::{resolved_layout_direction, theme_default_layout_direction};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable,
     material_ink_layer_for_pressable_with_ripple_bounds, material_pressable_indication_config,
@@ -747,19 +748,4 @@ fn material_icon<H: UiHost>(
     props.layout.size.height = Length::Px(size);
     props.color = color;
     cx.svg_icon_props(props)
-}
-
-fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
-    let resolved = cx
-        .app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
-        });
-
-    match resolved {
-        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
 }

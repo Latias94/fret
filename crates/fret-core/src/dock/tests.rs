@@ -1,0 +1,284 @@
+use super::*;
+use slotmap::KeyData;
+
+fn window(id: u64) -> AppWindowId {
+    AppWindowId::from(KeyData::from_ffi(id))
+}
+
+fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
+    Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+}
+
+#[test]
+fn float_panel_in_window_creates_floating_container() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, tabs);
+
+    let ok = g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w,
+        panel: panel_b.clone(),
+        target_window: w,
+        rect: rect(10.0, 20.0, 300.0, 200.0),
+    });
+    assert!(ok);
+    assert_eq!(g.collect_panels_in_window(w).len(), 2);
+    assert!(
+        g.floating_windows(w)
+            .iter()
+            .any(|f| { g.collect_panels_in_subtree(f.floating).contains(&panel_b) })
+    );
+    assert!(g.find_panel_in_window(w, &panel_b).is_some());
+}
+
+#[test]
+fn merge_floating_into_moves_panels_and_removes_floating_entry() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let mut g = DockGraph::new();
+    let main_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, main_tabs);
+
+    assert!(g.apply_op(&DockOp::FloatPanelInWindow {
+        source_window: w,
+        panel: panel_b.clone(),
+        target_window: w,
+        rect: rect(0.0, 0.0, 200.0, 160.0),
+    }));
+
+    let floating = g.floating_windows(w).first().unwrap().floating;
+    assert!(g.apply_op(&DockOp::MergeFloatingInto {
+        window: w,
+        floating,
+        target_tabs: main_tabs,
+    }));
+
+    assert!(g.floating_windows(w).is_empty());
+    let (tabs, _i) = g
+        .find_panel_in_window(w, &panel_b)
+        .expect("panel in window");
+    assert_eq!(tabs, main_tabs);
+}
+
+#[test]
+fn float_tabs_in_window_creates_floating_container_with_tabs() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+        active: 1,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(g.apply_op(&DockOp::FloatTabsInWindow {
+        source_window: w,
+        source_tabs: tabs,
+        target_window: w,
+        rect: rect(10.0, 20.0, 300.0, 200.0),
+    }));
+
+    assert!(
+        g.window_root(w).is_none(),
+        "expected dock root to be removed"
+    );
+    let floatings = g.floating_windows(w);
+    assert_eq!(floatings.len(), 1);
+    assert_eq!(floatings[0].rect, rect(10.0, 20.0, 300.0, 200.0));
+    assert_eq!(
+        g.collect_panels_in_subtree(floatings[0].floating),
+        vec![panel_a, panel_b, panel_c]
+    );
+}
+
+#[test]
+fn move_tabs_merges_into_target_tabs_and_preserves_active() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let source_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone()],
+        active: 1,
+    });
+    let target_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c.clone()],
+        active: 0,
+    });
+    let root = g.insert_node(DockNode::Split {
+        axis: Axis::Horizontal,
+        children: vec![source_tabs, target_tabs],
+        fractions: vec![0.5, 0.5],
+    });
+    g.set_window_root(w, root);
+
+    assert!(g.apply_op(&DockOp::MoveTabs {
+        source_window: w,
+        source_tabs,
+        target_window: w,
+        target_tabs,
+        zone: DropZone::Center,
+        insert_index: Some(0),
+    }));
+
+    assert_eq!(g.window_root(w), Some(target_tabs));
+    let DockNode::Tabs { tabs, active } = g.node(target_tabs).expect("target tabs exists") else {
+        unreachable!();
+    };
+    assert_eq!(
+        tabs,
+        &vec![panel_a.clone(), panel_b.clone(), panel_c.clone()]
+    );
+    assert_eq!(*active, 1);
+}
+
+#[test]
+fn layout_roundtrips_floatings_with_rect_and_order() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let main_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone()],
+        active: 0,
+    });
+    g.set_window_root(w, main_tabs);
+
+    let f0_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_b.clone()],
+        active: 0,
+    });
+    let f0 = g.insert_node(DockNode::Floating { child: f0_tabs });
+    g.floating_windows_mut(w).push(DockFloatingWindow {
+        floating: f0,
+        rect: rect(10.0, 20.0, 300.0, 200.0),
+    });
+
+    let f1_tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_c.clone()],
+        active: 0,
+    });
+    let f1 = g.insert_node(DockNode::Floating { child: f1_tabs });
+    g.floating_windows_mut(w).push(DockFloatingWindow {
+        floating: f1,
+        rect: rect(40.0, 60.0, 200.0, 120.0),
+    });
+
+    let windows = vec![(w, "main".to_string())];
+    let layout = g.export_layout(&windows);
+
+    let mut g2 = DockGraph::new();
+    assert!(g2.import_layout_for_windows(&layout, &windows));
+    assert_eq!(
+        g2.collect_panels_in_window(w),
+        vec![panel_a, panel_b, panel_c]
+    );
+    let floatings = g2.floating_windows(w);
+    assert_eq!(floatings.len(), 2);
+    assert_eq!(floatings[0].rect, rect(10.0, 20.0, 300.0, 200.0));
+    assert_eq!(floatings[1].rect, rect(40.0, 60.0, 200.0, 120.0));
+}
+
+#[test]
+fn import_layout_degrades_unmapped_windows_into_floating_containers() {
+    let window_a = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+
+    let layout = crate::DockLayout::new(
+        vec![
+            crate::DockLayoutWindow {
+                logical_window_id: "main".to_string(),
+                root: 1,
+                placement: None,
+                floatings: Vec::new(),
+            },
+            crate::DockLayoutWindow {
+                logical_window_id: "extra".to_string(),
+                root: 2,
+                placement: Some(crate::DockWindowPlacement {
+                    width: 400,
+                    height: 300,
+                    x: None,
+                    y: None,
+                    monitor_hint: None,
+                }),
+                floatings: Vec::new(),
+            },
+        ],
+        vec![
+            crate::DockLayoutNode::Tabs {
+                id: 1,
+                tabs: vec![panel_a.clone()],
+                active: 0,
+            },
+            crate::DockLayoutNode::Tabs {
+                id: 2,
+                tabs: vec![panel_b.clone()],
+                active: 0,
+            },
+        ],
+    );
+
+    let mut g = DockGraph::new();
+    assert!(g.import_layout_for_windows_with_fallback_floatings(
+        &layout,
+        &[(window_a, "main".to_string())],
+        window_a
+    ));
+
+    assert!(g.find_panel_in_window(window_a, &panel_a).is_some());
+    assert!(g.find_panel_in_window(window_a, &panel_b).is_some());
+    assert_eq!(g.floating_windows(window_a).len(), 1);
+}
+
+#[test]
+fn close_panel_before_active_preserves_active_panel() {
+    let w = window(1);
+    let panel_a = PanelKey::new("test.a");
+    let panel_b = PanelKey::new("test.b");
+    let panel_c = PanelKey::new("test.c");
+
+    let mut g = DockGraph::new();
+    let tabs = g.insert_node(DockNode::Tabs {
+        tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+        active: 1,
+    });
+    g.set_window_root(w, tabs);
+
+    assert!(g.apply_op(&DockOp::ClosePanel {
+        window: w,
+        panel: panel_a.clone(),
+    }));
+
+    let DockNode::Tabs { tabs: list, active } = g.node(tabs).expect("tabs node must exist") else {
+        unreachable!();
+    };
+
+    assert_eq!(list, &vec![panel_b.clone(), panel_c.clone()]);
+    assert_eq!(*active, 0, "expected active panel (b) to remain active");
+    assert_eq!(
+        g.find_panel_in_window(w, &panel_b),
+        Some((tabs, 0)),
+        "expected the previously-active panel to remain selected"
+    );
+}

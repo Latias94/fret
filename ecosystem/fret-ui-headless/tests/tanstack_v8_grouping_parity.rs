@@ -261,6 +261,10 @@ fn snapshot_sorted_grouped_row_model<TData>(
     data: &[TData],
     row_index_by_key: &std::collections::HashMap<RowKey, usize>,
     group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
+    group_aggs_any: &std::collections::HashMap<
+        RowKey,
+        Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
+    >,
 ) -> (Vec<GroupedRowNodeExpect>, Vec<GroupedRowNodeExpect>) {
     let mut roots: Vec<usize> = model.root_rows().to_vec();
 
@@ -272,6 +276,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data,
         row_index_by_key,
         group_aggs_u64,
+        group_aggs_any,
     );
 
     fn walk_root<TData>(
@@ -282,6 +287,10 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data: &[TData],
         row_index_by_key: &std::collections::HashMap<RowKey, usize>,
         group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
+        group_aggs_any: &std::collections::HashMap<
+            RowKey,
+            Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
+        >,
         out: &mut Vec<GroupedRowNodeExpect>,
     ) {
         for &index in indices {
@@ -301,6 +310,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
                 data,
                 row_index_by_key,
                 group_aggs_u64,
+                group_aggs_any,
             );
             walk_root(
                 model,
@@ -310,6 +320,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
                 data,
                 row_index_by_key,
                 group_aggs_u64,
+                group_aggs_any,
                 out,
             );
         }
@@ -324,6 +335,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data,
         row_index_by_key,
         group_aggs_u64,
+        group_aggs_any,
         &mut root,
     );
 
@@ -497,19 +509,19 @@ fn tanstack_v8_grouping_parity() {
 
         if let Some(expected) = snap.expect.row_pinning.as_ref() {
             let top: Vec<String> = table
-                .top_row_keys()
+                .top_row_ids()
                 .into_iter()
-                .map(|k| k.0.to_string())
+                .map(|id| id.as_str().to_string())
                 .collect();
             let center: Vec<String> = table
-                .center_row_keys()
+                .center_row_ids()
                 .into_iter()
-                .map(|k| k.0.to_string())
+                .map(|id| id.as_str().to_string())
                 .collect();
             let bottom: Vec<String> = table
-                .bottom_row_keys()
+                .bottom_row_ids()
                 .into_iter()
-                .map(|k| k.0.to_string())
+                .map(|id| id.as_str().to_string())
                 .collect();
 
             assert_eq!(
@@ -517,17 +529,11 @@ fn tanstack_v8_grouping_parity() {
                 "snapshot {} row_pinning.top mismatch",
                 snap.id
             );
-            // TanStack's `getCenterRows()` returns `table.getRowModel().rows`, which are "root rows".
-            // Under grouping, those are group rows (string IDs like `role:1`). This headless engine
-            // doesn't yet integrate grouping into the main `RowModel` pipeline, so `center_row_keys()`
-            // is only parity-gated for the non-grouped case.
-            if table.state().grouping.is_empty() {
-                assert_eq!(
-                    center, expected.center,
-                    "snapshot {} row_pinning.center mismatch",
-                    snap.id
-                );
-            }
+            assert_eq!(
+                center, expected.center,
+                "snapshot {} row_pinning.center mismatch",
+                snap.id
+            );
             assert_eq!(
                 bottom, expected.bottom,
                 "snapshot {} row_pinning.bottom mismatch",
@@ -769,6 +775,7 @@ fn tanstack_v8_grouping_parity() {
                     data.as_slice(),
                     &row_index_by_key,
                     actual_aggs,
+                    table.grouped_aggregations_any(),
                 );
 
                 assert_eq!(

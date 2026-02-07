@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::docs;
+use fret_kit::mvu::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
@@ -56,37 +57,20 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
 
 #[cfg(target_arch = "wasm32")]
 fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    fn find_key_value(raw: &str, key: &str) -> Option<String> {
-        let raw = raw.trim();
-        if raw.is_empty() {
-            return None;
-        }
+    let location = fret_router::web::current_location()?;
 
-        for part in raw.split('&') {
-            let (k, v) = part.split_once('=').unwrap_or((part, ""));
-            if k.trim() == key {
-                let v = v.trim();
-                if v.is_empty() {
-                    return None;
-                }
-                return Some(v.to_string());
-            }
-        }
-        None
-    }
-
-    let window = web_sys::window()?;
-    let location = window.location();
-    let search = location.search().ok().unwrap_or_default();
-    let hash = location.hash().ok().unwrap_or_default();
-
-    let search = search.strip_prefix('?').unwrap_or(search.as_str());
-    let hash = hash.strip_prefix('#').unwrap_or(hash.as_str());
-
-    let id = find_key_value(search, "page")
-        .or_else(|| find_key_value(hash, "page"))
-        .or_else(|| find_key_value(search, "start_page"))
-        .or_else(|| find_key_value(hash, "start_page"))?;
+    let id = fret_router::first_query_value_from_search_or_hash(
+        &location.search,
+        &location.hash,
+        "page",
+    )
+    .or_else(|| {
+        fret_router::first_query_value_from_search_or_hash(
+            &location.search,
+            &location.hash,
+            "start_page",
+        )
+    })?;
 
     ui_gallery_start_page_from_id(&id)
 }
@@ -98,6 +82,7 @@ pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
+pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
 pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
 pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
 pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
@@ -220,6 +205,8 @@ pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
+pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
+    "ui_gallery.nav.select.hit_test_only_paint_cache_probe";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
@@ -491,6 +478,22 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["hit_test", "pointer", "dispatch", "performance", "harness"],
                 docs::DOC_HIT_TEST_TORTURE,
                 docs::USAGE_HIT_TEST_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                "HitTestOnly Paint-Cache Probe",
+                "Hit Test / Paint Cache Gate Probe",
+                "fret-ui (paint-cache diagnostics)",
+                CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                &[
+                    "hit_test",
+                    "paint_cache",
+                    "diagnostics",
+                    "performance",
+                    "harness",
+                ],
+                docs::DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                docs::USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,
@@ -1835,36 +1838,26 @@ pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     by_command.get(command).copied()
 }
 
-struct DataGridCommands {
-    by_row: Vec<CommandId>,
-    row_by_command: HashMap<Arc<str>, u64>,
-}
-
-fn data_grid_commands() -> &'static DataGridCommands {
-    static COMMANDS: OnceLock<DataGridCommands> = OnceLock::new();
-    COMMANDS.get_or_init(|| {
-        let mut by_row: Vec<CommandId> = Vec::with_capacity(DATA_GRID_ROWS);
-        let mut row_by_command: HashMap<Arc<str>, u64> = HashMap::with_capacity(DATA_GRID_ROWS);
-
-        for row in 0..DATA_GRID_ROWS {
-            let cmd = CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"));
-            row_by_command.insert(cmd.0.clone(), row as u64);
-            by_row.push(cmd);
-        }
-
-        DataGridCommands {
-            by_row,
-            row_by_command,
-        }
-    })
+fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
+    let lock = ROUTER.get_or_init(|| {
+        Mutex::new(KeyedMessageRouter::new(
+            CMD_DATA_GRID_ROW_PREFIX.to_string(),
+        ))
+    });
+    let mut guard = lock
+        .lock()
+        .expect("ui-gallery data-grid row router lock poisoned");
+    f(&mut guard)
 }
 
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
-    data_grid_commands().by_row.get(row).cloned()
+    let row = u64::try_from(row).ok()?;
+    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
 }
 
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    data_grid_commands().row_by_command.get(command).copied()
+    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
 }
 
 pub(crate) fn page_meta(

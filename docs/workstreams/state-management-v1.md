@@ -6,6 +6,12 @@ Related ADR:
 
 - `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 
+Related guidance:
+
+- `docs/workstreams/state-management-v1-extension-contract.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1.md`
+- `docs/workstreams/imui-state-integration-v1.md`
+
 This workstream defines a practical, editor-grade “state management story” for Fret apps and
 ecosystem crates, without collapsing kernel boundaries.
 
@@ -102,6 +108,8 @@ Implementation:
     - `fret_query::ui::QueryElementContextExt::use_query(...)`
     - `fret_query::ui::QueryElementContextExt::use_query_async(...)`
     - `fret_query::ui::QueryElementContextExt::use_query_async_local(...)`
+  - lifecycle semantics (stale/refetch/cancel/retry): see
+    `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md` and `docs/workstreams/query-lifecycle-v1.md`
   - async fetch requires installing a `FutureSpawnerHandle` global (tokio/wasm spawners); see
     `docs/integrating-tokio-and-reqwest.md`
 
@@ -138,6 +146,10 @@ Caveat (view-cache reuse):
   This means per-frame routing tables will not be refreshed.
 - For dynamic commands inside a view-cached subtree, prefer **stable** command IDs and a persistent
   lookup table (`CommandId -> message`) owned by the window/app state.
+  - Recommended helper: `fret-kit::mvu::KeyedMessageRouter<K, M>`.
+    - allocate stable command IDs per key (`cmd(key, message)`),
+    - prune on each view build (`retain_keys(...)`) to avoid unbounded growth,
+    - resolve in `on_command(...)` (`try_resolve(...)`).
   - Example: UI Gallery keeps stable command→payload helpers in `apps/fret-ui-gallery/src/spec.rs`.
 
 ## User experience target (“what app authors should feel”)

@@ -15,3 +15,4 @@ slotmap.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+fret-i18n = { path = "../fret-i18n" }

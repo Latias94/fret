@@ -142,16 +142,16 @@ Related:
   - Evidence: `apps/fret-examples/src/todo_demo.rs`
 - [x] AUE-iter-102 Add sink-based `ui::{h_flex_build,v_flex_build}` helpers that preserve the fluent patch surface.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
-  - Evidence: `apps/fret-examples/src/todo_mvu_demo.rs`
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
 - [x] AUE-iter-103 Remove remaining `.elements()` hotspots in `fret-examples` by using sink-based builders or eager `Vec` assembly.
-  - Evidence: `apps/fret-examples/src/{assets_demo,todo_interop_demo,todo_interop_kit_demo,todo_mvu_interop_demo}.rs`
+  - Evidence: `apps/fret-examples/src/{assets_demo,markdown_demo,todo_demo}.rs`
 - [x] AUE-iter-104 Adopt iterable/sink-based patterns in `fret-ui-gallery` to reduce boilerplate in real-world authoring code.
   - Evidence: `apps/fret-ui-gallery/src/ui.rs`
 - [x] AUE-iter-105 Adopt iterable children patterns in demo shells (reduce `vec![...]` where APIs accept `IntoIterator`).
   - Evidence: `apps/fret-demo/src/bin/hotpatch_smoke_demo.rs`
 - [x] AUE-iter-106 Remove redundant `stack::{hstack_iter,vstack_iter}` wrappers (base functions already accept `IntoIterator`).
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/stack.rs`, `ecosystem/fret-ui-kit/src/declarative/scroll.rs`
-  - Evidence: `apps/fret-examples/src/{todo_interop_kit_demo,todo_mvu_interop_demo}.rs`
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
 - [x] AUE-iter-107 Remove redundant `TooltipProvider::with` wrappers (keep `with_elements` as the single surface).
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`

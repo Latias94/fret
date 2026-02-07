@@ -252,6 +252,36 @@
             "12": false,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -446,6 +476,36 @@
             "12": false,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -648,6 +708,36 @@
             "12": true,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -952,6 +1042,36 @@
             "12": true,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -1245,6 +1365,36 @@
             "12": false,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -1530,6 +1680,36 @@
             "121": false
           },
           "is_all_sub_rows_selected": {
+            "1": false,
+            "2": false,
+            "3": false,
+            "4": false,
+            "11": false,
+            "12": false,
+            "31": false,
+            "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
             "1": false,
             "2": false,
             "3": false,
@@ -1829,6 +2009,36 @@
             "12": true,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": false,
+            "2": false,
+            "3": false,
+            "4": false,
+            "11": false,
+            "12": false,
+            "31": false,
+            "121": false
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -2108,6 +2318,36 @@
             "12": false,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -2409,6 +2649,36 @@
             "12": true,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": false,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -2702,6 +2972,36 @@
             "12": false,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_select_sub_rows": {
+            "1": false,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }
@@ -2993,6 +3293,36 @@
             "12": true,
             "31": false,
             "121": false
+          },
+          "can_select": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "can_multi_select": {
+            "1": false,
+            "2": false,
+            "3": false,
+            "4": false,
+            "11": false,
+            "12": false,
+            "31": false,
+            "121": false
+          },
+          "can_select_sub_rows": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
           }
         }
       }

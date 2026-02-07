@@ -19,8 +19,7 @@ slotmap.workspace = true
 tracing.workspace = true
 
 [features]
-default = ["layout-engine-v2"]
-layout-engine-v2 = ["fret-ui/layout-engine-v2"]
+default = []
 ui = []
 imui = ["ui", "dep:fret-authoring"]
 

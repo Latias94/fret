@@ -1019,8 +1019,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
-                false,
-                true,
+                /* consume_deferred_scroll_to_item */ false,
+                /* commit_scroll_handle_baselines */ false,
             );
         }
 
@@ -1298,6 +1298,7 @@ impl<H: UiHost> UiTree<H> {
         let mut cursor_choice_from_query = false;
         let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
+        let mut stop_propagation_requested_by: Option<NodeId> = None;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let mut suppress_touch_up_outside_dispatch = false;
         let mut suppress_pointer_dispatch = false;
@@ -1905,6 +1906,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if stop_propagation {
                         stop_propagation_requested = true;
+                        if stop_propagation_requested_by.is_none() {
+                            stop_propagation_requested_by = Some(node_id);
+                        }
                         if is_wheel && wheel_stop_node.is_none() {
                             wheel_stop_node = Some(node_id);
                         }
@@ -2039,6 +2043,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if stop_propagation {
                         stop_propagation_requested = true;
+                        if stop_propagation_requested_by.is_none() {
+                            stop_propagation_requested_by = Some(node_id);
+                        }
                         if is_wheel && wheel_stop_node.is_none() {
                             wheel_stop_node = Some(node_id);
                         }
@@ -2180,6 +2187,9 @@ impl<H: UiHost> UiTree<H> {
 
                         if stop_propagation {
                             stop_propagation_requested = true;
+                            if stop_propagation_requested_by.is_none() {
+                                stop_propagation_requested_by = Some(node_id);
+                            }
                             stopped_in_capture = true;
                             break;
                         }
@@ -2306,12 +2316,34 @@ impl<H: UiHost> UiTree<H> {
 
                         if stop_propagation {
                             stop_propagation_requested = true;
+                            if stop_propagation_requested_by.is_none() {
+                                stop_propagation_requested_by = Some(node_id);
+                            }
                             break;
                         }
                     }
                 }
 
-                if defer_escape_overlay_dismiss && !stop_propagation_requested {
+                let stopped_by_dismissible_root_hook = stop_propagation_requested
+                    && self.window.is_some_and(|window| {
+                        stop_propagation_requested_by
+                            .and_then(|node| self.nodes.get(node).and_then(|n| n.element))
+                            .and_then(|element| {
+                                crate::elements::with_element_state(
+                                    app,
+                                    window,
+                                    element,
+                                    crate::action::DismissibleActionHooks::default,
+                                    |hooks| hooks.on_dismiss_request.clone(),
+                                )
+                            })
+                            .is_some()
+                    });
+
+                if defer_escape_overlay_dismiss
+                    && !stopped_by_dismissible_root_hook
+                    && (!stop_propagation_requested || !focus_requested)
+                {
                     if let Event::KeyDown {
                         key: fret_core::KeyCode::Escape,
                         repeat: false,
@@ -2442,6 +2474,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if stop_propagation {
                         stop_propagation_requested = true;
+                        if stop_propagation_requested_by.is_none() {
+                            stop_propagation_requested_by = Some(node_id);
+                        }
                         if is_wheel && wheel_stop_node.is_none() {
                             wheel_stop_node = Some(node_id);
                         }
@@ -2740,8 +2775,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
-                false,
-                true,
+                /* consume_deferred_scroll_to_item */ false,
+                /* commit_scroll_handle_baselines */ false,
             );
 
             self.hit_test_path_cache = None;

@@ -174,8 +174,7 @@ impl ConfigFilesWatcher {
         if settings_changed {
             match crate::config_files::load_layered_settings(&paths) {
                 Ok((settings, _report)) => {
-                    app.set_global(settings.clone());
-                    app.set_global(settings.docking_interaction_settings());
+                    crate::settings::apply_settings_globals(app, &settings);
                     crate::menu_bar::sync_os_menu_bar(app);
                     app.request_redraw(window);
                     tick.reloaded_settings = true;

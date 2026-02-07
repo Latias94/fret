@@ -21,6 +21,8 @@ This skill is organized as:
 - If the work is about **debugging / scripted repro / packaging**, use:
   - `fret-diag-workflow`
 
+- If the work includes async data + derived state + typed message flow, pair with `fret-app-architecture-and-effects`.
+
 ## Mind models
 
 - `references/mind-models/mm-layering.md`: pick the correct layer (`fret-ui` vs `fret-ui-kit` vs `fret-ui-shadcn`).

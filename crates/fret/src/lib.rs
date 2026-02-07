@@ -9,6 +9,9 @@
 //! - `fretboard` (dev tooling)
 //!
 //! See ADR 0111: `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`.
+//!
+//! Default features are intentionally minimal (`core` only). Enable additional feature bundles
+//! explicitly, or use `fret-kit` for the batteries-included golden path.
 
 #[cfg(feature = "core")]
 pub mod core {
@@ -58,6 +61,11 @@ pub mod platform_web {
 #[cfg(feature = "runner-winit")]
 pub mod runner_winit {
     pub use fret_runner_winit::*;
+}
+
+#[cfg(feature = "runner-web")]
+pub mod runner_web {
+    pub use fret_runner_web::*;
 }
 
 #[cfg(feature = "launch")]
