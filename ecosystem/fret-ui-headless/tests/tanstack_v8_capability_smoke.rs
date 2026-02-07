@@ -79,6 +79,9 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     let _top = table.top_row_keys();
     let _center = table.center_row_keys();
     let _bottom = table.bottom_row_keys();
+    let _top_ids = table.top_row_ids();
+    let _center_ids = table.center_row_ids();
+    let _bottom_ids = table.bottom_row_ids();
 }
 
 #[test]

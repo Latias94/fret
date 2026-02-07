@@ -101,7 +101,7 @@ Initial mapping snapshot (keep updated):
 | `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
 | `column.getSize()` / `column.getStart()` / `column.getAfter()` | `Table::column_size/column_start/column_after` | Aligned (core) | Fixture-gated via column sizing tests. |
 | `column.getIsPinned()` / `column.pin()` | `Table::column_pin_position` + `Table::toggled_column_pinning` | Aligned (core) | Column pinning fixtures gate state transitions + derived splits. |
-| `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_keys/center_row_keys/bottom_row_keys` | Partial | Keys-only; group-root semantics under grouping require `RowId` integration. |
+| `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_keys/center_row_keys/bottom_row_keys` (+ `*_row_ids`) | Partial | RowId-based partitions are now available (`top_row_ids/center_row_ids/bottom_row_ids`); remaining work is a capability-inventory pass for full Row-returning convenience surfaces. |
 
 ### Row identity (`RowId`) and lookup
 

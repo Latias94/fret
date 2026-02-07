@@ -784,6 +784,22 @@ impl<'a, TData> Table<'a, TData> {
         None
     }
 
+    pub fn row_id_for_key(&self, row_key: RowKey) -> Option<RowId> {
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            if let Some(i) = grouped.row_by_key(row_key) {
+                if let Some(row) = grouped.row(i) {
+                    return Some(row.id.clone());
+                }
+            }
+        }
+
+        let core = self.core_row_model();
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+        Some(row.id.clone())
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
     }
@@ -1959,8 +1975,22 @@ impl<'a, TData> Table<'a, TData> {
         self.pinned_row_keys(super::RowPinPosition::Top)
     }
 
+    pub fn top_row_ids(&self) -> Vec<RowId> {
+        self.top_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
+            .collect()
+    }
+
     pub fn bottom_row_keys(&self) -> Vec<RowKey> {
         self.pinned_row_keys(super::RowPinPosition::Bottom)
+    }
+
+    pub fn bottom_row_ids(&self) -> Vec<RowId> {
+        self.bottom_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
+            .collect()
     }
 
     pub fn center_row_keys(&self) -> Vec<RowKey> {
@@ -2017,6 +2047,13 @@ impl<'a, TData> Table<'a, TData> {
             .filter_map(|&i| grouped.row(i))
             .map(|row| row.key)
             .filter(|key| !pinned.contains(key))
+            .collect()
+    }
+
+    pub fn center_row_ids(&self) -> Vec<RowId> {
+        self.center_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
             .collect()
     }
 

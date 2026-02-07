@@ -154,7 +154,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_key_for_id` grouped fallback)
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
-      - Remaining: align key-only row partition APIs (`top/center/bottom`) with grouped row-id semantics.
+      - Done: row partition APIs now have RowId surfaces (`top_row_ids` / `center_row_ids` / `bottom_row_ids`)
+        that resolve grouped ids via the grouped row model.
+      - Remaining: continue the non-option capability inventory workstream (`HTP-base-004`, `HTP-cap-010`).
     - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
@@ -692,4 +694,3 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json` | `row_id_state_ops` | Row identity/state ops (`RowSelection` + `RowExpanding` + `RowPinning` by string RowId, grouped/nested grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json` | `row_id_lookup` | Row identity lookup (`table.getRow(id, searchAll?)`) + `rowsById` parity across core/pre-pagination/final models (custom RowId + grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs` | Partial |
-

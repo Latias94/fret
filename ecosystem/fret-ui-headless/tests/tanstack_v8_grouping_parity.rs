@@ -254,23 +254,6 @@ fn path_key(path: &[PathEntry]) -> String {
         .join("|")
 }
 
-fn row_id_for_key(table: &Table<'_, FixtureRow>, row_key: RowKey) -> String {
-    if !table.state().grouping.is_empty() {
-        let grouped = table.grouped_row_model();
-        if let Some(index) = grouped.row_by_key(row_key)
-            && let Some(row) = grouped.row(index)
-        {
-            return row.id.as_str().to_string();
-        }
-    }
-
-    if let Some(row) = table.row(row_key, true) {
-        return row.id.as_str().to_string();
-    }
-
-    row_key.0.to_string()
-}
-
 fn snapshot_sorted_grouped_row_model<TData>(
     model: &GroupedRowModel,
     sorting: &[fret_ui_headless::table::SortSpec],
@@ -526,19 +509,19 @@ fn tanstack_v8_grouping_parity() {
 
         if let Some(expected) = snap.expect.row_pinning.as_ref() {
             let top: Vec<String> = table
-                .top_row_keys()
+                .top_row_ids()
                 .into_iter()
-                .map(|k| row_id_for_key(&table, k))
+                .map(|id| id.as_str().to_string())
                 .collect();
             let center: Vec<String> = table
-                .center_row_keys()
+                .center_row_ids()
                 .into_iter()
-                .map(|k| row_id_for_key(&table, k))
+                .map(|id| id.as_str().to_string())
                 .collect();
             let bottom: Vec<String> = table
-                .bottom_row_keys()
+                .bottom_row_ids()
                 .into_iter()
-                .map(|k| row_id_for_key(&table, k))
+                .map(|id| id.as_str().to_string())
                 .collect();
 
             assert_eq!(
