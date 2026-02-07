@@ -3491,6 +3491,7 @@ See: `docs/tracy.md`.\n";
             let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
+            let mut exit_code: i32 = 0;
 
             if let Some(baseline) = perf_baseline.as_ref() {
                 for src in &scripts {
@@ -5140,7 +5141,9 @@ See: `docs/tracy.md`.\n";
                         perf_threshold_failures.len(),
                         out_path.display()
                     );
-                    std::process::exit(1);
+                    // Do not exit early: still print the `--json` payload so perf runs remain
+                    // loggable and diagnosable even when thresholds fail.
+                    exit_code = 1;
                 }
             }
 
@@ -5172,7 +5175,7 @@ See: `docs/tracy.md`.\n";
                 );
             }
 
-            std::process::exit(0);
+            std::process::exit(exit_code);
         }
         "stats" => {
             let Some(src) = rest.first().cloned() else {
