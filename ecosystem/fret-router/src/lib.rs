@@ -16,6 +16,11 @@ mod query_integration;
 mod route_tree;
 mod router_state;
 mod search;
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "web-history", feature = "hash-routing")
+))]
+mod web_adapters;
 
 pub use alias::{AliasResolveError, QueryKeyAlias, RouteAliasRule, RouteAliasTable};
 pub use base_path::{apply_base_path, normalize_base_path, strip_base_path};
@@ -44,6 +49,10 @@ pub use router_state::{HistoryAdapter, RouteMatchSnapshot, Router, RouterState, 
 pub use search::{
     RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,
 };
+#[cfg(all(target_arch = "wasm32", feature = "hash-routing"))]
+pub use web_adapters::HashHistoryAdapter;
+#[cfg(all(target_arch = "wasm32", feature = "web-history"))]
+pub use web_adapters::WebHistoryAdapter;
 
 #[cfg(all(
     target_arch = "wasm32",

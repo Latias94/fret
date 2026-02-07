@@ -8,6 +8,7 @@ use crate::{
 
 pub trait HistoryAdapter {
     fn current(&self) -> &RouteLocation;
+    fn refresh(&mut self) {}
     fn navigate(&mut self, action: NavigationAction, target: Option<RouteLocation>) -> bool;
 }
 
@@ -86,8 +87,9 @@ where
         tree: Arc<RouteTree<R>>,
         search_table: Arc<RouteSearchTable<R>>,
         search_mode: SearchValidationMode,
-        history: H,
+        mut history: H,
     ) -> Result<Self, RouteSearchValidationFailure> {
+        history.refresh();
         let initial_location = history.current().clone();
         let state = RouterState::from_match_result(tree.match_routes_with_search(
             &initial_location,
@@ -117,6 +119,7 @@ where
     }
 
     pub fn sync(&mut self) -> Result<bool, RouteSearchValidationFailure> {
+        self.history.refresh();
         let next_location = self.history.current().clone();
         if next_location == self.state.location {
             return Ok(false);
@@ -137,6 +140,7 @@ where
         action: NavigationAction,
         target: Option<RouteLocation>,
     ) -> Result<bool, RouteSearchValidationFailure> {
+        self.history.refresh();
         let from = self.history.current().clone();
 
         let changed = self.history.navigate(action, target);
@@ -144,6 +148,7 @@ where
             return Ok(false);
         }
 
+        self.history.refresh();
         let to = self.history.current().clone();
         let mut next_state = RouterState::from_match_result(self.tree.match_routes_with_search(
             &to,

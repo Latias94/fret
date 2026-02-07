@@ -3,6 +3,7 @@
     any(feature = "web-history", feature = "hash-routing")
 ))]
 
+use fret_router::HistoryAdapter;
 use fret_router::web;
 use wasm_bindgen_test::*;
 
@@ -188,4 +189,56 @@ fn current_hash_route_location_reads_nested_direct_link() {
     let location =
         web::current_hash_route_location().expect("hash route location should be available");
     assert_eq!(location.to_url(), "/docs/guides/getting-started?tab=api");
+}
+
+#[cfg(feature = "web-history")]
+#[wasm_bindgen_test]
+fn web_history_adapter_can_refresh_and_navigate() {
+    let _guard = UrlRestoreGuard::capture().expect("window location should be available");
+
+    assert!(web::navigate_with_history(
+        fret_router::NavigationAction::Replace,
+        Some("/router-adapter-test"),
+        Some("case=web"),
+        Some("frag"),
+    ));
+
+    let mut adapter =
+        fret_router::WebHistoryAdapter::new().expect("web history adapter should construct");
+    adapter.refresh();
+    assert_eq!(
+        adapter.current().to_url(),
+        "/router-adapter-test?case=web#frag"
+    );
+
+    assert!(adapter.navigate(
+        fret_router::NavigationAction::Replace,
+        Some(fret_router::RouteLocation::parse("/next?x=1#y")),
+    ));
+    assert_eq!(adapter.current().to_url(), "/next?x=1#y");
+}
+
+#[cfg(feature = "hash-routing")]
+#[wasm_bindgen_test]
+fn hash_history_adapter_can_refresh_and_navigate() {
+    let _guard = UrlRestoreGuard::capture().expect("window location should be available");
+
+    assert!(web::navigate_hash(
+        fret_router::NavigationAction::Replace,
+        "/router-hash-adapter-test?case=hash",
+    ));
+
+    let mut adapter =
+        fret_router::HashHistoryAdapter::new().expect("hash history adapter should construct");
+    adapter.refresh();
+    assert_eq!(
+        adapter.current().to_url(),
+        "/router-hash-adapter-test?case=hash"
+    );
+
+    assert!(adapter.navigate(
+        fret_router::NavigationAction::Replace,
+        Some(fret_router::RouteLocation::parse("/next?x=1#ignored")),
+    ));
+    assert_eq!(adapter.current().to_url(), "/next?x=1");
 }
