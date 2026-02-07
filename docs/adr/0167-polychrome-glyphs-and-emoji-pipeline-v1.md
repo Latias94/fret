@@ -123,7 +123,7 @@ We keep an explicit conformance surface for polychrome correctness:
 
 Current implementation already follows this direction in the renderer:
 
-- Glyph content classification + dedicated atlases live in `crates/fret-render/src/text.rs`.
+- Glyph content classification + dedicated atlases live in `crates/fret-render-wgpu/src/text.rs`.
 - The conformance harness is `apps/fret-examples/src/emoji_conformance_demo.rs`.
 
 ## Follow-ups
