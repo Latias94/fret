@@ -78,6 +78,12 @@ Legend:
   - no double-insert on `compositionend`.
 - [x] Validate glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
 - [!] Deferred: IME enable/focus is still flaky on some browsers/dev setups (activation-window timing). Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit later.
+  - Triage recipe:
+    - Load the harness with `?demo=ui_gallery&page=web_ime_harness&ime_debug=1` (console logs are opt-in).
+    - Click the editor surface once (ensure the browser grants user activation), then check the harness panel snapshots:
+      - `WindowInputContextService` (focus + `text_boundary_mode` + text-input classification)
+      - `WindowTextInputSnapshotService` (preedit/selection ranges and UTF-16↔UTF-8 mapping clues)
+    - If focus is flaky, confirm whether the bridge reports `enabled=1` and `textarea_has_focus=true` in the debug snapshot and inspect the recent DOM event ring buffer for ordering clues (`beforeinput`/`input`/`composition*`).
 
 ---
 
