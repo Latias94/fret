@@ -1098,3 +1098,161 @@ fn syntax_cache_invalidation_shifts_far_rows_on_newline_deletion() {
     );
     assert!(Arc::ptr_eq(&spans_after, &spans_150));
 }
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_invalidates_bounded_window_around_edit() {
+    let mut text = String::new();
+    for _ in 0..300 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let line_10 = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_50 = paint::cached_row_syntax_spans(&mut st, 50, max_entries);
+    let line_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    let line_200 = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+
+    assert!(st.syntax_row_cache.contains_key(&10));
+    assert!(st.syntax_row_cache.contains_key(&50));
+    assert!(st.syntax_row_cache.contains_key(&150));
+    assert!(st.syntax_row_cache.contains_key(&200));
+
+    let edit_line = 100usize;
+    let at = st
+        .buffer
+        .line_start(edit_line)
+        .expect("expected line start");
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Insert {
+            at,
+            text: "x".to_string(),
+        },
+        Selection {
+            anchor: at + 1,
+            focus: at + 1,
+        },
+    )
+    .expect("apply edit");
+
+    assert!(
+        st.syntax_row_cache.contains_key(&10),
+        "expected far-row entry outside the invalidation window to survive"
+    );
+    assert!(
+        st.syntax_row_cache.contains_key(&200),
+        "expected far-row entry outside the invalidation window to survive"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&50),
+        "expected entry inside the lookback/lookahead invalidation window to be evicted"
+    );
+    assert!(
+        !st.syntax_row_cache.contains_key(&150),
+        "expected entry inside the lookback/lookahead invalidation window to be evicted"
+    );
+
+    let hits_before = st.cache_stats.syntax_hits;
+    let line_10_after = paint::cached_row_syntax_spans(&mut st, 10, max_entries);
+    let line_200_after = paint::cached_row_syntax_spans(&mut st, 200, max_entries);
+    assert!(
+        st.cache_stats.syntax_hits >= hits_before + 2,
+        "expected preserved far-row cache to hit"
+    );
+    assert!(Arc::ptr_eq(&line_10_after, &line_10));
+    assert!(Arc::ptr_eq(&line_200_after, &line_200));
+
+    let _ = line_50;
+    let _ = line_150;
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_multiple_newline_insertion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Insert {
+            at: 0,
+            text: "\n\n\n".to_string(),
+        },
+        Selection {
+            anchor: 3,
+            focus: 3,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 153;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn syntax_cache_invalidation_shifts_far_rows_on_multiple_line_deletion() {
+    let mut text = String::new();
+    for _ in 0..200 {
+        text.push_str("fn main() {}\n");
+    }
+
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_language(Some(Arc::<str>::from("rust")));
+
+    let mut st = handle.state.borrow_mut();
+    let max_entries = 4096;
+
+    let spans_150 = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
+    assert!(
+        st.syntax_row_cache.contains_key(&150),
+        "expected far-row cache entries to be populated"
+    );
+
+    let end = st.buffer.line_start(3).expect("expected a line start");
+    input::apply_and_record_edit(
+        &mut st,
+        UndoGroupKind::Typing,
+        Edit::Delete { range: 0..end },
+        Selection {
+            anchor: 0,
+            focus: 0,
+        },
+    )
+    .expect("apply edit");
+
+    let shifted_row = 147;
+    let (shifted_entry, _) = st
+        .syntax_row_cache
+        .get(&shifted_row)
+        .expect("expected shifted far-row cache entry");
+    assert!(
+        Arc::ptr_eq(shifted_entry, &spans_150),
+        "expected the old far-row cache entry to move to the shifted row key"
+    );
+}

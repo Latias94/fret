@@ -529,7 +529,7 @@ Evidence anchors:
 ### 5) Syntax and highlighting (ADR 0200)
 
 - [x] Define semantic token schema (independent of theme colors).
-- [~] Define incremental update strategy (best-effort; visible-window prioritized).
+- [x] Define incremental update strategy (best-effort; visible-window prioritized).
 - [x] Materialize spans only for visible rows; keep theme mapping paint-only.
 - [x] Expose a UI Gallery toggle for manual validation.
 
