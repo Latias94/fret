@@ -118,6 +118,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-core/src/text/mod.rs`
 
+- [x] BU-FR-core-024 Extract keyboard code helpers into a dedicated input submodule.
+  - Goal: keep `input/mod.rs` focused on the portable event vocabulary while isolating typeahead helpers.
+  - Evidence:
+    - `crates/fret-core/src/input/keyboard.rs`
+    - `crates/fret-core/src/input/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
