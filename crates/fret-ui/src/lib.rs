@@ -35,14 +35,12 @@ pub mod scroll;
 mod svg_source;
 #[cfg(test)]
 mod test_host;
-#[allow(dead_code)]
-pub(crate) mod text_area;
-mod text_edit;
-#[allow(dead_code)]
-pub(crate) mod text_input;
-mod text_input_style;
-mod text_props;
-mod text_surface;
+mod text;
+pub(crate) use text::area as text_area;
+pub(crate) use text::edit as text_edit;
+pub(crate) use text::input as text_input;
+pub(crate) use text::props as text_props;
+pub(crate) use text::surface as text_surface;
 pub mod theme;
 pub mod theme_keys;
 pub(crate) mod theme_registry;
@@ -68,8 +66,7 @@ pub use pending_shortcut::PendingShortcutOverlayState;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
-pub use text_area::TextAreaStyle;
-pub use text_input_style::TextInputStyle;
+pub use text::{TextAreaStyle, TextInputStyle};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use theme_keys::{ThemeColorKey, ThemeMetricKey};
 pub use tree::{
