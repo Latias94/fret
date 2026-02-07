@@ -1,8 +1,8 @@
 {
   "name": "fret-skills",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-04",
+  "last_updated": "2026-02-07",
   "skills": {
     "foundation": [
       "fret-component-authoring",
@@ -46,6 +46,10 @@
     ],
     "recipes": [
       "fret-shadcn-app-recipes"
+    ],
+    "quality": [
+      "fret-crate-audits",
+      "fret-boundary-checks"
     ]
   },
   "triggers": {
@@ -195,6 +199,16 @@
       "data-table",
       "data-grid",
       "data grid"
+    ],
+    "quality": [
+      "crate audit",
+      "audit crate",
+      "code quality",
+      "best practices",
+      "layering",
+      "crate boundaries",
+      "dependency policy",
+      "forbidden deps"
     ],
     "app_architecture": [
       "fret-kit",
