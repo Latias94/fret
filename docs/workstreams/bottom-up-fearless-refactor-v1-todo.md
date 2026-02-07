@@ -89,9 +89,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-ui/src/text/area/mod.rs`
     - `crates/fret-ui/src/text/input/mod.rs`
 
-- [ ] BU-FR-ui-025 Regroup layout-related crate-root modules under a dedicated `layout/` subsystem module.
+- [x] BU-FR-ui-025 Regroup layout-related crate-root modules under a dedicated `layout/` subsystem module.
   - Candidates: `layout_constraints.rs`, `layout_pass.rs`, `layout_engine.rs`, and related helpers.
   - Goal: make layout ownership clear and reduce cross-module entanglement.
+  - Evidence:
+    - `crates/fret-ui/src/layout/mod.rs`
+    - `crates/fret-ui/src/layout/engine.rs`
+    - `crates/fret-ui/src/layout/constraints.rs`
+    - `crates/fret-ui/src/layout/pass.rs`
 
 ## M3 — Renderer closure
 
