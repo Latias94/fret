@@ -1,3 +1,11 @@
+//! Winit-based runner glue for Fret.
+//!
+//! This crate focuses on translating winit input/window events into `fret-core` events and
+//! maintaining a small amount of window-side state (cursor/IME) at the platform boundary.
+//!
+//! For module ownership and “where should this go?” guidance, see
+//! `crates/fret-runner-winit/README.md`.
+
 use fret_core::time::Instant;
 use fret_core::{
     CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
