@@ -131,8 +131,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     with status + evidence anchors for each capability surface.
     - [x] HTP-cap-011 Table instance public surface checklist (`table.*`, non-underscore).
     - [x] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
-    - [ ] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
-    - [ ] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
+    - [x] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
+    - [x] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
     - [ ] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
       so UI consumers do not re-implement TanStack policies and drift.
   - Source of truth:

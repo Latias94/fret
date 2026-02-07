@@ -816,6 +816,29 @@ Initial mapping (WIP):
 - **Aligned**: `row.columnFilters` / `row.columnFiltersMeta` → `Table::row_filter_state_snapshot()` (`filtering_meta.json`).
 - **Partial**: `getValue/renderValue/getUniqueValues` instance-style value accessors (we expose the behaviors via column defs + aggregation/fallback gates).
 
+#### Row instance full checklist (public surfaces)
+
+This is a **non-underscore** inventory of `row.*` members from upstream. The mapping may be Rust-native
+and does not need to preserve method names, but the **capability must exist**.
+
+| Upstream (`row.*`) | Fret mapping (capability) | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| `id/index/depth/parentId/subRows` | `Row` snapshot fields via `RowModel::row(..)` (`Row::{id,index,depth,parent,sub_rows}`) | Partial | `row_model` fixtures gate ids/ordering; full per-row structural snapshot not yet fixture-gated |
+| `original/originalSubRows` | `Row::original` + `TableBuilder::get_sub_rows` | Partial | N/A |
+| `getValue` | `Table::cell_value(row_key, column_id)` | Partial | behavior gated indirectly by sorting/filtering fixtures |
+| `getAllCells/getVisibleCells/getLeft/Center/RightVisibleCells` | `Table::row_cells(row_key)` (`RowCellsSnapshot`) | Aligned | `headers_cells.json` |
+| `getIsSelected/getIsSomeSelected/getIsAllSubRowsSelected` | `Table::{row_is_selected,row_is_some_selected,row_is_all_sub_rows_selected}` | Aligned | `selection_tree.json` (`row_selection_detail`) |
+| `toggleSelected/getToggleSelectedHandler` | `Table::{row_selection_updater,toggled_row_selected}` (+ by-id variants) | Aligned | `selection.json`, `selection_tree.json`, `row_id_state_ops.json` |
+| `getCanSelect/getCanMultiSelect/getCanSelectSubRows` | internal selection-gate helpers exist but are not exposed as a row API | Missing | should be covered by a future `Table::{row_can_select,row_can_multi_select,row_can_select_sub_rows}` helper + fixture |
+| `getIsExpanded/getIsAllParentsExpanded` | `Table::{row_is_expanded_for_row,row_is_all_parents_expanded}` | Aligned | `expanding.json` |
+| `getCanExpand` | `Table::row_can_expand(row_key)` | Aligned | `expanding.json` |
+| `toggleExpanded/getToggleExpandedHandler` | `Table::{row_expanding_updater,toggled_row_expanded}` (+ by-id variants) | Aligned | `expanding.json`, `row_id_state_ops.json` |
+| `getIsPinned/getPinnedIndex/getCanPin` | `Table::{row_is_pinned,row_pinned_index,row_can_pin}` | Aligned | `pinning.json` |
+| `pin` | `Table::{row_pinning_updater,toggled_row_pinned}` (+ by-id variants) | Aligned | `pinning.json`, `pinning_tree.json`, `row_id_state_ops.json` |
+| `columnFilters/columnFiltersMeta` | `Table::row_filter_state_snapshot()` | Aligned | `filtering_meta.json` |
+| `groupingColumnId/getGroupingValue/getIsGrouped` | exposed via grouped-row model snapshots (`GroupedRowModel`) rather than per-row instance methods | Partial | `grouping.json` + grouped fixtures |
+| `getLeafRows/getParentRows` | derivable via `RowModel` traversal (`Row.parent` / `sub_rows`) | Partial | no dedicated gate yet |
+
 ### Header instance (public, non-underscore)
 
 - **Aligned**: `colSpan/rowSpan/isPlaceholder/placeholderId/subHeaders` equivalents
@@ -823,8 +846,28 @@ Initial mapping (WIP):
 - **Partial**: `getResizeHandler` instance surface
   → modeled via `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `header_size/header_start` snapshots (policy helper surface may be needed).
 
+#### Header instance full checklist (public surfaces)
+
+| Upstream (`header.*`) | Fret mapping (capability) | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| `colSpan/rowSpan/index/isPlaceholder/placeholderId/subHeaders` | `HeaderSnapshot` fields (`col_span,row_span,index,is_placeholder,placeholder_id,sub_header_ids`) | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
+| `column/headerGroup` | `HeaderSnapshot.column_id` + group membership implied by `HeaderGroupSnapshot` | Partial | `headers_cells.json` |
+| `getLeafHeaders` | `Table::leaf_headers()` (postorder) + `*_leaf_headers` split variants | Aligned | `headers_cells.json` |
+| `getSize/getStart` | `Table::{header_size,header_start}` (via column sizing info) | Aligned | `column_sizing.json` (`header_sizing` expectations) |
+| `getResizeHandler` | resize lifecycle modeled as pure transitions: `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` | Aligned | `column_sizing.json` |
+
 ### Cell instance (public, non-underscore)
 
 - **Aligned**: `getIsGrouped/getIsPlaceholder/getIsAggregated`
   → `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` (`grouping_cells.json` parity).
 - **Partial**: `getValue/renderValue` (value extraction is Rust-native via column defs; fallback behavior is parity-gated by `render_fallback.json`).
+
+#### Cell instance full checklist (public surfaces)
+
+| Upstream (`cell.*`) | Fret mapping (capability) | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| `column` | `CellSnapshot.column_id` (snapshot surface) | Aligned | `headers_cells.json` |
+| `getIsGrouped/getIsPlaceholder/getIsAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `grouping_cells.json` |
+| `getValue` | `Table::cell_value(row_key, column_id)` | Partial | gated indirectly via sorting/filtering fixtures |
+| `renderValue` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
+| `getContext` | not modeled (Rust-native UI integration provides context separately) | Missing | N/A |
