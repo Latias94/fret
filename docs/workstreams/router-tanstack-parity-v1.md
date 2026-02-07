@@ -167,6 +167,8 @@ Unify under a trait:
 
 - Provide a route->query key convention and invalidate/prefetch planning from transitions.
 - Add race/cancellation tests for rapid route changes.
+- Provide update-scoped helpers that return prefetch intents alongside navigation results, so apps
+  do not need to rely on `take_prefetch_intents()` ordering across multiple transitions.
 
 ## Evidence anchors (current baseline)
 
@@ -175,4 +177,5 @@ Unify under a trait:
 - `ecosystem/fret-router/src/history.rs` (portable history)
 - `ecosystem/fret-router/src/web.rs` + `ecosystem/fret-router/tests/web_wasm.rs` (web adapters)
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
+- `ecosystem/fret-router/src/router_state.rs` (`navigate_with_prefetch_intents` / `sync_with_prefetch_intents`)
 - `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; route-driven query effects; page back/forward)

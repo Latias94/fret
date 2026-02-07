@@ -70,6 +70,9 @@ Status legend:
 - `[x]` Add route-level hook surface (ADR 1169):
   - `before_load` (per-route middleware)
   - `loader` (prefetch intents)
+- `[x]` Add update-scoped helpers:
+  - `Router::navigate_with_prefetch_intents`
+  - `Router::sync_with_prefetch_intents`
 - `[ ]` Add race/cancellation tests for rapid route changes.
 
 ## Phase 5 - App adoption

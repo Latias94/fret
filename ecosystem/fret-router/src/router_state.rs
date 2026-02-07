@@ -267,6 +267,12 @@ impl RouterUpdate {
 }
 
 #[derive(Debug, Clone)]
+pub struct RouterUpdateWithPrefetchIntents<R> {
+    pub update: RouterUpdate,
+    pub intents: Vec<RoutePrefetchIntent<R>>,
+}
+
+#[derive(Debug, Clone)]
 pub enum RouterEvent<R> {
     Transitioned {
         transition: RouterTransition,
@@ -618,6 +624,38 @@ where
         std::mem::take(&mut self.prefetch_intents)
     }
 
+    pub fn sync_with_prefetch_intents(
+        &mut self,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        match self.sync() {
+            Ok(update) => Ok(RouterUpdateWithPrefetchIntents {
+                update,
+                intents: self.take_prefetch_intents(),
+            }),
+            Err(err) => {
+                let _ = self.take_prefetch_intents();
+                Err(err)
+            }
+        }
+    }
+
+    pub fn navigate_with_prefetch_intents(
+        &mut self,
+        action: NavigationAction,
+        target: Option<RouteLocation>,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        match self.navigate(action, target) {
+            Ok(update) => Ok(RouterUpdateWithPrefetchIntents {
+                update,
+                intents: self.take_prefetch_intents(),
+            }),
+            Err(err) => {
+                let _ = self.take_prefetch_intents();
+                Err(err)
+            }
+        }
+    }
+
     pub fn max_redirect_hops(&self) -> usize {
         self.max_redirect_hops
     }
@@ -832,7 +870,10 @@ fn normalize_redirect_action(action: NavigationAction) -> NavigationAction {
 
 #[cfg(test)]
 mod tests {
-    use super::{RouteHooks, Router, RouterBlockReason, RouterGuardDecision, RouterUpdate};
+    use super::{
+        RouteHooks, Router, RouterBlockReason, RouterGuardDecision, RouterUpdate,
+        RouterUpdateWithPrefetchIntents,
+    };
     use crate::{
         MemoryHistory, NavigationAction, RouteLocation, RouteNode, RouteSearchTable, RouteTree,
         SearchMap, SearchValidationError, SearchValidationMode,
@@ -982,6 +1023,124 @@ mod tests {
         let events = router.take_events();
         assert_eq!(events.len(), 1);
         assert!(matches!(events[0], super::RouterEvent::Blocked { .. }));
+    }
+
+    #[test]
+    fn navigate_with_prefetch_intents_returns_update_scoped_intents() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Gallery,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Gallery, "gallery").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Gallery,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(|ctx| {
+                    vec![super::RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "tests.intent",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let RouterUpdateWithPrefetchIntents { update, intents } = router
+            .navigate_with_prefetch_intents(
+                NavigationAction::Push,
+                Some(RouteLocation::parse("/gallery")),
+            )
+            .expect("navigate should succeed");
+
+        assert!(update.changed());
+        assert_eq!(intents.len(), 1);
+        assert_eq!(intents[0].location.to_url(), "/gallery");
+        assert!(router.take_prefetch_intents().is_empty());
+    }
+
+    #[test]
+    fn navigate_with_prefetch_intents_clears_stale_intents_on_search_failure() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Gallery,
+        }
+
+        fn validate_root(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            if search.first("bad").is_some() {
+                Err(SearchValidationError::new("bad search key not allowed"))
+            } else {
+                Ok(search.clone())
+            }
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Gallery, "gallery").unwrap()]),
+        ));
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, validate_root);
+        let search_table = Arc::new(search_table);
+
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Gallery,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(|ctx| {
+                    vec![super::RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "tests.intent",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let update = router
+            .navigate(
+                NavigationAction::Push,
+                Some(RouteLocation::parse("/gallery")),
+            )
+            .expect("navigate should succeed");
+        assert!(update.changed());
+        assert_eq!(
+            router.prefetch_intents.len(),
+            1,
+            "expected the first transition to queue a prefetch intent"
+        );
+
+        let update = router.navigate_with_prefetch_intents(
+            NavigationAction::Push,
+            Some(RouteLocation::parse("/gallery?bad=1")),
+        );
+        assert!(update.is_err());
+        assert!(
+            router.prefetch_intents.is_empty(),
+            "expected navigate_with_prefetch_intents() to drain stale intents on failure"
+        );
     }
 
     #[test]
