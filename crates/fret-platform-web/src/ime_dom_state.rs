@@ -102,6 +102,20 @@ mod tests {
     }
 
     #[test]
+    fn shortcut_suppression_consumes_one_beforeinput_turn() {
+        let mut st = WebImeDomState::default();
+        st.on_shortcut_suppressed();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::Process
+        );
+    }
+
+    #[test]
     fn composition_end_suppresses_followup_input() {
         let mut st = WebImeDomState::default();
         st.on_composition_start();
@@ -113,6 +127,26 @@ mod tests {
             DomInputDisposition::IgnoreSuppressed
         );
         assert_eq!(st.input_disposition(), DomInputDisposition::Process);
+    }
+
+    #[test]
+    fn composition_end_suppresses_followup_beforeinput() {
+        let mut st = WebImeDomState::default();
+        st.on_composition_start();
+        assert_eq!(
+            st.beforeinput_disposition(true),
+            DomInputDisposition::IgnoreComposing
+        );
+
+        st.on_composition_end();
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::IgnoreSuppressed
+        );
+        assert_eq!(
+            st.beforeinput_disposition(false),
+            DomInputDisposition::Process
+        );
     }
 
     #[test]

@@ -826,6 +826,10 @@ impl WebImeBridge {
                 {
                     DomInputDisposition::IgnoreComposing => return,
                     DomInputDisposition::IgnoreSuppressed => {
+                        // If a command path already handled the edit (or a composition commit was
+                        // already emitted via `compositionend`), prevent the DOM mutation so we
+                        // don't get a follow-up `input` that would double-insert (ADR 0195).
+                        input.prevent_default();
                         textarea.set_value("");
                         #[cfg(debug_assertions)]
                         {
