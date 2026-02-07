@@ -13,3 +13,9 @@ fn docking_imui_handshake_compiles<H: UiHost + 'static>(ui: &mut impl UiWriter<H
     let runtime = DockingRuntime::new(AppWindowId::default());
     let _ = runtime.main_window();
 }
+
+#[test]
+fn imui_handshake_smoke_test_binary_is_non_empty() {
+    let options = DockSpaceImUiOptions::default();
+    assert!(options.test_id.is_none());
+}
