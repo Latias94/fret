@@ -1,4 +1,4 @@
-# ADR 0193: Code Editor Ecosystem v1 (Buffer/View/Surface Contracts)
+# ADR 0200: Code Editor Ecosystem v1 (Buffer/View/Surface Contracts)
 
 - Status: Proposed
 - Date: 2026-01-27
@@ -52,7 +52,18 @@ We introduce (names are normative unless later revised):
    - Edit operations (insert/delete/replace) expressed in UTF-8 byte indices (ADR 0044).
    - Selection/cursor primitives (single cursor v1; multi-cursor as a follow-up).
    - Undo integration hooks (ADR 0136; app-owned policy).
-   - Stable document identity (`DocId` or URI-like id) for multi-document workflows.
+   - Stable document identity for multi-document workflows.
+
+Document identity contract (v1):
+
+- The buffer MUST have a stable, opaque `DocId` used as the primary identity for caching and
+  cross-layer coordination.
+- The buffer MAY have an optional, URI-like `DocUri` intended for workspace shells and external
+  integrations (e.g. LSP, “open recent”, file-backed documents).
+  - `DocUri` is treated as an opaque string by the editor ecosystem crates.
+  - Normalization and scheme decisions are owned by the workspace layer.
+  - Changing a document’s `DocUri` is metadata-only and MUST NOT affect the buffer’s text
+    revision.
 
 2. `ecosystem/fret-code-editor-view`
    - A “display map” layer that maps buffer content into **display rows** and coordinate spaces:
@@ -176,6 +187,24 @@ Undo/redo:
 ### Phase 3: “Composable rows / embedded widgets (if required)”
 
 - Adopt ADR 0192 retained windowed hosts for composable per-row subtrees (when needed).
+
+## M0 Review Checklist (Non-Normative)
+
+The workstream blocks on explicitly confirming these v1 decisions:
+
+1) Layering: the normative split is buffer (`fret-code-editor-buffer`) → view (`fret-code-editor-view`)
+   → UI surface (`fret-code-editor`), and editor policy remains ecosystem-owned (ADR 0066).
+2) Document identity:
+   - `DocId` is the primary, stable identity used for caching/cross-layer coordination.
+   - `DocUri` is optional metadata for workspace shells; it is treated as opaque by the editor crates.
+   - Changing `DocUri` MUST NOT affect the text revision.
+3) Performance baseline:
+   - windowed virtual surface first (ADR 0190),
+   - no monolithic document `TextBlobId` (row-local shaping/caching only),
+   - bounded caches keyed by stable row identity and revision.
+4) Input/IME: reuse the runtime contracts (`Event::Ime` / `Event::TextInput`, ADR 0012/0071) and keep
+   the web IME bridge runner-owned (ADR 0195).
+5) Commands: baseline editing uses `text.*` (ADR 0044); editor-only behaviors live under `editor.*`.
 
 ## Evidence anchors (implementation)
 

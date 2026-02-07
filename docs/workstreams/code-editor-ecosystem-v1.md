@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-04
+Last updated: 2026-02-07
 
 Recent changes (2026-02-04):
 
@@ -194,7 +194,7 @@ Deferred (Web/WASM IME):
      viewport + overscan, not document length.
 
 3) **Line-local text blobs**
-   - No monolithic `TextBlobId` for an entire document. Prepare and cache text per visible row (ADR 0193).
+   - No monolithic `TextBlobId` for an entire document. Prepare and cache text per visible row (ADR 0200).
 
 4) **Theme-only updates should be paint-only**
    - Syntax highlighting should be expressed as semantic tokens and materialized as paint-only spans for visible rows.
@@ -206,7 +206,7 @@ Deferred (Web/WASM IME):
 
 ## Target Crate Layout (v1 direction)
 
-See ADR 0193 for the normative split. This workstream assumes:
+See ADR 0200 for the normative split. This workstream assumes:
 
 - `ecosystem/fret-code-editor-buffer`: document model + edits + selection + undo hooks
 - `ecosystem/fret-code-editor-view`: display mapping + invalidation + syntax token projection
@@ -264,7 +264,7 @@ Each milestone has “exit criteria” that should be demonstrably true (tests, 
 
 Exit criteria:
 
-- ADR 0193/0194/0195 reviewed and accepted or revised with explicit decisions.
+- ADR 0200/0194/0195 reviewed and accepted or revised with explicit decisions.
 - This workstream document reflects the accepted decisions and links to evidence anchors.
 
 ### M1 — Web IME bridge spike (wasm baseline)
@@ -404,9 +404,11 @@ Legend:
 
 ### 0) Contracts (ADRs)
 
-- [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
-- [ ] Review ADR 0194 and confirm the preferred seam:
+- [x] Review ADR 0200 and confirm crate split and v1 baseline (windowed surface first).
+  - See: ADR 0200 “M0 Review Checklist (Non-Normative)”.
+- [x] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
+  - See: ADR 0194 “M0 Review Checklist (Non-Normative)”.
 - [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation rules,
@@ -460,7 +462,7 @@ Evidence anchors:
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
-### 3) Windowed editor surface (ADR 0190/0193)
+### 3) Windowed editor surface (ADR 0190/0200)
 
 - [x] Choose v1 surface implementation strategy:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
@@ -493,7 +495,7 @@ Evidence anchors:
 - `ecosystem/fret-code-editor/src/lib.rs` (`caret_rect_for_selection` preedit cursor offset)
 - `ecosystem/fret-code-editor/src/lib.rs` (`paint_row`, `materialize_preedit_rich_text` underline)
 
-### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
+### 4) Document model (buffer) and undo hooks (ADR 0200 / ADR 0136)
 
 - [~] Select v1 text buffer structure:
   - rope, piece table, or hybrid (document decision).
@@ -513,7 +515,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/driver.rs` (`code_editor_syntax_rust` model)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` syntax toggle)
 
-### 5) Syntax and highlighting (ADR 0193)
+### 5) Syntax and highlighting (ADR 0200)
 
 - [x] Define semantic token schema (independent of theme colors).
 - [~] Define incremental update strategy (best-effort; visible-window prioritized).
@@ -577,4 +579,3 @@ Evidence anchors:
 - Targeted tests (examples):
   - `cargo nextest run -p fret-ui` (focus/scroll/semantics regressions)
   - `cargo nextest run -p fret-render` (text cache/atlas conformance)
-

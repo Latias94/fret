@@ -24,7 +24,7 @@ This ADR defines the v1 contract for “word boundaries” and their relationshi
 
 - `text.move_word_*` / `text.select_word_*` commands (ADR 0044),
 - pointer double-click selection (ADR 0151),
-- and future code editor ecosystem surfaces (ADR 0193).
+- and future code editor ecosystem surfaces (ADR 0200).
 
 ## Goals
 
@@ -79,7 +79,7 @@ Default (when no policy is provided):
 
 Recommended policy (v1):
 
-- If the focused surface is a code-editor-grade widget (e.g. the future `fret-code-editor` surface, ADR 0193),
+- If the focused surface is a code-editor-grade widget (e.g. the future `fret-code-editor` surface, ADR 0200),
   set `Identifier` mode for that window while it is focused.
 - Otherwise default to `UnicodeWord`.
 
@@ -166,11 +166,31 @@ At minimum, conformance harnesses SHOULD cover:
 3) Make `text.move_word_*` always mean “identifier”
    - Rejected: surprises users in general UI text fields and harms non-code workflows.
 
+## M0 Review Checklist (Non-Normative)
+
+The workstream blocks on explicitly confirming these v1 decisions:
+
+1) Seam: the preferred mechanism is window-scoped `InputContext.text_boundary_mode` plus an
+   override-stack service (not a per-widget heuristic).
+2) Defaults: core text widgets default to `UnicodeWord`; code-editor-grade surfaces opt into
+   `Identifier` while focused.
+3) Determinism around whitespace:
+   - clicking whitespace selects a whitespace run,
+   - clicking whitespace just after a word selects the previous word.
+4) Fallback behavior:
+   - when no “word” exists at the pointer (emoji/punctuation), selection falls back to a single
+     grapheme cluster (never split ZWJ emoji sequences).
+5) Identifier character class (v1 baseline): `_` plus Unicode XID_Continue.
+6) Triple-click line selection includes the trailing newline when present.
+7) Conformance strategy: keep a shared, testable implementation (currently `crates/fret-text-nav`)
+   so `TextInput`/`TextArea` and the code editor cannot drift.
+
 ## Evidence anchors (implementation)
 
 - Runtime seam + override stack: `crates/fret-runtime/src/input.rs` (`TextBoundaryMode`, `InputContext.text_boundary_mode`), `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`).
-- Core surface integration + tests: `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests), `crates/fret-ui/src/declarative/tests/interactions.rs` (double-click selection under scroll/transform for `TextInput` / `TextArea`).
-- Ecosystem consumer (code editor): `ecosystem/fret-code-editor/src/editor/mod.rs` (double/triple click selection; `TextInputRegionProps.text_boundary_mode_override`), `ecosystem/fret-code-editor-view/src/lib.rs` (`select_word_range_in_buffer`, `move_word_*_in_buffer`).
+- Shared word/line boundary implementation + tests: `crates/fret-text-nav/src/lib.rs` (`select_word_range`, `select_line_range`, `move_word_left`, `move_word_right`).
+- Core surface integration + tests: `crates/fret-ui/src/text_edit.rs` (delegates word/line navigation to `fret-text-nav`), `crates/fret-ui/src/declarative/tests/interactions.rs` (double-click selection under scroll/transform for `TextInput` / `TextArea`).
+- Ecosystem consumer (code editor): `ecosystem/fret-code-editor/src/editor/mod.rs` (double/triple click selection; `TextInputRegionProps.text_boundary_mode_override`), `ecosystem/fret-code-editor-view/src/lib.rs` (`select_word_range_in_buffer`, `move_word_*_in_buffer`, delegates to `fret-text-nav`).
 
 ## References
 
@@ -179,4 +199,4 @@ At minimum, conformance harnesses SHOULD cover:
 - ADR 0151: Pointer click count and double-click semantics
 - ADR 0152: Read-only text selection and clipboard commands
 - ADR 0066: Runtime contract surface (policy vs mechanism)
-- ADR 0193: Code editor ecosystem v1 (ecosystem layering)
+- ADR 0200: Code editor ecosystem v1 (ecosystem layering)

@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-05
+Last updated: 2026-02-07
 
 This is the checkbox tracker companion to:
 
@@ -24,14 +24,16 @@ Legend:
 
 ## M0 — Contracts Locked
 
-- [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
-- [ ] Review ADR 0194 and confirm the preferred seam:
+- [x] Review ADR 0200 and confirm crate split and v1 baseline (windowed surface first).
+  - See: ADR 0200 “M0 Review Checklist (Non-Normative)”.
+- [x] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
+  - See: ADR 0194 “M0 Review Checklist (Non-Normative)”.
 - [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation,
   - proxy mode (no full document mirroring).
-- [x] Add 1–3 evidence anchors per ADR (file paths / tests) in ADR 0193/0194/0195.
+- [x] Add 1–3 evidence anchors per ADR (file paths / tests) in ADR 0200/0194/0195.
 
 ---
 
@@ -186,7 +188,7 @@ Evidence anchors:
 - [x] Choose v1 buffer structure: rope (`ropey`) while preserving the UTF-8 byte-index contract.
 - [x] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [x] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
-- [~] Lock document identity (URI-like) for multi-document workflows.
+- [x] Lock document identity (URI-like) for multi-document workflows.
 
 Evidence anchors:
 
@@ -252,4 +254,3 @@ Evidence anchors:
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
-
