@@ -3787,6 +3787,48 @@ impl<'a, TData> Table<'a, TData> {
         super::selected_flat_row_count(self.filtered_row_model(), &self.state.row_selection)
     }
 
+    /// TanStack-aligned: `row.getCanSelect()`.
+    pub fn row_can_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanMultiSelect()`.
+    pub fn row_can_multi_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_multi_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanSelectSubRows()`.
+    pub fn row_can_select_sub_rows(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_sub_rows_for_row(row_key, r))
+    }
+
+    pub fn row_can_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_multi_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_multi_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_select_sub_rows_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_sub_rows_for_row(row.key, row))
+    }
+
     pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
         let can_select =
             |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);

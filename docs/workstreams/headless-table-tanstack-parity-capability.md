@@ -673,8 +673,8 @@ Rules:
 **Visibility/ordering**
 
 - **Aligned**: `getIsAllColumnsVisible/getIsSomeColumnsVisible` → `Table::{is_all_columns_visible,is_some_columns_visible}` (unit gates exist; fixture gating TBD).
-- **Partial**: `getToggleAllColumnsVisibilityHandler/toggleAllColumnsVisible`
-  → `Table::toggled_all_columns_visible(visible)` (unit gate; fixture gating TBD).
+- **Partial**: `getToggleAllColumnsVisibilityHandler` (we expose the state transition, but not a JS-style handler surface)
+  → `Table::toggled_all_columns_visible(visible)` (fixture-gated by `visibility_ordering.json`).
 - **Aligned**: `resetColumnVisibility` / `resetColumnOrder` → `Table::{reset_column_visibility,reset_column_order}` (`resets.json`).
 
 **Selection/expanding**
@@ -740,7 +740,7 @@ Legend:
 | `getTotalSize` (+ left/center/right) | `Table::{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `column_sizing.json` |
 | `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
 | `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Partial | unit gates; fixture gate TBD |
-| `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Partial | unit gate: `row_model.rs` (`table_toggle_all_columns_visible_keeps_non_hideable_visible_when_hiding_all`) |
+| `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `getVisibleFlatColumns/getAllFlatColumns` | derive via column tree snapshot; may need `visible_flat_columns` helper | Partial | N/A |
 | `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |
 | `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | currently not first-class; upstream built-ins often yield empty/null (fixture captures) | Partial | `faceting.json` |
@@ -835,7 +835,7 @@ and does not need to preserve method names, but the **capability must exist**.
 | `getAllCells/getVisibleCells/getLeft/Center/RightVisibleCells` | `Table::row_cells(row_key)` (`RowCellsSnapshot`) | Aligned | `headers_cells.json` |
 | `getIsSelected/getIsSomeSelected/getIsAllSubRowsSelected` | `Table::{row_is_selected,row_is_some_selected,row_is_all_sub_rows_selected}` | Aligned | `selection_tree.json` (`row_selection_detail`) |
 | `toggleSelected/getToggleSelectedHandler` | `Table::{row_selection_updater,toggled_row_selected}` (+ by-id variants) | Aligned | `selection.json`, `selection_tree.json`, `row_id_state_ops.json` |
-| `getCanSelect/getCanMultiSelect/getCanSelectSubRows` | internal selection-gate helpers exist but are not exposed as a row API | Missing | should be covered by a future `Table::{row_can_select,row_can_multi_select,row_can_select_sub_rows}` helper + fixture |
+| `getCanSelect/getCanMultiSelect/getCanSelectSubRows` | `Table::{row_can_select,row_can_multi_select,row_can_select_sub_rows}` (+ by-id variants) | Aligned | `selection_tree.json` (`row_selection_detail`), `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs` |
 | `getIsExpanded/getIsAllParentsExpanded` | `Table::{row_is_expanded_for_row,row_is_all_parents_expanded}` | Aligned | `expanding.json` |
 | `getCanExpand` | `Table::row_can_expand(row_key)` | Aligned | `expanding.json` |
 | `toggleExpanded/getToggleExpandedHandler` | `Table::{row_expanding_updater,toggled_row_expanded}` (+ by-id variants) | Aligned | `expanding.json`, `row_id_state_ops.json` |

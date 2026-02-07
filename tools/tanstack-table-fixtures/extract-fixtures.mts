@@ -395,6 +395,9 @@ type RowSelectionDetail = {
   is_selected: Record<string, boolean>
   is_some_selected: Record<string, boolean>
   is_all_sub_rows_selected: Record<string, boolean>
+  can_select: Record<string, boolean>
+  can_multi_select: Record<string, boolean>
+  can_select_sub_rows: Record<string, boolean>
 }
 
 type FilteringHelpersSnapshot = {
@@ -1115,6 +1118,9 @@ function snapshotRowSelectionDetail(table: any, rowIds: string[]): RowSelectionD
     is_selected: {},
     is_some_selected: {},
     is_all_sub_rows_selected: {},
+    can_select: {},
+    can_multi_select: {},
+    can_select_sub_rows: {},
   }
 
   for (const id of rowIds) {
@@ -1123,11 +1129,17 @@ function snapshotRowSelectionDetail(table: any, rowIds: string[]): RowSelectionD
       out.is_selected[id] = false
       out.is_some_selected[id] = false
       out.is_all_sub_rows_selected[id] = false
+      out.can_select[id] = false
+      out.can_multi_select[id] = false
+      out.can_select_sub_rows[id] = false
       continue
     }
     out.is_selected[id] = Boolean(row.getIsSelected?.())
     out.is_some_selected[id] = Boolean(row.getIsSomeSelected?.())
     out.is_all_sub_rows_selected[id] = Boolean(row.getIsAllSubRowsSelected?.())
+    out.can_select[id] = Boolean(row.getCanSelect?.())
+    out.can_multi_select[id] = Boolean(row.getCanMultiSelect?.())
+    out.can_select_sub_rows[id] = Boolean(row.getCanSelectSubRows?.())
   }
 
   return out
