@@ -214,3 +214,62 @@ fn named_scopes_appear_in_debug_paths() {
         "expected named segment in debug path: {debug_path}"
     );
 }
+
+#[test]
+#[cfg(feature = "diagnostics")]
+fn debug_paths_survive_gc_when_touching_only_leaf_elements() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let leaf_id = Arc::new(std::sync::Mutex::new(
+        None::<crate::elements::GlobalElementId>,
+    ));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "debug-path-gc-touch-leaf",
+        |cx| {
+            let leaf = cx.named("a", |cx| cx.named("b", |cx| cx.text("leaf")));
+            *leaf_id.lock().unwrap() = Some(leaf.id);
+            vec![leaf]
+        },
+    );
+    ui.set_root(root);
+
+    let leaf = leaf_id.lock().unwrap().expect("leaf id");
+
+    // Simulate a long run of cache-hit frames where only a subset of elements are touched for
+    // liveness bookkeeping.
+    for _ in 0..8 {
+        app.advance_frame();
+        let frame_id = app.frame_id();
+        app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+            runtime.prepare_window_for_frame(window, frame_id);
+            runtime
+                .for_window_mut(window)
+                .touch_debug_identity_for_element(frame_id, leaf);
+        });
+    }
+
+    let debug_path = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+        runtime.debug_path_for_element(window, leaf)
+    });
+
+    let debug_path = debug_path.expect("debug path");
+    assert!(
+        debug_path.contains("name=a") && debug_path.contains("name=b"),
+        "expected named segments in debug path after GC touches: {debug_path}"
+    );
+}
