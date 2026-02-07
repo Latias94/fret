@@ -1,6 +1,7 @@
 use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
 use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
+use std::sync::OnceLock;
 use unicode_segmentation::UnicodeSegmentation;
 
 const ELLIPSIS: &str = "\u{2026}";
@@ -658,7 +659,7 @@ fn wrap_word_range(
         );
     }
 
-    if spans.is_none() {
+    if spans.is_none() && shape_once_word_wrap_enabled() {
         if let Some(out) =
             wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
         {
@@ -743,6 +744,16 @@ fn wrap_word_range(
     }
 
     (line_ranges, lines)
+}
+
+fn shape_once_word_wrap_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var("FRET_TEXT_WORD_WRAP_SHAPE_ONCE")
+            .ok()
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false)
+    })
 }
 
 fn wrap_word_range_plain_shape_once(
