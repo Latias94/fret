@@ -1,6 +1,9 @@
+pub(super) mod layout;
+pub(super) mod op;
+
+use self::op::DockOp;
 use crate::{
     PanelKey,
-    dock_op::DockOp,
     geometry::{Point, Px, Rect, Size},
     ids::{AppWindowId, DockNodeId},
 };

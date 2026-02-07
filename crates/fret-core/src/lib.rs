@@ -12,8 +12,6 @@
 
 pub mod cursor;
 pub mod dock;
-pub mod dock_layout;
-pub mod dock_op;
 pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
@@ -38,15 +36,15 @@ pub mod window;
 // Stable re-exports (core vocabulary surface)
 // -----------------------------------------------------------------------------
 pub use cursor::CursorIcon;
-pub use dock::{
-    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
-};
-pub use dock_layout::{
+pub use dock::layout::{
     DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow, DockLayoutNode,
     DockLayoutValidationError, DockLayoutValidationErrorKind, DockLayoutWindow, DockRect,
     DockWindowPlacement, EditorDockLayoutSpec,
 };
-pub use dock_op::{DockOp, SplitFractionsUpdate};
+pub use dock::op::{DockOp, SplitFractionsUpdate};
+pub use dock::{
+    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
+};
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
 };

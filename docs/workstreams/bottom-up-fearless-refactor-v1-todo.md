@@ -62,6 +62,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target: settings/keymap/layout and any persisted docking state formats.
   - Goal: avoid accidental format drift during internal refactors.
 
+- [x] BU-FR-core-015 Convert docking-related crate-root modules in `fret-core` into a single `dock/` subsystem.
+  - Goal: remove `dock_*` crate-root prefixes while keeping the stable re-export surface unchanged.
+  - Evidence:
+    - `crates/fret-core/src/dock/mod.rs`
+    - `crates/fret-core/src/dock/layout.rs`
+    - `crates/fret-core/src/dock/op.rs`
+    - `crates/fret-core/src/lib.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.

@@ -25,7 +25,7 @@ This is a living “where should this code go?” map.
 - `input` — portable input events (`Event`, pointer/key/IME), plus normalization helpers
 - `scene` — portable scene recording (`Scene`, `SceneOp`) consumed by the renderer layer
 - `semantics` — portable semantics snapshot types (A11y bridge contract surface)
-- `dock`, `dock_layout`, `dock_op` — docking model/ops/persistence vocabulary (policy lives in ecosystem)
+- `dock` — docking model/ops/persistence vocabulary (policy lives in ecosystem)
 - `viewport` — viewport mapping types used for Tier A embedding (`RenderTargetId`, mapping helpers)
 - `services` — portable service traits (host-provided, backend-agnostic)
 - `window` — window metrics and coordinate space vocabulary (no windowing backend here)
@@ -37,4 +37,3 @@ If you need to add something new:
 1. Put it in the narrowest module that “owns” the concept.
 2. Prefer a new submodule over growing an unrelated one.
 3. Avoid re-exporting it from `lib.rs` unless it is part of the stable vocabulary.
-
