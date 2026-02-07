@@ -5726,3 +5726,47 @@ Worst-frame breakdown (from the bundle; `frame_id=470`):
 Interpretation:
 - Resize remains layout-dominant on this probe; the solve itself is not the primary cost.
   Primary leverage is reducing layout plumbing overhead and width-jitter-induced text churn while resizing.
+
+## 2026-02-07 10:25:10 (commit `e7547c213a9438dc5b401e9b60a6285a920e581b`)
+
+Change:
+- Re-run resize stress steady probe at HEAD
+
+Suite:
+- `ui-gallery-window-resize-stress-steady`
+
+Command:
+```powershell
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-stress-steady.20260207-102407 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-perf/resize-stress-steady.20260207-102407/stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14105 | 14270 | 14270 | 10981 | 1655 | 87 | 3210 | 2400 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `2425 / 3475 / 3475` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `22 / 24 / 24` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431050887-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431050887-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14270`
+- bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431057808-ui-gallery-window-resize-stress-steady/bundle.json`
