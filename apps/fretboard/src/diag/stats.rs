@@ -10109,13 +10109,19 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    const MAX_POINTER_FALLBACKS: u64 = 1;
-    const MAX_CARET_RECT_FALLBACKS: u64 = 1;
-    const MAX_VERTICAL_MOVE_FALLBACKS: u64 = 1;
+    // This gate is intentionally strict: after warmup + stats reset, code-editor-grade interactions
+    // (soft-wrap, pointer drag, vertical moves) should route through renderer geometry rather than
+    // the MVP monospace heuristic.
+    const MAX_POINTER_FALLBACKS: u64 = 0;
+    const MAX_CARET_RECT_FALLBACKS: u64 = 0;
+    const MAX_VERTICAL_MOVE_FALLBACKS: u64 = 0;
 
     let mut examined_snapshots = 0u64;
     let mut ui_gallery_snapshots = 0u64;
     let mut last_observed = None::<serde_json::Value>;
+    let mut max_pointer_fallbacks_observed = 0u64;
+    let mut max_caret_rect_fallbacks_observed = 0u64;
+    let mut max_vertical_move_fallbacks_observed = 0u64;
 
     let windows = bundle
         .get("windows")
@@ -10175,6 +10181,12 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
 
+            max_pointer_fallbacks_observed = max_pointer_fallbacks_observed.max(pointer_fallbacks);
+            max_caret_rect_fallbacks_observed =
+                max_caret_rect_fallbacks_observed.max(caret_rect_fallbacks);
+            max_vertical_move_fallbacks_observed =
+                max_vertical_move_fallbacks_observed.max(vertical_move_fallbacks);
+
             last_observed = Some(serde_json::json!({
                 "window": window_id,
                 "tick_id": tick_id,
@@ -10204,6 +10216,9 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
         "max_pointer_fallbacks": MAX_POINTER_FALLBACKS,
         "max_caret_rect_fallbacks": MAX_CARET_RECT_FALLBACKS,
         "max_vertical_move_fallbacks": MAX_VERTICAL_MOVE_FALLBACKS,
+        "max_pointer_fallbacks_observed": max_pointer_fallbacks_observed,
+        "max_caret_rect_fallbacks_observed": max_caret_rect_fallbacks_observed,
+        "max_vertical_move_fallbacks_observed": max_vertical_move_fallbacks_observed,
         "last_observed": last_observed,
     });
     write_json_value(&evidence_path, &payload)?;
@@ -10216,7 +10231,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
         ));
     }
 
-    let Some(last) = last_observed.as_ref() else {
+    let Some(_last) = last_observed.as_ref() else {
         return Err(format!(
             "ui-gallery code-editor geom fallback gate failed (no code_editor_torture snapshot observed after warmup)\n  bundle: {}\n  evidence: {}",
             bundle_path.display(),
@@ -10224,28 +10239,15 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low
         ));
     };
 
-    let pointer = last
-        .get("geom_pointer_hit_test_fallbacks")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(u64::MAX);
-    let caret_rect = last
-        .get("geom_caret_rect_fallbacks")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(u64::MAX);
-    let vertical = last
-        .get("geom_vertical_move_fallbacks")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(u64::MAX);
-
-    if pointer <= MAX_POINTER_FALLBACKS
-        && caret_rect <= MAX_CARET_RECT_FALLBACKS
-        && vertical <= MAX_VERTICAL_MOVE_FALLBACKS
+    if max_pointer_fallbacks_observed <= MAX_POINTER_FALLBACKS
+        && max_caret_rect_fallbacks_observed <= MAX_CARET_RECT_FALLBACKS
+        && max_vertical_move_fallbacks_observed <= MAX_VERTICAL_MOVE_FALLBACKS
     {
         return Ok(());
     }
 
     Err(format!(
-        "ui-gallery code-editor geom fallback gate failed (expected fallbacks <= {MAX_POINTER_FALLBACKS}/{MAX_CARET_RECT_FALLBACKS}/{MAX_VERTICAL_MOVE_FALLBACKS}, got pointer={pointer} caret_rect={caret_rect} vertical_move={vertical})\n  bundle: {}\n  evidence: {}",
+        "ui-gallery code-editor geom fallback gate failed (expected fallbacks <= {MAX_POINTER_FALLBACKS}/{MAX_CARET_RECT_FALLBACKS}/{MAX_VERTICAL_MOVE_FALLBACKS}, got pointer={max_pointer_fallbacks_observed} caret_rect={max_caret_rect_fallbacks_observed} vertical_move={max_vertical_move_fallbacks_observed})\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))
