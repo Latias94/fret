@@ -1,0 +1,122 @@
+{
+  "generated_unix_ms": 1770456340483,
+  "headroom_pct": 20,
+  "kind": "perf_baseline",
+  "out_path": "/Users/frankorz/codes/rust/fret/docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 2674,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 3,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 2714,
+        "top_layout_time_us": 15212,
+        "top_total_time_us": 24330
+      },
+      "measured_p90": {
+        "top_layout_engine_solve_time_us": 2379,
+        "top_layout_time_us": 11961,
+        "top_total_time_us": 19698
+      },
+      "measured_p95": {
+        "top_layout_engine_solve_time_us": 2547,
+        "top_layout_time_us": 13586,
+        "top_total_time_us": 22014
+      },
+      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "threshold_seed": {
+        "top_layout_engine_solve_time_us": 2547,
+        "top_layout_time_us": 13586,
+        "top_total_time_us": 22014
+      },
+      "threshold_seed_source": {
+        "top_layout_engine_solve_time_us": "p95",
+        "top_layout_time_us": "p95",
+        "top_total_time_us": "p95"
+      },
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 3212,
+        "max_pointer_move_global_changes": 4,
+        "max_pointer_move_hit_test_us": 0,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 16304,
+        "max_top_solve_us": 3060,
+        "max_top_total_us": 26420,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 1391,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 5,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 2345,
+        "top_layout_time_us": 10217,
+        "top_total_time_us": 15940
+      },
+      "measured_p90": {
+        "top_layout_engine_solve_time_us": 2337,
+        "top_layout_time_us": 9933,
+        "top_total_time_us": 15879
+      },
+      "measured_p95": {
+        "top_layout_engine_solve_time_us": 2341,
+        "top_layout_time_us": 10075,
+        "top_total_time_us": 15910
+      },
+      "script": "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
+      "threshold_seed": {
+        "top_layout_engine_solve_time_us": 2345,
+        "top_layout_time_us": 10217,
+        "top_total_time_us": 15940
+      },
+      "threshold_seed_source": {
+        "top_layout_engine_solve_time_us": "max",
+        "top_layout_time_us": "max",
+        "top_total_time_us": "max"
+      },
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 1672,
+        "max_pointer_move_global_changes": 6,
+        "max_pointer_move_hit_test_us": 0,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 12264,
+        "max_top_solve_us": 2816,
+        "max_top_total_us": 19128,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_seed_policy": {
+    "default_seed": "max",
+    "rules": [
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      },
+      {
+        "metric": "top_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      }
+    ],
+    "schema_version": 1
+  },
+  "warmup_frames": 5
+}

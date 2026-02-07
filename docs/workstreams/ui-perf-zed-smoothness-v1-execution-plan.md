@@ -1,0 +1,240 @@
+---
+title: UI Performance - Zed-level Smoothness (v1) - Execution Plan
+status: draft
+date: 2026-02-07
+scope: perf, zed, gpui, renderer, baseline, gates
+---
+
+# UI Performance: Zed-level Smoothness (v1) — Execution Plan
+
+This document is the **execution-focused companion** to:
+
+- Workstream plan: `docs/workstreams/ui-perf-zed-smoothness-v1.md`
+- TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
+- Evidence log: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
+- GPUI gap analysis: `docs/workstreams/ui-perf-gpui-gap-v1.md`
+- Renderer profiling playbook: `docs/workstreams/ui-perf-renderer-profiling-v1.md`
+
+The intent is to stop drifting into “endless experiments” by pinning:
+
+1. what we build next,
+2. how we validate it,
+3. what counts as “done”, and
+4. what evidence must be recorded for reversibility.
+
+---
+
+## Current state (as of 2026-02-07)
+
+- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+- Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
+- P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
+- Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
+- Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
+- Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
+- Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
+
+This means the **measurement substrate is good enough** to spend most effort on implementation rather than
+baseline wrangling.
+
+Note:
+- Resize probes currently use a relatively generous baseline headroom to avoid flakiness from known resize tails.
+  Tighten `ui-resize-probes.macos-m4.*` over time as we eliminate the underlying hitches and can re-seed from
+  `p95` again without intermittent failures.
+
+---
+
+## Operating rules (to avoid “experiment-only” loops)
+
+### Rule 1: Every perf change must land one of
+
+- a new default behavior (or a narrowed, stable knob), or
+- a new diagnostic signal that explains a tail hitch class, or
+- a new stable gate (script + threshold + baseline update).
+
+If a change cannot satisfy one of these, it stays out-of-tree.
+
+### Rule 1.5: Global optimum bar (no “one-probe wins”)
+
+We treat perf as **system-level**, not script-local.
+
+Every perf-affecting change must:
+
+1. **Not regress the steady suite** under the canonical protocol and baseline:
+   - `fretboard diag perf ui-gallery-steady ... --perf-baseline <baseline>`
+2. **Not regress P0 resize probes** (even if the change targets another area):
+   - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+   - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+   - Gate runner: `tools/perf/diag_resize_probes_gate.sh` (suite: `ui-resize-probes`)
+3. **Not regress at least one input hot-path probe**:
+   - pointer-move gate (bounds-tree / dispatch): `ui-gallery-hit-test-torture-*move-sweep*`
+4. If the change touches renderer/text caches, also run one GPU/churn probe:
+   - e.g. effects blur or SVG upload torture (see `ui-perf-gpui-gap-v1.md`).
+
+If a change improves one probe but regresses another, it is considered **not accepted** until we:
+
+- explain the regression via diagnostics,
+- either eliminate it or justify it as a contract trade-off, and
+- record the decision (and rollback plan) in the perf log.
+
+### Rule 2: Evidence is mandatory and commit-addressable
+
+For each perf-affecting PR:
+
+1. add an entry in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` with:
+   - commit hash
+   - exact command(s)
+   - baseline/validation paths
+   - delta summary (what tightened/loosened and why)
+2. update `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md` checkboxes.
+
+### Rule 3: Time split
+
+- 70%: implementation in hot paths
+- 30%: validation / triage / logging
+
+---
+
+## Priority focus (updated 2026-02-07)
+
+This workstream can easily drift into “rare tail hitch” micro-fixes. Those are still valuable, but we
+must keep a clear order of operations based on *how often the hot path executes*.
+
+- **P0: Resize-drag smoothness (layout/solve budgets)**  
+  Target probes:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (large-step resize stress).
+  - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (small-step width jitter; live-drag approximation).
+  Attribution helpers (bundles):
+  - `debug.layout_hotspots[]` (top *exclusive* layout time; often “who is measuring?”).
+  - `debug.layout_inclusive_hotspots[]` (top *inclusive* layout time; “which subtree dominates?”; commit `69111ebde`).
+- **P1: Text pipeline stability under width jitter**  
+  Target probes: editor autoscroll + resize.
+- **P2: GPU vs CPU attribution + upload churn**  
+  Target probes: effects blur, SVG/image upload stress, any real hitch.
+
+---
+
+## Active milestone ladder (updated 2026-02-07)
+
+| Milestone | Status | Scope | Required evidence |
+| --- | --- | --- | --- |
+| M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v22.json`, selection summary in perf log (2026-02-07 10:10) |
+| M4.0.1 Resize probes stabilization + baseline | Done | Make resize probes stable + reproducible, then refresh baseline and gate default | `ui-resize-probes.macos-m4.v3.json`, gate pass summary `target/fret-diag-resize-probes-gate-r13/summary.json` (2026-02-07 09:28) |
+| M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
+| M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
+| M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |
+| M4.4 Resize-drag smoothness | Pending | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-gallery-window-resize-stress-steady.json` p95/max improvements recorded in perf log; new diagnostics or gates if needed |
+| M5.0 Text pipeline stabilization | Pending | Cache-key spec + warmup/cold-path miss gate | Text cache miss gate and miss attribution recorded in bundles |
+| M7.0 GPU/CPU attribution | Pending | GPU timing capture and hitch-class triage flow | One hitch classified with recorded CPU/GPU evidence |
+
+### Next commit queue (implementation-first, reversible)
+
+1. **M4.4 resize probe tightening**: attribute resize cost (layout/solve/text) and confirm we only pay once per frame.
+2. **M4.4 resize LOD (guarded)**: bucket wrap widths / defer expensive probes while resizing, then reconcile on idle.
+3. **M4.3 escape-trigger observability**: make escape-driven shifts assertable when expected (deprioritized vs P0).
+4. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
+5. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
+
+This queue is intentionally aggressive, but each item has a measurable gate and a rollback trail in the perf log.
+
+---
+
+## Two-week execution plan (Sprint S1)
+
+Sprint goal: **make editor-class interactions paint-only more often**, and reduce tail latency outliers under
+steady-state probes without relying on over-loose thresholds.
+
+### Work package A — Windowed surfaces (M4)
+
+Owner goal: scrolling and pan/zoom should avoid full relayout/rerender for most frames.
+
+Target probes (must not regress):
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json`
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- (optional) one 2D surface probe (canvas/node-graph) once it is stable enough for gating
+
+Deliverables:
+
+1. **Define a “window boundary crossing” correctness + perf probe**
+   - Script should fail if it triggers full rerender too often while scrolling.
+   - Acceptance: `failures=0` against the steady baseline and the probe becomes part of the acceptance suite.
+2. **Reduce rerender triggers on scroll**
+   - Goal: in steady scroll, most frames should be explainable as “translate cached content” rather than “re-emit”.
+   - Evidence: bundle stats show improved cache-root reuse counters for the target scripts.
+3. **Stabilize cache keys for windowed content**
+   - Fix key instability sources (layout inputs, style resolution, subtree identity).
+   - Acceptance: `view_cache_roots_cache_key_mismatch` does not spike on steady scripts.
+4. **Resize-drag smoothing**
+   - Reduce avoidable secondary work during `WindowEvent::SurfaceResized` frames (unbounded probes, text churn, cache-key mismatch).
+   - Acceptance: `ui-gallery-window-resize-stress-steady.json` stays within its baseline thresholds and improves over time.
+
+Exit criteria:
+
+- Acceptance probes remain `failures=0` under 3 validation runs.
+- Tail outliers are explainable via diagnostics (no “mystery spikes” without churn signals).
+
+### Work package B — Text pipeline stability (M5)
+
+Owner goal: after warmup, “text prepare” events become rare and correlated with real changes.
+
+Target probes:
+
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json` (text-first appearance sanity)
+
+Deliverables:
+
+1. **Document stable cache keys** for measure/shaping (wrap width, font stack, style, hinting).
+2. **Make atlas eviction / re-upload observable** in perf snapshots (if not already sufficient).
+3. **Add a “text cache miss” gate** (lightweight; no pixel diffs) that fails when misses spike after warmup.
+
+Exit criteria:
+
+- Worst frame attribution for text-dominant scripts is actionable from bundle exports alone.
+- Repeat runs do not show periodic text-prepare spikes unless changes occur.
+
+### Work package C — GPU vs CPU separation (M7)
+
+Owner goal: classify “CPU is fine but it hitches” bugs without guessing.
+
+Deliverables:
+
+1. Add an opt-in GPU time signal (where supported) to diagnostics snapshots.
+2. Add a short playbook entry for “GPU-stall class” triage.
+
+Exit criteria:
+
+- For at least one hitch case, we can label it CPU-bound vs GPU-bound using recorded evidence.
+
+### Work package D — Reduce perf gating cost (M6-lite)
+
+Owner goal: make “perf regressions are caught early” realistic.
+
+Deliverables:
+
+1. Define a reduced CI-friendly suite (3–5 scripts) and document its purpose.
+2. Define baseline storage policy (per OS + hardware class).
+
+Exit criteria:
+
+- We can run the reduced suite locally in < 5 minutes (excluding build time).
+
+---
+
+## Promotion protocol (baseline updates)
+
+Baseline updates must follow the candidate-selection workflow to avoid resize outliers:
+
+- Script: `tools/perf/diag_perf_baseline_select.sh`
+- Output: `docs/workstreams/perf-baselines/ui-gallery-steady.<machine>.vN.json`
+- Evidence: `target/<work-dir>/selection-summary.json` committed or referenced in the perf log.
+
+---
+
+## Out of scope (for Sprint S1)
+
+- Large-scale renderer architecture changes (render graph refactor).
+- Cross-platform CI perf gating (only define the plan).
+- New UI features/components not needed for perf probes.

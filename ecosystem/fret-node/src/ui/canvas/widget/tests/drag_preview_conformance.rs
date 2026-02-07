@@ -89,6 +89,8 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
     // Sanity: the moved node's output port remains hittable in the preview geometry.
     let _ = geom2.port_center(a_out).expect("preview port center");
     let _ = geom2.port_center(b_in).expect("preview port center");
+    let geom2_keep = geom2.clone();
+    let index2_keep = index2.clone();
     drop(geom2);
     drop(index2);
 
@@ -108,14 +110,12 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
             &[(a, pos1)],
         )
         .expect("preview");
-    let geom3_ptr = Arc::as_ptr(&geom3) as usize;
-    let index3_ptr = Arc::as_ptr(&index3) as usize;
-    assert_ne!(
-        geom2_ptr, geom3_ptr,
+    assert!(
+        !Arc::ptr_eq(&geom2_keep, &geom3),
         "expected base index key change to invalidate and rebuild preview geometry"
     );
-    assert_ne!(
-        index2_ptr, index3_ptr,
+    assert!(
+        !Arc::ptr_eq(&index2_keep, &index3),
         "expected base index key change to invalidate and rebuild preview spatial index"
     );
 }
