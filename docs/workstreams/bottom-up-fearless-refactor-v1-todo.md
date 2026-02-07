@@ -46,9 +46,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] BU-FR-core-011 Audit `fret-core` exports and propose a minimal prelude or re-export strategy (if needed).
   - Evidence anchors: `crates/fret-core/src/lib.rs`
 
-- [ ] BU-FR-core-012 Add a “module ownership map” section for each core crate as it is refactored.
+- [x] BU-FR-core-012 Add a “module ownership map” section for each core crate as it is refactored.
   - Start with: `crates/fret-core`, then `crates/fret-runtime`, then `crates/fret-app`.
   - Goal: make “where should new code go?” obvious to humans and AI alike.
+  - Evidence:
+    - `crates/fret-core/README.md`
+    - `crates/fret-runtime/README.md`
+    - `crates/fret-app/README.md`
 
 - [ ] BU-FR-core-013 Write down an explicit async policy per layer (core vs app vs backends vs ecosystem) and add at least one regression gate.
   - Goal: prevent Tokio/executor coupling from leaking into core crates and prevent UI-thread blocking regressions.
@@ -70,13 +74,20 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - `ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`, `ecosystem/fret-kit`
   - Scope: fluent builder conventions, `test_id` conventions, and “cached subtree” guidance.
 
-- [ ] BU-FR-ui-023 Reduce crate-root “prefix modules” by regrouping related code under subsystem modules.
+- [x] BU-FR-ui-023 Reduce crate-root “prefix modules” by regrouping related code under subsystem modules.
   - Example: prefer `text/{edit,props,surface}.rs` over `text_edit.rs`, `text_props.rs`, `text_surface.rs`.
   - Goal: improve ownership clarity and reduce “where does this belong?” drift during fearless refactors.
+  - Evidence:
+    - `crates/fret-ui/src/text/`
+    - `crates/fret-ui/src/text/mod.rs`
 
-- [ ] BU-FR-ui-024 Regroup text subsystem modules in `crates/fret-ui` under a single `text/` module.
+- [x] BU-FR-ui-024 Regroup text subsystem modules in `crates/fret-ui` under a single `text/` module.
   - Current: `text_input/`, `text_area/`, plus crate-root `text_*` files.
   - Target: `crates/fret-ui/src/text/mod.rs` with clear submodules (`input`, `area`, `edit`, `props`, `style`, `surface`), keeping public exports unchanged.
+  - Evidence:
+    - `crates/fret-ui/src/text/mod.rs`
+    - `crates/fret-ui/src/text/area/mod.rs`
+    - `crates/fret-ui/src/text/input/mod.rs`
 
 - [ ] BU-FR-ui-025 Regroup layout-related crate-root modules under a dedicated `layout/` subsystem module.
   - Candidates: `layout_constraints.rs`, `layout_pass.rs`, `layout_engine.rs`, and related helpers.
