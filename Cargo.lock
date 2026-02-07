@@ -1015,6 +1015,8 @@ dependencies = [
  "fret-app",
  "fret-canvas",
  "fret-core",
+ "fret-i18n",
+ "fret-i18n-fluent",
  "fret-icons",
  "fret-icons-lucide",
  "fret-icons-radix",

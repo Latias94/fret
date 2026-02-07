@@ -1,4 +1,4 @@
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
@@ -477,12 +477,6 @@ const CORE_COMMAND_LOCALIZATION_SPECS: &[(&str, &str, Option<&str>)] = &[
     ),
 ];
 
-pub fn ensure_core_i18n_backend(service: &mut fret_runtime::fret_i18n::I18nService) {
-    if service.lookup().is_none() {
-        service.set_lookup(Some(core_i18n_lookup()));
-    }
-}
-
 pub fn apply_core_command_localization(app: &mut crate::App) {
     let Some(service) = app
         .global::<fret_runtime::fret_i18n::I18nService>()
@@ -537,7 +531,6 @@ pub fn handle_locale_cycle_command(app: &mut crate::App, command: &CommandId) ->
 
     locales.rotate_left(1);
     service.set_preferred_locales(locales.clone());
-    ensure_core_i18n_backend(&mut service);
     app.set_global(service);
 
     if let Some(mut settings) = app.global::<crate::SettingsFileV1>().cloned()
@@ -565,117 +558,56 @@ fn localized_or_fallback(
     }
 }
 
-fn core_i18n_lookup() -> Arc<dyn fret_runtime::fret_i18n::I18nLookup + 'static> {
-    Arc::new(CoreStaticLookup)
-}
-
-struct CoreStaticLookup;
-
-impl fret_runtime::fret_i18n::I18nLookup for CoreStaticLookup {
-    fn format(
-        &self,
-        preferred_locales: &[fret_runtime::fret_i18n::LocaleId],
-        key: &fret_runtime::fret_i18n::MessageKey,
-        args: Option<&fret_runtime::fret_i18n::MessageArgs>,
-    ) -> Result<fret_runtime::fret_i18n::LocalizedMessage, fret_runtime::fret_i18n::I18nLookupError>
-    {
-        let _ = args;
-
-        for (depth, locale) in preferred_locales.iter().enumerate() {
-            if let Some(text) = core_message_for(locale, key.as_str()) {
-                return Ok(fret_runtime::fret_i18n::LocalizedMessage {
-                    text: text.to_string(),
-                    locale: locale.clone(),
-                    fallback_depth: depth,
-                });
-            }
-        }
-
-        if core_message_known(key.as_str()) {
-            Err(fret_runtime::fret_i18n::I18nLookupError::MissingLocale {
-                requested: preferred_locales.to_vec(),
-            })
-        } else {
-            Err(fret_runtime::fret_i18n::I18nLookupError::MissingKey { key: key.clone() })
-        }
-    }
-}
-
-fn core_message_for(locale: &fret_runtime::fret_i18n::LocaleId, key: &str) -> Option<&'static str> {
-    if locale == core_locale_zh_cn() {
-        core_message_zh_cn(key)
-    } else if locale == core_locale_en_us() {
-        core_message_en_us(key)
-    } else {
-        None
-    }
-}
-
-fn core_message_known(key: &str) -> bool {
-    core_message_en_us(key).is_some() || core_message_zh_cn(key).is_some()
-}
-
-fn core_message_en_us(key: &str) -> Option<&'static str> {
-    Some(match key {
-        "core-command-category-app" => "App",
-        "workspace-menu-file" => "File",
-        "workspace-menu-edit" => "Edit",
-        "workspace-menu-view" => "View",
-        "workspace-menu-window" => "Window",
-        "core-command-title-app-command-palette" => "Command Palette",
-        "core-command-title-app-about" => "About",
-        "core-command-title-app-preferences" => "Preferences...",
-        "core-command-title-app-locale-switch-next" => "Switch Language",
-        "core-command-title-app-hide" => "Hide",
-        "core-command-title-app-hide-others" => "Hide Others",
-        "core-command-title-app-show-all" => "Show All",
-        "core-command-title-app-quit" => "Quit",
-        _ => return None,
-    })
-}
-
-fn core_message_zh_cn(key: &str) -> Option<&'static str> {
-    Some(match key {
-        "core-command-category-app" => "应用",
-        "workspace-menu-file" => "文件",
-        "workspace-menu-edit" => "编辑",
-        "workspace-menu-view" => "视图",
-        "workspace-menu-window" => "窗口",
-        "core-command-title-app-command-palette" => "命令面板",
-        "core-command-title-app-about" => "关于",
-        "core-command-title-app-preferences" => "偏好设置...",
-        "core-command-title-app-locale-switch-next" => "切换语言",
-        "core-command-title-app-hide" => "隐藏",
-        "core-command-title-app-hide-others" => "隐藏其他应用",
-        "core-command-title-app-show-all" => "显示全部",
-        "core-command-title-app-quit" => "退出",
-        _ => return None,
-    })
-}
-
-fn core_locale_en_us() -> &'static fret_runtime::fret_i18n::LocaleId {
-    static LOCALE: OnceLock<fret_runtime::fret_i18n::LocaleId> = OnceLock::new();
-    LOCALE.get_or_init(|| {
-        fret_runtime::fret_i18n::LocaleId::parse("en-US")
-            .expect("hardcoded locale en-US must parse")
-    })
-}
-
-fn core_locale_zh_cn() -> &'static fret_runtime::fret_i18n::LocaleId {
-    static LOCALE: OnceLock<fret_runtime::fret_i18n::LocaleId> = OnceLock::new();
-    LOCALE.get_or_init(|| {
-        fret_runtime::fret_i18n::LocaleId::parse("zh-CN")
-            .expect("hardcoded locale zh-CN must parse")
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
+    use fret_runtime::fret_i18n::{I18nLookup, I18nLookupError, LocalizedMessage, MessageKey};
+
+    struct TestLookup;
+
+    impl I18nLookup for TestLookup {
+        fn format(
+            &self,
+            preferred_locales: &[fret_runtime::fret_i18n::LocaleId],
+            key: &MessageKey,
+            _args: Option<&fret_runtime::fret_i18n::MessageArgs>,
+        ) -> Result<LocalizedMessage, I18nLookupError> {
+            for (depth, locale) in preferred_locales.iter().enumerate() {
+                let value = match (locale.to_string().as_str(), key.as_str()) {
+                    ("zh-CN", "core-command-title-app-about") => Some("关于"),
+                    ("zh-CN", "core-command-title-app-locale-switch-next") => Some("切换语言"),
+                    ("en-US", "core-command-title-app-about") => Some("About"),
+                    ("en-US", "core-command-title-app-locale-switch-next") => {
+                        Some("Switch Language")
+                    }
+                    _ => None,
+                };
+                if let Some(text) = value {
+                    return Ok(LocalizedMessage {
+                        text: text.to_string(),
+                        locale: locale.clone(),
+                        fallback_depth: depth,
+                    });
+                }
+            }
+
+            Err(I18nLookupError::MissingKey { key: key.clone() })
+        }
+    }
+
     #[test]
     fn core_command_localization_uses_current_locale() {
         let mut app = crate::App::new();
+        let mut service = app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .cloned()
+            .unwrap_or_default();
+        service.set_lookup(Some(Arc::new(TestLookup)));
+        app.set_global(service);
+
         let mut settings = crate::SettingsFileV1::default();
         settings.locale.primary = "zh-CN".to_string();
         settings.locale.fallbacks = vec!["en-US".to_string()];
@@ -697,6 +629,13 @@ mod tests {
     #[test]
     fn locale_cycle_command_rotates_locale_and_relocalizes() {
         let mut app = crate::App::new();
+        let mut service = app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .cloned()
+            .unwrap_or_default();
+        service.set_lookup(Some(Arc::new(TestLookup)));
+        app.set_global(service);
+
         let mut settings = crate::SettingsFileV1::default();
         settings.locale.primary = "en-US".to_string();
         settings.locale.fallbacks = vec!["zh-CN".to_string()];

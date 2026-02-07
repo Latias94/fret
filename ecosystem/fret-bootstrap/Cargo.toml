@@ -41,6 +41,7 @@ slotmap.workspace = true
 
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-i18n = { path = "../../crates/fret-i18n" }
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-icons = { path = "../fret-icons" }
 fret-launch = { path = "../../crates/fret-launch" }
@@ -49,6 +50,7 @@ fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
 fret-canvas = { path = "../fret-canvas", optional = true }
 
+fret-i18n-fluent = { path = "../fret-i18n-fluent" }
 fret-ui-kit = { path = "../fret-ui-kit", optional = true }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
 fret-ui-assets = { path = "../fret-ui-assets", optional = true }
