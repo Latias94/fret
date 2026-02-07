@@ -2591,6 +2591,36 @@ impl<'a, TData> Table<'a, TData> {
         super::split_pinned_columns(visible.as_slice(), &self.state.column_pinning)
     }
 
+    /// TanStack-aligned: `table.getLeft/Center/RightLeafColumns()`.
+    ///
+    /// Note: this returns **leaf columns** split by pinning state and does not apply column
+    /// visibility filtering. Use [`Self::pinned_visible_columns`] for visible-only splits.
+    pub fn pinned_leaf_columns(
+        &self,
+    ) -> (
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+    ) {
+        let leaf = self.ordered_columns();
+        super::split_pinned_columns(leaf.as_slice(), &self.state.column_pinning)
+    }
+
+    pub fn left_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (left, _, _) = self.pinned_leaf_columns();
+        left
+    }
+
+    pub fn center_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (_, center, _) = self.pinned_leaf_columns();
+        center
+    }
+
+    pub fn right_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (_, _, right) = self.pinned_leaf_columns();
+        right
+    }
+
     pub fn column_size(&self, id: &str) -> Option<f32> {
         let col = self.column(id)?;
         Some(super::resolved_column_size(&self.state.column_sizing, col))
