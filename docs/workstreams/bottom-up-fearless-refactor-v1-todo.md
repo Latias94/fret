@@ -98,6 +98,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-ui/src/layout/constraints.rs`
     - `crates/fret-ui/src/layout/pass.rs`
 
+- [x] BU-FR-ui-026 Regroup theme-related crate-root modules under a dedicated `theme/` subsystem module.
+  - Candidates: `theme.rs`, `theme_keys.rs`, `theme_registry.rs`.
+  - Goal: keep theme/token code co-located and reduce crate-root prefix drift.
+  - Evidence:
+    - `crates/fret-ui/src/theme/mod.rs`
+    - `crates/fret-ui/src/theme/keys.rs`
+    - `crates/fret-ui/src/theme/registry.rs`
+
 ## M3 — Renderer closure
 
 - [ ] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
