@@ -5,7 +5,8 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, TimerToken, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, KeyCode, Modifiers, SemanticsRole, TimerToken,
+    UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -21,8 +22,9 @@ use fret_router::{
     SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
 };
 use fret_runtime::{
-    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailability,
-    WindowCommandAvailabilityService, WindowCommandEnabledService,
+    DefaultKeybinding, KeyChord, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
+    PlatformFilter, WindowCommandAvailability, WindowCommandAvailabilityService,
+    WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -124,6 +126,32 @@ fn apply_page_route_side_effects_via_router(
     apply_page_router_update_side_effects(app, window, current_page, router, update);
 }
 
+fn sync_gallery_page_history_command_enabled(
+    app: &mut App,
+    window: AppWindowId,
+    history: &MemoryHistory,
+) {
+    let can_back = history.can_back();
+    let can_forward = history.can_forward();
+
+    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
+    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
+
+    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+        if can_back {
+            svc.clear_command(window, &cmd_back);
+        } else {
+            svc.set_enabled(window, cmd_back.clone(), false);
+        }
+
+        if can_forward {
+            svc.clear_command(window, &cmd_forward);
+        } else {
+            svc.set_enabled(window, cmd_forward.clone(), false);
+        }
+    });
+}
+
 fn apply_page_router_update_side_effects(
     app: &mut App,
     window: AppWindowId,
@@ -131,6 +159,8 @@ fn apply_page_router_update_side_effects(
     router: &mut Router<UiGalleryRouteId, MemoryHistory>,
     update: Result<RouterUpdate, fret_router::RouteSearchValidationFailure>,
 ) {
+    sync_gallery_page_history_command_enabled(app, window, router.history());
+
     let Ok(update) = update else {
         return;
     };
@@ -3144,13 +3174,83 @@ pub fn build_app() -> App {
         CommandId::new(CMD_GALLERY_PAGE_BACK),
         CommandMeta::new("Page Back")
             .with_category("Gallery")
-            .with_keywords(["gallery", "page", "back", "history", "navigate"]),
+            .with_keywords(["gallery", "page", "back", "history", "navigate"])
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Macos,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::BracketLeft,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+            ]),
     );
     app.commands_mut().register(
         CommandId::new(CMD_GALLERY_PAGE_FORWARD),
         CommandMeta::new("Page Forward")
             .with_category("Gallery")
-            .with_keywords(["gallery", "page", "forward", "history", "navigate"]),
+            .with_keywords(["gallery", "page", "forward", "history", "navigate"])
+            .with_default_keybindings([
+                DefaultKeybinding {
+                    platform: PlatformFilter::Windows,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Linux,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+                DefaultKeybinding {
+                    platform: PlatformFilter::Macos,
+                    sequence: vec![KeyChord::new(
+                        KeyCode::BracketRight,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    )],
+                    when: None,
+                },
+            ]),
     );
     app.commands_mut().register(
         CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
