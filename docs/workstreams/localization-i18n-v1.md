@@ -92,7 +92,7 @@ The following constraints are intentionally treated as hard gates for v1 because
 
 3. **Backend-neutral app/runtime contracts**
    - Public app/runtime APIs must not expose `fluent-rs` concrete types.
-   - `ecosystem/fret-i18n` remains the only required contract dependency for callers.
+   - `crates/fret-i18n` remains the only required contract dependency for callers.
 
 4. **Portable resource source model**
    - Catalog acquisition abstractions must support embedded, async, and reloadable sources.
@@ -112,7 +112,7 @@ The following constraints are intentionally treated as hard gates for v1 because
 
 ## Proposed layering (modular and extensible)
 
-### Layer A: Backend-agnostic i18n contracts (`ecosystem/fret-i18n`)
+### Layer A: Backend-agnostic i18n contracts (`crates/fret-i18n`)
 
 Primary responsibilities:
 
@@ -226,7 +226,7 @@ Registry usage anchors:
 ## One-shot delivery strategy
 
 1. Lock i18n contracts and key conventions up front (ADR + workstream gates).
-2. Implement `ecosystem/fret-i18n` + `ecosystem/fret-i18n-fluent` in the same delivery window.
+2. Implement `crates/fret-i18n` + `ecosystem/fret-i18n-fluent` in the same delivery window.
 3. Land app-level locale settings/switching and primary UI surfaces together:
    - command metadata (`title`, `description`, `category`),
    - workspace/menu bar labels,
@@ -292,7 +292,7 @@ Notes:
 
 ## Completed in this iteration
 
-- Added `ecosystem/fret-i18n` contract crate with:
+- Added `crates/fret-i18n` contract crate with:
   - locale/key/args domain types,
   - lookup trait + diagnostics model,
   - runtime `I18nService` (locale chain + pseudo mode + `t`/`t_args`).

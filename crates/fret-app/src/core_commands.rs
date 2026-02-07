@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
@@ -566,59 +566,108 @@ fn localized_or_fallback(
 }
 
 fn core_i18n_lookup() -> Arc<dyn fret_runtime::fret_i18n::I18nLookup + 'static> {
-    let mut catalog = fret_runtime::fret_i18n_fluent::FluentCatalog::new();
-    catalog
-        .add_locale_ftl(
-            fret_runtime::fret_i18n::LocaleId::parse("en-US")
-                .expect("hardcoded locale en-US must parse"),
-            CORE_COMMANDS_FTL_EN_US,
-        )
-        .expect("en-US i18n resource must load");
-    catalog
-        .add_locale_ftl(
-            fret_runtime::fret_i18n::LocaleId::parse("zh-CN")
-                .expect("hardcoded locale zh-CN must parse"),
-            CORE_COMMANDS_FTL_ZH_CN,
-        )
-        .expect("zh-CN i18n resource must load");
-
-    let lookup = fret_runtime::fret_i18n_fluent::FluentLookup::new(Arc::new(catalog));
-    Arc::new(lookup)
+    Arc::new(CoreStaticLookup)
 }
 
-const CORE_COMMANDS_FTL_EN_US: &str = r#"
-core-command-category-app = App
-workspace-menu-file = File
-workspace-menu-edit = Edit
-workspace-menu-view = View
-workspace-menu-window = Window
+struct CoreStaticLookup;
 
-core-command-title-app-command-palette = Command Palette
-core-command-title-app-about = About
-core-command-title-app-preferences = Preferences...
-core-command-title-app-locale-switch-next = Switch Language
-core-command-title-app-hide = Hide
-core-command-title-app-hide-others = Hide Others
-core-command-title-app-show-all = Show All
-core-command-title-app-quit = Quit
-"#;
+impl fret_runtime::fret_i18n::I18nLookup for CoreStaticLookup {
+    fn format(
+        &self,
+        preferred_locales: &[fret_runtime::fret_i18n::LocaleId],
+        key: &fret_runtime::fret_i18n::MessageKey,
+        args: Option<&fret_runtime::fret_i18n::MessageArgs>,
+    ) -> Result<fret_runtime::fret_i18n::LocalizedMessage, fret_runtime::fret_i18n::I18nLookupError>
+    {
+        let _ = args;
 
-const CORE_COMMANDS_FTL_ZH_CN: &str = r#"
-core-command-category-app = 应用
-workspace-menu-file = 文件
-workspace-menu-edit = 编辑
-workspace-menu-view = 视图
-workspace-menu-window = 窗口
+        for (depth, locale) in preferred_locales.iter().enumerate() {
+            if let Some(text) = core_message_for(locale, key.as_str()) {
+                return Ok(fret_runtime::fret_i18n::LocalizedMessage {
+                    text: text.to_string(),
+                    locale: locale.clone(),
+                    fallback_depth: depth,
+                });
+            }
+        }
 
-core-command-title-app-command-palette = 命令面板
-core-command-title-app-about = 关于
-core-command-title-app-preferences = 偏好设置...
-core-command-title-app-locale-switch-next = 切换语言
-core-command-title-app-hide = 隐藏
-core-command-title-app-hide-others = 隐藏其他应用
-core-command-title-app-show-all = 显示全部
-core-command-title-app-quit = 退出
-"#;
+        if core_message_known(key.as_str()) {
+            Err(fret_runtime::fret_i18n::I18nLookupError::MissingLocale {
+                requested: preferred_locales.to_vec(),
+            })
+        } else {
+            Err(fret_runtime::fret_i18n::I18nLookupError::MissingKey { key: key.clone() })
+        }
+    }
+}
+
+fn core_message_for(locale: &fret_runtime::fret_i18n::LocaleId, key: &str) -> Option<&'static str> {
+    if locale == core_locale_zh_cn() {
+        core_message_zh_cn(key)
+    } else if locale == core_locale_en_us() {
+        core_message_en_us(key)
+    } else {
+        None
+    }
+}
+
+fn core_message_known(key: &str) -> bool {
+    core_message_en_us(key).is_some() || core_message_zh_cn(key).is_some()
+}
+
+fn core_message_en_us(key: &str) -> Option<&'static str> {
+    Some(match key {
+        "core-command-category-app" => "App",
+        "workspace-menu-file" => "File",
+        "workspace-menu-edit" => "Edit",
+        "workspace-menu-view" => "View",
+        "workspace-menu-window" => "Window",
+        "core-command-title-app-command-palette" => "Command Palette",
+        "core-command-title-app-about" => "About",
+        "core-command-title-app-preferences" => "Preferences...",
+        "core-command-title-app-locale-switch-next" => "Switch Language",
+        "core-command-title-app-hide" => "Hide",
+        "core-command-title-app-hide-others" => "Hide Others",
+        "core-command-title-app-show-all" => "Show All",
+        "core-command-title-app-quit" => "Quit",
+        _ => return None,
+    })
+}
+
+fn core_message_zh_cn(key: &str) -> Option<&'static str> {
+    Some(match key {
+        "core-command-category-app" => "应用",
+        "workspace-menu-file" => "文件",
+        "workspace-menu-edit" => "编辑",
+        "workspace-menu-view" => "视图",
+        "workspace-menu-window" => "窗口",
+        "core-command-title-app-command-palette" => "命令面板",
+        "core-command-title-app-about" => "关于",
+        "core-command-title-app-preferences" => "偏好设置...",
+        "core-command-title-app-locale-switch-next" => "切换语言",
+        "core-command-title-app-hide" => "隐藏",
+        "core-command-title-app-hide-others" => "隐藏其他应用",
+        "core-command-title-app-show-all" => "显示全部",
+        "core-command-title-app-quit" => "退出",
+        _ => return None,
+    })
+}
+
+fn core_locale_en_us() -> &'static fret_runtime::fret_i18n::LocaleId {
+    static LOCALE: OnceLock<fret_runtime::fret_i18n::LocaleId> = OnceLock::new();
+    LOCALE.get_or_init(|| {
+        fret_runtime::fret_i18n::LocaleId::parse("en-US")
+            .expect("hardcoded locale en-US must parse")
+    })
+}
+
+fn core_locale_zh_cn() -> &'static fret_runtime::fret_i18n::LocaleId {
+    static LOCALE: OnceLock<fret_runtime::fret_i18n::LocaleId> = OnceLock::new();
+    LOCALE.get_or_init(|| {
+        fret_runtime::fret_i18n::LocaleId::parse("zh-CN")
+            .expect("hardcoded locale zh-CN must parse")
+    })
+}
 
 #[cfg(test)]
 mod tests {
