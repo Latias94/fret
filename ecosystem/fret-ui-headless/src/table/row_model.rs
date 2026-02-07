@@ -1776,6 +1776,126 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// TanStack-aligned: `column.getCanSort()`.
+    pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+        Some(self.options.enable_sorting && col.enable_sorting && has_sort_value_source)
+    }
+
+    /// TanStack-aligned: `column.getIsSorted()` (boolean form).
+    pub fn column_is_sorted(&self, column_id: &str) -> Option<bool> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .any(|s| s.column.as_ref() == column_id),
+        )
+    }
+
+    /// TanStack-aligned: `column.getSortIndex()`.
+    ///
+    /// Returns `-1` when the column is not currently sorted. Returns `None` when the column id
+    /// does not exist.
+    pub fn column_sort_index(&self, column_id: &str) -> Option<i32> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .position(|s| s.column.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
+    /// TanStack-aligned sorting state transition for `column.toggleSorting(...)`.
+    ///
+    /// This models the "direct toggle" policy (see `sorting.rs::toggle_sorting_tanstack`).
+    pub fn sorting_updater_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// TanStack-aligned sorting state transition for `column.getToggleSortingHandler()`.
+    ///
+    /// This models the "handler" policy (including `getCanSort` gating), aligning with
+    /// `sorting.rs::toggle_sorting_handler_tanstack`.
+    pub fn sorting_handler_updater_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_handler_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                event_multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// Convenience: apply [`Self::sorting_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater = self.sorting_updater_tanstack(column_id, multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
+    /// Convenience: apply [`Self::sorting_handler_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_handler_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater =
+            self.sorting_handler_updater_tanstack(column_id, event_multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
     /// TanStack-aligned: `table.resetColumnFilters(defaultState?)`.
     pub fn reset_column_filters(&self, default_state: bool) -> super::ColumnFiltersState {
         if default_state {

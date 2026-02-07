@@ -133,8 +133,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - [x] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
     - [x] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
     - [x] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
-    - [ ] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
+    - [~] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
       so UI consumers do not re-implement TanStack policies and drift.
+      - [x] Sorting policy helpers are engine-owned and fixture-gated:
+        `Table::{sorting_updater_tanstack,sorting_handler_updater_tanstack,toggled_column_sorting_tanstack,toggled_column_sorting_handler_tanstack}`.
+        - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`,
+          `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs`.
+      - [ ] Follow-up: identify additional engine-owned policies (filtering/grouping/sizing handlers) that UI
+        consumers should not re-implement.
   - Source of truth:
     - Core: `repo-ref/table/packages/table-core/src/core/*`
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`

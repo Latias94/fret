@@ -745,7 +745,7 @@ Legend:
 | `setState/setOptions` | rebuild `Table` from `TableState`/`TableOptions` (pure engine design) | Partial | fixture gates exercise outcomes, not API shape |
 | `setSorting/setColumnFilters/setGlobalFilter/setPagination/...` | mutate `TableState` (or apply `Updater<T>`) then rebuild | Partial | fixtures gate derived outputs after state changes |
 | `resetSorting/resetColumnFilters/resetGlobalFilter/resetPagination/...` | `Table::reset_*` surfaces exist | Aligned | `resets.json` + feature fixtures |
-| `toggleColumnSorting` | prefer engine-owned helper (see `HTP-cap-015`) | Partial | helpers exist in `sorting.rs`; consumer usage is test-only today |
+| `toggleColumnSorting` | `Table::{toggled_column_sorting_tanstack,toggled_column_sorting_handler_tanstack}` (engine-owned policy helpers) | Aligned | `demo_process.json`, `tanstack_v8_parity.rs` |
 
 ### Column instance (public, non-underscore)
 
@@ -797,7 +797,7 @@ and does not need to preserve method names, but the **capability must exist**.
 | `getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
 | `clearSorting` | remove column from `TableState.sorting` (engine helper TBD) | Partial | N/A |
 | `getCanSort/getIsSorted/getSortIndex/getNextSortingOrder/getFirstSortDir/getAutoSortDir` | sorting policy in `sorting.rs` (`toggle_sorting_tanstack`, `toggle_sorting_handler_tanstack`) | Partial | sorting outcomes gated (`demo_process.json`, `sorting_fns.json`), policy helper not table-owned |
-| `toggleSorting/getToggleSortingHandler` | prefer engine-owned helper (see `HTP-cap-015`) wrapping `sorting.rs` policy | Partial | currently used in tests only (`tanstack_v8_parity.rs`) |
+| `toggleSorting/getToggleSortingHandler` | `Table::{sorting_updater_tanstack,sorting_handler_updater_tanstack}` (+ `toggled_*` convenience) | Aligned | `demo_process.json`, `sorting_fns.json` |
 | `getSortingFn/getAutoSortingFn` | `SortingFnSpec` resolution + registry (`sorting.rs`) | Aligned | `sorting_fns.json` |
 
 ### Row instance (public, non-underscore)

@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
     ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
-    contains_ascii_case_insensitive, toggle_sorting_handler_tanstack, toggle_sorting_tanstack,
+    contains_ascii_case_insensitive,
 };
 use serde::Deserialize;
 
@@ -142,9 +141,6 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
             }),
     ];
 
-    let column_by_id: HashMap<&str, &ColumnDef<FixtureRow>> =
-        columns.iter().map(|c| (c.id.as_ref(), c)).collect();
-
     for snap in fixture.snapshots {
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
@@ -154,27 +150,31 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
 
         if !snap.actions.is_empty() {
             for action in &snap.actions {
+                let table_for_action = Table::builder(&data)
+                    .columns(columns.clone())
+                    .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                    .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                    .state(state.clone())
+                    .options(options)
+                    .build();
+
                 match action {
                     FixtureAction::ToggleSorting { column_id, multi } => {
-                        let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
-                            panic!("unknown action column_id: {}", column_id);
-                        };
-                        toggle_sorting_tanstack(&mut state.sorting, column, options, *multi, false);
+                        state.sorting = table_for_action
+                            .toggled_column_sorting_tanstack(column_id.as_str(), *multi, false)
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                     FixtureAction::ToggleSortingHandler {
                         column_id,
                         event_multi,
                     } => {
-                        let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
-                            panic!("unknown action column_id: {}", column_id);
-                        };
-                        toggle_sorting_handler_tanstack(
-                            &mut state.sorting,
-                            column,
-                            options,
-                            *event_multi,
-                            false,
-                        );
+                        state.sorting = table_for_action
+                            .toggled_column_sorting_handler_tanstack(
+                                column_id.as_str(),
+                                *event_multi,
+                                false,
+                            )
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                 }
             }
