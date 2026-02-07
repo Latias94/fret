@@ -133,6 +133,7 @@ struct Node<H: UiHost> {
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
+    paint_invalidated_by_hit_test_only: bool,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
     prepaint_outputs: PrepaintOutputs,
@@ -214,6 +215,7 @@ impl<H: UiHost> Node<H> {
                 paint: true,
                 hit_test: true,
             },
+            paint_invalidated_by_hit_test_only: false,
             paint_cache: None,
             interaction_cache: None,
             prepaint_outputs: PrepaintOutputs::default(),
@@ -424,6 +426,11 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    /// Paint-cache replay attempts that were allowed specifically by the
+    /// `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` gate.
+    pub paint_cache_hit_test_only_replay_allowed: u32,
+    /// Hit-test-only replay attempts rejected because the previous cache key did not match.
+    pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub paint_cache_replay_time: Duration,
     pub paint_cache_bounds_translate_time: Duration,
     pub paint_cache_bounds_translated_nodes: u32,
@@ -435,6 +442,10 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Total number of `layout_engine_child_local_rect` queries performed during the current frame.
+    pub layout_engine_child_rect_queries: u64,
+    /// Total wall time spent inside layout engine child-rect queries during the current frame.
+    pub layout_engine_child_rect_time: Duration,
     /// Number of "widget-local" layout engine solves triggered as a fallback when a widget cannot
     /// consume already-solved engine child rects.
     ///
@@ -902,6 +913,38 @@ pub enum UiDebugScrollHandleChangeKind {
     HitTestOnly,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollAxis {
+    X,
+    Y,
+    Both,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollNodeTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollbarTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub scroll_target: Option<GlobalElementId>,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+    pub track: Rect,
+    pub thumb: Option<Rect>,
+    pub hovered: bool,
+    pub dragging: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct UiDebugScrollHandleChange {
     pub handle_key: usize,
@@ -1099,6 +1142,8 @@ pub struct UiDebugLayoutEngineSolve {
 pub struct UiDebugLayoutHotspot {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
     pub widget_type: &'static str,
     pub inclusive_time: Duration,
     pub exclusive_time: Duration,
@@ -1118,6 +1163,7 @@ pub struct UiDebugPaintWidgetHotspot {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
     pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
     pub widget_type: &'static str,
     pub inclusive_time: Duration,
     pub exclusive_time: Duration,
@@ -1549,6 +1595,7 @@ pub struct UiTree<H: UiHost> {
     debug_paint_widget_exclusive_started: Option<Instant>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_inclusive_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_stack: Vec<DebugLayoutStackFrame>,
     debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
     debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
@@ -1571,6 +1618,8 @@ pub struct UiTree<H: UiHost> {
     debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
+    debug_scroll_nodes: Vec<UiDebugScrollNodeTelemetry>,
+    debug_scrollbars: Vec<UiDebugScrollbarTelemetry>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
@@ -1982,6 +2031,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_paint_widget_exclusive_started: None,
             debug_layout_engine_solves: Vec::new(),
             debug_layout_hotspots: Vec::new(),
+            debug_layout_inclusive_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
@@ -2003,6 +2053,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
+            debug_scroll_nodes: Vec::new(),
+            debug_scrollbars: Vec::new(),
             debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
@@ -2091,6 +2143,20 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
+        match inv {
+            Invalidation::HitTestOnly => {
+                if !node.invalidation.paint {
+                    node.paint_invalidated_by_hit_test_only = true;
+                }
+            }
+            Invalidation::Paint | Invalidation::Layout | Invalidation::HitTest => {
+                node.paint_invalidated_by_hit_test_only = false;
+            }
+        }
+        node.invalidation.mark(inv);
+    }
+
     fn update_invalidation_counters(&mut self, prev: InvalidationFlags, next: InvalidationFlags) {
         if prev.layout != next.layout {
             if next.layout {
@@ -2121,7 +2187,7 @@ impl<H: UiHost> UiTree<H> {
         };
         let prev = n.invalidation;
         let layout_before = n.invalidation.layout;
-        n.invalidation.mark(inv);
+        Self::mark_node_invalidation_state(n, inv);
         let next = n.invalidation;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
@@ -2329,6 +2395,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_layout_hotspots.clear();
+        self.debug_layout_inclusive_hotspots.clear();
         self.debug_layout_stack.clear();
         self.debug_widget_measure_hotspots.clear();
         self.debug_widget_measure_stack.clear();
@@ -2347,6 +2414,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
+        self.debug_scroll_nodes.clear();
+        self.debug_scrollbars.clear();
         self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
@@ -2833,6 +2902,33 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_windows.push(record);
     }
 
+    pub(crate) fn debug_record_scroll_node_telemetry(
+        &mut self,
+        record: UiDebugScrollNodeTelemetry,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scroll containers.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scroll_nodes.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scroll_nodes.push(record);
+    }
+
+    pub(crate) fn debug_record_scrollbar_telemetry(&mut self, record: UiDebugScrollbarTelemetry) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scrollbars.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scrollbars.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scrollbars.push(record);
+    }
+
     pub(crate) fn debug_record_retained_virtual_list_reconcile(
         &mut self,
         record: UiDebugRetainedVirtualListReconcile,
@@ -3087,6 +3183,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layout_hotspots.as_slice()
+    }
+
+    pub fn debug_layout_inclusive_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_inclusive_hotspots.as_slice()
     }
 
     pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
@@ -3578,6 +3681,20 @@ impl<H: UiHost> UiTree<H> {
         self.debug_scroll_handle_changes.as_slice()
     }
 
+    pub fn debug_scroll_nodes(&self) -> &[UiDebugScrollNodeTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scroll_nodes.as_slice()
+    }
+
+    pub fn debug_scrollbars(&self) -> &[UiDebugScrollbarTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scrollbars.as_slice()
+    }
+
     pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {
         if !self.debug_enabled {
             return &[];
@@ -3973,6 +4090,25 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
+    pub(crate) fn layout_engine_child_local_rect_profiled(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> Option<Rect> {
+        let started = self.debug_enabled.then(Instant::now);
+        let rect = self
+            .layout_engine
+            .child_layout_rect_if_solved(parent, child);
+        if let Some(started) = started {
+            self.debug_stats.layout_engine_child_rect_queries = self
+                .debug_stats
+                .layout_engine_child_rect_queries
+                .saturating_add(1);
+            self.debug_stats.layout_engine_child_rect_time += started.elapsed();
+        }
+        rect
+    }
+
     #[allow(dead_code)]
     pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
         let Some(&child) = self.children(root).first() else {
@@ -4104,6 +4240,7 @@ impl<H: UiHost> UiTree<H> {
         };
         let layout_before = n.invalidation.layout;
         n.invalidation.clear();
+        n.paint_invalidated_by_hit_test_only = false;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
@@ -5956,7 +6093,7 @@ impl<H: UiHost> UiTree<H> {
                 };
                 let prev = n.invalidation;
                 let layout_before = n.invalidation.layout;
-                n.invalidation.mark(inv);
+                Self::mark_node_invalidation_state(n, inv);
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,
                     layout_before,
@@ -6031,7 +6168,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -6117,7 +6254,7 @@ impl<H: UiHost> UiTree<H> {
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -6197,7 +6334,7 @@ impl<H: UiHost> UiTree<H> {
                         if (already & needed) != needed {
                             let prev = n.invalidation;
                             let layout_before = n.invalidation.layout;
-                            n.invalidation.mark(inv);
+                            Self::mark_node_invalidation_state(n, inv);
                             record_layout_invalidation_transition(
                                 &mut self.layout_invalidations_count,
                                 layout_before,

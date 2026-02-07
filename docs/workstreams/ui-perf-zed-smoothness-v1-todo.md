@@ -17,7 +17,34 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
+## Current priorities (updated 2026-02-07)
+
+- [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
+  `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
+  - Companion probe (width jitter / live-drag approximation):
+    `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
+    - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
+    - Evidence: perf log entry `2026-02-07 11:15` (r16 worst bundle + snapshot pointers).
+  - [x] Quantize logical window sizes in the runner to reduce float-noise resize churn (commit `74dc38bd9`).
+    - Evidence: perf log entry `2026-02-07 11:50`.
+  - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
+    - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+  - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
+    identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
+    - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
+      `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
+    - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
+- [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
+  - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
+- [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
+
 ## Milestones
+
+Execution plan:
+
+- `docs/workstreams/ui-perf-zed-smoothness-v1-execution-plan.md`
 
 ### M0: Baseline + suite gates (make perf a contract)
 
@@ -46,10 +73,25 @@ Conventions:
     evidence + drift notes in the perf log entry for commit `72e6c32df`).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json` (refresh after the
     post-merge editor regression fix; evidence + drift notes in the perf log entry for commit `0d8ad27ac`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json` (refresh under the
+    steady-state protocol: `--reuse-launch` + diagnostics envs pinned; evidence + drift notes in the perf log entry
+    for commit `09ecac494`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json` (adds the editor-grade
+    autoscroll probe to the suite; evidence + drift notes in the perf log entry for commit `f21a0aa82`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json` (pointer-move threshold slack/quantum stabilization; see perf log entry around 2026-02-06 12:36).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json` (refresh after resize-event coalescing work; see perf log entry for commit `beb2fa315`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json` (schema refresh including run-max hit-test-replay gate fields; evidence + drift notes in perf log entry 2026-02-06 20:12).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json` (adds anti-noise threshold seeding metadata, policy header, and resize-script p95 seeding with interpolated percentile; evidence + drift notes in perf log entries 2026-02-06 21:05 and 2026-02-06 21:35).
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
   - Candidate: `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+- [x] Add a dedicated P0 resize probe suite + gate runner (so resize regressions are always caught).
+  - Suite: `ui-resize-probes` (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` +
+    `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`).
+  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
+  - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
+  - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:
@@ -62,12 +104,17 @@ Conventions:
   - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
+- [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
+  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 - [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
   - Implemented by `perf(fret-ui): defer unbounded scroll probe on resize` (commit `05d2d56c`).
   - Env: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
   - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES` (default: 2)
+- [x] Add correctness gates for the resize + scroll probe policy:
+  - Scroll offset stability gate: `--check-scroll-offset-stable <test_id>` (commit `6c248d9e1`).
+  - Scrollbar thumb geometry validity gate: `--check-scrollbar-thumb-valid all` (commit `e20637f92`).
 - [ ] Decide whether scroll unbounded-probe deferral should become the default (remove env gating) and
   update the canonical perf suite env set accordingly.
 - [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
@@ -78,6 +125,7 @@ Conventions:
     `layout_pending_barrier_relayouts_time_us`, `layout_repair_view_cache_bounds_time_us`,
     `layout_contained_view_cache_roots_time_us`, `layout_collapse_layout_observations_time_us`,
     `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
+  - Follow-up: include `layout_roots_time_us` in `fretboard diag stats` / `diag perf --json` payloads (commit `366efd769`).
   - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
   - Implemented by `feat(diag): export layout phase breakdown` (commit `b02744a8`).
 - [x] Export initial paint-pass breakdown metrics (to disprove/confirm “paint-cache replay is the hotspot”).
@@ -86,6 +134,9 @@ Conventions:
     `paint_record_visual_bounds_calls`.
   - Implemented by `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`).
   - Tracking: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
+- [x] Export top inclusive layout hotspots (to complement exclusive-only `debug.layout_hotspots[]`).
+  - Field: `debug.layout_inclusive_hotspots[]`
+  - Implemented by `feat(diag): add inclusive layout hotspots` (commit `69111ebde`).
 - [x] Export initial paint micro-breakdown timers (paint-all plumbing).
   - Adds: `paint_input_context_time_us`, `paint_scroll_handle_invalidation_time_us`,
     `paint_collect_roots_time_us`, `paint_publish_text_input_snapshot_time_us`,
@@ -426,19 +477,50 @@ TODO:
 
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 
-- [ ] Pick the first “editor-class” migration target:
-  - Option A: VirtualList visible window derivation in prepaint (ADR 0190 alignment).
-  - Option B: Code view visible-line window derivation in prepaint (code editor feel).
+- [x] Pick the first “editor-class” migration target: **Option A (VirtualList)**.
+  - Rationale: fastest path to validate retained prepaint-window behavior and rerender suppression under wheel traffic.
+  - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`,
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries 2026-02-07 00:46 and 2026-02-07 00:56.
 - [ ] Reduce editor-class per-frame scene construction when scrolling/animating.
   - Baseline hotspot: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` can be dominated by
     `paint_widget_hotspots kind=Canvas` (see perf log entry 2026-02-05 15:43:55).
   - Goal: translate/replay cached ranges where possible instead of re-emitting large display lists each frame.
 - [ ] Ensure cache-root reuse remains stable under steady scroll/pan.
-- [ ] Add a “window boundary crossing” script that fails if it triggers full rerender too often.
+- [x] Suppress avoidable non-retained prefetch rerenders on steady wheel crossing.
+  - Change: `crates/fret-ui/src/tree/prepaint.rs` now disables preemptive/forced prefetch shifts for
+    non-retained + view-cache path while visible range remains covered by the rendered overscan envelope.
+  - Non-retained sample (`FRET_UI_GALLERY_VLIST_RETAINED=0`, 3 runs):
+    - before: `prefetch=1`, `non_retained=1` per run
+    - after: `prefetch=0`, `non_retained=0` per run
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 01:04.
+- [x] Add a “window boundary crossing” probe script for retained VirtualList scrolling.
+  - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
+  - Sampling status: with `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
+    `FRET_UI_GALLERY_VLIST_MINIMAL=1`, runs `r3..r6` show `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`.
+- [x] Promote the boundary-crossing probe into a stable acceptance gate recipe (repeat runs + threshold rationale).
+  - Gate runner: `tools/perf/diag_vlist_boundary_gate.sh`
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-gate-r1/summary.json` (`runs=3`, `run_failures=0`, `pass=true`).
 
 Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
+- [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json`:
+  - Retained gate target: `prefetch<=3`, `escape<=0`, `non_retained<=0`
+  - Command profile: enable view-cache env (`FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`) and run `tools/perf/diag_vlist_boundary_gate.sh --runs 3`.
+- [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json` (non-retained fallback profile):
+  - Run profile: add `FRET_UI_GALLERY_VLIST_RETAINED=0`
+  - Current sampled expectation (3 runs): `prefetch=0`, `escape=0`, `non_retained=0`
+- [x] Add strict non-retained fallback gate and cache-key budgets.
+  - Gate runner: `tools/perf/diag_vlist_boundary_gate.sh` now supports
+    `--retained`, `--max-cache-key-mismatch`, `--max-needs-rerender`.
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-nonretained-gate-r1/summary.json`
+    (`runs=3`, `pass=true`, `prefetch=0`, `escape=0`, `non_retained=0`,
+    `cache_key_mismatch_max=0`, `needs_rerender_max=0`).
+- [x] Add non-retained boundary stress probe and strict gate recipe.
+  - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json`
+  - Gate command:
+    `tools/perf/diag_vlist_boundary_gate.sh --runs 3 --script tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json --retained 0 --prefetch-max 0 --escape-max 0 --non-retained-max 0 --max-cache-key-mismatch 0 --max-needs-rerender 0`
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1/summary.json` (`pass=true`, `run_failures=0`).
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).
@@ -462,6 +544,7 @@ Perf acceptance:
   - Evidence + numbers: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for 2026-02-06 (commit `0d8ad27ac`).
 - [x] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
   - `paint_widget_hotspots` now include `ElementInstance` kind attribution (commit `c80525b9`).
+  - `paint_widget_hotspots` now include element debug paths for faster attribution (commit `414974a44`).
   - Paint-phase text prepare counters + reason counts:
     - `paint_text_prepare_time_us`, `paint_text_prepare_calls` (commit `07d2ccf2`)
     - `paint_text_prepare_reason_*` (commit `80a46d49`)
@@ -490,6 +573,114 @@ Perf acceptance:
 - [ ] Keep `fret-ui` policy-light (mechanisms only; policy stays in ecosystem; see ADR 0066).
 - [ ] Track GPUI performance gaps explicitly and close them with measurable gates:
   - `docs/workstreams/ui-perf-gpui-gap-v1.md`
+- [x] Stabilize `ui-gallery-steady` perf baseline gates against microsecond jitter.
+  - Adjustment: add slack + quantum rounding for pointer-move thresholds in perf baseline generation.
+  - Refresh baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 12:36.
+- [x] Refresh steady baseline after perf-threshold schema update (run-max hit-test replay metrics).
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`
+  - Validation: `target/fret-diag-codex-perf-v14-validate2/check.perf_thresholds.json` (failures=0).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 20:12.
+- [x] Add anti-noise threshold seeding metadata for steady baselines.
+  - Baseline row now records `measured_p90`, `measured_p95`, `threshold_seed`, `threshold_seed_source`.
+  - Baseline header records `threshold_seed_policy` (default seed + per-script/metric rules).
+  - Script-specific policy: resize steady uses p95 seed for `top_total/layout/solve`; other metrics stay max-seeded.
+  - Percentile seeds use linear interpolation so repeat=7 no longer degenerates to max-only seeding.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json`
+  - Validation: `target/fret-diag-codex-perf-v15-validate-seed/check.perf_thresholds.json` (failures=0).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries 2026-02-06 21:05 and 2026-02-06 21:35.
+- [x] Make baseline seed policy configurable from CLI.
+  - New flag: `--perf-baseline-seed <scope@metric=max|p90|p95>` (repeatable; scope supports suite names and `this-suite`).
+  - Example: `--perf-baseline-seed ui-gallery-steady@top_total_time_us=p90`.
+  - Template doc: `docs/workstreams/perf-baselines/seed-policy-template.md`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 21:35.
+- [x] Add versioned JSON presets for baseline seed policies.
+  - New flag: `--perf-baseline-seed-preset <path>` (repeatable; merge order follows CLI argument order).
+  - Merge precedence: built-in defaults -> preset rules -> explicit `--perf-baseline-seed` overrides.
+  - Added preset example: `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 22:50.
+- [x] Run v16 preset trial and evaluate gate stability.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json`.
+  - Validation sample: `target/fret-diag-codex-perf-v16-validate{,2,3}/check.perf_thresholds.json` (all `failures=1`).
+  - Control: `target/fret-diag-codex-perf-v15-validate-recheck/check.perf_thresholds.json` (`failures=0`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:20.
+- [x] Publish `ui-gallery-steady.v2` preset to remove known false-fail hotspot.
+  - Updated: `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
+  - Change: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json` now uses `p95` override.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json`.
+  - Validation sample: `target/fret-diag-codex-perf-v17-validate{1,2,3}/check.perf_thresholds.json` (all `failures=0`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:55.
+- [x] Harden baseline generation workflow against resize outliers (tooling).
+  - Added: `tools/perf/diag_perf_baseline_select.sh` (candidate selection + validation sampling + summary JSON).
+  - Rule: choose candidate by failures -> resize p90 -> threshold-sum.
+  - Template doc updated: `docs/workstreams/perf-baselines/seed-policy-template.md` (`Candidate selection workflow`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Quantize “big-frame” perf baseline thresholds to reduce 1–2us gate flakiness.
+  - Change: use `apply_perf_baseline_headroom_with_slack_and_quantum(..., quantum_us=4)` for `top_total/layout/solve`.
+  - Commit: `c7ea64bb5`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:02.
+- [x] Promote selected v18 baseline as canonical after candidate-selection run.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`.
+  - Selection summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`.
+  - Stability: both candidates validated `3/3` with `failures=0`; winner copied to v18 baseline.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Refresh the canonical steady baseline after diagnostics/perf instrumentation changes.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+  - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 10:10.
+
+- [x] Stabilize resize perf scripts and refresh the P0 resize probes baseline + default gate pointer.
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (insert per-resize waits; settle before capture)
+    - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (insert waits; shrink jitter span)
+  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`
+  - Gate default: `tools/perf/diag_resize_probes_gate.sh`
+  - Commit: `cad3fef6a`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:28.
+
+- [x] Avoid redundant scale-factor events during interactive resize.
+  - Change: only deliver `Event::WindowScaleFactorChanged` when the scale factor actually changes.
+  - Commit: `66b610487`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 09:15.
+
+
+- [x] Coalesce window resizes to once per frame in the desktop runner.
+  - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
+  - Commit: `beb2fa315`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:20.
+- [x] Make “deferred unbounded scroll probes on resize” the default behavior (keep an opt-out).
+  - Default: enabled (set `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE=0` to disable).
+  - Invalidation-only gate (separate): `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+  - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2` (default).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 15:56.
+    - [x] Add a correctness probe to ensure resize stress does not clamp scroll offsets incorrectly.
+      - Script: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+      - Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
+      - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 14:26.
+    - If acceptable, flip the default for resize-only (keep invalidation deferral opt-in).
+- [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
+  - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
+  - Commit: `e50173f13`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 16:12.
+- [x] Add diagnostics counters for the new gate path before deciding default behavior.
+  - Export at least: “paint replay allowed by hit-test-only gate” and “hit-test-only replay attempts rejected by key mismatch”.
+  - Implemented by `feat(diag): export hit-test-only paint-cache replay counters` (commit `f38f8c1d5`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 17:32.
+  - [x] Add a focused script where `HitTestOnly` dominates and layout stays stable.
+    - Added probe page + script: `hit_test_only_paint_cache_probe` + `tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`.
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 18:30.
+  - [x] Export per-run counter maxima in `diag perf --json` for gate-path counters.
+    - Implemented by `feat(diag): export per-run hit-test-only replay maxima in perf json` (commit `4c88f6696`); new fields `run_paint_cache_hit_test_only_replay_allowed_max` and `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`.
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 19:28.
+    - `top_*` rows can stay `0` even when bundle-level max counters are non-zero.
+  - [x] Wire run-max counters into perf baseline + threshold gates.
+    - Implemented by `feat(diag): gate hit-test replay run-max in perf baseline` (commit `f4a6f422b`).
+    - Adds CLI thresholds: `--min-run-paint-cache-hit-test-only-replay-allowed-max`, `--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max`.
+    - Baseline export now includes both `measured_max` and `thresholds` for these counters.
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 19:56.
+- [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
+  - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.
+- [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
   - Prefer `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for perf probes and clean old run directories periodically.

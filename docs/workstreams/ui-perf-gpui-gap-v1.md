@@ -86,6 +86,45 @@ To close the gap responsibly, treat perf as a contract and work from the “lowe
 This playbook is intentionally compatible with “fearless refactors”: each change should produce a measurable delta and
 an entry in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commit-addressable) so regressions are reversible.
 
+## 0.2.1 Resize smoothness: gaps to investigate vs GPUI/Zed
+
+Resize-drag is a “stress multiplier”: it invalidates layout constraints, which tends to trigger the widest set of
+reflow + paint work. Zed feels smooth here primarily because it keeps the per-frame work bounded and predictable.
+
+What we already do in Fret (evidence in the perf log):
+
+- **Coalesce resizes to once per frame** at the runner boundary (apply pending size at `RedrawRequested`).
+- **Defer known-expensive scroll measurement** while the viewport is actively resizing (unbounded probe deferral).
+- **Make resize probes stable and reproducible** (so baselines measure “work per resize” rather than “scheduler timing”).
+
+Open questions / likely gaps (need code-level confirmation against `repo-ref/zed/crates/gpui`):
+
+Baseline fact (quick reference):
+- On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
+  (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+
+1) **Text layout cache model under width jitter**
+   - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
+     layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
+   - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+
+2) **Layout invalidation granularity**
+   - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.
+   - Fret TODO: tighten layout-root construction and subtree invalidation so a resize does not always imply
+     “layout the whole tree” when only a small set of constraints changed.
+
+3) **Per-frame allocation discipline on hot resize frames**
+   - GPUI likely relies heavily on per-frame scratch arenas and stable caches; sporadic allocations can manifest as
+     rare tail hitches even when p90 looks fine.
+   - Fret TODO: track allocation and cache miss reasons directly in resize bundles (already partially available via
+     layout and view-cache counters) and close remaining blind spots.
+
+4) **GPU work scaling with surface area**
+   - Even if CPU layout is stable, large resizes can spike GPU cost if we re-rasterize masks, upload atlases, or
+     thrash intermediate textures.
+   - Fret TODO: ensure resize probes include renderer churn counters in the log (text atlas, SVG cache, intermediate
+     pool) and classify whether tail spikes are CPU-only or GPU-influenced.
+
 ## 0.3 Pointer-move hit-test status (current probe)
 
 Current “Zed feel” probe:
@@ -360,6 +399,73 @@ Proposal:
 Acceptance:
 
 - Add a perf gate that fails if cache-root reuse rate drops for key scripts (scroll, hover, editor autoscroll).
+
+#### Gap C.2: Window resize currently defeats view-cache reuse (hit-test coupling)
+
+In the steady-state suite, `ui-gallery-window-resize-stress-steady` is still the worst overall script, and the
+worst frame shows a characteristic signature:
+
+- `layout_time_us` dominates (root/widget layout traversal),
+- `paint_time_us` is then dominated by `paint_text_prepare_time_us` where the reason mask is entirely
+  `width_changed` (word wrap reflow), and
+- view-cache roots are present but do not reuse on these frames (reported as `not_marked_reuse_root`).
+
+Evidence (macOS Apple M4; `ui-gallery-steady` baseline v11 era):
+
+- Worst bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`
+- `fretboard diag stats --sort time --top 1` (selected lines from the worst frame):
+  - `time.us(total/layout/prepaint/paint)=16136/11331/98/4707`
+  - `paint_text_prepare.us(time/calls)=3656/18`
+  - `paint_text_prepare.reasons(.../width/...)=.../18/...`
+  - `top_cache_roots: ... reason=not_marked_reuse_root ...` (3 roots)
+
+Interpretation:
+
+- Fret’s current view-cache reuse gate is conservative and effectively ties “paint reuse” to “hit-test stability”.
+  Window resizing forces hit-test invalidation in the chrome-heavy view-cache page, so cache roots cannot reuse,
+  and the runtime ends up paying repeated layout + text prepare work across frames.
+
+Proposal (fearless refactor friendly):
+
+1) Decouple “paint reuse” from “hit-test invalidation” for view-cache roots:
+   - allow reusing cached paint output while recomputing hit-test data (bounds-tree) when only hit-test is dirty.
+2) Make width-change text reflow cheaper by introducing GPUI-like frame-to-frame line-layout reuse:
+   - keep shaping results stable,
+   - recompute line breaks incrementally for new widths,
+   - gate reuse by explicit keys (text/style/font-stack/scale/wrap width).
+
+Acceptance:
+
+- The `ui-gallery-window-resize-stress-steady` row improves measurably:
+  - reduce `max top_total_time_us` and `max paint_text_prepare_time_us` outliers,
+  - keep correctness (no stale scene/hit-test failures on scripted resize probes).
+
+Update:
+
+- Desktop runner now coalesces resize application to once per frame (commit `beb2fa315`), closer to GPUI’s
+  “resize marks dirty; draw happens at the frame boundary” model.
+  - GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs` wires `platform_window.on_resize(...)` to
+    `Window::bounds_changed(cx)`, which updates `viewport_size` and calls `refresh()`; layout/paint happens later
+    during `Window::draw` at the frame boundary.
+  - Implication: during an interactive drag-resize, it is expected to “re-layout every frame” (because constraints
+    are changing), but not expected to re-layout multiple times per frame due to resize spam.
+- Evidence (macOS Apple M4):
+  - Single-script probe worst `top_total_time_us`: `16935` (v12 baseline era) → `14219` (post-coalesce run)
+  - Suite baseline worst `top_total_time_us`: `16935` (v12) → `15532` (v13)
+  - Details and bundles are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:20).
+- Additional experiment (env-gated scroll optimization):
+  - Enabling deferred unbounded scroll probes during resize (`FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`)
+    improves the same single-script resize probe further to `top_total_time_us=11810` (repeat=7).
+  - This suggests a non-trivial portion of the resize tail is `Scroll` “unbounded probe” measurement work.
+  - Evidence and command are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:45).
+- Correctness gates added to make the resize policy safe to iterate:
+  - Scroll offset stability: `--check-scroll-offset-stable <test_id>` (commit `6c248d9e1`).
+  - Scrollbar thumb geometry validity: `--check-scrollbar-thumb-valid all` (commit `e20637f92`).
+- Latest spot check (commit `5208b6883`, repeat=7; reuse-launch):
+  - `p95 time.us(total/layout/solve/prepaint/paint)=15204/11659/1799/101/3444`
+  - Interpretation: resize remains layout-dominant; primary leverage is reducing layout plumbing overhead and
+    width-jitter-induced text churn (not the solve itself).
+  - Evidence: perf log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-07 08:45).
 
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 
