@@ -19,7 +19,8 @@ use fret_query::{QueryPolicy, with_query_client};
 use fret_router::{
     MemoryHistory, NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks,
     RouteLocation, RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate,
-    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
+    RouterUpdateWithPrefetchIntents, SearchValidationMode, collect_invalidated_namespaces,
+    prefetch_intent_query_key,
 };
 use fret_runtime::{
     DefaultKeybinding, KeyChord, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
@@ -122,7 +123,7 @@ fn apply_page_route_side_effects_via_router(
     router: &mut Router<UiGalleryRouteId, MemoryHistory>,
 ) {
     let current_route = route_location_for_page(&current_page);
-    let update = router.navigate(action, Some(current_route.canonicalized()));
+    let update = router.navigate_with_prefetch_intents(action, Some(current_route.canonicalized()));
     apply_page_router_update_side_effects(app, window, current_page, router, update);
 }
 
@@ -157,7 +158,10 @@ fn apply_page_router_update_side_effects(
     window: AppWindowId,
     current_page: Arc<str>,
     router: &mut Router<UiGalleryRouteId, MemoryHistory>,
-    update: Result<RouterUpdate, fret_router::RouteSearchValidationFailure>,
+    update: Result<
+        RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
+        fret_router::RouteSearchValidationFailure,
+    >,
 ) {
     sync_gallery_page_history_command_enabled(app, window, router.history());
 
@@ -165,8 +169,9 @@ fn apply_page_router_update_side_effects(
         return;
     };
 
+    let RouterUpdateWithPrefetchIntents { update, intents } = update;
+
     let RouterUpdate::Changed(transition) = update else {
-        let _ = router.take_prefetch_intents();
         return;
     };
 
@@ -185,7 +190,6 @@ fn apply_page_router_update_side_effects(
         ],
     );
 
-    let intents = router.take_prefetch_intents();
     if invalidated.is_empty() && intents.is_empty() {
         return;
     }
@@ -1222,7 +1226,9 @@ impl UiGalleryDriver {
             } else {
                 NavigationAction::Forward
             };
-            let update = state.page_router.navigate(action, None);
+            let update = state
+                .page_router
+                .navigate_with_prefetch_intents(action, None);
 
             let next_page = page_from_gallery_location(&state.page_router.state().location)
                 .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
