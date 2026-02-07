@@ -5814,3 +5814,44 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
 - top_total_time_us: `16783`
 - bundle: `target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327/1770431627012-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-07 11:29:52 (working tree)
+
+Change:
+- Add a dedicated `ui-resize-probes` perf suite (resize stress + drag jitter) so we can gate resize regressions as a
+  single, cheap contract.
+- Generate a committed baseline for the suite using the anti-outlier selection workflow.
+- Add a lightweight gate runner script.
+
+Baseline selection (anti-outlier):
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-resize-probes \
+  --preset docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json \
+  --candidates 2 \
+  --validate-runs 2 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 20 \
+  --work-dir target/fret-diag-baseline-select-ui-resize-probes-v1b \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Outputs:
+- Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-resize-probes-v1b/selection-summary.json`
+  - Best candidate: `candidate-1` (`fail_total=1`, `resize_p90_top_total_us=14945`, `threshold_sum_max_top_total_us=35468`)
+
+Gate smoke (repeat=3):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-smoke \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-smoke/summary.json`)

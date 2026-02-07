@@ -72,6 +72,12 @@ Execution plan:
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
   - Candidate: `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+- [x] Add a dedicated P0 resize probe suite + gate runner (so resize regressions are always caught).
+  - Suite: `ui-resize-probes` (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` +
+    `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`).
+  - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json`.
+  - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
+  - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:
