@@ -278,6 +278,122 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 /// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
 pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
 
+/// Base UI style delay before mouse-up is allowed to commit the already-selected option.
+///
+/// This protects against accidental commit when the list opens from a trigger pointer interaction
+/// and the release lands over the currently selected row.
+pub const SELECT_MOUSE_UP_SELECTED_DELAY_MS: u64 = 400;
+
+/// Base UI style delay before mouse-up is allowed to commit an unselected option.
+///
+/// When a selected option exists, this delay is shorter than `SELECT_MOUSE_UP_SELECTED_DELAY_MS`.
+pub const SELECT_MOUSE_UP_UNSELECTED_DELAY_MS: u64 = 200;
+
+/// Timer-driven mouse-up commit gate for select item rows.
+///
+/// Mirrors Base UI's delayed `onMouseUp` selection policy:
+/// - unselected rows are blocked for ~200ms after opening when a selected row exists
+/// - selected rows are blocked for ~400ms after opening
+/// - if no selected row exists in the list, both paths are blocked for ~400ms
+#[derive(Debug, Default)]
+pub struct SelectMouseUpSelectionGateState {
+    allow_selected_mouse_up: bool,
+    allow_unselected_mouse_up: bool,
+    selected_delay_token: Option<TimerToken>,
+    unselected_delay_token: Option<TimerToken>,
+}
+
+impl SelectMouseUpSelectionGateState {
+    fn cancel_timer(host: &mut dyn UiActionHost, token: &mut Option<TimerToken>) {
+        if let Some(token) = token.take() {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+    }
+
+    fn arm_timer(
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        after: Duration,
+        slot: &mut Option<TimerToken>,
+    ) {
+        Self::cancel_timer(host, slot);
+        let token = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after,
+            repeat: None,
+        });
+        *slot = Some(token);
+    }
+
+    pub fn arm_on_open(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        has_selected_item_in_list: bool,
+    ) {
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+
+        let unselected_delay_ms = if has_selected_item_in_list {
+            SELECT_MOUSE_UP_UNSELECTED_DELAY_MS
+        } else {
+            SELECT_MOUSE_UP_SELECTED_DELAY_MS
+        };
+
+        Self::arm_timer(
+            host,
+            window,
+            Duration::from_millis(unselected_delay_ms),
+            &mut self.unselected_delay_token,
+        );
+        Self::arm_timer(
+            host,
+            window,
+            Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            &mut self.selected_delay_token,
+        );
+    }
+
+    pub fn reset_without_cancel(&mut self) {
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+        self.selected_delay_token = None;
+        self.unselected_delay_token = None;
+    }
+
+    pub fn clear_and_cancel(&mut self, host: &mut dyn UiActionHost) {
+        Self::cancel_timer(host, &mut self.selected_delay_token);
+        Self::cancel_timer(host, &mut self.unselected_delay_token);
+        self.allow_selected_mouse_up = false;
+        self.allow_unselected_mouse_up = false;
+    }
+
+    pub fn on_timer(&mut self, token: TimerToken) -> bool {
+        let mut handled = false;
+        if self.unselected_delay_token == Some(token) {
+            self.unselected_delay_token = None;
+            self.allow_unselected_mouse_up = true;
+            handled = true;
+        }
+        if self.selected_delay_token == Some(token) {
+            self.selected_delay_token = None;
+            self.allow_selected_mouse_up = true;
+            handled = true;
+        }
+        handled
+    }
+
+    pub fn should_allow_item_mouse_up(&self, item_is_selected: bool) -> bool {
+        if item_is_selected {
+            self.allow_selected_mouse_up
+        } else {
+            self.allow_unselected_mouse_up
+        }
+    }
+}
+
 pub type SelectMouseOpenGuard = Arc<Mutex<SelectMouseOpenGuardState>>;
 
 pub fn select_mouse_open_guard() -> SelectMouseOpenGuard {
@@ -1399,6 +1515,31 @@ pub fn select_item_pointer_up_handler(
     item_disabled: bool,
     mouse_open_guard: SelectMouseOpenGuard,
 ) -> OnPointerUp {
+    select_item_pointer_up_handler_with_mouse_up_gate(
+        open,
+        value,
+        item_value,
+        item_disabled,
+        mouse_open_guard,
+        false,
+        None,
+    )
+}
+
+/// Same as `select_item_pointer_up_handler`, plus an optional delayed mouse-up commit gate.
+///
+/// When `mouse_up_gate` is present, mouse pointer-up commit is only allowed if the gate currently
+/// permits the row type (`item_is_selected` vs unselected), mirroring Base UI's delayed mouse-up
+/// policy after opening.
+pub fn select_item_pointer_up_handler_with_mouse_up_gate(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+    item_is_selected: bool,
+    mouse_up_gate: Option<Arc<Mutex<SelectMouseUpSelectionGateState>>>,
+) -> OnPointerUp {
     Arc::new(move |host, action_cx, up: PointerUpCx| {
         if up.button != fret_core::MouseButton::Left {
             return false;
@@ -1411,6 +1552,12 @@ pub fn select_item_pointer_up_handler(
         }
         if select_mouse_open_guard_should_suppress_pointer_up_shared(&mouse_open_guard, up) {
             return true;
+        }
+        if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
+            let gate = mouse_up_gate.lock().unwrap_or_else(|e| e.into_inner());
+            if !gate.should_allow_item_mouse_up(item_is_selected) {
+                return true;
+            }
         }
 
         let _ = host

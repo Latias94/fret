@@ -1219,6 +1219,12 @@ fn select_impl<H: UiHost>(
                 || radix_select::select_mouse_open_guard(),
                 |g| g.clone(),
             );
+            let mouse_up_selection_gate: Arc<Mutex<radix_select::SelectMouseUpSelectionGateState>> =
+                cx.with_state_for(
+                    trigger_id,
+                    || Arc::new(Mutex::new(radix_select::SelectMouseUpSelectionGateState::default())),
+                    |g| g.clone(),
+                );
 
             if !overlay_present {
                 let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
@@ -1235,13 +1241,17 @@ fn select_impl<H: UiHost>(
             }
 
             let state_for_timer = trigger_state.clone();
+            let mouse_up_selection_gate_for_timer = mouse_up_selection_gate.clone();
             cx.timer_on_timer_for(
                 trigger_id,
                 Arc::new(move |_host, _action_cx, token| {
                     let mut state = state_for_timer
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    state.trigger.on_timer(token) || state.content.on_timer(token)
+                    let mut gate = mouse_up_selection_gate_for_timer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    state.trigger.on_timer(token) || state.content.on_timer(token) || gate.on_timer(token)
                 }),
             );
 
@@ -1252,6 +1262,7 @@ fn select_impl<H: UiHost>(
             let disabled_for_key = typeahead_disabled.clone();
             let state_for_key = trigger_state.clone();
             let mouse_open_guard_for_key = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_key = mouse_up_selection_gate.clone();
             let on_value_change_for_key = on_value_change.clone();
             cx.key_on_key_down_for(
                 trigger_id,
@@ -1266,6 +1277,12 @@ fn select_impl<H: UiHost>(
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
                     radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_key);
+                    {
+                        let mut gate = mouse_up_selection_gate_for_key
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        gate.clear_and_cancel(host);
+                    }
                     let handled = state.trigger.handle_key_down_when_closed(
                         host,
                         action_cx.window,
@@ -1300,15 +1317,12 @@ fn select_impl<H: UiHost>(
             let open_for_pointer_down = open_for_trigger.clone();
             let state_for_pointer_down = trigger_state.clone();
             let mouse_open_guard_for_pointer_down = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_pointer_down = mouse_up_selection_gate.clone();
+            let model_for_pointer_down = model.clone();
+            let typeahead_values_for_pointer_down = typeahead_values.clone();
+            let typeahead_disabled_for_pointer_down = typeahead_disabled.clone();
             let enabled_for_pointer_down = enabled;
             cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
-                if !matches!(
-                    down.pointer_type,
-                    fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
-                ) {
-                    return fret_ui::action::PressablePointerDownResult::Continue;
-                }
-
                 let was_open = host
                     .models_mut()
                     .get_copied(&open_for_pointer_down)
@@ -1333,6 +1347,31 @@ fn select_impl<H: UiHost>(
                     .models_mut()
                     .get_copied(&open_for_pointer_down)
                     .unwrap_or(false);
+
+                if !was_open && now_open {
+                    radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_down);
+                    let has_selected_item_in_list = host
+                        .models_mut()
+                        .read(&model_for_pointer_down, |selected| {
+                            selected.as_ref().is_some_and(|selected_value| {
+                                typeahead_values_for_pointer_down
+                                    .iter()
+                                    .zip(typeahead_disabled_for_pointer_down.iter())
+                                    .any(
+                                    |(value, is_disabled)| {
+                                        !*is_disabled && value.as_ref() == selected_value.as_ref()
+                                    },
+                                )
+                            })
+                        })
+                        .ok()
+                        .unwrap_or(false);
+                    let mut gate = mouse_up_selection_gate_for_pointer_down
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    gate.arm_on_open(host, action_cx.window, has_selected_item_in_list);
+                }
+
                 radix_select::select_mouse_open_guard_record_if_opened(
                     &mouse_open_guard_for_pointer_down,
                     was_open,
@@ -1344,7 +1383,29 @@ fn select_impl<H: UiHost>(
                 }
                 state.trigger.clear_typeahead(host);
 
-                fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                if matches!(
+                    down.pointer_type,
+                    fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
+                ) {
+                    fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
+                } else {
+                    fret_ui::action::PressablePointerDownResult::Continue
+                }
+            }));
+
+            let state_for_pointer_move = trigger_state.clone();
+            cx.pressable_add_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                if !matches!(
+                    mv.pointer_type,
+                    fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                ) {
+                    return false;
+                }
+
+                let mut state = state_for_pointer_move
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                state.pointer.handle_pointer_move(host, action_cx, mv)
             }));
 
             // Radix opens on mouse `pointerdown` and installs a one-shot pointer-up guard so the
@@ -1355,7 +1416,66 @@ fn select_impl<H: UiHost>(
             // the trigger so it cannot "leak" into later pointer-up events (e.g. clicking outside
             // after scrolling), which would otherwise be misinterpreted as a drag-to-select.
             let mouse_open_guard_for_pointer_up = mouse_open_guard.clone();
-            cx.pressable_add_on_pointer_up(Arc::new(move |_host, _action_cx, up| {
+            let state_for_pointer_up = trigger_state.clone();
+            let open_for_pointer_up = open_for_trigger.clone();
+            let mouse_up_selection_gate_for_pointer_up = mouse_up_selection_gate.clone();
+            let model_for_pointer_up = model.clone();
+            let typeahead_values_for_pointer_up = typeahead_values.clone();
+            let typeahead_disabled_for_pointer_up = typeahead_disabled.clone();
+            let enabled_for_pointer_up = enabled;
+            cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                if matches!(
+                    up.pointer_type,
+                    fret_core::PointerType::Touch | fret_core::PointerType::Pen
+                ) {
+                    let was_open = host
+                        .models_mut()
+                        .get_copied(&open_for_pointer_up)
+                        .unwrap_or(false);
+                    let mut state = state_for_pointer_up
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    let handled = state.pointer.handle_pointer_up(
+                        host,
+                        action_cx,
+                        up,
+                        &open_for_pointer_up,
+                        enabled_for_pointer_up,
+                    );
+                    if handled {
+                        let now_open = host
+                            .models_mut()
+                            .get_copied(&open_for_pointer_up)
+                            .unwrap_or(false);
+                        if !was_open && now_open {
+                            radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_pointer_up);
+                            state.opened_by_pointer = true;
+                            let has_selected_item_in_list = host
+                                .models_mut()
+                                .read(&model_for_pointer_up, |selected| {
+                                    selected.as_ref().is_some_and(|selected_value| {
+                                        typeahead_values_for_pointer_up
+                                            .iter()
+                                            .zip(typeahead_disabled_for_pointer_up.iter())
+                                            .any(
+                                            |(value, is_disabled)| {
+                                                !*is_disabled
+                                                    && value.as_ref() == selected_value.as_ref()
+                                            },
+                                        )
+                                    })
+                                })
+                                .ok()
+                                .unwrap_or(false);
+                            let mut gate = mouse_up_selection_gate_for_pointer_up
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            gate.arm_on_open(host, action_cx.window, has_selected_item_in_list);
+                        }
+                    }
+                    return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                }
+
                 match radix_select::select_mouse_open_guard_pointer_up_decision_shared(
                     &mouse_open_guard_for_pointer_up,
                     up,
@@ -1377,6 +1497,7 @@ fn select_impl<H: UiHost>(
             let open_for_activate = open_for_trigger.clone();
             let state_for_activate = trigger_state.clone();
             let mouse_open_guard_for_activate = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_activate = mouse_up_selection_gate.clone();
             cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                 let mut state = state_for_activate
                     .lock()
@@ -1387,6 +1508,12 @@ fn select_impl<H: UiHost>(
                 }
 
                 radix_select::select_mouse_open_guard_clear(&mouse_open_guard_for_activate);
+                {
+                    let mut gate = mouse_up_selection_gate_for_activate
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    gate.clear_and_cancel(host);
+                }
                 state.trigger.clear_typeahead(host);
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
@@ -1843,6 +1970,7 @@ fn select_impl<H: UiHost>(
                     let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+                    let mouse_up_selection_gate_for_overlay = mouse_up_selection_gate.clone();
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
@@ -1852,13 +1980,6 @@ fn select_impl<H: UiHost>(
                         let open_for_content = open_for_overlay.clone();
                         let open_for_barrier_children = open_for_overlay.clone();
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
-
-                        let model = model_for_overlay.clone();
-                        let selected = cx
-                            .watch_model(&model)
-                            .cloned()
-                            .unwrap_or_default();
-                        let on_value_change = on_value_change_for_overlay_children.clone();
 
                         #[derive(Clone)]
                         enum SelectRow {
@@ -1880,6 +2001,13 @@ fn select_impl<H: UiHost>(
 
                         let mut rows: Vec<SelectRow> = Vec::new();
                         flatten_entries(&mut rows, entries);
+
+                        let model = model_for_overlay.clone();
+                        let selected = cx
+                            .watch_model(&model)
+                            .cloned()
+                            .unwrap_or_default();
+                        let on_value_change = on_value_change_for_overlay_children.clone();
 
                         let item_count = rows
                             .iter()
@@ -1925,18 +2053,25 @@ fn select_impl<H: UiHost>(
                                     state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
-                            } else if state.content.active_row().is_none() {
-                                state.content.set_active_row(initial_active_row);
+                                } else if state.content.active_row().is_none() {
+                                    state.content.set_active_row(initial_active_row);
+                                }
+                            } else {
+                                state.was_open = false;
+                                state.content.set_active_row(None);
+                                state.pending_active_align_top_scroll = false;
+                                state.opened_by_pointer = false;
                             }
-                        } else {
-                            state.was_open = false;
-                            state.content.set_active_row(None);
-                            state.pending_active_align_top_scroll = false;
-                            state.opened_by_pointer = false;
-                        }
 
-                        state.content.active_row()
-                    };
+                            state.content.active_row()
+                        };
+
+                        if !is_open {
+                            let mut gate = mouse_up_selection_gate_for_overlay
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            gate.reset_without_cancel();
+                        }
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
@@ -2287,6 +2422,10 @@ fn select_impl<H: UiHost>(
                                                                             let row_idx_for_hover = row_idx;
                                                                             let mouse_open_guard_for_item_pointer_up =
                                                                                 mouse_open_guard_for_content.clone();
+                                                                            let mouse_up_selection_gate_for_item_pointer_up =
+                                                                                mouse_up_selection_gate_for_overlay.clone();
+                                                                            let item_mouse_pointer_down =
+                                                                                Arc::new(Mutex::new(false));
 
                                                                             let value_key = item.value.clone();
                                                                             let style_for_item =
@@ -2340,6 +2479,30 @@ fn select_impl<H: UiHost>(
                                                                                     // This mirrors Radix's pointer-driven contract and avoids
                                                                                     // regressions when `is_click=false` (e.g. after scrolling).
                                                                                     if !item_disabled {
+                                                                                        let item_mouse_pointer_down_for_pointer_down =
+                                                                                            item_mouse_pointer_down.clone();
+                                                                                        let mouse_open_guard_for_pointer_down =
+                                                                                            mouse_open_guard_for_item_pointer_up
+                                                                                                .clone();
+                                                                                        cx.pressable_add_on_pointer_down(
+                                                                                            Arc::new(move |_host, _action_cx, down| {
+                                                                                                if matches!(
+                                                                                                    down.pointer_type,
+                                                                                                    fret_core::PointerType::Mouse
+                                                                                                        | fret_core::PointerType::Unknown
+                                                                                                ) {
+                                                                                                    radix_select::select_mouse_open_guard_clear(
+                                                                                                        &mouse_open_guard_for_pointer_down,
+                                                                                                    );
+                                                                                                    let mut pressed = item_mouse_pointer_down_for_pointer_down
+                                                                                                        .lock()
+                                                                                                        .unwrap_or_else(|e| e.into_inner());
+                                                                                                    *pressed = true;
+                                                                                                }
+                                                                                                fret_ui::action::PressablePointerDownResult::Continue
+                                                                                            }),
+                                                                                        );
+
                                                                                         let open_for_pointer_up = open.clone();
                                                                                         let model_for_pointer_up = model.clone();
                                                                                         let item_value_for_pointer_up =
@@ -2347,6 +2510,13 @@ fn select_impl<H: UiHost>(
                                                                                         let mouse_open_guard_for_pointer_up =
                                                                                             mouse_open_guard_for_item_pointer_up
                                                                                                 .clone();
+                                                                                        let mouse_up_selection_gate_for_pointer_up =
+                                                                                            mouse_up_selection_gate_for_item_pointer_up
+                                                                                                .clone();
+                                                                                        let item_mouse_pointer_down_for_pointer_up =
+                                                                                            item_mouse_pointer_down.clone();
+                                                                                        let item_is_selected_for_pointer_up =
+                                                                                            is_selected;
                                                                                         let on_value_change_for_pointer_up =
                                                                                             on_value_change_for_item.clone();
                                                                                         cx.pressable_add_on_pointer_up(
@@ -2364,11 +2534,30 @@ fn select_impl<H: UiHost>(
                                                                                                     ) {
                                                                                                         return fret_ui::action::PressablePointerUpResult::Continue;
                                                                                                     }
-                                                                                                    if radix_select::select_mouse_open_guard_should_suppress_pointer_up_shared(
-                                                                                                        &mouse_open_guard_for_pointer_up,
-                                                                                                        up,
-                                                                                                    ) {
-                                                                                                        return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                                                                                                    let had_pointer_down = {
+                                                                                                        let mut pressed = item_mouse_pointer_down_for_pointer_up
+                                                                                                            .lock()
+                                                                                                            .unwrap_or_else(|e| e.into_inner());
+                                                                                                        let had = *pressed;
+                                                                                                        *pressed = false;
+                                                                                                        had
+                                                                                                    };
+                                                                                                    if !had_pointer_down {
+                                                                                                        if radix_select::select_mouse_open_guard_should_suppress_pointer_up_shared(
+                                                                                                            &mouse_open_guard_for_pointer_up,
+                                                                                                            up,
+                                                                                                        ) {
+                                                                                                            return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                                                                                                        }
+                                                                                                        {
+                                                                                                            let gate = mouse_up_selection_gate_for_pointer_up
+                                                                                                                .lock()
+                                                                                                                .unwrap_or_else(|e| e.into_inner());
+                                                                                                            if !gate.should_allow_item_mouse_up(item_is_selected_for_pointer_up)
+                                                                                                            {
+                                                                                                                return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                                                                                                            }
+                                                                                                        }
                                                                                                     }
 
                                                                                                     let _ = host
@@ -2540,14 +2729,19 @@ fn select_impl<H: UiHost>(
                                                                                              let item_disabled_for_pointer_up = item_disabled;
                                                                                              let mouse_open_guard_for_pointer_up =
                                                                                                  mouse_open_guard_for_item_pointer_up.clone();
+                                                                                             let mouse_up_selection_gate_for_pointer_up =
+                                                                                                 mouse_up_selection_gate_for_item_pointer_up.clone();
+                                                                                             let item_is_selected_for_pointer_up = is_selected;
 
                                                                                              cx.pointer_region_on_pointer_up(
-                                                                                                 radix_select::select_item_pointer_up_handler(
+                                                                                                 radix_select::select_item_pointer_up_handler_with_mouse_up_gate(
                                                                                                      open_for_pointer_up,
                                                                                                      model_for_pointer_up,
                                                                                                      item_value_for_pointer_up,
                                                                                                      item_disabled_for_pointer_up,
                                                                                                      mouse_open_guard_for_pointer_up,
+                                                                                                     item_is_selected_for_pointer_up,
+                                                                                                     Some(mouse_up_selection_gate_for_pointer_up),
                                                                                                  ),
                                                                                              );
 
@@ -2922,13 +3116,20 @@ fn select_impl<H: UiHost>(
                         .resolve(cx, cx.window);
                     radix_select::request_select(cx, request);
                 } else {
-                    let open_for_overlay = open_for_trigger.clone();
-                    let mouse_open_guard_for_overlay = mouse_open_guard.clone();
-                    let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
-                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                        let barrier = radix_select::select_modal_barrier_with_dismiss_handler(
-                            cx,
-                            open_for_overlay.clone(),
+            let open_for_overlay = open_for_trigger.clone();
+            let mouse_open_guard_for_overlay = mouse_open_guard.clone();
+            let mouse_up_selection_gate_for_overlay = mouse_up_selection_gate.clone();
+            let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
+            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                {
+                    let mut gate = mouse_up_selection_gate_for_overlay
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    gate.reset_without_cancel();
+                }
+                let barrier = radix_select::select_modal_barrier_with_dismiss_handler(
+                    cx,
+                    open_for_overlay.clone(),
                             true,
                             on_dismiss_request_for_overlay_children.clone(),
                             std::iter::empty::<AnyElement>(),
@@ -3106,7 +3307,7 @@ mod tests {
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_runtime::{Effect, FrameId};
+    use fret_runtime::{Effect, FrameId, TimerToken};
     use fret_ui::tree::UiTree;
 
     #[test]
@@ -3631,7 +3832,7 @@ mod tests {
     }
 
     #[test]
-    fn select_pointer_open_first_click_commits_immediately() {
+    fn select_pointer_open_first_click_commits_with_item_pointer_down() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -3762,9 +3963,13 @@ mod tests {
         assert_eq!(
             selected.as_deref(),
             Some("banana"),
-            "expected first item click after pointer-open to commit immediately"
+            "expected first item click after pointer-open to commit when the row receives pointer-down"
         );
-        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected list to close after pointer-up commit"
+        );
     }
 
     #[test]
@@ -4468,7 +4673,7 @@ mod tests {
     }
 
     #[test]
-    fn select_mouse_drag_release_selects_item() {
+    fn select_mouse_drag_release_selects_item_after_mouse_up_gate_delay() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -4554,6 +4759,33 @@ mod tests {
                 || dy > radix_select::SELECT_TRIGGER_CLICK_SLOP_PX,
             "test expects a pointer-up delta larger than the Radix click slop"
         );
+
+        let mouse_up_gate_tokens: Vec<TimerToken> = app
+            .flush_effects()
+            .into_iter()
+            .filter_map(|effect| match effect {
+                Effect::SetTimer { token, after, .. }
+                    if after
+                        == Duration::from_millis(
+                            radix_select::SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+                        )
+                        || after
+                            == Duration::from_millis(
+                                radix_select::SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+                            ) =>
+                {
+                    Some(token)
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !mouse_up_gate_tokens.is_empty(),
+            "expected mouse-up gate timers to be armed on pointer-open"
+        );
+        for token in mouse_up_gate_tokens {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
 
         ui.dispatch_event(
             &mut app,
@@ -4699,6 +4931,182 @@ mod tests {
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("gamma"));
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn select_touch_pointer_down_and_up_opens_overlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(11),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "touch down should not open before touch up"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(11),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "touch up inside trigger should open"
+        );
+    }
+
+    #[test]
+    fn select_touch_drag_does_not_open_overlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+        let far_right = Point::new(Px(trigger_center.x.0 + 32.0), trigger_center.y);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(12),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(12),
+                position: far_right,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+            }),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(12),
+                position: far_right,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "touch drag-release should not open"
+        );
     }
 
     #[test]
@@ -5030,6 +5438,43 @@ mod tests {
                 items.clone(),
             );
         }
+
+        let mouse_up_gate_tokens: Vec<TimerToken> = app
+            .flush_effects()
+            .into_iter()
+            .filter_map(|effect| match effect {
+                Effect::SetTimer { token, after, .. }
+                    if after
+                        == Duration::from_millis(
+                            radix_select::SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+                        )
+                        || after
+                            == Duration::from_millis(
+                                radix_select::SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+                            ) =>
+                {
+                    Some(token)
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(
+            !mouse_up_gate_tokens.is_empty(),
+            "expected mouse-up gate timers to be armed on open"
+        );
+        for token in mouse_up_gate_tokens {
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let listbox = snap
