@@ -43,8 +43,8 @@ pub(crate) use text::input as text_input;
 pub(crate) use text::props as text_props;
 pub(crate) use text::surface as text_surface;
 pub mod theme;
-pub mod theme_keys;
-pub(crate) mod theme_registry;
+pub use theme::keys as theme_keys;
+pub(crate) use theme::registry as theme_registry;
 pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]
