@@ -213,6 +213,21 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-launch/src/runner/common/window_create_spec.rs`
     - `crates/fret-launch/src/runner/common/winit_app_driver.rs`
 
+- [x] BU-FR-launch-071 Convert `crates/fret-launch/src/runner/web.rs` into a directory module facade.
+  - Goal: make `runner/web/` the single owner so the wasm runner can be split into stable submodules without churn.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/mod.rs`
+
+- [x] BU-FR-launch-072 Extract wasm IME mount plumbing into a dedicated web runner submodule.
+  - Goal: keep DOM/IME wrapper details isolated from the event loop and GPU plumbing.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/ime_mount.rs`
+
+- [x] BU-FR-launch-073 Extract streaming image update plumbing into a dedicated web runner submodule.
+  - Goal: isolate the streaming image contract + GPU YUV path from the rest of the web runner.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/streaming_images.rs`
+
 - [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
   - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
   - Evidence:

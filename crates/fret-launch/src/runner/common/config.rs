@@ -6,8 +6,6 @@ use winit::window::Window;
 
 use crate::RunnerError;
 
-use super::WindowCreateSpec;
-
 pub struct WinitRunnerConfig {
     pub main_window_title: String,
     pub main_window_size: LogicalSize<f64>,
@@ -132,8 +130,9 @@ impl Default for WinitRunnerConfig {
 
 impl WinitRunnerConfig {
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn main_window_spec(&self) -> WindowCreateSpec {
-        let mut spec = WindowCreateSpec::new(self.main_window_title.clone(), self.main_window_size);
+    pub(crate) fn main_window_spec(&self) -> super::WindowCreateSpec {
+        let mut spec =
+            super::WindowCreateSpec::new(self.main_window_title.clone(), self.main_window_size);
         if let Some(position) = self.main_window_position {
             spec = spec.with_position(position);
         }
@@ -141,9 +140,11 @@ impl WinitRunnerConfig {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn default_window_spec(&self) -> WindowCreateSpec {
-        let mut spec =
-            WindowCreateSpec::new(self.default_window_title.clone(), self.default_window_size);
+    pub(crate) fn default_window_spec(&self) -> super::WindowCreateSpec {
+        let mut spec = super::WindowCreateSpec::new(
+            self.default_window_title.clone(),
+            self.default_window_size,
+        );
         if let Some(position) = self.default_window_position {
             spec = spec.with_position(position);
         }
