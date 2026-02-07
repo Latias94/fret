@@ -10,7 +10,10 @@ that layer.
 
 ## Module ownership map
 
-- `src/wasm/mod.rs`: wasm32 implementation of `WebPlatformServices` and related helpers.
+- `src/wasm/mod.rs`: wasm32 `WebPlatformServices` facade and effect dispatcher.
+- `src/wasm/ime.rs`: IME textarea bridge and debug snapshot plumbing.
+- `src/wasm/timers.rs`: timer wiring (set/cancel/collect fired tokens).
+- `src/wasm/file_dialog.rs`: file input + read-all plumbing for `FileDialog*` effects.
 - `src/native/mod.rs`: non-wasm stub types to keep cross-target builds explicit.
 - `src/lib.rs`: cfg-based module selection + public re-exports.
 
@@ -22,4 +25,4 @@ re-exports stub types that report “wasm32 only”.
 ## Refactor gates
 
 - Formatting: `cargo fmt`
-- Build/test: `cargo nextest run -p fret-platform-web`
+- Build/test: `cargo nextest run -p fret-platform-web --no-tests pass`
