@@ -74,6 +74,20 @@ Boundary tightening:
   - UI sugar (`ElementContext` extension traits) should be opt-in (e.g. `fret-query/ui`).
 - Remove stale/unused feature flags when a crate does not actually implement them yet.
 
+## 3.3 Reference patterns (notes only)
+
+These snapshots are not prescriptive, but they help validate that our boundaries match common
+successful shapes:
+
+- **Zed / GPUI**: a GPU UI framework with strong platform feature gating (Wayland/X11/macOS/Windows),
+  and a large “one crate, many optional platform deps” approach via features.
+  - Takeaway for Fret: we still want platform separation, but we prefer explicit adapter crates
+    (`*-winit`, `*-web`, `*-wgpu`) so contracts stay narrow and backends are swappable.
+- **Dioxus**: a UI framework with a large multi-package workspace (`core`, `html`, `router`, `desktop`,
+  `web`, etc.) that keeps portability via many explicit crates.
+  - Takeaway for Fret: this supports our “contract vs adapter vs facade” direction; the key is to
+    avoid unnecessary micro-crates unless they represent a real seam.
+
 ## 4) Open questions worth auditing next
 
 1. **Facade policy (`crates/fret`)**
