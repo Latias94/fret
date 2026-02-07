@@ -71,6 +71,8 @@ struct State {
 
     target_out_dir: Model<Option<Arc<str>>>,
     last_bundle_dir_abs: Model<Option<Arc<str>>>,
+    last_bundle_dump_exported_unix_ms: Model<Option<u64>>,
+    last_bundle_dump_bundle_json: Model<Option<Arc<str>>>,
     last_pack_path: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
@@ -156,6 +158,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
     let target_out_dir = app.models_mut().insert(None::<Arc<str>>);
     let last_bundle_dir_abs = app.models_mut().insert(None::<Arc<str>>);
+    let last_bundle_dump_exported_unix_ms = app.models_mut().insert(None::<u64>);
+    let last_bundle_dump_bundle_json = app.models_mut().insert(None::<Arc<str>>);
     let last_pack_path = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
@@ -197,6 +201,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         script_pack_after_run,
         target_out_dir,
         last_bundle_dir_abs,
+        last_bundle_dump_exported_unix_ms,
+        last_bundle_dump_bundle_json,
         last_pack_path,
         viewer_url,
         last_pick_json,
@@ -253,6 +259,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.script_pack_after_run, Invalidation::Paint);
     cx.observe_model(&st.target_out_dir, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_dir_abs, Invalidation::Paint);
+    cx.observe_model(&st.last_bundle_dump_exported_unix_ms, Invalidation::Paint);
+    cx.observe_model(&st.last_bundle_dump_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_pack_path, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
@@ -1379,6 +1387,20 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                 if !message_matches_selected_session(app, st, &msg) {
                     continue;
                 }
+                if let Some(ts) = msg.payload.get("exported_unix_ms").and_then(|v| v.as_u64()) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.last_bundle_dump_exported_unix_ms, |v| *v = Some(ts));
+                }
+                if let Some(bundle) = msg.payload.get("bundle") {
+                    if let Ok(text) = serde_json::to_string_pretty(bundle) {
+                        let _ = app
+                            .models_mut()
+                            .update(&st.last_bundle_dump_bundle_json, |v| {
+                                *v = Some(Arc::<str>::from(text));
+                            });
+                    }
+                }
                 if let Some(out_dir) = msg.payload.get("out_dir").and_then(|v| v.as_str()) {
                     let _ = app.models_mut().update(&st.target_out_dir, |v| {
                         *v = Some(Arc::<str>::from(out_dir.to_string()));
@@ -1573,19 +1595,16 @@ fn is_abs_path(s: &str) -> bool {
     bytes.len() >= 3 && bytes[1] == b':' && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
-fn pack_last_bundle(app: &mut App, st: &mut State) -> Result<PathBuf, String> {
-    let Some(bundle_dir) = app
-        .models()
-        .read(&st.last_bundle_dir_abs, |v| v.clone())
-        .ok()
-        .flatten()
-    else {
-        let msg = "pack refused (no bundle dir yet)".to_string();
-        push_log(app, &st.log_lines, &msg);
-        return Err(msg);
-    };
+fn diag_exports_root(repo_root: &PathBuf) -> PathBuf {
+    repo_root.join(".fret").join("diag").join("exports")
+}
 
-    let out_dir = app
+fn ensure_bundle_dir_materialized(
+    app: &mut App,
+    st: &mut State,
+    repo_root: &PathBuf,
+) -> Result<(String, PathBuf), String> {
+    let out_dir_arg = app
         .models()
         .read(&st.target_out_dir, |v| v.clone())
         .ok()
@@ -1593,8 +1612,59 @@ fn pack_last_bundle(app: &mut App, st: &mut State) -> Result<PathBuf, String> {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "target/fret-diag".to_string());
 
+    if let Some(dir) = app
+        .models()
+        .read(&st.last_bundle_dir_abs, |v| v.clone())
+        .ok()
+        .flatten()
+    {
+        let dir_abs = if is_abs_path(dir.as_ref()) {
+            PathBuf::from(dir.as_ref())
+        } else {
+            repo_root.join(dir.as_ref())
+        };
+        if dir_abs.join("bundle.json").is_file() {
+            return Ok((out_dir_arg, dir_abs));
+        }
+    }
+
+    let Some(bundle_json) = app
+        .models()
+        .read(&st.last_bundle_dump_bundle_json, |v| v.clone())
+        .ok()
+        .flatten()
+    else {
+        return Err("no in-memory bundle payload to materialize yet".to_string());
+    };
+
+    let ts = app
+        .models()
+        .read(&st.last_bundle_dump_exported_unix_ms, |v| *v)
+        .ok()
+        .flatten()
+        .unwrap_or_else(now_unix_ms);
+
+    let exports_root = diag_exports_root(repo_root);
+    std::fs::create_dir_all(&exports_root).map_err(|e| e.to_string())?;
+    let export_dir = exports_root.join(ts.to_string());
+    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+
+    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    let _ = app.models_mut().update(&st.target_out_dir, |v| {
+        *v = Some(Arc::<str>::from(exports_root.to_string_lossy().to_string()));
+    });
+    let _ = app.models_mut().update(&st.last_bundle_dir_abs, |v| {
+        *v = Some(Arc::<str>::from(export_dir.to_string_lossy().to_string()));
+    });
+
+    Ok((exports_root.to_string_lossy().to_string(), export_dir))
+}
+
+fn pack_last_bundle(app: &mut App, st: &mut State) -> Result<PathBuf, String> {
     let repo_root = repo_root_from_script_paths(&st.script_paths);
-    let bundle_dir_abs = PathBuf::from(bundle_dir.as_ref());
+    let (out_dir, bundle_dir_abs) = ensure_bundle_dir_materialized(app, st, &repo_root)?;
 
     let pack_dir = repo_root.join(".fret").join("diag").join("packs");
     let _ = std::fs::create_dir_all(&pack_dir);

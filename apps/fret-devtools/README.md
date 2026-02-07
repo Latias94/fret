@@ -38,6 +38,12 @@ pnpm dev
 
 Then use **Open viewer** in DevTools and drop/open the generated `.zip` in the viewer UI.
 
+## Web runner note
+
+When the target app runs on the web runner, `bundle.dumped` includes an in-memory `bundle` payload. DevTools
+materializes it into `.fret/diag/exports/` before packing, so `Run & Pack` still works without filesystem access
+inside the browser.
+
 ## Connect a target app (native)
 
 Set:

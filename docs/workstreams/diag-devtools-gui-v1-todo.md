@@ -92,6 +92,7 @@ Conventions:
 - [ ] Define an artifact store abstraction for diagnostics outputs:
   - [ ] native: filesystem (existing),
   - [ ] web: in-memory store + “download zip” export.
+- [x] Allow DevTools to pack web runner dumps by materializing `bundle.dumped.bundle` into `.fret/diag/exports/`.
 - [ ] Ensure the offline bundle viewer can open zips produced by web runs (same structure as `diag pack`).
 
 ### M6: Quality gates + “real-time inspect” polish
