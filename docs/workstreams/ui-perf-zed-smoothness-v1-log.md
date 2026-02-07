@@ -5855,6 +5855,8 @@ tools/perf/diag_resize_probes_gate.sh \
 
 Result:
 - `pass=true` (`target/fret-diag-resize-probes-gate-smoke/summary.json`)
+  - Note: This was a **false PASS** because the initial gate runner only checked the process exit code.
+    The run produced `failures > 0` in `check.perf_thresholds.json`. Fixed by commit `f7d6fbbca`.
 
 ## 2026-02-07 12:09:11 (commits `e20ddde7a`, `f7d6fbbca`, and baseline refresh)
 
