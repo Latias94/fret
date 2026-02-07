@@ -19,6 +19,7 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::{ElementContext, Invalidation, Theme};
 use fret_ui_shadcn as shadcn;
 
+mod pack;
 mod script_studio;
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -74,6 +75,8 @@ struct State {
     last_bundle_dump_exported_unix_ms: Model<Option<u64>>,
     last_bundle_dump_bundle_json: Model<Option<Arc<str>>>,
     last_pack_path: Model<Option<Arc<str>>>,
+    pack_in_flight: Model<bool>,
+    pack_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -84,6 +87,9 @@ struct State {
 
     client: DevtoolsWsClient,
     applied_session_id: Option<Arc<str>>,
+
+    pack_tx: std::sync::mpsc::Sender<pack::PackJobResult>,
+    pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -161,6 +167,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_bundle_dump_exported_unix_ms = app.models_mut().insert(None::<u64>);
     let last_bundle_dump_bundle_json = app.models_mut().insert(None::<Arc<str>>);
     let last_pack_path = app.models_mut().insert(None::<Arc<str>>);
+    let pack_in_flight = app.models_mut().insert(false);
+    let pack_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
@@ -179,6 +187,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     ];
     let client = DevtoolsWsClient::connect_native(client_cfg)
         .expect("devtools ws client connect must succeed");
+
+    let (pack_tx, pack_rx) = pack::new_pack_channel();
 
     let mut st = State {
         cfg,
@@ -204,6 +214,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_bundle_dump_exported_unix_ms,
         last_bundle_dump_bundle_json,
         last_pack_path,
+        pack_in_flight,
+        pack_last_error,
         viewer_url,
         last_pick_json,
         last_script_result_json,
@@ -212,6 +224,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         log_lines,
         client,
         applied_session_id: None,
+        pack_tx,
+        pack_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -219,6 +233,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
+    pack::poll_pack_jobs(cx.app, st);
     drain_ws_messages(cx.app, st);
     sync_selected_session_to_client(cx.app, st);
 
@@ -262,6 +277,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_bundle_dump_exported_unix_ms, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_dump_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_pack_path, Invalidation::Paint);
+    cx.observe_model(&st.pack_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.pack_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
@@ -552,10 +569,27 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         .read(&st.last_bundle_dir_abs, |v| v.clone())
         .ok()
         .flatten();
+    let last_bundle_dump_bundle_json = cx
+        .app
+        .models()
+        .read(&st.last_bundle_dump_bundle_json, |v| v.clone())
+        .ok()
+        .flatten();
     let last_pack_path = cx
         .app
         .models()
         .read(&st.last_pack_path, |v| v.clone())
+        .ok()
+        .flatten();
+    let pack_in_flight = cx
+        .app
+        .models()
+        .read(&st.pack_in_flight, |v| *v)
+        .unwrap_or(false);
+    let pack_last_error = cx
+        .app
+        .models()
+        .read(&st.pack_last_error, |v| v.clone())
         .ok()
         .flatten();
     let viewer_url = cx
@@ -583,7 +617,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     let can_fork = loaded_origin == Some(script_studio::ScriptOrigin::WorkspaceTools);
     let can_save = loaded_origin == Some(script_studio::ScriptOrigin::UserLocal);
     let can_apply_pick = !pick_text.trim().is_empty() && !apply_pointer.trim().is_empty();
-    let can_pack = last_bundle_dir_abs.is_some();
+    let can_pack = last_bundle_dir_abs.is_some() || last_bundle_dump_bundle_json.is_some();
 
     let pointer_input = shadcn::Input::new(st.script_apply_pointer.clone())
         .a11y_label("JSON pointer")
@@ -621,6 +655,16 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
             .unwrap_or_else(|| "-".to_string());
         format!(
             "status={stage} step={step}/{script_steps} reason={reason} last_bundle_dir={bundle}"
+        )
+    };
+    let pack_status_line = {
+        let err = pack_last_error
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!(
+            "pack_in_flight={} pack_last_error={err}",
+            if pack_in_flight { "true" } else { "false" }
         )
     };
 
@@ -687,7 +731,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                 shadcn::Button::new("Pack last bundle")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_pack)
+                    .disabled(!can_pack || pack_in_flight)
                     .on_click(CMD_PACK_LAST_BUNDLE)
                     .into_element(cx),
                 shadcn::Button::new("Copy pack path")
@@ -857,6 +901,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
             buttons,
             cx.text(format!("validate: {script_summary}")),
             cx.text(status_line),
+            cx.text(pack_status_line),
             cx.text(format!(
                 "pack_after_run={}",
                 if pack_after_run { "true" } else { "false" }
@@ -1046,7 +1091,9 @@ fn on_command(
             });
         }
         CMD_PACK_LAST_BUNDLE => {
-            let _ = pack_last_bundle(app, st);
+            if let Err(err) = pack::start_pack_last_bundle(app, st) {
+                push_log(app, &st.log_lines, &format!("pack refused: {err}"));
+            }
             app.request_redraw(window);
         }
         CMD_SCRIPT_PUSH | CMD_SCRIPT_RUN | CMD_SCRIPT_RUN_AND_PACK => {
@@ -1359,24 +1406,8 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                             }
                         }
                     }
-
-                    if matches!(
-                        parsed.stage,
-                        UiScriptStageV1::Passed | UiScriptStageV1::Failed
-                    ) {
-                        let pack_after = app
-                            .models()
-                            .read(&st.script_pack_after_run, |v| *v)
-                            .unwrap_or(false);
-                        if pack_after {
-                            if pack_last_bundle(app, st).is_ok() {
-                                let _ = app
-                                    .models_mut()
-                                    .update(&st.script_pack_after_run, |v| *v = false);
-                            }
-                        }
-                    }
                 }
+                maybe_start_pack_after_run(app, st);
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app
                         .models_mut()
@@ -1416,30 +1447,10 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
                         });
                     }
                 }
-                let stage = app
-                    .models()
-                    .read(&st.script_last_stage, |v| v.clone())
-                    .ok()
-                    .flatten();
-                let pack_after = app
-                    .models()
-                    .read(&st.script_pack_after_run, |v| *v)
-                    .unwrap_or(false);
-                if pack_after
-                    && matches!(
-                        stage,
-                        Some(UiScriptStageV1::Passed) | Some(UiScriptStageV1::Failed)
-                    )
-                {
-                    if pack_last_bundle(app, st).is_ok() {
-                        let _ = app
-                            .models_mut()
-                            .update(&st.script_pack_after_run, |v| *v = false);
-                    }
-                }
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
                 }
+                maybe_start_pack_after_run(app, st);
             }
             "screenshot.result" => {
                 if !message_matches_selected_session(app, st, &msg) {
@@ -1460,6 +1471,47 @@ fn drain_ws_messages(app: &mut App, st: &mut State) {
         // The driver can stop requesting frames once the UI is idle.
         // (We do not have a dedicated background-to-UI wakeup path yet.)
     }
+}
+
+fn maybe_start_pack_after_run(app: &mut App, st: &mut State) {
+    let pack_after = app
+        .models()
+        .read(&st.script_pack_after_run, |v| *v)
+        .unwrap_or(false);
+    if !pack_after {
+        return;
+    }
+
+    let stage = app
+        .models()
+        .read(&st.script_last_stage, |v| v.clone())
+        .ok()
+        .flatten();
+    if !matches!(
+        stage,
+        Some(UiScriptStageV1::Passed) | Some(UiScriptStageV1::Failed)
+    ) {
+        return;
+    }
+
+    let has_bundle_dir = app
+        .models()
+        .read(&st.last_bundle_dir_abs, |v| v.is_some())
+        .unwrap_or(false);
+    let has_bundle_payload = app
+        .models()
+        .read(&st.last_bundle_dump_bundle_json, |v| v.is_some())
+        .unwrap_or(false);
+    if !(has_bundle_dir || has_bundle_payload) {
+        return;
+    }
+
+    if let Err(err) = pack::start_pack_last_bundle(app, st) {
+        push_log(app, &st.log_lines, &format!("pack refused: {err}"));
+    }
+    let _ = app
+        .models_mut()
+        .update(&st.script_pack_after_run, |v| *v = false);
 }
 
 fn ensure_session_selection_is_valid(app: &mut App, st: &mut State) {
@@ -1593,112 +1645,6 @@ fn is_abs_path(s: &str) -> bool {
     }
     let bytes = s.as_bytes();
     bytes.len() >= 3 && bytes[1] == b':' && (bytes[2] == b'\\' || bytes[2] == b'/')
-}
-
-fn diag_exports_root(repo_root: &PathBuf) -> PathBuf {
-    repo_root.join(".fret").join("diag").join("exports")
-}
-
-fn ensure_bundle_dir_materialized(
-    app: &mut App,
-    st: &mut State,
-    repo_root: &PathBuf,
-) -> Result<(String, PathBuf), String> {
-    let out_dir_arg = app
-        .models()
-        .read(&st.target_out_dir, |v| v.clone())
-        .ok()
-        .flatten()
-        .map(|s| s.to_string())
-        .unwrap_or_else(|| "target/fret-diag".to_string());
-
-    if let Some(dir) = app
-        .models()
-        .read(&st.last_bundle_dir_abs, |v| v.clone())
-        .ok()
-        .flatten()
-    {
-        let dir_abs = if is_abs_path(dir.as_ref()) {
-            PathBuf::from(dir.as_ref())
-        } else {
-            repo_root.join(dir.as_ref())
-        };
-        if dir_abs.join("bundle.json").is_file() {
-            return Ok((out_dir_arg, dir_abs));
-        }
-    }
-
-    let Some(bundle_json) = app
-        .models()
-        .read(&st.last_bundle_dump_bundle_json, |v| v.clone())
-        .ok()
-        .flatten()
-    else {
-        return Err("no in-memory bundle payload to materialize yet".to_string());
-    };
-
-    let ts = app
-        .models()
-        .read(&st.last_bundle_dump_exported_unix_ms, |v| *v)
-        .ok()
-        .flatten()
-        .unwrap_or_else(now_unix_ms);
-
-    let exports_root = diag_exports_root(repo_root);
-    std::fs::create_dir_all(&exports_root).map_err(|e| e.to_string())?;
-    let export_dir = exports_root.join(ts.to_string());
-    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
-
-    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    let _ = app.models_mut().update(&st.target_out_dir, |v| {
-        *v = Some(Arc::<str>::from(exports_root.to_string_lossy().to_string()));
-    });
-    let _ = app.models_mut().update(&st.last_bundle_dir_abs, |v| {
-        *v = Some(Arc::<str>::from(export_dir.to_string_lossy().to_string()));
-    });
-
-    Ok((exports_root.to_string_lossy().to_string(), export_dir))
-}
-
-fn pack_last_bundle(app: &mut App, st: &mut State) -> Result<PathBuf, String> {
-    let repo_root = repo_root_from_script_paths(&st.script_paths);
-    let (out_dir, bundle_dir_abs) = ensure_bundle_dir_materialized(app, st, &repo_root)?;
-
-    let pack_dir = repo_root.join(".fret").join("diag").join("packs");
-    let _ = std::fs::create_dir_all(&pack_dir);
-    let bundle_name = bundle_dir_abs
-        .file_name()
-        .and_then(|s| s.to_str())
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or("bundle");
-    let out_path = pack_dir.join(format!("{bundle_name}-{}.zip", now_unix_ms()));
-
-    let args = vec![
-        "--dir".to_string(),
-        out_dir,
-        "--pack-out".to_string(),
-        out_path.to_string_lossy().to_string(),
-        "--include-all".to_string(),
-        "pack".to_string(),
-        bundle_dir_abs.to_string_lossy().to_string(),
-    ];
-
-    match fret_diag::diag_cmd(args) {
-        Ok(()) => {
-            let _ = app.models_mut().update(&st.last_pack_path, |v| {
-                *v = Some(Arc::<str>::from(out_path.to_string_lossy().to_string()))
-            });
-            push_log(app, &st.log_lines, "pack ok");
-            Ok(out_path)
-        }
-        Err(err) => {
-            let msg = format!("pack failed: {err}");
-            push_log(app, &st.log_lines, &msg);
-            Err(msg)
-        }
-    }
 }
 
 fn repo_root_from_script_paths(paths: &script_studio::ScriptPaths) -> PathBuf {
