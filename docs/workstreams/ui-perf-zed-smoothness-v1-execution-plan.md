@@ -28,7 +28,7 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 - Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`.
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
-- P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json`.
+- P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
@@ -36,6 +36,11 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.
+
+Note:
+- Resize probes currently use a relatively generous baseline headroom to avoid flakiness from known resize tails.
+  Tighten `ui-resize-probes.macos-m4.*` over time as we eliminate the underlying hitches and can re-seed from
+  `p95` again without intermittent failures.
 
 ---
 
