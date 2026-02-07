@@ -23,9 +23,10 @@ Conventions:
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
-  - [ ] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
+  - [x] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
     strict majority pass (keeps the gate strict, but reduces single-run flake).
     - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
+    - Implementation: commit `4755aa087`
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).

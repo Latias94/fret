@@ -6984,3 +6984,40 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
 - top_total_time_us: `20183`
 - bundle: `target/fret-diag-resize-probes-gate-r30/1770483288901-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-08 01:13:00 (commit `4755aa087`)
+
+Change:
+- perf(tools): harden resize probes gate (multi-attempt majority) and rerun to evaluate flake rate
+
+Suite:
+- `ui-resize-probes`
+
+Command:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --attempts 3 --out-dir target/fret-diag-resize-probes-gate-r32
+```
+
+Gate summary:
+- pass: `false` (passes=`1/3`, required=`2`)
+- summary: `target/fret-diag-resize-probes-gate-r32/summary.json`
+
+Attempts:
+- attempt-1: PASS (failures=0)
+  - worst_overall: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` top_total_time_us=`16293`
+  - bundle: `target/fret-diag-resize-probes-gate-r32/attempt-1/1770483780347-ui-gallery-window-resize-stress-steady/bundle.json`
+- attempt-2: FAIL (failures=3)
+  - `drag-jitter` top_total_time_us=`19600` (threshold `19128`)
+  - `drag-jitter` top_layout_time_us=`14543` (threshold `12264`)
+  - `drag-jitter` top_layout_engine_solve_time_us=`3964` (threshold `2816`)
+  - bundle: `target/fret-diag-resize-probes-gate-r32/attempt-2/1770483859691-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3: FAIL (failures=1)
+  - `stress` top_layout_engine_solve_time_us=`3227` (threshold `3060`)
+  - bundle: `target/fret-diag-resize-probes-gate-r32/attempt-3/1770483889069-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This is not a code regression (no runtime changes since `61c6aa15c`); the failures are still dominated by
+  layout + solve under width jitter. Prefer fixing the underlying tail hitches (text-wrap reuse / layout solve
+  budgeting) over loosening baselines.
+- Triage helper:
+  - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
