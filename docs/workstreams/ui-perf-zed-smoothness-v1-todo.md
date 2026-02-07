@@ -109,6 +109,7 @@ Execution plan:
     `layout_pending_barrier_relayouts_time_us`, `layout_repair_view_cache_bounds_time_us`,
     `layout_contained_view_cache_roots_time_us`, `layout_collapse_layout_observations_time_us`,
     `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
+  - Follow-up: include `layout_roots_time_us` in `fretboard diag stats` / `diag perf --json` payloads (commit TBD).
   - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
   - Implemented by `feat(diag): export layout phase breakdown` (commit `b02744a8`).
 - [x] Export initial paint-pass breakdown metrics (to disprove/confirm “paint-cache replay is the hotspot”).

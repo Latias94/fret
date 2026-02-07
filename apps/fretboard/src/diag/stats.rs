@@ -220,6 +220,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_roots_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
     pub(super) layout_contained_view_cache_roots_time_us: u64,
@@ -1573,6 +1574,10 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_request_build_roots_time_us".to_string(),
                     Value::from(row.layout_request_build_roots_time_us),
+                );
+                obj.insert(
+                    "layout_roots_time_us".to_string(),
+                    Value::from(row.layout_roots_time_us),
                 );
                 obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),
@@ -7443,6 +7448,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_request_build_roots_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_pending_barrier_relayouts_time_us = stats
                 .and_then(|m| m.get("layout_pending_barrier_relayouts_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7803,6 +7812,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_invalidate_scroll_handle_bindings_time_us,
                 layout_expand_view_cache_invalidations_time_us,
                 layout_request_build_roots_time_us,
+                layout_roots_time_us,
                 layout_pending_barrier_relayouts_time_us,
                 layout_repair_view_cache_bounds_time_us,
                 layout_contained_view_cache_roots_time_us,

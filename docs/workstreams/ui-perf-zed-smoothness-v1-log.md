@@ -5917,3 +5917,51 @@ Why this matters:
 Validation:
 - Run any perf probe that captures a bundle and inspect a top snapshot:
   - `debug.paint_widget_hotspots[0].element_path` should be present when element debug identity is available.
+
+## 2026-02-07 13:04:21 (resize probe follow-up + layout phase visibility)
+
+Evidence run (repeat=10, baseline v2):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r2 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 10 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r2/summary.json`)
+- Worst frames (from `target/fret-diag-resize-probes-gate-r2/stdout.json`):
+  - `ui-gallery-window-resize-stress-steady` worst `top_total_time_us=15113`
+    - `top_layout_time_us=11077`, `top_paint_time_us=3948`, `top_layout_engine_solve_time_us=1610`, `top_layout_engine_solves=4`
+    - Renderer CPU (diagnostic): `top_renderer_encode_scene_us=201`, `top_renderer_prepare_text_us=165`
+  - `ui-gallery-window-resize-drag-jitter-steady` worst `top_total_time_us=14404`
+    - `top_layout_time_us=11562`, `top_paint_time_us=2762`, `top_layout_engine_solve_time_us=1727`, `top_layout_engine_solves=4`
+    - Renderer CPU (diagnostic): `top_renderer_encode_scene_us=252`, `top_renderer_prepare_text_us=305`
+
+Interpretation:
+- On these resize probes, the bottleneck remains **layout plumbing** (`top_layout_time_us`), not renderer CPU work.
+- This supports the working hypothesis that “Zed smoothness” on live resize is mostly about reducing per-frame
+  tree/build/apply overhead and minimizing avoidable invalidations, rather than GPU-side tuning (for these scripts).
+
+Change:
+- Make `layout_roots_time_us` visible in `fretboard diag stats` snapshot rows and in `fretboard diag perf --json`
+  run payloads (alongside `layout_request_build_roots_time_us`), so resize traces can be split into:
+  “request/build” vs “roots/layout traversal”.
+
+Validation:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r3 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r3/summary.json`)
+- `target/fret-diag-resize-probes-gate-r3/stdout.json` now includes:
+  - `top_layout_request_build_roots_time_us`
+  - `top_layout_roots_time_us`
