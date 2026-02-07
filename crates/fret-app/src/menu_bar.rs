@@ -160,18 +160,18 @@ pub fn apply_layered_menu_bar(
         has_layers = true;
         effective =
             apply_config(effective, cfg.clone()).map_err(|source| MenuBarFileError::Parse {
-            path: path.display().to_string(),
-            source,
-        })?;
+                path: path.display().to_string(),
+                source,
+            })?;
     }
 
     if let Some((path, cfg)) = layered.project.as_ref() {
         has_layers = true;
         effective =
             apply_config(effective, cfg.clone()).map_err(|source| MenuBarFileError::Parse {
-            path: path.display().to_string(),
-            source,
-        })?;
+                path: path.display().to_string(),
+                source,
+            })?;
     }
 
     let layered_for_state = has_layers.then(|| layered.clone());
