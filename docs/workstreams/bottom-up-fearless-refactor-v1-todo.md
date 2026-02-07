@@ -93,6 +93,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/dock/apply.rs`
     - `crates/fret-core/src/dock/mod.rs`
 
+- [x] BU-FR-core-020 Split docking query/mutation helpers into focused submodules.
+  - Goal: keep `dock/mod.rs` as a small facade while enabling incremental refactors of docking algorithms.
+  - Evidence:
+    - `crates/fret-core/src/dock/query.rs`
+    - `crates/fret-core/src/dock/mutate.rs`
+    - `crates/fret-core/src/dock/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
