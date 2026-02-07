@@ -435,15 +435,51 @@ pub(super) fn paint_row(
             let caret = st.selection.caret().min(st.buffer.len_bytes());
             let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
             if caret_pt.row == row {
-                let mut col = caret_pt.col;
-                if let Some(preedit) = &st.preedit {
-                    col = col.saturating_add(preedit_cursor_offset_cols(preedit));
-                }
-                let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
-                let caret_rect = Rect::new(
-                    fret_core::Point::new(x, rect.origin.y),
-                    Size::new(Px(1.0), row_h),
-                );
+                let caret_rect = if let Some(blob) = row_blob {
+                    let mut local = caret.saturating_sub(row_range.start).min(line.len());
+                    if let Some(preedit) = &st.preedit
+                        && row_preedit.is_some()
+                    {
+                        local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+                    }
+                    let max_len = if let Some(preedit) = &st.preedit
+                        && row_preedit.is_some()
+                    {
+                        line.len().saturating_add(preedit.text.len())
+                    } else {
+                        line.len()
+                    };
+                    local = local.min(max_len);
+
+                    let (services, _) = painter.services_and_scene();
+                    let x0 = services.text().caret_x(blob, local);
+
+                    let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                        (caret_rect_top, caret_rect_height)
+                        && h.0 > 0.0
+                    {
+                        (top, Px(h.0.min(row_h.0)))
+                    } else {
+                        (Px(0.0), row_h)
+                    };
+                    Rect::new(
+                        fret_core::Point::new(
+                            Px(rect.origin.x.0 + x0.0),
+                            Px(rect.origin.y.0 + caret_top.0),
+                        ),
+                        Size::new(Px(1.0), caret_h),
+                    )
+                } else {
+                    let mut col = caret_pt.col;
+                    if let Some(preedit) = &st.preedit {
+                        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+                    }
+                    let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
+                    Rect::new(
+                        fret_core::Point::new(x, rect.origin.y),
+                        Size::new(Px(1.0), row_h),
+                    )
+                };
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
