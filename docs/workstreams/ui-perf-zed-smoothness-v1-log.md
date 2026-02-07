@@ -6280,3 +6280,54 @@ Result:
 - `pass=true` (exit code `0`)
 - Worst overall: `top_total_time_us=17900` (see JSON output; worst bundle path under
   `target/fret-diag-ui-gallery-steady-check-v22-r1/`)
+
+## 2026-02-07 11:15 — perf(fret-ui): quantize layout measure cache keys
+
+Problem:
+- The layout engine caches `taffy` measure results within a solve using `LayoutMeasureKey`, but the key used raw
+  `f32::to_bits()` values for the `known_*` and `AvailableSpace::Definite(_)` inputs.
+- Under resize-drag / width-jitter probes, sub-pixel float noise can reduce cache hit rates and inflate layout time.
+
+Change (commit `94057ffab`):
+- Quantize `LayoutMeasureKey` inputs (known + definite available sizes) before turning them into key bits.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r16
+```
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r1 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r16/summary.json`).
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r1/check.perf_thresholds.json`).
+
+Resize probe deltas (worst-frame maxima; r15 -> r16):
+- drag-jitter (`ui-gallery-window-resize-drag-jitter-steady.json`):
+  - `max_total`: `17080us -> 15186us` (`-11.1%`)
+  - `max_layout`: `10123us -> 8782us` (`-13.3%`)
+  - `max_solve`: `2347us -> 2347us` (`+0.0%`)
+  - `max_paint`: `6881us -> 6425us` (`-6.6%`)
+- resize-stress (`ui-gallery-window-resize-stress-steady.json`):
+  - `max_total`: `15151us -> 15372us` (`+1.5%`)
+  - `max_layout`: `8871us -> 8723us` (`-1.7%`)
+  - `max_solve`: `2413us -> 2306us` (`-4.4%`)
+  - `max_paint`: `6317us -> 6570us` (`+4.0%`)

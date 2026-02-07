@@ -23,6 +23,8 @@ Conventions:
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
+    - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
