@@ -105,8 +105,9 @@ pub use row_selection::{
     toggle_row_selected,
 };
 pub use sorting::{
-    SortSpec, SortingFnDef, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
-    toggle_sorting_handler_tanstack, toggle_sorting_tanstack,
+    SortSpec, SortToggleColumn, SortingFnDef, SortingState, sort_for_column, sort_row_model,
+    toggle_sort_for_column, toggle_sorting_handler_tanstack, toggle_sorting_state_handler_tanstack,
+    toggle_sorting_state_tanstack, toggle_sorting_tanstack,
 };
 pub use state::TableState;
 pub use tanstack_memo::{

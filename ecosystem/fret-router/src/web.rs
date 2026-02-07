@@ -1,3 +1,4 @@
+use crate::query::decode_path_component;
 use crate::{
     NavigationAction, RouteLocation, apply_base_path, first_query_value_from_search_or_hash,
     parse_query_pairs, strip_base_path as strip_base_path_from_path,
@@ -74,7 +75,7 @@ pub fn route_location_from_snapshot(snapshot: &WebLocationSnapshot) -> RouteLoca
     location.fragment = snapshot
         .hash
         .strip_prefix('#')
-        .map(str::to_string)
+        .map(decode_path_component)
         .filter(|fragment| !fragment.trim().is_empty());
     location.canonicalize();
     location
@@ -385,6 +386,19 @@ mod tests {
             location.to_url(),
             "/app/projects/42/files/7?lang=zh&tab=preview#line-120"
         );
+    }
+
+    #[test]
+    fn route_location_from_snapshot_decodes_and_reencodes_fragment() {
+        let snapshot = WebLocationSnapshot {
+            pathname: "/docs".to_string(),
+            search: String::new(),
+            hash: "#section%201".to_string(),
+        };
+
+        let location = route_location_from_snapshot(&snapshot);
+        assert_eq!(location.fragment.as_deref(), Some("section 1"));
+        assert_eq!(location.to_url(), "/docs#section%201");
     }
 
     #[test]

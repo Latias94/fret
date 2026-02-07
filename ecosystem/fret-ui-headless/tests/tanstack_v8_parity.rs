@@ -1,9 +1,9 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
-    contains_ascii_case_insensitive, toggle_sorting_handler_tanstack, toggle_sorting_tanstack,
+    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState, TanStackValue,
+    contains_ascii_case_insensitive, sort_for_column,
 };
 use serde::Deserialize;
 
@@ -30,7 +30,26 @@ struct FixtureExpect {
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
     #[serde(default)]
+    sorting_helpers: Option<SortingHelpersSnapshot>,
+    #[serde(default)]
     next_state: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SortingHelpersSnapshot {
+    columns: std::collections::BTreeMap<String, SortingHelperColumn>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SortingHelperColumn {
+    can_sort: bool,
+    can_multi_sort: bool,
+    is_sorted: Option<String>,
+    sort_index: i32,
+    auto_sort_dir: Option<String>,
+    first_sort_dir: Option<String>,
+    next_sorting_order: Option<String>,
+    next_sorting_order_multi: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -48,6 +67,8 @@ enum FixtureAction {
         #[serde(default)]
         event_multi: bool,
     },
+    #[serde(rename = "clearSorting")]
+    ClearSorting { column_id: String },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -104,16 +125,23 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
     let columns: Vec<ColumnDef<FixtureRow>> = vec![
         ColumnDef::<FixtureRow>::new("name")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.name.cmp(&b.name))
+            .sort_value_by(|row: &FixtureRow| {
+                TanStackValue::String(Arc::<str>::from(row.name.clone()))
+            })
             .filter_by(|row: &FixtureRow, needle: &str| {
                 contains_ascii_case_insensitive(&row.name, needle)
             }),
         ColumnDef::<FixtureRow>::new("status")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.status.cmp(&b.status))
+            .sort_value_by(|row: &FixtureRow| {
+                TanStackValue::String(Arc::<str>::from(row.status.clone()))
+            })
             .filter_by(|row: &FixtureRow, needle: &str| {
                 contains_ascii_case_insensitive(&row.status, needle)
             }),
         ColumnDef::<FixtureRow>::new("cpu")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.cpu.cmp(&b.cpu))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
             .filter_by(|row: &FixtureRow, needle: &str| {
                 let Ok(v) = needle.parse::<u64>() else {
                     return false;
@@ -122,18 +150,23 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
             }),
         ColumnDef::<FixtureRow>::new("cpu_desc_first")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.cpu.cmp(&b.cpu))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
             .sort_desc_first(true),
         ColumnDef::<FixtureRow>::new("cpu_no_multi")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.cpu.cmp(&b.cpu))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
             .enable_multi_sort(false),
         ColumnDef::<FixtureRow>::new("cpu_no_sort")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.cpu.cmp(&b.cpu))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
             .enable_sorting(false),
         ColumnDef::<FixtureRow>::new("cpu_invert")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.cpu.cmp(&b.cpu))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
             .invert_sorting(true),
         ColumnDef::<FixtureRow>::new("mem_mb")
             .sort_by(|a: &FixtureRow, b: &FixtureRow| a.mem_mb.cmp(&b.mem_mb))
+            .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.mem_mb as f64))
             .filter_by(|row: &FixtureRow, needle: &str| {
                 let Ok(v) = needle.parse::<u64>() else {
                     return false;
@@ -141,9 +174,6 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
                 row.mem_mb == v
             }),
     ];
-
-    let column_by_id: HashMap<&str, &ColumnDef<FixtureRow>> =
-        columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
     for snap in fixture.snapshots {
         let tanstack_options =
@@ -154,27 +184,36 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
 
         if !snap.actions.is_empty() {
             for action in &snap.actions {
+                let table_for_action = Table::builder(&data)
+                    .columns(columns.clone())
+                    .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                    .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                    .state(state.clone())
+                    .options(options)
+                    .build();
+
                 match action {
                     FixtureAction::ToggleSorting { column_id, multi } => {
-                        let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
-                            panic!("unknown action column_id: {}", column_id);
-                        };
-                        toggle_sorting_tanstack(&mut state.sorting, column, options, *multi, false);
+                        state.sorting = table_for_action
+                            .toggled_column_sorting_tanstack(column_id.as_str(), *multi, false)
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                     FixtureAction::ToggleSortingHandler {
                         column_id,
                         event_multi,
                     } => {
-                        let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
-                            panic!("unknown action column_id: {}", column_id);
-                        };
-                        toggle_sorting_handler_tanstack(
-                            &mut state.sorting,
-                            column,
-                            options,
-                            *event_multi,
-                            false,
-                        );
+                        state.sorting = table_for_action
+                            .toggled_column_sorting_handler_tanstack(
+                                column_id.as_str(),
+                                *event_multi,
+                                false,
+                            )
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
+                    }
+                    FixtureAction::ClearSorting { column_id } => {
+                        state.sorting = table_for_action
+                            .cleared_column_sorting(column_id.as_str())
+                            .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                     }
                 }
             }
@@ -236,6 +275,96 @@ fn tanstack_v8_demo_process_parity_core_filter_sort_paginate() {
             "snapshot {} sorted flat mismatch",
             snap.id
         );
+
+        if let Some(expected) = snap.expect.sorting_helpers.as_ref() {
+            fn dir_for_desc(desc: bool) -> &'static str {
+                if desc { "desc" } else { "asc" }
+            }
+
+            fn opt_dir_for_desc(desc: Option<bool>) -> Option<&'static str> {
+                desc.map(dir_for_desc)
+            }
+
+            fn next_dir_for_desc(next: Option<Option<bool>>) -> Option<&'static str> {
+                next.and_then(|v| v).map(dir_for_desc)
+            }
+
+            for (col_id, exp) in &expected.columns {
+                assert_eq!(
+                    table.column_can_sort(col_id.as_str()),
+                    Some(exp.can_sort),
+                    "snapshot {} sorting_helpers.columns[{}].can_sort mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    table.column_is_sorted(col_id.as_str()),
+                    Some(exp.is_sorted.is_some()),
+                    "snapshot {} sorting_helpers.columns[{}].is_sorted mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    table.column_sort_index(col_id.as_str()),
+                    Some(exp.sort_index),
+                    "snapshot {} sorting_helpers.columns[{}].sort_index mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    table.column_can_multi_sort(col_id.as_str()),
+                    Some(exp.can_multi_sort),
+                    "snapshot {} sorting_helpers.columns[{}].can_multi_sort mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                let expected_desc = exp.is_sorted.as_deref().map(|s| s == "desc");
+                assert_eq!(
+                    sort_for_column(&table.state().sorting, col_id.as_str()),
+                    expected_desc,
+                    "snapshot {} sorting_helpers.columns[{}].sort_for_column mismatch",
+                    snap.id,
+                    col_id
+                );
+
+                assert_eq!(
+                    opt_dir_for_desc(table.column_auto_sort_dir_desc_tanstack(col_id.as_str())),
+                    exp.auto_sort_dir.as_deref(),
+                    "snapshot {} sorting_helpers.columns[{}].auto_sort_dir mismatch",
+                    snap.id,
+                    col_id
+                );
+                assert_eq!(
+                    opt_dir_for_desc(table.column_first_sort_dir_desc_tanstack(col_id.as_str())),
+                    exp.first_sort_dir.as_deref(),
+                    "snapshot {} sorting_helpers.columns[{}].first_sort_dir mismatch",
+                    snap.id,
+                    col_id
+                );
+                assert_eq!(
+                    next_dir_for_desc(
+                        table.column_next_sorting_order_desc_tanstack(col_id.as_str(), false),
+                    ),
+                    exp.next_sorting_order.as_deref(),
+                    "snapshot {} sorting_helpers.columns[{}].next_sorting_order mismatch",
+                    snap.id,
+                    col_id
+                );
+                assert_eq!(
+                    next_dir_for_desc(
+                        table.column_next_sorting_order_desc_tanstack(col_id.as_str(), true),
+                    ),
+                    exp.next_sorting_order_multi.as_deref(),
+                    "snapshot {} sorting_helpers.columns[{}].next_sorting_order_multi mismatch",
+                    snap.id,
+                    col_id
+                );
+            }
+        }
 
         // Our engine's `row_model()` corresponds to TanStack's `getRowModel()` (post-pagination).
         assert_eq!(

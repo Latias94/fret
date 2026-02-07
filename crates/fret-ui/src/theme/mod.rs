@@ -1,3 +1,6 @@
+pub mod keys;
+pub(crate) mod registry;
+
 use fret_core::{Color, Corners, Px, TextStyle};
 use serde::{Deserialize, Serialize};
 use std::{

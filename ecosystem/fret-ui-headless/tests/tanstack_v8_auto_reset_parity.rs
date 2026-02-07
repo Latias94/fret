@@ -1,10 +1,9 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
     ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TableState, TanStackTableOptions,
-    TanStackTableState, TanStackValue, toggle_sorting_tanstack,
+    TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -145,9 +144,6 @@ fn tanstack_v8_auto_reset_parity() {
             .filtering_fn_auto(),
     ];
 
-    let column_by_id: HashMap<&str, &ColumnDef<FixtureRow>> =
-        columns.iter().map(|c| (c.id.as_ref(), c)).collect();
-
     for snap in fixture.snapshots {
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
@@ -174,10 +170,19 @@ fn tanstack_v8_auto_reset_parity() {
         for action in &snap.actions {
             match action {
                 FixtureAction::ToggleSorting { column_id, multi } => {
-                    let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
-                        panic!("unknown action column_id: {column_id}");
-                    };
-                    toggle_sorting_tanstack(&mut state.sorting, column, options, *multi, false);
+                    let table_for_action = Table::builder(&data)
+                        .columns(columns.clone())
+                        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                        .initial_state(initial_state.clone())
+                        .state(state.clone())
+                        .options(options)
+                        .global_filter_fn(FilteringFnSpec::Auto)
+                        .build();
+
+                    state.sorting = table_for_action
+                        .toggled_column_sorting_tanstack(column_id.as_str(), *multi, false)
+                        .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                 }
                 FixtureAction::SetGlobalFilterValue { value } => {
                     state.global_filter = Some(value.clone());

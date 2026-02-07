@@ -1,10 +1,12 @@
-//! Web platform adapter utilities.
+//! Web/wasm runner glue for Fret.
 //!
-//! This crate is intended to host **web-specific** glue that should not live in:
-//! - `fret-platform-web` (platform I/O backend for Effects),
-//! - `fret-runner-winit` (winit-specific event mapping).
+//! On `wasm32`, this crate re-exports `fret-platform-web` services used by `fret-runtime::Effect`s
+//! and provides DOM-adjacent adapters (cursor, input event mapping, RAF/timers). It intentionally
+//! keeps non-wasm builds explicit via a stub module.
 //!
-//! Long-term direction: a dedicated DOM adapter for IME/keyboard fidelity (ADR 0091/0093).
+//! For module ownership and “where should this go?” guidance, see `crates/fret-runner-web/README.md`.
+//!
+//! Long-term direction: a dedicated DOM adapter for IME/keyboard fidelity (see ADR 0091/0093).
 
 #[cfg(target_arch = "wasm32")]
 pub use fret_platform_web::*;

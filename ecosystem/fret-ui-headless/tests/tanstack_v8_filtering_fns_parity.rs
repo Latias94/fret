@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
@@ -23,12 +24,31 @@ struct RowModelSnapshot {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct FilteringHelpersSnapshot {
+    columns: BTreeMap<String, FilteringHelpersColumnSnapshot>,
+    #[serde(default)]
+    global_filter: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FilteringHelpersColumnSnapshot {
+    can_filter: bool,
+    #[serde(default)]
+    filter_value: Option<serde_json::Value>,
+    is_filtered: bool,
+    filter_index: i32,
+    can_global_filter: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     core: RowModelSnapshot,
     filtered: RowModelSnapshot,
     sorted: RowModelSnapshot,
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
+    #[serde(default)]
+    filtering_helpers: Option<FilteringHelpersSnapshot>,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
 }
@@ -275,5 +295,52 @@ fn tanstack_v8_filtering_fns_parity() {
             "snapshot {} paginated flat mismatch",
             snap.id
         );
+
+        if let Some(expected_helpers) = snap.expect.filtering_helpers.as_ref() {
+            for (column_id, expected) in &expected_helpers.columns {
+                assert_eq!(
+                    table.column_can_filter(column_id.as_str()),
+                    Some(expected.can_filter),
+                    "snapshot {} column_can_filter({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_filter_value(column_id.as_str()),
+                    expected.filter_value.as_ref(),
+                    "snapshot {} column_filter_value({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_is_filtered(column_id.as_str()),
+                    Some(expected.is_filtered),
+                    "snapshot {} column_is_filtered({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_filter_index(column_id.as_str()),
+                    Some(expected.filter_index),
+                    "snapshot {} column_filter_index({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_can_global_filter(column_id.as_str()),
+                    Some(expected.can_global_filter),
+                    "snapshot {} column_can_global_filter({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+            }
+
+            assert_eq!(
+                table.state().global_filter,
+                expected_helpers.global_filter.clone(),
+                "snapshot {} global_filter mismatch",
+                snap.id
+            );
+        }
     }
 }
