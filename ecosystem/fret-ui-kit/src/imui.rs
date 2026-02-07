@@ -977,6 +977,42 @@ impl Default for FloatingWindowResizeOptions {
     }
 }
 
+/// Behavior flags for in-window floating windows.
+///
+/// This is an ecosystem-level facade surface (not a mechanism-layer contract). The goal is to
+/// provide ImGui-like control over common floating window behavior without introducing a parallel
+/// runtime or duplicating canonical policy.
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingWindowOptions {
+    /// When true, the window can be moved by dragging the title bar.
+    pub movable: bool,
+    /// When true, resize handles are active when the window is rendered with an initial size.
+    pub resizable: bool,
+    /// When true, title-bar double click toggles collapse/expand.
+    pub collapsible: bool,
+    /// When true and an `open` model is provided, the close button and `Escape`-to-close are enabled.
+    pub closable: bool,
+    /// When true, pointer down anywhere in the window activates it for z-order (when nested under
+    /// `floating_layer(...)`).
+    pub activate_on_click: bool,
+    /// When false, the window is rendered but pointer interactions are blocked (no activation,
+    /// drag, resize, or child clicks).
+    pub inputs_enabled: bool,
+}
+
+impl Default for FloatingWindowOptions {
+    fn default() -> Self {
+        Self {
+            movable: true,
+            resizable: true,
+            collapsible: true,
+            closable: true,
+            activate_on_click: true,
+            inputs_enabled: true,
+        }
+    }
+}
+
 const FLOAT_WINDOW_RESIZE_KIND_BASE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.resize.v1");
 
 fn float_window_resize_kind_for_element(
@@ -1429,6 +1465,7 @@ fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
     area: FloatingAreaContext,
     props: PointerRegionProps,
     on_left_double_click: Option<OnFloatingAreaLeftDoubleClick>,
+    enable_drag: bool,
     setup: Setup,
     build: Build,
 ) -> AnyElement
@@ -1454,9 +1491,16 @@ where
             }
 
             host.request_focus(acx.target);
-            host.capture_pointer();
-            if host.drag(down.pointer_id).is_none() {
-                host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+            if enable_drag {
+                host.capture_pointer();
+                if host.drag(down.pointer_id).is_none() {
+                    host.begin_drag_with_kind(
+                        down.pointer_id,
+                        drag_kind,
+                        acx.window,
+                        down.position,
+                    );
+                }
             }
             if down.click_count == 2
                 && let Some(on_left_double_click) = on_left_double_click_for_down.as_ref()
@@ -1475,6 +1519,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+            if !enable_drag {
+                return false;
+            }
             let Some(drag) = host.drag_mut(mv.pointer_id) else {
                 return false;
             };
@@ -1505,6 +1552,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+            if !enable_drag {
+                return false;
+            }
             if let Some(drag) = host.drag(up.pointer_id)
                 && drag.kind == drag_kind
                 && drag.source_window == acx.window
@@ -1882,7 +1932,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, None, setup, f))
+        self.with_cx_mut(|cx| {
+            floating_area_drag_surface_element(cx, area, props, None, true, setup, f)
+        })
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -3686,13 +3738,37 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        self.floating_window_impl_on_area_show(
+        self.floating_window_impl_on_area_show_with_options(
             id,
             title,
             open,
             initial_position,
             initial_size,
             resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            options,
             f,
         )
     }
@@ -3749,6 +3825,29 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_on_area_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
         if let Some(open) = open {
             let is_open = self
                 .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
@@ -3791,6 +3890,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     initial_position,
                     initial_size,
                     resize,
+                    options,
                     f,
                 );
                 chrome_out.set(chrome);
@@ -3804,6 +3904,96 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             resizing: chrome.resizing,
             collapsed: chrome.collapsed,
         }
+    }
+
+    /// Render a floating window with explicit behavior flags.
+    fn window_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model floating window with explicit behavior flags.
+    fn window_open_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render a resizable floating window with explicit behavior flags.
+    fn window_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model resizable floating window with explicit behavior flags.
+    fn window_open_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
     }
 
     fn floating_window_impl_legacy(
