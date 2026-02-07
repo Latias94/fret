@@ -148,6 +148,26 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render/src/svg/mod.rs`
     - `crates/fret-render/src/svg/cache.rs`
 
+## M3.5 — Platform + runner closure
+
+- [x] BU-FR-plat-050 Add a module ownership map for `crates/fret-platform` and document the intended public surface.
+  - Goal: make portable platform contracts easy to discover and keep call sites stable.
+  - Evidence:
+    - `crates/fret-platform/README.md`
+    - `crates/fret-platform/src/lib.rs`
+
+- [x] BU-FR-plat-051 Add a module ownership map for `crates/fret-platform-native` and document the intended public surface.
+  - Goal: make desktop implementations discoverable and keep exports intentional.
+  - Evidence:
+    - `crates/fret-platform-native/README.md`
+    - `crates/fret-platform-native/src/lib.rs`
+
+- [x] BU-FR-plat-052 Add a module ownership map for `crates/fret-platform-web` and document the intended public surface.
+  - Goal: clarify the wasm32-only posture and avoid accidental platform coupling.
+  - Evidence:
+    - `crates/fret-platform-web/README.md`
+    - `crates/fret-platform-web/src/lib.rs`
+
 ## M4 — Ecosystem rationalization
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
