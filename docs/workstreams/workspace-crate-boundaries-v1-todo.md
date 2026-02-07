@@ -57,8 +57,9 @@ Related plan:
 ### M7 — Ecosystem crate graph audit (optional)
 
 - [x] Record a reverse-deps + LOC snapshot (date-stamped) in the crate survey notes.
-- [ ] List “single-consumer micro-crates” and justify each one (seam vs accidental).
-- [ ] Decide follow-up actions (merge/keep/split) and track separately if needed.
+- [x] List “single-consumer micro-crates” and justify each one (seam vs accidental).
+- [ ] Decide follow-up actions (merge/keep/split) and track separately if needed:
+  - [ ] `fret-plot3d`: keep for now (ImPlot3 parity sandbox); revisit once it has a second consumer or grows into a reusable 3D subsystem.
 
 ## Validation checklist (run at each milestone)
 
