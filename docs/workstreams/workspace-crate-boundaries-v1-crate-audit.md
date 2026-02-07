@@ -86,6 +86,31 @@ Boundary tightening:
    - Some ecosystem crates currently have a single in-tree consumer; confirm whether they exist for
      extraction/portability reasons (keep) vs accidental fragmentation (merge).
 
+## 4.1 Candidate list (merge / split / rename)
+
+These are not commitments; they are “review prompts” to keep boundaries intentional.
+
+Potential merge candidates (only if they do not represent a real extraction seam):
+
+- `ecosystem/fret-ui-primitives` → `ecosystem/fret-ui-kit`
+  - Today it is primarily consumed by `fret-ui-kit`. If it remains a pure internal adapter layer,
+    merging could reduce cognitive load.
+  - Keep it separate if we expect multiple design-system kits to depend on the same primitives
+    surface.
+
+Potential split candidates (only if ownership/portability becomes unclear):
+
+- `ecosystem/fret-ui-headless`
+  - If it grows into multiple independent policy engines (table, typeahead, selection models, etc),
+    consider splitting by subsystem (e.g. `fret-table-headless`, `fret-typeahead-headless`) to keep
+    build times and dependency graphs shallow for downstream users.
+
+Potential “keep separate” candidates (single consumer is OK if the seam is real):
+
+- `ecosystem/fret-icons-*` (data packs): keep as separate crates to make optional icon packs cheap.
+- `ecosystem/fret-code-editor-buffer` / `ecosystem/fret-code-editor-view`: keep if buffer/view remain
+  portable and reusable across editor shells and demos.
+
 ## 5) Proposed next deliverables (documentation-first)
 
 - Add a short “crate boundary map” section to `docs/workstreams/workspace-crate-boundaries-v1.md`

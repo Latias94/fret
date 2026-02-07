@@ -117,6 +117,8 @@ Boundary tightening follow-ups:
 - Keep route↔query helpers behind an explicit feature (today: `fret-router/query-integration`).
 - Keep `fret-query` portable by default by requiring callers that want `ElementContext` sugar to opt
   into `fret-query/ui` explicitly (avoid “UI by default” in transitive deps).
+- Apply the same “portable by default” rule to selector helpers (`fret-selector/ui`), so pure
+  derived-state memoization remains usable without pulling UI/runtime deps transitively.
 
 ## 5) Definition of done
 
