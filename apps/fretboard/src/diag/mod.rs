@@ -4094,6 +4094,7 @@ See: `docs/tracy.md`.\n";
                                 top_total,
                                 top_layout,
                                 top_solve,
+                                pointer_move_frames_present,
                                 pointer_move_max_dispatch_time_us,
                                 pointer_move_max_hit_test_time_us,
                                 pointer_move_snapshots_with_global_changes,
@@ -4144,6 +4145,7 @@ See: `docs/tracy.md`.\n";
                     Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf)> = None;
+                let mut any_pointer_move_frames_present: bool = false;
 
                 for run_index in 0..repeat {
                     if !reuse_process {
@@ -4440,6 +4442,7 @@ See: `docs/tracy.md`.\n";
                     runs_dispatch.push(top_dispatch);
                     runs_hit_test.push(top_hit_test);
                     let pointer_move_frames_present = report.pointer_move_frames_present;
+                    any_pointer_move_frames_present |= pointer_move_frames_present;
                     let pointer_move_frames_considered =
                         report.pointer_move_frames_considered as u64;
                     let pointer_move_max_dispatch_time_us =
@@ -5181,6 +5184,7 @@ See: `docs/tracy.md`.\n";
                             max_total,
                             max_layout,
                             max_solve,
+                            any_pointer_move_frames_present,
                             max_pointer_move_dispatch,
                             max_pointer_move_hit_test,
                             max_pointer_move_global_changes,
@@ -11133,6 +11137,7 @@ mod tests {
             99,
             79,
             49,
+            true,
             1999,
             1499,
             0,
@@ -11161,6 +11166,7 @@ mod tests {
             101,
             81,
             51,
+            true,
             2001,
             1501,
             1,
@@ -11203,6 +11209,7 @@ mod tests {
             0,
             0,
             0,
+            true,
             0,
             0,
             0,
@@ -11222,6 +11229,49 @@ mod tests {
         assert!(metrics.contains(
             &"run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max".to_string()
         ));
+    }
+
+    #[test]
+    fn perf_threshold_scan_skips_pointer_move_metrics_when_no_pointer_move_frames() {
+        let failures = scan_perf_threshold_failures(
+            "script.json",
+            BundleStatsSort::Time,
+            PerfThresholds {
+                max_top_total_us: Some(100),
+                max_top_layout_us: Some(80),
+                max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: Some(2000),
+                max_pointer_move_hit_test_us: Some(1500),
+                max_pointer_move_global_changes: Some(0),
+                min_run_paint_cache_hit_test_only_replay_allowed_max: None,
+                max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: None,
+            },
+            PerfThresholds::default(),
+            101,
+            81,
+            51,
+            false,
+            2001,
+            1501,
+            1,
+            0,
+            0,
+        );
+        assert_eq!(failures.len(), 3);
+        let metrics: Vec<String> = failures
+            .iter()
+            .filter_map(|v| {
+                v.get("metric")
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+        assert!(metrics.contains(&"top_total_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_max_dispatch_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_max_hit_test_time_us".to_string()));
+        assert!(!metrics.contains(&"pointer_move_snapshots_with_global_changes".to_string()));
     }
 
     #[test]

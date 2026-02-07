@@ -1514,6 +1514,7 @@ pub(super) fn scan_perf_threshold_failures(
     max_total_time_us: u64,
     max_layout_time_us: u64,
     max_layout_engine_solve_time_us: u64,
+    pointer_move_frames_present: bool,
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
     max_pointer_move_global_changes: u64,
@@ -1591,41 +1592,43 @@ pub(super) fn scan_perf_threshold_failures(
             "sort": sort.as_str(),
         }));
     }
-    if let Some(threshold_us) = threshold_pointer_move_dispatch
-        && max_pointer_move_dispatch_time_us > threshold_us
-    {
-        out.push(serde_json::json!({
-            "metric": "pointer_move_max_dispatch_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_pointer_move_dispatch,
-            "actual_us": max_pointer_move_dispatch_time_us,
-            "script": script,
-            "sort": sort.as_str(),
-        }));
-    }
-    if let Some(threshold_us) = threshold_pointer_move_hit_test
-        && max_pointer_move_hit_test_time_us > threshold_us
-    {
-        out.push(serde_json::json!({
-            "metric": "pointer_move_max_hit_test_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_pointer_move_hit_test,
-            "actual_us": max_pointer_move_hit_test_time_us,
-            "script": script,
-            "sort": sort.as_str(),
-        }));
-    }
-    if let Some(threshold) = threshold_pointer_move_global_changes
-        && max_pointer_move_global_changes > threshold
-    {
-        out.push(serde_json::json!({
-            "metric": "pointer_move_snapshots_with_global_changes",
-            "threshold": threshold,
-            "threshold_source": source_pointer_move_global_changes,
-            "actual": max_pointer_move_global_changes,
-            "script": script,
-            "sort": sort.as_str(),
-        }));
+    if pointer_move_frames_present {
+        if let Some(threshold_us) = threshold_pointer_move_dispatch
+            && max_pointer_move_dispatch_time_us > threshold_us
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_max_dispatch_time_us",
+                "threshold_us": threshold_us,
+                "threshold_source": source_pointer_move_dispatch,
+                "actual_us": max_pointer_move_dispatch_time_us,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
+        if let Some(threshold_us) = threshold_pointer_move_hit_test
+            && max_pointer_move_hit_test_time_us > threshold_us
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_max_hit_test_time_us",
+                "threshold_us": threshold_us,
+                "threshold_source": source_pointer_move_hit_test,
+                "actual_us": max_pointer_move_hit_test_time_us,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
+        if let Some(threshold) = threshold_pointer_move_global_changes
+            && max_pointer_move_global_changes > threshold
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_snapshots_with_global_changes",
+                "threshold": threshold,
+                "threshold_source": source_pointer_move_global_changes,
+                "actual": max_pointer_move_global_changes,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
     }
     if let Some(threshold) = threshold_min_run_paint_cache_hit_test_only_replay_allowed
         && max_run_paint_cache_hit_test_only_replay_allowed < threshold
