@@ -186,6 +186,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-launch/README.md`
     - `crates/fret-launch/src/lib.rs`
 
+- [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
+  - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
+  - Evidence:
+    - `crates/fret-runner-winit/src/lib.rs`
+    - `crates/fret-runner-winit/src/mapping/mod.rs`
+    - `crates/fret-runner-winit/src/state/mod.rs`
+    - `crates/fret-runner-winit/src/state/input/mod.rs`
+
 ## M4 — Ecosystem rationalization
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
