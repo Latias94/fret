@@ -233,6 +233,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `crates/fret-launch/src/runner/web/app_handler.rs`
 
+- [x] BU-FR-launch-075 Extract the wasm runner render loop and turn draining into a dedicated submodule.
+  - Goal: isolate frame driving (`render_frame`) and effect/event fixed-point draining (`drain_turns`) from the rest of the web runner.
+  - Evidence:
+    - `crates/fret-launch/src/runner/web/render_loop.rs`
+
 - [x] BU-FR-runner-063 Split `crates/fret-runner-winit` crate-root implementation into `mapping/` + `state/` subsystems.
   - Goal: shrink `src/lib.rs` to a stable facade while enabling incremental internal refactors without widening the public surface.
   - Evidence:
