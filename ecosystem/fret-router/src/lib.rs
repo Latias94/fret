@@ -38,7 +38,8 @@ pub use query::{
 };
 #[cfg(feature = "query-integration")]
 pub use query_integration::{
-    NamespaceInvalidationRule, RouteChangePolicy, collect_invalidated_namespaces,
+    NamespaceInvalidationRule, RouteChangePolicy, RoutePrefetchPlanItem, RoutePrefetchRule,
+    RouteTransitionPlan, collect_invalidated_namespaces, plan_route_transition,
     route_change_matches, route_query_key, route_query_key_with,
 };
 pub use route_tree::{

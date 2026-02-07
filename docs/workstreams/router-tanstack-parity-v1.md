@@ -82,10 +82,13 @@ Rationale:
 Treat `fret-query` as the default cache/loader backend and model TanStack-style loader semantics as:
 
 - route -> query keys (namespaced, canonical location)
-- router transition -> invalidate/prefetch plan
-- optional cancellation hooks for rapid navigation (future phase)
+  - router transition -> invalidate/prefetch plan
+  - optional cancellation hooks for rapid navigation (future phase)
 
 Keep a small adapter seam so tests can run with a mock client.
+
+Note: query key canonicalization should **ignore URL fragments** by default. Fragments are typically
+view-local UI state (scroll anchors, tabs) and should not invalidate loader data.
 
 ## Proposed architecture (v1 targets)
 
@@ -164,4 +167,3 @@ Unify under a trait:
 - `ecosystem/fret-router/src/history.rs` (portable history)
 - `ecosystem/fret-router/src/web.rs` + `ecosystem/fret-router/tests/web_wasm.rs` (web adapters)
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
-

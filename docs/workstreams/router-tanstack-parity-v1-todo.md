@@ -47,18 +47,18 @@ Status legend:
 
 - `[x]` Add `RouterState` (location, matches, status, last_transition).
 - `[x]` Define `RouterTransition` snapshot (portable, serializable).
-- `[~]` Define `HistoryAdapter` trait and implement:
+- `[x]` Define `HistoryAdapter` trait and implement:
   - memory adapter (wrap `MemoryHistory`)
   - web history adapter (wrap existing `web-history`)
   - hash adapter (wrap existing `hash-routing`)
-- `[~]` Add integration tests for:
+- `[x]` Add integration tests for:
   - back/forward restore
   - deep-link open -> matches computed
 
 ## Phase 4 - `fret-query` loader integration
 
-- `[ ]` Define route->query key conventions for loader-like behavior.
-- `[ ]` Add transition-based invalidate/prefetch planning:
+- `[x]` Define route->query key conventions for loader-like behavior.
+- `[x]` Add transition-based invalidate/prefetch planning:
   - input: `RouterTransition`
   - output: list of namespaces + keys to prefetch
 - `[ ]` Add race/cancellation tests for rapid route changes.
