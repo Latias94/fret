@@ -672,7 +672,8 @@ Rules:
 
 **Visibility/ordering**
 
-- **Aligned**: `getIsAllColumnsVisible/getIsSomeColumnsVisible` → `Table::{is_all_columns_visible,is_some_columns_visible}` (unit gates exist; fixture gating TBD).
+- **Aligned**: `getIsAllColumnsVisible/getIsSomeColumnsVisible` → `Table::{is_all_columns_visible,is_some_columns_visible}`
+  (`visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`).
 - **Partial**: `getToggleAllColumnsVisibilityHandler` (we expose the state transition, but not a JS-style handler surface)
   → `Table::toggled_all_columns_visible(visible)` (fixture-gated by `visibility_ordering.json`).
 - **Aligned**: `resetColumnVisibility` / `resetColumnOrder` → `Table::{reset_column_visibility,reset_column_order}` (`resets.json`).
@@ -739,7 +740,7 @@ Legend:
 | `getLeafHeaders` (+ left/center/right) | `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
 | `getTotalSize` (+ left/center/right) | `Table::{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `column_sizing.json` |
 | `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
-| `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Partial | unit gates; fixture gate TBD |
+| `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `getVisibleFlatColumns/getAllFlatColumns` | derive via column tree snapshot; may need `visible_flat_columns` helper | Partial | N/A |
 | `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |

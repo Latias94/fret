@@ -442,6 +442,8 @@ type FixtureSnapshot = {
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
+    is_all_columns_visible?: boolean
+    is_some_columns_visible?: boolean
     filtering_helpers?: FilteringHelpersSnapshot
     headers_cells?: {
       header_groups: {
@@ -4883,6 +4885,12 @@ function snapshotColumnPinning(
         ...snapshotForState(options, state),
         ...snapshotColumnSizing(buildTable(options, state).table),
         core_model: coreModelForState(options, state),
+        is_all_columns_visible: Boolean(
+          buildTable(options, state).table.getIsAllColumnsVisible?.(),
+        ),
+        is_some_columns_visible: Boolean(
+          buildTable(options, state).table.getIsSomeColumnsVisible?.(),
+        ),
       },
     })
 
@@ -4904,6 +4912,12 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           core_model: coreModelForState(options, expect.next_state),
+          is_all_columns_visible: Boolean(
+            buildTable(options, expect.next_state).table.getIsAllColumnsVisible?.(),
+          ),
+          is_some_columns_visible: Boolean(
+            buildTable(options, expect.next_state).table.getIsSomeColumnsVisible?.(),
+          ),
         },
       }
     }

@@ -94,6 +94,8 @@ struct FixtureExpect {
     is_all_rows_expanded: bool,
     is_some_rows_expanded: bool,
     can_some_rows_expand: bool,
+    is_all_columns_visible: bool,
+    is_some_columns_visible: bool,
     #[serde(rename = "column_sizing")]
     sizing: ColumnSizingExpect,
     #[serde(rename = "column_start")]
@@ -451,6 +453,18 @@ fn tanstack_v8_visibility_ordering_parity() {
             table.can_some_rows_expand(),
             snap.expect.can_some_rows_expand,
             "snapshot {} can_some_rows_expand mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_all_columns_visible(),
+            snap.expect.is_all_columns_visible,
+            "snapshot {} is_all_columns_visible mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_columns_visible(),
+            snap.expect.is_some_columns_visible,
+            "snapshot {} is_some_columns_visible mismatch",
             snap.id
         );
 
