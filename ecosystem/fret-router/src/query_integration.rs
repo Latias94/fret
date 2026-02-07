@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use fret_query::QueryKey;
 
-use crate::{RouteLocation, RouteMatchSnapshot, RouterTransition};
+use crate::{RouteLocation, RouteMatchSnapshot, RoutePrefetchIntent, RouterTransition};
 
 fn canonical_location_for_query_key(location: &RouteLocation) -> RouteLocation {
     let mut canonical = location.canonicalized();
@@ -52,6 +52,14 @@ pub fn route_query_key_with<T: 'static, H: Hash + ?Sized>(
         extra,
     };
     QueryKey::new(namespace, &seed)
+}
+
+pub fn prefetch_intent_query_key<T: 'static, R>(intent: &RoutePrefetchIntent<R>) -> QueryKey<T> {
+    if let Some(extra) = intent.extra {
+        route_query_key_with(intent.namespace, &intent.location, extra)
+    } else {
+        route_query_key(intent.namespace, &intent.location)
+    }
 }
 
 pub fn route_change_matches(
@@ -219,10 +227,13 @@ impl<H: Hash + ?Sized> Hash for RouteQueryKeySeedWithExtra<'_, H> {
 mod tests {
     use super::{
         NamespaceInvalidationRule, RouteChangePolicy, RoutePrefetchRule,
-        collect_invalidated_namespaces, plan_route_transition, route_change_matches,
-        route_query_key, route_query_key_with,
+        collect_invalidated_namespaces, plan_route_transition, prefetch_intent_query_key,
+        route_change_matches, route_query_key, route_query_key_with,
     };
-    use crate::{NavigationAction, RouteLocation, RouteMatchSnapshot, RouterTransition, SearchMap};
+    use crate::{
+        NavigationAction, RouteLocation, RouteMatchSnapshot, RoutePrefetchIntent, RouterTransition,
+        SearchMap,
+    };
 
     #[test]
     fn route_query_key_uses_canonical_location() {
@@ -256,6 +267,36 @@ mod tests {
 
         assert_eq!(left_key.namespace(), right_key.namespace());
         assert_eq!(left_key.hash(), right_key.hash());
+    }
+
+    #[test]
+    fn prefetch_intent_query_key_ignores_fragment_and_respects_extra() {
+        let with_fragment = RouteLocation::parse("/users/42?b=2&a=1#tab");
+        let without_fragment = RouteLocation::parse("/users/42?a=1&b=2");
+
+        let intent_without_extra = RoutePrefetchIntent {
+            route: 1u8,
+            namespace: "fret.router.test.users.v1",
+            location: with_fragment.clone(),
+            extra: None,
+        };
+        let key_without_extra_a = prefetch_intent_query_key::<u8, _>(&intent_without_extra);
+
+        let intent_without_fragment = RoutePrefetchIntent {
+            location: without_fragment,
+            ..intent_without_extra
+        };
+        let key_without_extra_b = prefetch_intent_query_key::<u8, _>(&intent_without_fragment);
+        assert_eq!(key_without_extra_a.hash(), key_without_extra_b.hash());
+
+        let intent_with_extra = RoutePrefetchIntent {
+            route: 1u8,
+            namespace: "fret.router.test.users.v1",
+            location: with_fragment,
+            extra: Some("scope"),
+        };
+        let key_with_extra = prefetch_intent_query_key::<u8, _>(&intent_with_extra);
+        assert_ne!(key_without_extra_a.hash(), key_with_extra.hash());
     }
 
     #[test]
