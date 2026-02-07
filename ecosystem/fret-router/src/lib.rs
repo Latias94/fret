@@ -47,8 +47,9 @@ pub use route_tree::{
     RouteNode, RouteSearchValidationFailure, RouteTree, RouteTreeDiagnostics, RouteTreeError,
 };
 pub use router_state::{
-    HistoryAdapter, RouteMatchSnapshot, Router, RouterBlockReason, RouterEvent, RouterState,
-    RouterTransition, RouterTransitionCause, RouterUpdate,
+    HistoryAdapter, RouteMatchSnapshot, Router, RouterBlockReason, RouterEvent, RouterGuardContext,
+    RouterGuardDecision, RouterGuardFn, RouterState, RouterTransition, RouterTransitionCause,
+    RouterUpdate,
 };
 pub use search::{
     RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,

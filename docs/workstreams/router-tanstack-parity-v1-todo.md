@@ -49,6 +49,7 @@ Status legend:
 - `[x]` Define `RouterTransition` snapshot (portable; diagnostics-friendly).
 - `[x]` Add `RouterUpdate` return type for `navigate` / `sync`.
 - `[x]` Add `RouterEvent` queue (`Router::take_events()`).
+- `[x]` Add guard contract (block/redirect) for `Push`/`Replace`.
 - `[x]` Define `HistoryAdapter` trait and implement:
   - memory adapter (wrap `MemoryHistory`)
   - web history adapter (wrap existing `web-history`)
