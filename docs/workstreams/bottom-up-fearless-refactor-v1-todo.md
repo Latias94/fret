@@ -137,6 +137,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-render/src/text/mod.rs`
     - `crates/fret-render/src/viewport_overlay/mod.rs`
 
+- [x] BU-FR-render-034 Regroup SVG rasterization + caching under a single `svg/` subsystem module.
+  - Candidates: `svg.rs`, `svg_cache.rs`.
+  - Goal: keep SVG ownership clear and avoid adding more crate-root prefix modules as SVG grows.
+  - Evidence:
+    - `crates/fret-render/src/svg/mod.rs`
+    - `crates/fret-render/src/svg/cache.rs`
+
 ## M4 — Ecosystem rationalization
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
