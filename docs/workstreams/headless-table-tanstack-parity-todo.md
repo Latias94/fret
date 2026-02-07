@@ -133,14 +133,24 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - [x] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
     - [x] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
     - [x] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
-    - [~] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
+    - [x] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
       so UI consumers do not re-implement TanStack policies and drift.
       - [x] Sorting policy helpers are engine-owned and fixture-gated:
         `Table::{sorting_updater_tanstack,sorting_handler_updater_tanstack,toggled_column_sorting_tanstack,toggled_column_sorting_handler_tanstack}`.
         - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`,
           `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs`.
-      - [ ] Follow-up: identify additional engine-owned policies (filtering/grouping/sizing handlers) that UI
-        consumers should not re-implement.
+        - UI integration: `ecosystem/fret-ui-kit/src/declarative/table.rs` now uses the headless TanStack policy
+          (`toggle_sorting_state_handler_tanstack`) to avoid drift.
+      - [x] Filtering helpers are engine-owned:
+        - `Table::{column_filters_updater_set_value,global_filter_updater_set_value}`
+          (autoRemove semantics are in-engine).
+        - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`.
+      - [x] Grouping toggle handler helpers are engine-owned:
+        - `Table::{grouping_updater,grouping_handler_updater}`.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`grouping_handler_updater`).
+      - [x] Column resize interaction helpers are engine-owned:
+        - `Table::{started_column_resize,dragged_column_resize,ended_column_resize}`.
+        - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`.
   - Source of truth:
     - Core: `repo-ref/table/packages/table-core/src/core/*`
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`

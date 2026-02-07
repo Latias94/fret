@@ -23,11 +23,12 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
     FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
-    PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, Table, TableOptions,
-    TableState, TanStackValue, begin_column_resize, column_size, compute_grouped_u64_aggregations,
-    drag_column_resize, end_column_resize, is_column_visible, is_row_expanded, is_row_selected,
-    is_some_rows_pinned, order_column_refs_for_grouping, order_columns, pagination_bounds,
-    sort_grouped_row_indices_in_place, split_pinned_columns,
+    PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, SortToggleColumn, Table,
+    TableOptions, TableState, TanStackValue, begin_column_resize, column_size,
+    compute_grouped_u64_aggregations, drag_column_resize, end_column_resize, is_column_visible,
+    is_row_expanded, is_row_selected, is_some_rows_pinned, order_column_refs_for_grouping,
+    order_columns, pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
+    toggle_sorting_state_handler_tanstack,
 };
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
@@ -3439,10 +3440,46 @@ where
                                                                                 let mut pieces = Vec::new();
 
                                                                                 let enabled = props.enable_sorting
-                                                                                    && col.sort_cmp.is_some();
+                                                                                    && col.enable_sorting
+                                                                                    && (col.sort_cmp.is_some()
+                                                                                        || col.sort_value.is_some());
                                                                                 let col_id = col.id.clone();
                                                                                 let state_model =
                                                                                     state.clone();
+                                                                                let sort_options =
+                                                                                    TableOptions {
+                                                                                        enable_sorting: props
+                                                                                            .enable_sorting,
+                                                                                        ..TableOptions::default()
+                                                                                    };
+                                                                                let sort_toggle_column =
+                                                                                    SortToggleColumn {
+                                                                                        id: col_id.clone(),
+                                                                                        enable_sorting: col
+                                                                                            .enable_sorting,
+                                                                                        enable_multi_sort: col
+                                                                                            .enable_multi_sort,
+                                                                                        sort_desc_first: col
+                                                                                            .sort_desc_first,
+                                                                                        has_sort_value_source: col
+                                                                                            .sort_cmp
+                                                                                            .is_some()
+                                                                                            || col.sort_value.is_some(),
+                                                                                    };
+                                                                                let auto_sort_dir_desc = col
+                                                                                    .sort_value
+                                                                                    .as_ref()
+                                                                                    .and_then(|f| {
+                                                                                        data.first()
+                                                                                            .map(|r| f(r))
+                                                                                    })
+                                                                                    .map(|v| {
+                                                                                        !matches!(
+                                                                                            v,
+                                                                                            TanStackValue::String(_)
+                                                                                        )
+                                                                                    })
+                                                                                    .unwrap_or(false);
 
                                                                                 pieces.push(cx.pressable(
                                                                                     PressableProps {
@@ -3460,19 +3497,23 @@ where
                                                                                             role: Some(
                                                                                                 SemanticsRole::Button,
                                                                                             ),
-                                                                                            ..Default::default()
-                                                                                        },
                                                                                         ..Default::default()
                                                                                     },
+                                                                                    ..Default::default()
+                                                                                },
                                                                                     |cx, _| {
                                                                                         if enabled {
                                                                                             cx.pressable_update_model(
                                                                                                 &state_model,
                                                                                                 move |st| {
-                                                                                                    apply_single_sort_toggle(
-                                                                                                        st,
-                                                                                                        &col_id,
+                                                                                                    toggle_sorting_state_handler_tanstack(
+                                                                                                        &mut st.sorting,
+                                                                                                        &sort_toggle_column,
+                                                                                                        sort_options,
+                                                                                                        false,
+                                                                                                        auto_sort_dir_desc,
                                                                                                     );
+                                                                                                    st.pagination.page_index = 0;
                                                                                                 },
                                                                                             );
                                                                                         }
