@@ -618,3 +618,129 @@ cell.getIsPlaceholder
 cell.getValue
 cell.renderValue
 ```
+
+---
+
+## Checklist: public instance surfaces (WIP)
+
+This is the actionable inventory for `HTP-cap-010` / `HTP-base-004`.
+
+Rules:
+
+- Prefer **capability mapping** over method-name mapping.
+- “Aligned” means **parity-gated by fixtures** (or a dedicated unit gate for a non-JSONable invariant).
+- For handler-returning APIs, we map to **pure state transitions** (`Updater<T>` or `toggled_*` helpers).
+
+### Table instance (public, non-underscore)
+
+**Row model pipeline**
+
+- **Aligned**: `getCoreRowModel` → `Table::core_row_model()` (multiple fixtures, e.g. `demo_process.json`).
+- **Aligned**: `getPreFilteredRowModel` / `getFilteredRowModel` → `Table::{pre_filtered_row_model,filtered_row_model}` (`filtering_fns.json`).
+- **Aligned**: `getPreSortedRowModel` / `getSortedRowModel` → `Table::{pre_sorted_row_model,sorted_row_model}` (`sorting_fns.json`, `sort_undefined.json`).
+- **Aligned**: `getPreExpandedRowModel` / `getExpandedRowModel` → `Table::{pre_expanded_row_model,expanded_row_model}` (`expanding.json`).
+- **Aligned**: `getPrePaginationRowModel` / `getPaginationRowModel` / `getRowModel` → `Table::{pre_pagination_row_model,row_model}` (`pagination.json`).
+- **Aligned**: `getPreGroupedRowModel` / `getGroupedRowModel` → `Table::{pre_grouped_row_model,grouped_row_model}` (`grouping.json`).
+
+**Columns**
+
+- **Partial**: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`
+  → `Table::{column_tree,ordered_columns,column}` + `CoreModelSnapshot.column_tree/leaf_columns` (`headers_cells.json`).
+- **Aligned**: `getVisibleLeafColumns` (+ left/center/right variants)
+  → `CoreModelSnapshot.leaf_columns.{visible,left_visible,center_visible,right_visible}` (`headers_cells.json`).
+- **Partial**: `getVisibleFlatColumns` (may need a dedicated “flat column” snapshot helper).
+
+**Headers**
+
+- **Aligned**: `getHeaderGroups` (+ left/center/right) → `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` (`headers_cells.json`).
+- **Aligned**: `getFooterGroups` (+ left/center/right) → `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` (`headers_cells.json`).
+- **Aligned**: `getFlatHeaders` (+ left/center/right) → `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` (`headers_cells.json`).
+- **Aligned**: `getLeafHeaders` (+ left/center/right) → `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` (`headers_cells.json`).
+- **Aligned**: deeper nesting + hide-branch edge cases are gated by `headers_inventory_deep.json`.
+
+**Sizing**
+
+- **Aligned**: `getTotalSize` (+ left/center/right) → `Table::{total_size,left_total_size,center_total_size,right_total_size}` (`column_sizing.json`).
+- **Aligned**: `column.getStart/getAfter` equivalents → `Table::{column_start,column_after}` (`column_sizing.json`).
+- **Aligned**: `resetHeaderSizeInfo` → `Table::reset_header_size_info(default_state)` (`column_sizing.json`).
+
+**Visibility/ordering**
+
+- **Aligned**: `getIsAllColumnsVisible/getIsSomeColumnsVisible` → `Table::{is_all_columns_visible,is_some_columns_visible}` (unit gates exist; fixture gating TBD).
+- **Partial**: `getToggleAllColumnsVisibilityHandler/toggleAllColumnsVisible`
+  → `Table::toggled_all_columns_visible(visible)` (unit gate; fixture gating TBD).
+- **Aligned**: `resetColumnVisibility` / `resetColumnOrder` → `Table::{reset_column_visibility,reset_column_order}` (`resets.json`).
+
+**Selection/expanding**
+
+- **Aligned**: `getIsAllRowsSelected/getIsSomeRowsSelected/getIsAllPageRowsSelected/getIsSomePageRowsSelected`
+  → `Table::{is_all_rows_selected,is_some_rows_selected,is_all_page_rows_selected,is_some_page_rows_selected}` (`selection.json`, `selection_tree.json`).
+- **Partial**: `getToggleAllRowsSelectedHandler/toggleAllRowsSelected`
+  → `Table::toggled_all_rows_selected(value)` (selection fixtures cover outcomes; handler mapping is Rust-native).
+- **Partial**: `getToggleAllRowsExpandedHandler/toggleAllRowsExpanded`
+  → `Table::toggled_all_rows_expanded(value)` (expanding fixtures cover outcomes; handler mapping is Rust-native).
+
+**Pinning**
+
+- **Aligned**: `getTopRows/getCenterRows/getBottomRows`
+  → `Table::{top_row_keys,center_row_keys,bottom_row_keys}` + row lookup (`pinning.json`).
+- **Aligned**: `getIsSomeRowsPinned` (+ top/bottom) → `Table::is_some_rows_pinned(..)` (`pinning.json`).
+- **Aligned**: `resetRowPinning/resetColumnPinning` → `Table::{reset_row_pinning,reset_column_pinning}` (`pinning.json`, `column_pinning.json`).
+
+**State**
+
+- **Partial**: `getState`/`setState`/`setOptions` (JS instance-style API)
+  → Rust-native “pure table”: rebuild `Table` from `TableState` + `TableOptions` (gated indirectly by fixtures).
+- **Aligned**: reset surfaces (`resetSorting`, `resetColumnFilters`, `resetGlobalFilter`, `resetGrouping`, `resetPagination`, `resetRowSelection`, ...)
+  → `Table::reset_*` (feature fixtures + `resets.json`).
+
+### Column instance (public, non-underscore)
+
+Fret does not expose a first-class `Column` instance object yet. Capabilities map to:
+
+- `ColumnDef` static config (`enable_*`, sizing bounds, fn specs), plus
+- `Table::*` helper surfaces (can-* gates, pin state, sizing, filtering/sorting helper outputs),
+- and JSON fixtures that lock the observable outcomes.
+
+Initial mapping (WIP):
+
+- **Aligned**: `getCanFilter/getFilterValue/getIsFiltered/getFilterIndex/getCanGlobalFilter`
+  → `Table::{column_can_filter,column_filter_value,column_is_filtered,column_filter_index,column_can_global_filter}` (`filtering_fns.json`).
+- **Aligned**: `getCanHide/getIsVisible` → `Table::{column_can_hide,is_column_visible}` (`visibility_ordering.json`).
+- **Aligned**: `getCanPin/getIsPinned/getPinnedIndex` → `Table::{column_can_pin,column_pin_position,column_pinned_index}` (`column_pinning.json`).
+- **Aligned**: `getCanResize/getIsResizing/getSize/getStart/getAfter`
+  → `Table::{column_can_resize,is_column_resizing,column_size,column_start,column_after}` (`column_sizing.json`).
+- **Partial**: sorting instance surfaces (`getCanSort/getIsSorted/getSortIndex/getNextSortingOrder/getToggleSortingHandler/toggleSorting`)
+  → `sorting.rs` helpers (`toggle_sorting_tanstack`, `toggle_sorting_handler_tanstack`) + `TableState.sorting` (needs an explicit engine-owned helper surface and fixture gate for the “handler/policy” path).
+- **Partial**: grouping instance surfaces (`getCanGroup/getIsGrouped/getGroupedIndex/getToggleGroupingHandler/toggleGrouping`)
+  → `grouping.rs` helpers + `TableState.grouping` (fixture-gated for outcomes, but no consolidated “column instance” helper surface yet).
+- **Partial**: faceting instance surfaces (`getFaceted*`) are supported via `Table::{faceted_*}` (fixture-gated), but we do not expose them as `Column` instance methods.
+
+### Row instance (public, non-underscore)
+
+Fret does not expose a first-class `Row` instance object yet. Capabilities map to:
+
+- `RowModel` snapshots + lookup (`row_by_key`, `row_by_id`), plus
+- `Table::*` row helpers (selection/expanding/pinning) and cell snapshots.
+
+Initial mapping (WIP):
+
+- **Aligned**: `getAllCells/getVisibleCells/getLeft/Center/RightVisibleCells`
+  → `Table::row_cells(row_key)` (`headers_cells.json`).
+- **Aligned**: selection/expanding/pinning booleans + transitions (`getIsSelected/toggleSelected`, `getIsExpanded/toggleExpanded`, `getIsPinned/pin`)
+  → `Table::{row_is_selected,row_selection_updater,row_is_expanded_for_row,row_expanding_updater,row_is_pinned,row_pinning_updater}` (feature fixtures).
+- **Aligned**: `row.columnFilters` / `row.columnFiltersMeta` → `Table::row_filter_state_snapshot()` (`filtering_meta.json`).
+- **Partial**: `getValue/renderValue/getUniqueValues` instance-style value accessors (we expose the behaviors via column defs + aggregation/fallback gates).
+
+### Header instance (public, non-underscore)
+
+- **Aligned**: `colSpan/rowSpan/isPlaceholder/placeholderId/subHeaders` equivalents
+  → `HeaderSnapshot` fields (`headers_cells.json`, `headers_inventory_deep.json`).
+- **Partial**: `getResizeHandler` instance surface
+  → modeled via `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `header_size/header_start` snapshots (policy helper surface may be needed).
+
+### Cell instance (public, non-underscore)
+
+- **Aligned**: `getIsGrouped/getIsPlaceholder/getIsAggregated`
+  → `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` (`grouping_cells.json` parity).
+- **Partial**: `getValue/renderValue` (value extraction is Rust-native via column defs; fallback behavior is parity-gated by `render_fallback.json`).

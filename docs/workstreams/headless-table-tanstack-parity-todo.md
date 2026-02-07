@@ -70,6 +70,8 @@ ColumnDef keys referenced by upstream feature implementations:
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
   - Update: added a raw upstream instance member dump (table/column/row/header/cell) as an appendix in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
+  - Next: mark public surfaces vs internals, and record which internals are observable obligations
+    (memo/queue/auto-reset) even if we do not mirror the internal mechanism.
 
 ---
 
@@ -125,6 +127,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
   - Update: added a raw upstream instance member inventory appendix (table/column/row/header/cell) in
     `docs/workstreams/headless-table-tanstack-parity-capability.md` to keep the mapping work honest.
+  - Next: turn the raw upstream instance-member dump into an explicit checklist (public surfaces first),
+    with status + evidence anchors for each capability surface.
+    - [ ] HTP-cap-011 Table instance public surface checklist (`table.*`, non-underscore).
+    - [ ] HTP-cap-012 Column instance capability checklist (`column.*`, non-underscore).
+    - [ ] HTP-cap-013 Row instance capability checklist (`row.*`, non-underscore).
+    - [ ] HTP-cap-014 Header + cell instance capability checklist (`header.*`, `cell.*`).
+    - [ ] HTP-cap-015 Identify “policy helpers” that should be engine-owned (sorting/filtering/grouping/resize handlers)
+      so UI consumers do not re-implement TanStack policies and drift.
   - Source of truth:
     - Core: `repo-ref/table/packages/table-core/src/core/*`
     - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
