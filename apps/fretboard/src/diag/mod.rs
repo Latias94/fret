@@ -7141,6 +7141,122 @@ mod tests {
     }
 
     #[test]
+    fn bundle_stats_aggregates_query_snapshot_entries() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Loading",
+                                        "stale": false,
+                                        "inflight": { "attempt": 1 }
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 1,
+                                    "invalidation_walk_nodes": 1,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "changed_models": [],
+                            "changed_globals": [],
+                            "query_snapshot": {
+                                "entries": [
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Success",
+                                        "stale": true,
+                                        "retry": { "next_retry_at_unix_ms": 1000 }
+                                    },
+                                    {
+                                        "namespace": "todos",
+                                        "status": "Error",
+                                        "stale": false,
+                                        "retry": { "next_retry_at_unix_ms": 2000 }
+                                    },
+                                    {
+                                        "namespace": "users",
+                                        "status": "Idle",
+                                        "stale": false
+                                    }
+                                ]
+                            },
+                            "debug": {
+                                "stats": {
+                                    "invalidation_walk_calls": 2,
+                                    "invalidation_walk_nodes": 2,
+                                    "model_change_invalidation_roots": 0,
+                                    "global_change_invalidation_roots": 0
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let report = bundle_stats_from_json_with_options(
+            &bundle,
+            3,
+            BundleStatsSort::Invalidation,
+            BundleStatsOptions::default(),
+        )
+        .unwrap();
+
+        assert_eq!(report.snapshots_with_query_snapshot, 2);
+        assert_eq!(report.query_entries_total, 4);
+        assert_eq!(report.query_entries_stale, 1);
+        assert_eq!(report.query_entries_inflight, 1);
+        assert_eq!(report.query_entries_idle, 1);
+        assert_eq!(report.query_entries_loading, 1);
+        assert_eq!(report.query_entries_success, 1);
+        assert_eq!(report.query_entries_error, 1);
+        assert_eq!(report.query_entries_retry_pending, 2);
+
+        let report_json = report.to_json();
+        assert_eq!(
+            report_json["snapshots_with_query_snapshot"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(report_json["sum"]["query_entries_total"].as_u64(), Some(4));
+        assert_eq!(report_json["sum"]["query_entries_stale"].as_u64(), Some(1));
+        assert_eq!(
+            report_json["sum"]["query_entries_inflight"].as_u64(),
+            Some(1)
+        );
+        assert_eq!(
+            report_json["sum"]["query_entries_retry_pending"].as_u64(),
+            Some(2)
+        );
+        assert_eq!(
+            report_json["query_namespace_hotspots"][0]["namespace"],
+            "todos"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][0]["count"], 3);
+        assert_eq!(
+            report_json["query_namespace_hotspots"][1]["namespace"],
+            "users"
+        );
+        assert_eq!(report_json["query_namespace_hotspots"][1]["count"], 1);
+    }
+    #[test]
     fn json_pointer_set_updates_object_field() {
         let mut v = json!({
             "steps": [

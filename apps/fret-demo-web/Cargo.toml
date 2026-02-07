@@ -23,6 +23,7 @@ cjk-lite-fonts = ["fret-launch/wasm-cjk-lite-fonts"]
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-examples = { path = "../fret-examples" }
 fret-ui-gallery = { path = "../fret-ui-gallery" }
+fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing"] }
 fret-launch = { path = "../../crates/fret-launch" }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"

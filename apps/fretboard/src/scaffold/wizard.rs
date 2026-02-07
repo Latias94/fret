@@ -4,10 +4,7 @@ use std::path::PathBuf;
 use crate::cli::workspace_root;
 
 use super::fs::sanitize_package_name;
-use super::{
-    IconPack, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at, init_todo_at,
-    init_todo_mvu_at,
-};
+use super::{IconPack, NewTemplate, ScaffoldOptions, init_empty_at, init_hello_at, init_todo_at};
 
 pub(super) fn new_wizard() -> Result<(), String> {
     if !std::io::stdin().is_terminal() {
@@ -28,7 +25,6 @@ pub(super) fn new_wizard() -> Result<(), String> {
             ("empty", NewTemplate::Empty),
             ("hello", NewTemplate::Hello),
             ("todo", NewTemplate::Todo),
-            ("todo-mvu", NewTemplate::TodoMvu),
         ],
         1,
     )?;
@@ -37,7 +33,6 @@ pub(super) fn new_wizard() -> Result<(), String> {
         NewTemplate::Empty => "my-app",
         NewTemplate::Hello => "hello-world",
         NewTemplate::Todo => "todo-app",
-        NewTemplate::TodoMvu => "todo-mvu-app",
     };
 
     let name_raw = prompt_line("Package name", Some(default_name))?;
@@ -69,9 +64,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
     };
 
     let ui_assets = match template {
-        NewTemplate::Todo | NewTemplate::TodoMvu => {
-            prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?
-        }
+        NewTemplate::Todo => prompt_yes_no("Enable UI assets cache? (--ui-assets)", false)?,
         _ => false,
     };
 
@@ -90,7 +83,7 @@ pub(super) fn new_wizard() -> Result<(), String> {
         println!("  icons:    {}", opts.icon_pack.as_str());
         println!("  palette:  {}", opts.command_palette);
     }
-    if matches!(template, NewTemplate::Todo | NewTemplate::TodoMvu) {
+    if matches!(template, NewTemplate::Todo) {
         println!("  ui-assets: {}", opts.ui_assets);
     }
     println!();
@@ -103,7 +96,6 @@ pub(super) fn new_wizard() -> Result<(), String> {
         NewTemplate::Empty => init_empty_at(&out_dir, &package_name),
         NewTemplate::Hello => init_hello_at(&root, &out_dir, &package_name, opts),
         NewTemplate::Todo => init_todo_at(&root, &out_dir, &package_name, opts),
-        NewTemplate::TodoMvu => init_todo_mvu_at(&root, &out_dir, &package_name, opts),
     }
 }
 

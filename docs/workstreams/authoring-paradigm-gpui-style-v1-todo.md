@@ -149,6 +149,8 @@ Tasks:
 - `[x]` Add a lint-style checklist or CI grep gate for `"strip_prefix(\"...\""` patterns in demos.
   - Evidence: `.github/workflows/consistency-checks.yml`
   - Evidence: `tools/check_stringly_command_parsing.ps1`
-- `[ ]` Document a view-cache-safe pattern for dynamic command routing.
+- `[x]` Document a view-cache-safe pattern for dynamic command routing.
   - Motivation: `MessageRouter` is per-frame and view-cache reuse can skip subtree re-builds.
-  - Goal: a recommended stable `CommandId` → message lookup for cached subtrees.
+  - Goal: a recommended stable `CommandId` -> message lookup for cached subtrees.
+  - Evidence: `docs/workstreams/state-management-v1.md` (`KeyedMessageRouter` recommendation + routing table)
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (keyed routing helpers for data grid rows)

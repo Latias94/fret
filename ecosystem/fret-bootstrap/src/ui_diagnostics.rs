@@ -3,6 +3,7 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
+use fret_query::{QueryClientSnapshot, QuerySnapshotEntry};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -1958,7 +1959,7 @@ impl UiDiagnosticsService {
                             step_index,
                             remaining_frames: timeout_frames,
                             phase: 0,
-                            last_drag_x: None,
+                            last_drag_axis: None,
                         },
                     };
 
@@ -1974,23 +1975,178 @@ impl UiDiagnosticsService {
                             output.request_redraw = true;
                         } else {
                             let bounds = node.bounds;
-                            let left = bounds.origin.x.0;
-                            let width = bounds.size.width.0.max(0.0);
-                            let right = left + width;
+                            let center = center_of_rect(bounds);
+                            let axis = if bounds.size.width.0 >= bounds.size.height.0 {
+                                fret_core::Axis::Horizontal
+                            } else {
+                                fret_core::Axis::Vertical
+                            };
+                            let (axis_origin, axis_len, cross_center) = match axis {
+                                fret_core::Axis::Horizontal => {
+                                    (bounds.origin.x.0, bounds.size.width.0.max(0.0), center.y.0)
+                                }
+                                fret_core::Axis::Vertical => {
+                                    (bounds.origin.y.0, bounds.size.height.0.max(0.0), center.x.0)
+                                }
+                            };
                             let span = (max - min).abs().max(0.0001);
 
-                            let clamp_x = |x: f32| {
-                                let pad = 2.0_f32;
-                                x.clamp(left + pad, right - pad)
+                            #[derive(Debug, Clone, Copy)]
+                            struct ThumbGeom {
+                                thumb_r: f32,
+                                center_axis: f32,
+                                center_cross: f32,
+                                min_at_axis_start: bool,
+                            }
+
+                            let thumb_geom = || -> Option<ThumbGeom> {
+                                let mut by_id: HashMap<u64, &fret_core::SemanticsNode> =
+                                    HashMap::new();
+                                let mut children: HashMap<u64, Vec<u64>> = HashMap::new();
+                                for n in &snapshot.nodes {
+                                    let id = n.id.data().as_ffi();
+                                    by_id.insert(id, n);
+                                    if let Some(parent) = n.parent {
+                                        children
+                                            .entry(parent.data().as_ffi())
+                                            .or_default()
+                                            .push(id);
+                                    }
+                                }
+
+                                let mut subtree: HashSet<u64> = HashSet::new();
+                                collect_subtree_ids(
+                                    node.id.data().as_ffi(),
+                                    &children,
+                                    &mut subtree,
+                                );
+
+                                let mut best: Option<(ThumbGeom, f32)> = None;
+                                for id in subtree.iter().copied() {
+                                    let Some(candidate) = by_id.get(&id).copied() else {
+                                        continue;
+                                    };
+                                    if candidate.role != fret_core::SemanticsRole::Slider {
+                                        continue;
+                                    }
+                                    let Some(candidate_value) = candidate
+                                        .value
+                                        .as_deref()
+                                        .and_then(parse_semantics_numeric_value)
+                                    else {
+                                        continue;
+                                    };
+
+                                    let candidate_bounds = candidate.bounds;
+                                    let (thumb_size, center_axis, center_cross) = match axis {
+                                        fret_core::Axis::Horizontal => (
+                                            candidate_bounds.size.width.0.max(0.0),
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                        ),
+                                        fret_core::Axis::Vertical => (
+                                            candidate_bounds.size.height.0.max(0.0),
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                        ),
+                                    };
+                                    let thumb_r = (thumb_size * 0.5).max(0.0);
+
+                                    // Infer direction by comparing the thumb's normalized position
+                                    // to the observed value. This lets the diagnostics script set
+                                    // values for RTL / inverted / vertical sliders without hard
+                                    // coding a direction rule.
+                                    let usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                    let observed_t =
+                                        ((candidate_value - min) / span).clamp(0.0, 1.0);
+                                    let pointer_t = if usable_len > 0.0 {
+                                        ((center_axis - axis_origin - thumb_r) / usable_len)
+                                            .clamp(0.0, 1.0)
+                                    } else {
+                                        0.0
+                                    };
+                                    let min_at_axis_start = (pointer_t - observed_t).abs()
+                                        <= (pointer_t - (1.0 - observed_t)).abs();
+
+                                    let geom = ThumbGeom {
+                                        thumb_r,
+                                        center_axis,
+                                        center_cross,
+                                        min_at_axis_start,
+                                    };
+                                    let score = (candidate_value - value).abs();
+                                    match best {
+                                        None => best = Some((geom, score)),
+                                        Some((_, best_score)) if score < best_score => {
+                                            best = Some((geom, score))
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                best.map(|(geom, _)| geom)
                             };
-                            let target_t = ((value - min) / span).clamp(0.0, 1.0);
+
+                            let mut thumb_r = 0.0_f32;
+                            let mut usable_len = axis_len;
+                            let mut min_at_axis_start = true;
+                            let mut start_axis_default = match axis {
+                                fret_core::Axis::Horizontal => center.x.0,
+                                fret_core::Axis::Vertical => center.y.0,
+                            };
+                            let mut cross = cross_center;
+
+                            if let Some(thumb) = thumb_geom() {
+                                thumb_r = thumb.thumb_r;
+                                usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                min_at_axis_start = thumb.min_at_axis_start;
+                                start_axis_default = thumb.center_axis;
+                                cross = thumb.center_cross;
+                            }
+
+                            let clamp_axis = |pos: f32| {
+                                let pad = 2.0_f32;
+                                let min_pos = axis_origin + thumb_r + pad;
+                                let max_pos = axis_origin + axis_len - thumb_r - pad;
+                                if max_pos >= min_pos {
+                                    pos.clamp(min_pos, max_pos)
+                                } else {
+                                    pos
+                                }
+                            };
+
+                            let axis_point = |axis_pos: f32| match axis {
+                                fret_core::Axis::Horizontal => {
+                                    Point::new(fret_core::Px(axis_pos), fret_core::Px(cross))
+                                }
+                                fret_core::Axis::Vertical => {
+                                    Point::new(fret_core::Px(cross), fret_core::Px(axis_pos))
+                                }
+                            };
+
+                            let axis_pos_for_value = |desired: f32| {
+                                let value_t = ((desired - min) / span).clamp(0.0, 1.0);
+                                let pointer_t = if min_at_axis_start {
+                                    value_t
+                                } else {
+                                    1.0 - value_t
+                                };
+                                if usable_len > 0.0 {
+                                    axis_origin + thumb_r + usable_len * pointer_t
+                                } else {
+                                    axis_origin + axis_len * pointer_t
+                                }
+                            };
 
                             if state.phase == 0 {
-                                let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect_clamped_to_rect(bounds, window_bounds);
-                                let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                let start = Point::new(fret_core::Px(start_x), start.y);
-                                let end = Point::new(fret_core::Px(x), start.y);
+                                let axis_pos = clamp_axis(axis_pos_for_value(value));
+                                let start_axis = state.last_drag_axis.unwrap_or(start_axis_default);
+                                let start = axis_point(start_axis);
+                                let end = axis_point(axis_pos);
                                 output.events.extend(drag_events(
                                     start,
                                     end,
@@ -1998,7 +2154,7 @@ impl UiDiagnosticsService {
                                     drag_steps.max(1),
                                 ));
                                 state.phase = 1;
-                                state.last_drag_x = Some(x);
+                                state.last_drag_axis = Some(axis_pos);
                                 active.v2_step_state = Some(V2StepState::SetSliderValue(state));
                                 output.request_redraw = true;
                             } else {
@@ -2027,20 +2183,20 @@ impl UiDiagnosticsService {
                                         output.request_redraw = true;
                                     } else {
                                         let error = value - observed;
-                                        let dx = (error / span) * width;
-                                        let start =
-                                            center_of_rect_clamped_to_rect(bounds, window_bounds);
-                                        let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                        let end_x = clamp_x(start_x + dx);
-                                        let start = Point::new(fret_core::Px(start_x), start.y);
-                                        let end = Point::new(fret_core::Px(end_x), start.y);
+                                        let direction = if min_at_axis_start { 1.0 } else { -1.0 };
+                                        let dx = (error / span) * usable_len * direction;
+                                        let start_axis =
+                                            state.last_drag_axis.unwrap_or(start_axis_default);
+                                        let end_axis = clamp_axis(start_axis + dx);
+                                        let start = axis_point(start_axis);
+                                        let end = axis_point(end_axis);
                                         output.events.extend(drag_events(
                                             start,
                                             end,
                                             UiMouseButtonV1::Left,
                                             drag_steps.max(1),
                                         ));
-                                        state.last_drag_x = Some(end_x);
+                                        state.last_drag_axis = Some(end_axis);
                                         state.remaining_frames =
                                             state.remaining_frames.saturating_sub(1);
                                         active.v2_step_state =
@@ -2656,12 +2812,19 @@ impl UiDiagnosticsService {
             .as_ref()
             .and_then(|provider| provider(app, window));
 
+        let snapshot_unix_ms = unix_ms_now();
+
+        let query_snapshot = app
+            .global::<fret_query::QueryClient>()
+            .map(fret_query::QueryClient::snapshot)
+            .map(|snapshot| ui_query_snapshot_from_runtime(snapshot, snapshot_unix_ms));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
             frame_id: app.frame_id().0,
             window: window.data().as_ffi(),
-            timestamp_unix_ms: unix_ms_now(),
+            timestamp_unix_ms: snapshot_unix_ms,
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
@@ -2673,6 +2836,7 @@ impl UiDiagnosticsService {
             changed_model_sources_top,
             resource_caches,
             app_snapshot,
+            query_snapshot,
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -3247,6 +3411,9 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_snapshot: Option<serde_json::Value>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query_snapshot: Option<UiQuerySnapshotV1>,
+
     pub debug: UiTreeDebugSnapshotV1,
 }
 
@@ -3265,6 +3432,67 @@ pub struct UiResourceCachesV1 {
     pub canvas: Vec<UiCanvasCacheEntryV1>,
     #[serde(default)]
     pub render_text: Option<UiRendererTextPerfSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotV1 {
+    pub captured_at_unix_ms: u64,
+    pub entries: Vec<UiQuerySnapshotEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotEntryV1 {
+    pub namespace: String,
+    pub hash: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debug_label: Option<String>,
+    pub type_name: String,
+    pub model_id: u64,
+    pub stale: bool,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inflight: Option<u64>,
+    pub policy: UiQueryPolicyV1,
+    pub retry: UiQueryRetryV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryPolicyV1 {
+    pub stale_time_ms: u64,
+    pub cache_time_ms: u64,
+    pub dedupe_inflight: bool,
+    pub keep_previous_data_while_loading: bool,
+    pub cancel_mode: String,
+    pub retry_policy: UiQueryRetryPolicyV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryPolicyV1 {
+    pub kind: String,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_delay_ms: Option<u64>,
+    pub retry_on: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryV1 {
+    pub failures: u32,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_retry_at_unix_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -3449,26 +3677,14 @@ pub struct UiCacheKindSnapshotV1 {
 
 #[cfg(feature = "preload-icon-svgs")]
 fn icon_svg_cache_stats(app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
-    let cache = app.global::<crate::icon_preload::PreloadedIconSvgCache>()?;
-    let (entries, bytes_ready, stats) = cache.diagnostics_snapshot();
+    let diagnostics = app.global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()?;
     Some(UiRetainedSvgCacheStatsV1 {
-        entries,
-        bytes_ready,
+        entries: diagnostics.entries,
+        bytes_ready: diagnostics.bytes_ready,
         stats: UiCacheStatsV1 {
-            get_calls: stats.get_calls,
-            get_hits: stats.get_hits,
-            get_misses: stats.get_misses,
-            prepare_calls: stats.prepare_calls,
-            prepare_hits: stats.prepare_hits,
-            prepare_misses: stats.prepare_misses,
-            prune_calls: stats.prune_calls,
-            clear_calls: stats.clear_calls,
-            evict_calls: stats.evict_calls,
-            release_replaced: stats.release_replaced,
-            release_prune_age: stats.release_prune_age,
-            release_prune_budget: stats.release_prune_budget,
-            release_clear: stats.release_clear,
-            release_evict: stats.release_evict,
+            prepare_calls: diagnostics.register_calls,
+            prepare_misses: diagnostics.register_calls,
+            ..UiCacheStatsV1::default()
         },
     })
 }
@@ -4296,7 +4512,7 @@ struct V2SetSliderValueState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
-    last_drag_x: Option<f32>,
+    last_drag_axis: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -10916,6 +11132,84 @@ mod tests {
     }
 
     #[test]
+    fn query_snapshot_is_serializable_for_bundle() {
+        let model_id = ModelId::from(KeyData::from_ffi(7));
+        let model_id_ffi = model_id.data().as_ffi();
+
+        let snapshot = QueryClientSnapshot {
+            captured_at: fret_core::time::Instant::now(),
+            entries: vec![QuerySnapshotEntry {
+                namespace: "test.query.v1",
+                hash: 42,
+                debug_label: Some("demo"),
+                type_name: "u32",
+                model_id,
+                policy: fret_query::QueryPolicy {
+                    stale_time: std::time::Duration::from_secs(2),
+                    cache_time: std::time::Duration::from_secs(60),
+                    dedupe_inflight: true,
+                    keep_previous_data_while_loading: true,
+                    cancel_mode: fret_query::QueryCancelMode::CancelInFlight,
+                    retry: fret_query::QueryRetryPolicy::fixed(
+                        2,
+                        std::time::Duration::from_millis(50),
+                    ),
+                },
+                stale: false,
+                status: fret_query::QueryStatus::Success,
+                inflight: None,
+                last_used: fret_core::time::Instant::now(),
+                last_observed_frame: Some(fret_core::FrameId(9)),
+                updated_at: None,
+                last_duration: Some(std::time::Duration::from_millis(8)),
+                retry: fret_query::QueryRetryState {
+                    failures: 0,
+                    max_retries: 2,
+                    next_retry_at: None,
+                },
+                last_error_kind: None,
+                last_error_message: None,
+            }],
+        };
+
+        let ui_snapshot = ui_query_snapshot_from_runtime(snapshot, 1234);
+        let json = serde_json::to_value(&ui_snapshot).expect("query snapshot should serialize");
+
+        assert_eq!(
+            json.get("captured_at_unix_ms").and_then(|v| v.as_u64()),
+            Some(1234)
+        );
+        let entries = json
+            .get("entries")
+            .and_then(|v| v.as_array())
+            .expect("entries should be array");
+        assert_eq!(entries.len(), 1);
+
+        let entry = &entries[0];
+        assert_eq!(
+            entry.get("namespace").and_then(|v| v.as_str()),
+            Some("test.query.v1")
+        );
+        assert_eq!(entry.get("hash").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            entry.get("model_id").and_then(|v| v.as_u64()),
+            Some(model_id_ffi)
+        );
+        assert_eq!(
+            entry.get("status").and_then(|v| v.as_str()),
+            Some("Success")
+        );
+        assert_eq!(
+            entry
+                .get("policy")
+                .and_then(|v| v.get("retry_policy"))
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str()),
+            Some("fixed")
+        );
+    }
+
+    #[test]
     fn hit_test_snapshot_exposes_focus_barrier_root() {
         let position = Point::new(Px(1.0), Px(2.0));
         let hit_test = UiDebugHitTest {
@@ -10944,6 +11238,23 @@ mod tests {
                 .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
         );
     }
+
+    #[cfg(feature = "preload-icon-svgs")]
+    #[test]
+    fn icon_svg_cache_stats_reads_preload_diagnostics() {
+        let mut app = App::new();
+        app.set_global(fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics {
+            entries: 12,
+            bytes_ready: 3456,
+            register_calls: 12,
+        });
+
+        let stats = icon_svg_cache_stats(&app).expect("expected preload diagnostics");
+        assert_eq!(stats.entries, 12);
+        assert_eq!(stats.bytes_ready, 3456);
+        assert_eq!(stats.stats.prepare_calls, 12);
+        assert_eq!(stats.stats.prepare_misses, 12);
+    }
 }
 
 fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
@@ -10953,6 +11264,103 @@ fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default()
+}
+
+fn ui_query_snapshot_from_runtime(
+    snapshot: QueryClientSnapshot,
+    now_unix_ms: u64,
+) -> UiQuerySnapshotV1 {
+    UiQuerySnapshotV1 {
+        captured_at_unix_ms: now_unix_ms,
+        entries: snapshot
+            .entries
+            .into_iter()
+            .map(|entry| ui_query_snapshot_entry_from_runtime(entry))
+            .collect(),
+    }
+}
+
+fn ui_query_snapshot_entry_from_runtime(entry: QuerySnapshotEntry) -> UiQuerySnapshotEntryV1 {
+    UiQuerySnapshotEntryV1 {
+        namespace: entry.namespace.to_string(),
+        hash: entry.hash,
+        debug_label: entry.debug_label.map(ToString::to_string),
+        type_name: entry.type_name.to_string(),
+        model_id: entry.model_id.data().as_ffi(),
+        stale: entry.stale,
+        status: format!("{:?}", entry.status),
+        inflight: entry.inflight,
+        policy: UiQueryPolicyV1 {
+            stale_time_ms: duration_millis_u64(entry.policy.stale_time),
+            cache_time_ms: duration_millis_u64(entry.policy.cache_time),
+            dedupe_inflight: entry.policy.dedupe_inflight,
+            keep_previous_data_while_loading: entry.policy.keep_previous_data_while_loading,
+            cancel_mode: format!("{:?}", entry.policy.cancel_mode),
+            retry_policy: match entry.policy.retry {
+                fret_query::QueryRetryPolicy::None => UiQueryRetryPolicyV1 {
+                    kind: "none".to_string(),
+                    max_retries: 0,
+                    delay_ms: None,
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: "transient".to_string(),
+                },
+                fret_query::QueryRetryPolicy::Fixed {
+                    max_retries,
+                    delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "fixed".to_string(),
+                    max_retries,
+                    delay_ms: Some(duration_millis_u64(delay)),
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+                fret_query::QueryRetryPolicy::Exponential {
+                    max_retries,
+                    base_delay,
+                    max_delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "exponential".to_string(),
+                    max_retries,
+                    delay_ms: None,
+                    base_delay_ms: Some(duration_millis_u64(base_delay)),
+                    max_delay_ms: Some(duration_millis_u64(max_delay)),
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+            },
+        },
+        retry: UiQueryRetryV1 {
+            failures: entry.retry.failures,
+            max_retries: entry.retry.max_retries,
+            next_retry_at_unix_ms: entry.retry.next_retry_at.and_then(instant_to_unix_ms),
+        },
+        last_error_kind: entry
+            .last_error_kind
+            .map(|kind| format!("{:?}", kind).to_ascii_lowercase()),
+        last_error_message: entry.last_error_message.map(|message| message.to_string()),
+        updated_at_unix_ms: entry.updated_at.and_then(instant_to_unix_ms),
+        last_duration_ms: entry.last_duration.map(duration_millis_u64),
+    }
+}
+
+fn duration_millis_u64(duration: std::time::Duration) -> u64 {
+    duration.as_millis().min(u128::from(u64::MAX)) as u64
+}
+
+fn instant_to_unix_ms(instant: std::time::Instant) -> Option<u64> {
+    let now_instant = std::time::Instant::now();
+    let now_unix_ms = unix_ms_now();
+
+    if instant >= now_instant {
+        let delta = instant.duration_since(now_instant);
+        return now_unix_ms.checked_add(duration_millis_u64(delta));
+    }
+
+    let delta = now_instant.duration_since(instant);
+    now_unix_ms.checked_sub(duration_millis_u64(delta))
 }
 
 trait PointerEventExt {

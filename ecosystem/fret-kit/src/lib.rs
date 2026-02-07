@@ -82,7 +82,7 @@ pub mod prelude {
     };
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::mvu::{MessageRouter, Program as MvuProgram};
+    pub use crate::mvu::{KeyedMessageRouter, MessageRouter, Program as MvuProgram};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop;

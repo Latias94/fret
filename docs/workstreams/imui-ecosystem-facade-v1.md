@@ -47,6 +47,7 @@ Status snapshot (2026-02-06):
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- State integration note: `docs/workstreams/imui-state-integration-v1.md`
 - v2 follow-up: `docs/workstreams/imui-ecosystem-facade-v2.md`
 - v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
 - Perf guide: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`

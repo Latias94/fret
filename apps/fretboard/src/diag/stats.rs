@@ -156,6 +156,7 @@ pub(super) struct BundleStatsReport {
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     pub(super) snapshots_with_hover_layout_invalidations: u32,
+    pub(super) snapshots_with_query_snapshot: u32,
     /// Whether the bundle includes `pointer.move` events (so the derived “pointer move” frame set
     /// can be identified from the event log rather than inferred from dispatch-only frames).
     pub(super) pointer_move_frames_present: bool,
@@ -188,6 +189,14 @@ pub(super) struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     pub(super) sum_hover_layout_invalidations: u64,
+    pub(super) query_entries_total: u64,
+    pub(super) query_entries_stale: u64,
+    pub(super) query_entries_inflight: u64,
+    pub(super) query_entries_idle: u64,
+    pub(super) query_entries_loading: u64,
+    pub(super) query_entries_success: u64,
+    pub(super) query_entries_error: u64,
+    pub(super) query_entries_retry_pending: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
@@ -200,6 +209,7 @@ pub(super) struct BundleStatsReport {
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
+    query_namespace_hotspots: Vec<BundleStatsQueryNamespaceHotspot>,
     pub(super) top: Vec<BundleStatsSnapshotRow>,
 }
 
@@ -552,6 +562,12 @@ struct BundleStatsModelSourceHotspot {
     count: u64,
 }
 
+#[derive(Debug, Default, Clone)]
+struct BundleStatsQueryNamespaceHotspot {
+    namespace: String,
+    count: u64,
+}
+
 impl BundleStatsReport {
     pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
@@ -612,6 +628,20 @@ impl BundleStatsReport {
                 self.snapshots_with_hover_layout_invalidations
             );
         }
+        if self.snapshots_with_query_snapshot > 0 || self.query_entries_total > 0 {
+            println!(
+                "query snapshots: frames_with_query_snapshot={} entries(total/stale/inflight)={}/{}/{} status(idle/loading/success/error)={}/{}/{}/{} retry_pending={}",
+                self.snapshots_with_query_snapshot,
+                self.query_entries_total,
+                self.query_entries_stale,
+                self.query_entries_inflight,
+                self.query_entries_idle,
+                self.query_entries_loading,
+                self.query_entries_success,
+                self.query_entries_error,
+                self.query_entries_retry_pending
+            );
+        }
 
         if !self.global_type_hotspots.is_empty() {
             let items: Vec<String> = self
@@ -628,6 +658,14 @@ impl BundleStatsReport {
                 .map(|h| format!("{}={}", h.source, h.count))
                 .collect();
             println!("changed_models_top: {}", items.join(" | "));
+        }
+        if !self.query_namespace_hotspots.is_empty() {
+            let items: Vec<String> = self
+                .query_namespace_hotspots
+                .iter()
+                .map(|h| format!("{}={}", h.namespace, h.count))
+                .collect();
+            println!("query_namespaces_top: {}", items.join(" | "));
         }
 
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -1198,6 +1236,10 @@ impl BundleStatsReport {
             "snapshots_with_hover_layout_invalidations".to_string(),
             Value::from(self.snapshots_with_hover_layout_invalidations),
         );
+        root.insert(
+            "snapshots_with_query_snapshot".to_string(),
+            Value::from(self.snapshots_with_query_snapshot),
+        );
 
         root.insert(
             "pointer_move".to_string(),
@@ -1265,6 +1307,38 @@ impl BundleStatsReport {
         sum.insert(
             "hover_layout_invalidations".to_string(),
             Value::from(self.sum_hover_layout_invalidations),
+        );
+        sum.insert(
+            "query_entries_total".to_string(),
+            Value::from(self.query_entries_total),
+        );
+        sum.insert(
+            "query_entries_stale".to_string(),
+            Value::from(self.query_entries_stale),
+        );
+        sum.insert(
+            "query_entries_inflight".to_string(),
+            Value::from(self.query_entries_inflight),
+        );
+        sum.insert(
+            "query_entries_idle".to_string(),
+            Value::from(self.query_entries_idle),
+        );
+        sum.insert(
+            "query_entries_loading".to_string(),
+            Value::from(self.query_entries_loading),
+        );
+        sum.insert(
+            "query_entries_success".to_string(),
+            Value::from(self.query_entries_success),
+        );
+        sum.insert(
+            "query_entries_error".to_string(),
+            Value::from(self.query_entries_error),
+        );
+        sum.insert(
+            "query_entries_retry_pending".to_string(),
+            Value::from(self.query_entries_retry_pending),
         );
         root.insert("sum".to_string(), Value::Object(sum));
 
@@ -1334,6 +1408,21 @@ impl BundleStatsReport {
         root.insert(
             "model_source_hotspots".to_string(),
             Value::Array(model_source_hotspots),
+        );
+
+        let query_namespace_hotspots = self
+            .query_namespace_hotspots
+            .iter()
+            .map(|h| {
+                let mut obj = Map::new();
+                obj.insert("namespace".to_string(), Value::from(h.namespace.clone()));
+                obj.insert("count".to_string(), Value::from(h.count));
+                Value::Object(obj)
+            })
+            .collect::<Vec<_>>();
+        root.insert(
+            "query_namespace_hotspots".to_string(),
+            Value::Array(query_namespace_hotspots),
         );
 
         let top = self
@@ -2931,7 +3020,7 @@ fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value)
 }
 
 fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
-    // Higher is “more useful for debugging”.
+    // Higher is 鈥渕ore useful for debugging鈥?
     let mut score: u64 = 0;
     if node.get("test_id").and_then(|v| v.as_str()).is_some() {
         score += 10_000;
@@ -6731,6 +6820,8 @@ pub(super) fn bundle_stats_from_json_with_options(
         std::collections::HashMap::new();
     let mut model_source_counts: std::collections::HashMap<String, u64> =
         std::collections::HashMap::new();
+    let mut query_namespace_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let pointer_move_frame_ids: HashSet<u64> = w
@@ -6810,6 +6901,56 @@ pub(super) fn bundle_stats_from_json_with_options(
                     let count = item.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
                     let key = format!("{}@{}:{}:{}", type_name, file, line, column);
                     *model_source_counts.entry(key).or_insert(0) += count;
+                }
+            }
+
+            if let Some(query_entries) = s
+                .get("query_snapshot")
+                .and_then(|v| v.get("entries"))
+                .and_then(|v| v.as_array())
+            {
+                out.snapshots_with_query_snapshot =
+                    out.snapshots_with_query_snapshot.saturating_add(1);
+                for entry in query_entries {
+                    out.query_entries_total = out.query_entries_total.saturating_add(1);
+                    if entry
+                        .get("stale")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        out.query_entries_stale = out.query_entries_stale.saturating_add(1);
+                    }
+                    if entry.get("inflight").is_some_and(|v| !v.is_null()) {
+                        out.query_entries_inflight = out.query_entries_inflight.saturating_add(1);
+                    }
+                    match entry.get("status").and_then(|v| v.as_str()) {
+                        Some("Idle") => {
+                            out.query_entries_idle = out.query_entries_idle.saturating_add(1);
+                        }
+                        Some("Loading") => {
+                            out.query_entries_loading = out.query_entries_loading.saturating_add(1);
+                        }
+                        Some("Success") => {
+                            out.query_entries_success = out.query_entries_success.saturating_add(1);
+                        }
+                        Some("Error") => {
+                            out.query_entries_error = out.query_entries_error.saturating_add(1);
+                        }
+                        _ => {}
+                    }
+                    if entry
+                        .get("retry")
+                        .and_then(|v| v.get("next_retry_at_unix_ms"))
+                        .is_some_and(|v| !v.is_null())
+                    {
+                        out.query_entries_retry_pending =
+                            out.query_entries_retry_pending.saturating_add(1);
+                    }
+                    if let Some(namespace) = entry.get("namespace").and_then(|v| v.as_str()) {
+                        *query_namespace_counts
+                            .entry(namespace.to_string())
+                            .or_insert(0) += 1;
+                    }
                 }
             }
 
@@ -8178,6 +8319,18 @@ pub(super) fn bundle_stats_from_json_with_options(
     model_hotspots.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.source.cmp(&b.source)));
     model_hotspots.truncate(top);
     out.model_source_hotspots = model_hotspots;
+
+    let mut query_hotspots: Vec<BundleStatsQueryNamespaceHotspot> = query_namespace_counts
+        .into_iter()
+        .map(|(namespace, count)| BundleStatsQueryNamespaceHotspot { namespace, count })
+        .collect();
+    query_hotspots.sort_by(|a, b| {
+        b.count
+            .cmp(&a.count)
+            .then_with(|| a.namespace.cmp(&b.namespace))
+    });
+    query_hotspots.truncate(8);
+    out.query_namespace_hotspots = query_hotspots;
 
     out.top = rows.into_iter().take(top).collect();
     Ok(out)

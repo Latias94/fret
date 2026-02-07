@@ -14,6 +14,11 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_query::{QueryPolicy, with_query_client};
+use fret_router::{
+    NamespaceInvalidationRule, RouteChangePolicy, RouteLocation, collect_invalidated_namespaces,
+    route_query_key,
+};
 use fret_runtime::{
     MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailability,
     WindowCommandAvailabilityService, WindowCommandEnabledService,
@@ -47,6 +52,66 @@ use crate::harness::{
 };
 use crate::spec::*;
 use crate::ui;
+
+const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
+const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct UiGalleryPagePrefetchSeed {
+    selected_page: Arc<str>,
+}
+
+fn route_location_for_page(page: &Arc<str>) -> RouteLocation {
+    RouteLocation::from_path("/gallery")
+        .with_query_value("page", Some(page.to_string()))
+        .with_query_value("source", Some("nav".to_string()))
+}
+
+fn apply_route_query_side_effects(
+    app: &mut App,
+    window: AppWindowId,
+    previous_page: Option<Arc<str>>,
+    current_page: Arc<str>,
+) {
+    let previous_route = previous_page
+        .as_ref()
+        .map(route_location_for_page)
+        .unwrap_or_default();
+    let current_route = route_location_for_page(&current_page);
+
+    let invalidated = collect_invalidated_namespaces(
+        &previous_route,
+        &current_route,
+        &[
+            NamespaceInvalidationRule::new(
+                UI_GALLERY_PAGE_CONTENT_NS,
+                RouteChangePolicy::PathOrQueryChanged,
+            ),
+            NamespaceInvalidationRule::new(
+                UI_GALLERY_NAV_INDEX_NS,
+                RouteChangePolicy::QueryChanged,
+            ),
+        ],
+    );
+
+    let _ = with_query_client(app, |client, app| {
+        for namespace in invalidated {
+            client.invalidate_namespace(namespace);
+        }
+
+        let seed = UiGalleryPagePrefetchSeed {
+            selected_page: current_page.clone(),
+        };
+        let key = route_query_key::<String>(UI_GALLERY_PAGE_CONTENT_NS, &current_route);
+        let policy = QueryPolicy::default();
+        let _ = client.prefetch(app, window, key, policy, move |_token| {
+            Ok::<String, fret_query::QueryError>(format!(
+                "ui_gallery.page_prefetch:{}",
+                seed.selected_page
+            ))
+        });
+    });
+}
 
 #[derive(Default)]
 struct DebugHudState {
@@ -174,6 +239,7 @@ struct UiGalleryWindowState {
     accordion_value: Model<Option<Arc<str>>>,
     avatar_demo_image: Model<Option<ImageId>>,
     avatar_demo_image_token: Option<ImageUploadToken>,
+    avatar_demo_image_retry_count: u8,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -207,6 +273,7 @@ struct UiGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    sonner_position: Model<shadcn::ToastPosition>,
     menu_bar_seq: Model<u64>,
     virtual_list_torture_jump: Model<String>,
     virtual_list_torture_edit_row: Model<Option<u64>>,
@@ -219,6 +286,29 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    const AVATAR_DEMO_IMAGE_WIDTH: u32 = 96;
+    const AVATAR_DEMO_IMAGE_HEIGHT: u32 = 96;
+    const AVATAR_DEMO_IMAGE_RETRY_MAX: u8 = 8;
+
+    fn enqueue_avatar_demo_image_register(
+        app: &mut App,
+        window: AppWindowId,
+        token: ImageUploadToken,
+    ) {
+        app.push_effect(Effect::ImageRegisterRgba8 {
+            window,
+            token,
+            width: Self::AVATAR_DEMO_IMAGE_WIDTH,
+            height: Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            bytes: Self::generate_avatar_demo_image_rgba8(
+                Self::AVATAR_DEMO_IMAGE_WIDTH,
+                Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            ),
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
+        });
+    }
+
     fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
         let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
         cmds.open = Some(CommandId::new(CMD_APP_OPEN));
@@ -771,8 +861,8 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
-        let resizable_h_fractions = app.models_mut().insert(vec![0.3, 0.7]);
-        let resizable_v_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+        let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+        let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
 
         let data_table_state = app
             .models_mut()
@@ -787,15 +877,7 @@ impl UiGalleryDriver {
 
         let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
         let avatar_demo_image_token = app.next_image_upload_token();
-        app.push_effect(Effect::ImageRegisterRgba8 {
-            window,
-            token: avatar_demo_image_token,
-            width: 96,
-            height: 96,
-            bytes: Self::generate_avatar_demo_image_rgba8(96, 96),
-            color_info: ImageColorInfo::srgb_rgba(),
-            alpha_mode: AlphaMode::Opaque,
-        });
+        Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
 
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -830,6 +912,7 @@ impl UiGalleryDriver {
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let sonner_position = app.models_mut().insert(shadcn::ToastPosition::TopCenter);
         let menu_bar_seq = app.models_mut().insert(0_u64);
         let virtual_list_torture_jump = app.models_mut().insert(String::from("9000"));
         let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
@@ -929,6 +1012,7 @@ impl UiGalleryDriver {
             accordion_value,
             avatar_demo_image,
             avatar_demo_image_token: Some(avatar_demo_image_token),
+            avatar_demo_image_retry_count: 0,
             progress,
             checkbox,
             switch,
@@ -962,6 +1046,7 @@ impl UiGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
+            sonner_position,
             menu_bar_seq,
             virtual_list_torture_jump,
             virtual_list_torture_edit_row,
@@ -999,6 +1084,7 @@ impl UiGalleryDriver {
     fn handle_nav_command(
         app: &mut App,
         state: &mut UiGalleryWindowState,
+        window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         let Some(page) = page_id_for_nav_command(command.as_str()) else {
@@ -1006,8 +1092,12 @@ impl UiGalleryDriver {
         };
 
         let page: Arc<str> = Arc::from(page);
+        let page_for_selected = page.clone();
         let page_for_tabs = page.clone();
-        let _ = app.models_mut().update(&state.selected_page, |v| *v = page);
+        let previous_page = app.models().get_cloned(&state.selected_page);
+        let _ = app
+            .models_mut()
+            .update(&state.selected_page, |v| *v = page_for_selected);
         let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
             if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
                 tabs.push(page_for_tabs.clone());
@@ -1022,12 +1112,15 @@ impl UiGalleryDriver {
         state
             .workspace_tab_close_by_command
             .insert(cmd, page_for_tabs);
+
+        apply_route_query_side_effects(app, window, previous_page, page.clone());
         true
     }
 
     fn handle_workspace_tab_command(
         app: &mut App,
         state: &mut UiGalleryWindowState,
+        window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         let close_tab_by_id =
@@ -1076,7 +1169,13 @@ impl UiGalleryDriver {
                     });
 
                 if let Some(next) = next_selected {
+                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    let current_page = app
+                        .models()
+                        .get_cloned(&state.selected_page)
+                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                    apply_route_query_side_effects(app, window, previous_page, current_page);
                 }
 
                 true
@@ -1105,7 +1204,13 @@ impl UiGalleryDriver {
                     (index + tabs.len() - 1) % tabs.len()
                 };
                 if let Some(next) = tabs.get(next_index).cloned() {
+                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    let current_page = app
+                        .models()
+                        .get_cloned(&state.selected_page)
+                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                    apply_route_query_side_effects(app, window, previous_page, current_page);
                     return true;
                 }
                 false
@@ -1614,6 +1719,13 @@ impl UiGalleryDriver {
             theme.extend_tokens_from_config(&cfg);
         });
 
+        // Ensure the header theme select cannot remain visually open across a full theme swap.
+        // In gallery flows this prevents stale modal barrier/content from overlapping the next
+        // select interaction on the page content.
+        let _ = app
+            .models_mut()
+            .update(&state.theme_preset_open, |open| *open = false);
+
         state.applied_theme_preset = Some(preset);
     }
 
@@ -1733,6 +1845,7 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let sonner_position = state.sonner_position.clone();
         let menu_bar_seq = state.menu_bar_seq.clone();
         let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
         let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
@@ -2125,6 +2238,7 @@ impl UiGalleryDriver {
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
+                                            sonner_position.clone(),
                                             virtual_list_torture_jump.clone(),
                                             virtual_list_torture_edit_row.clone(),
                                             virtual_list_torture_edit_text.clone(),
@@ -2223,6 +2337,7 @@ impl UiGalleryDriver {
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),
+                                        sonner_position.clone(),
                                         virtual_list_torture_jump.clone(),
                                         virtual_list_torture_edit_row.clone(),
                                         virtual_list_torture_edit_text.clone(),
@@ -2486,7 +2601,12 @@ impl UiGalleryDriver {
                         if (bisect & BISECT_DISABLE_TOASTER) != 0 {
                             cx.text("")
                         } else {
-                            shadcn::Toaster::new().into_element(cx)
+                            {
+                                let position = cx
+                                    .get_model_copied(&sonner_position, Invalidation::Layout)
+                                    .unwrap_or(shadcn::ToastPosition::TopCenter);
+                                shadcn::Toaster::new().position(position).into_element(cx)
+                            }
                         },
                     ];
 
@@ -3244,12 +3364,12 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
-        if Self::handle_workspace_tab_command(app, state, &command) {
+        if Self::handle_workspace_tab_command(app, state, window, &command) {
             app.request_redraw(window);
             return;
         }
 
-        let did_nav = Self::handle_nav_command(app, state, &command);
+        let did_nav = Self::handle_nav_command(app, state, window, &command);
         let did_gallery = Self::handle_gallery_command(app, state, window, &command);
         if did_nav || did_gallery {
             app.request_redraw(window);
@@ -3721,6 +3841,7 @@ impl WinitAppDriver for UiGalleryDriver {
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {
                     state.avatar_demo_image_token = None;
+                    state.avatar_demo_image_retry_count = 0;
                     let _ = app
                         .models_mut()
                         .update(&state.avatar_demo_image, |v| *v = Some(*image));
@@ -3729,9 +3850,19 @@ impl WinitAppDriver for UiGalleryDriver {
             }
             Event::ImageRegisterFailed { token, message } => {
                 if state.avatar_demo_image_token == Some(*token) {
-                    state.avatar_demo_image_token = None;
-                    tracing::error!(message, "ui-gallery avatar demo image register failed");
-                    app.request_redraw(window);
+                    let transient_not_ready = message.contains("not initialized");
+                    if transient_not_ready
+                        && state.avatar_demo_image_retry_count < Self::AVATAR_DEMO_IMAGE_RETRY_MAX
+                    {
+                        state.avatar_demo_image_retry_count =
+                            state.avatar_demo_image_retry_count.saturating_add(1);
+                        Self::enqueue_avatar_demo_image_register(app, window, *token);
+                        app.request_redraw(window);
+                    } else {
+                        state.avatar_demo_image_token = None;
+                        tracing::error!(message, "ui-gallery avatar demo image register failed");
+                        app.request_redraw(window);
+                    }
                 }
             }
             Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {

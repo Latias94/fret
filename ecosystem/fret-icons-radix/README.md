@@ -1,4 +1,4 @@
-This crate provides a small curated set of Radix Icons SVG assets embedded via `include_bytes!`.
+This crate provides a Radix Icons SVG icon pack embedded via `rust-embed`.
 
 Radix Icons are designed on a 15×15 grid, which is expected to scale to the requested icon size at render time.
 
@@ -6,8 +6,8 @@ Radix Icons are designed on a 15×15 grid, which is expected to scale to the req
 
 The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons repository:
 
-- Source: `repo-ref/icons/packages/radix-icons/icons/*`
-- Upstream: `https://github.com/radix-ui/icons` @ `112af91ad275a63c3a29b0da2588342af74ef9bf`
+- Source: `third_party/radix-icons/packages/radix-icons/icons/*` (git submodule)
+- Upstream: `https://github.com/radix-ui/icons`
 - License: see `LICENSE.radix`
 
 ## Semantic IDs
@@ -26,12 +26,24 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons
 
 ## Vendor IDs
 
-This crate also registers a small vendor namespace (for convenience in app code):
+This crate registers `radix.<icon-name>` for every SVG listed in `icon-list.txt` (where `<icon-name>` matches the
+upstream SVG filename stem).
 
-- `radix.check` -> `check.svg`
-- `radix.chevron-down` -> `chevron-down.svg`
-- `radix.chevron-up` -> `chevron-up.svg`
-- `radix.cross-1` -> `cross-1.svg`
-- `radix.magnifying-glass` -> `magnifying-glass.svg`
-- `radix.gear` -> `gear.svg`
-- `radix.play` -> `play.svg`
+Generated vendor constants are exposed under `generated_ids::radix::*`.
+
+## Maintenance
+
+- Generate full Radix list and Rust constants:
+  - Windows/macOS/Linux: `python3 tools/gen_radix.py`
+- Generate one/all packs with a single entrypoint:
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack radix`
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack all`
+- Sync SVGs from upstream sources into `assets/icons`:
+  - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
+  - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
+- Verify referenced vendor IDs resolve to vendored assets:
+  - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
+- Release-time one-shot checks:
+  - Icons only: `pwsh tools/pre_release_icons.ps1`
+  - Aggregate entrypoint: `pwsh tools/pre_release.ps1`
+  - Pack-aware check entrypoint: `pwsh tools/check_icons_generation.ps1 -Pack radix`

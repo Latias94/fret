@@ -1002,10 +1002,7 @@ fn select_impl<H: UiHost>(
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        // `selected` affects rendered structure (label text + indicator visibility). Observe it as
-        // a layout dependency so view-cache reuse does not freeze the displayed value.
-        let selected = cx.watch_model(&model).layout().cloned().unwrap_or_default();
-        let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
@@ -1042,11 +1039,6 @@ fn select_impl<H: UiHost>(
 
         let radius = resolved.radius;
         let mut ring = decl_style::focus_ring(&theme, radius);
-
-        let label = selected
-            .as_ref()
-            .and_then(|v| find_item_label(entries, v.as_ref()))
-            .unwrap_or(placeholder);
 
         let text_style = TextStyle {
             font: FontId::default(),
@@ -1114,6 +1106,7 @@ fn select_impl<H: UiHost>(
             pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
+            opened_by_pointer: bool,
             scroll_handle: fret_ui::scroll::ScrollHandle,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
@@ -1142,6 +1135,7 @@ fn select_impl<H: UiHost>(
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
+                    opened_by_pointer: false,
                     scroll_handle: fret_ui::scroll::ScrollHandle::default(),
                     value_node: None,
                     viewport: None,
@@ -1187,12 +1181,19 @@ fn select_impl<H: UiHost>(
             }
         }
 
-        // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
-        // for trigger-owned hooks.
+        // `control_chrome_pressable_with_id_props` stores handlers; keep dedicated clones for
+        // trigger-owned hooks.
+        let model_for_trigger = model.clone();
         let open_for_trigger = open.clone();
         let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
+            // `selected` affects rendered structure (label text + indicator visibility). Observe it as
+            // a paint dependency on the mounted trigger element so model changes drive invalidation
+            // (and won't be dropped when `select_impl` is wrapped in an unmounted `cx.scope`).
+            cx.watch_model(&model_for_trigger).paint().observe();
+            cx.watch_model(&open_for_trigger).paint().observe();
+
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
             let mut typeahead_labels: Vec<Arc<str>> = Vec::new();
             let mut typeahead_disabled: Vec<bool> = Vec::new();
@@ -1230,6 +1231,7 @@ fn select_impl<H: UiHost>(
                 state.item_aligned_scroll_up_visible = false;
                 state.pending_active_align_top_scroll = false;
                 state.pending_active_scroll_into_view = false;
+                state.opened_by_pointer = false;
             }
 
             let state_for_timer = trigger_state.clone();
@@ -1259,6 +1261,7 @@ fn select_impl<H: UiHost>(
                         .read(&model_for_key, |v| v.clone())
                         .ok()
                         .flatten();
+                    let was_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
                     let mut state = state_for_key
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
@@ -1275,6 +1278,10 @@ fn select_impl<H: UiHost>(
                         it.modifiers,
                         it.repeat,
                     );
+                    let now_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
+                    if !was_open && now_open {
+                        state.opened_by_pointer = false;
+                    }
                     let after = host
                         .models_mut()
                         .read(&model_for_key, |v| v.clone())
@@ -1332,6 +1339,9 @@ fn select_impl<H: UiHost>(
                     now_open,
                     down.position,
                 );
+                if !was_open && now_open {
+                    state.opened_by_pointer = true;
+                }
                 state.trigger.clear_typeahead(host);
 
                 fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -1380,6 +1390,7 @@ fn select_impl<H: UiHost>(
                 state.trigger.clear_typeahead(host);
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
+                state.opened_by_pointer = false;
                 host.request_redraw(action_cx.window);
             }));
 
@@ -1834,6 +1845,7 @@ fn select_impl<H: UiHost>(
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let on_value_change_for_overlay_children = on_value_change.clone();
+                    let model_for_overlay = model.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
@@ -1841,7 +1853,11 @@ fn select_impl<H: UiHost>(
                         let open_for_barrier_children = open_for_overlay.clone();
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
 
-                        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+                        let model = model_for_overlay.clone();
+                        let selected = cx
+                            .watch_model(&model)
+                            .cloned()
+                            .unwrap_or_default();
                         let on_value_change = on_value_change_for_overlay_children.clone();
 
                         #[derive(Clone)]
@@ -1908,7 +1924,7 @@ fn select_impl<H: UiHost>(
                                     state.was_open = true;
                                     state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
-                                    state.pending_active_align_top_scroll = true;
+                                    state.pending_active_align_top_scroll = !state.opened_by_pointer;
                             } else if state.content.active_row().is_none() {
                                 state.content.set_active_row(initial_active_row);
                             }
@@ -1916,6 +1932,7 @@ fn select_impl<H: UiHost>(
                             state.was_open = false;
                             state.content.set_active_row(None);
                             state.pending_active_align_top_scroll = false;
+                            state.opened_by_pointer = false;
                         }
 
                         state.content.active_row()
@@ -2034,7 +2051,7 @@ fn select_impl<H: UiHost>(
                                         let state_for_key =
                                             trigger_state_for_overlay_in_content.clone();
                                         let open_for_key = open_for_content.clone();
-                                        let model_for_key = model.clone();
+                                        let model_for_key = model_for_overlay.clone();
                                         let loop_navigation_for_key = loop_navigation;
 
                                         cx.key_on_key_down_for(
@@ -2973,6 +2990,8 @@ fn select_impl<H: UiHost>(
             }
 
             let state_for_value_node = trigger_state.clone();
+            let placeholder_for_value_node = placeholder.clone();
+            let model_for_value_node = model.clone();
 
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
@@ -3012,6 +3031,17 @@ fn select_impl<H: UiHost>(
                                         ..Default::default()
                                     },
                                     move |cx| {
+                                        let selected = cx
+                                            .get_model_cloned(
+                                                &model_for_value_node,
+                                                fret_ui::Invalidation::Paint,
+                                            )
+                                            .unwrap_or_default();
+                                        let label = selected
+                                            .as_ref()
+                                            .and_then(|v| find_item_label(entries, v.as_ref()))
+                                            .unwrap_or_else(|| placeholder_for_value_node.clone());
+
                                         let mut text = ui::text(cx, label)
                                             .text_size_px(text_style.size)
                                             .font_weight(text_style.weight)
@@ -3598,6 +3628,143 @@ mod tests {
             Some(beta.id),
             "expected pointer-open to not focus the selected entry"
         );
+    }
+
+    #[test]
+    fn select_pointer_open_first_click_commits_immediately() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let mut items: Vec<SelectItem> = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+        items.extend((1..=40).map(|i| {
+            let value: Arc<str> = Arc::from(format!("item-{i:02}"));
+            let label: Arc<str> = Arc::from(format!("Item {i:02}"));
+            SelectItem::new(value, label)
+        }));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
+            .expect("banana option node");
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(
+            selected.as_deref(),
+            Some("banana"),
+            "expected first item click after pointer-open to commit immediately"
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
