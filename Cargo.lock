@@ -1171,6 +1171,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-devtools"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-diag-protocol",
+ "fret-diag-ws",
+ "fret-launch",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "fret-ui-shadcn",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "fret-devtools-ws"
 version = "0.1.0"
 dependencies = [
