@@ -70,6 +70,16 @@ fn available_space_cache_key(space: AvailableSpace) -> u64 {
     }
 }
 
+fn scroll_defer_unbounded_probe_on_resize_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        // Default-on for interactive resize/viewport churn. Set to "0" to disable.
+        std::env::var("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE")
+            .ok()
+            .is_none_or(|v| v != "0")
+    })
+}
+
 fn scroll_defer_unbounded_probe_on_invalidation_enabled() -> bool {
     static ENABLED: OnceLock<bool> = OnceLock::new();
     *ENABLED.get_or_init(|| {
@@ -711,7 +721,8 @@ impl ElementHostWidget {
         let wants_unbounded_probe = props.probe_unbounded
             && (props.axis.scroll_x() || props.axis.scroll_y())
             && !is_probe_layout;
-        let defer_probe_enabled = scroll_defer_unbounded_probe_on_invalidation_enabled();
+        let defer_probe_on_resize = scroll_defer_unbounded_probe_on_resize_enabled();
+        let defer_probe_on_invalidation = scroll_defer_unbounded_probe_on_invalidation_enabled();
         let prev_viewport = handle.viewport_size();
         let viewport_changed = prev_viewport.width.0 > 0.0
             && prev_viewport.height.0 > 0.0
@@ -719,9 +730,9 @@ impl ElementHostWidget {
                 || prev_viewport.height.0.to_bits() != available.height.0.to_bits());
 
         let should_defer_unbounded_probe_on_resize =
-            wants_unbounded_probe && defer_probe_enabled && viewport_changed;
+            wants_unbounded_probe && defer_probe_on_resize && viewport_changed;
         let should_defer_unbounded_probe_on_invalidation = wants_unbounded_probe
-            && defer_probe_enabled
+            && defer_probe_on_invalidation
             && cx
                 .children
                 .iter()
