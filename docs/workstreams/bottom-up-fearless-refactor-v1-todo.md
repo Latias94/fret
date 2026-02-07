@@ -106,6 +106,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-ui/src/theme/keys.rs`
     - `crates/fret-ui/src/theme/registry.rs`
 
+- [x] BU-FR-ui-027 Convert scroll-related crate-root modules into subsystem directories.
+  - Candidates: `scroll.rs`, `virtual_list.rs`.
+  - Goal: keep `scroll` / `virtual_list` as stable module names while enabling further internal split without adding new crate-root prefixes.
+  - Evidence:
+    - `crates/fret-ui/src/scroll/mod.rs`
+    - `crates/fret-ui/src/virtual_list/mod.rs`
+
 ## M3 — Renderer closure
 
 - [ ] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
