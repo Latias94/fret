@@ -138,36 +138,22 @@ fn strip_fragment(raw: &str) -> &str {
     raw.split('#').next().unwrap_or_default()
 }
 
+/// Decode a query component (application/x-www-form-urlencoded compatible).
+///
+/// Notes:
+/// - `+` decodes to space.
+/// - Percent decoding is applied when possible; invalid sequences are preserved.
 pub(crate) fn decode_component(input: &str) -> String {
-    let bytes = input.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut index = 0;
+    decode_percent_component(input, true)
+}
 
-    while index < bytes.len() {
-        match bytes[index] {
-            b'+' => {
-                out.push(b' ');
-                index += 1;
-            }
-            b'%' if index + 2 < bytes.len() => {
-                if let (Some(high), Some(low)) =
-                    (hex_value(bytes[index + 1]), hex_value(bytes[index + 2]))
-                {
-                    out.push((high << 4) | low);
-                    index += 3;
-                } else {
-                    out.push(bytes[index]);
-                    index += 1;
-                }
-            }
-            byte => {
-                out.push(byte);
-                index += 1;
-            }
-        }
-    }
-
-    String::from_utf8_lossy(&out).into_owned()
+/// Decode a path/hash/fragment component (RFC 3986 style).
+///
+/// Notes:
+/// - `+` is treated as a literal plus (not a space).
+/// - Percent decoding is applied when possible; invalid sequences are preserved.
+pub(crate) fn decode_path_component(input: &str) -> String {
+    decode_percent_component(input, false)
 }
 
 pub(crate) fn encode_component(input: &str) -> String {
@@ -198,6 +184,38 @@ pub(crate) fn encode_component(input: &str) -> String {
 
 fn is_unreserved(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~')
+}
+
+fn decode_percent_component(input: &str, plus_to_space: bool) -> String {
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'+' if plus_to_space => {
+                out.push(b' ');
+                index += 1;
+            }
+            b'%' if index + 2 < bytes.len() => {
+                if let (Some(high), Some(low)) =
+                    (hex_value(bytes[index + 1]), hex_value(bytes[index + 2]))
+                {
+                    out.push((high << 4) | low);
+                    index += 3;
+                } else {
+                    out.push(bytes[index]);
+                    index += 1;
+                }
+            }
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 fn hex_value(byte: u8) -> Option<u8> {

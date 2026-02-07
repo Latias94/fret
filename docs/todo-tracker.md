@@ -12,6 +12,12 @@ It complements (but does not replace) ADRs:
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
 - Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
+## P0 - Workspace crate boundaries
+
+- Track render/web-runner/facade boundary refactors in:
+  - `docs/workstreams/workspace-crate-boundaries-v1.md`
+  - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:
@@ -446,4 +452,3 @@ It complements (but does not replace) ADRs:
   - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete native backend lives in `crates/fret-platform-native` and the event loop/effect draining live in `crates/fret-launch`; decide how much window registry/event translation should live in the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
   - Code: `crates/fret-platform-native/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-launch/src/runner/*`
-
