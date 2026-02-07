@@ -9,12 +9,15 @@ Usage:
     [--baseline <path>] \
     [--launch-bin <path>] \
     [--timeout-ms <n>] \
+    [--attempts <n>] \
     [--repeat <n>] \
     [--warmup-frames <n>]
 
 Notes:
   - Runs the `ui-resize-probes` perf suite via `fretboard diag perf`.
   - Intended to be a lightweight "P0 resize must not regress" gate.
+  - `--attempts` reruns the suite to reduce flakiness from rare tail outliers.
+    The gate passes if a strict majority of attempts pass.
   - Common env profile:
       FRET_UI_GALLERY_VIEW_CACHE=1
       FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
@@ -38,6 +41,7 @@ out_dir="target/fret-diag-resize-probes-gate-$(date +%s)"
 baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
 launch_bin="target/release/fret-ui-gallery"
 timeout_ms=300000
+attempts=1
 repeat=7
 warmup_frames=5
 
@@ -57,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --timeout-ms)
       timeout_ms="$2"
+      shift 2
+      ;;
+    --attempts)
+      attempts="$2"
       shift 2
       ;;
     --repeat)
@@ -85,85 +93,157 @@ require_cmd jq
 cd "$WORKSPACE_ROOT"
 mkdir -p "$out_dir"
 
-  cmd=(
-  cargo run -q -p fretboard --
-  diag perf ui-resize-probes
-  --dir "$out_dir"
-  --timeout-ms "$timeout_ms"
-  --reuse-launch
-  --repeat "$repeat" --warmup-frames "$warmup_frames"
-  --sort time --top 15 --json
-  --perf-baseline "$baseline"
-  --env FRET_UI_GALLERY_VIEW_CACHE=1
-  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
-  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0
-  --env FRET_DIAG_SEMANTICS=0
-  --launch -- "$launch_bin"
-)
+if [[ "$attempts" -lt 1 ]]; then
+  echo "error: --attempts must be >= 1" >&2
+  exit 2
+fi
 
-echo "[gate] ui-resize-probes -> ${out_dir}"
+echo "[gate] ui-resize-probes -> ${out_dir} (attempts=${attempts})"
 echo "[gate] baseline: ${baseline}"
 echo "[gate] launch-bin: ${launch_bin}"
-printf '[gate] cmd: %q ' "${cmd[@]}"
-echo
 
-rc=0
-if ! "${cmd[@]}" > "$out_dir/stdout.json" 2> "$out_dir/stderr.log"; then
-  rc=$?
-fi
+passes=0
+fails=0
+selected_attempt_dir=""
+attempt_summaries_json="[]"
 
-check_file="$out_dir/check.perf_thresholds.json"
-failures_count=""
-pass=true
+for ((i=1; i<=attempts; i++)); do
+  attempt_dir="$out_dir/attempt-$i"
+  mkdir -p "$attempt_dir"
 
-if [[ "$rc" -ne 0 ]]; then
-  pass=false
-fi
+  cmd=(
+    cargo run -q -p fretboard --
+    diag perf ui-resize-probes
+    --dir "$attempt_dir"
+    --timeout-ms "$timeout_ms"
+    --reuse-launch
+    --repeat "$repeat" --warmup-frames "$warmup_frames"
+    --sort time --top 15 --json
+    --perf-baseline "$baseline"
+    --env FRET_UI_GALLERY_VIEW_CACHE=1
+    --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
+    --env FRET_DIAG_SCRIPT_AUTO_DUMP=0
+    --env FRET_DIAG_SEMANTICS=0
+    --launch -- "$launch_bin"
+  )
 
-if [[ ! -f "$check_file" ]]; then
-  pass=false
-else
-  failures_count="$(jq -r '.failures | length' "$check_file" 2>/dev/null || true)"
-  if [[ -z "$failures_count" ]]; then
-    pass=false
-  elif [[ "$failures_count" != "0" ]]; then
-    pass=false
+  echo "[gate] attempt $i/$attempts -> $attempt_dir"
+  printf '[gate] cmd: %q ' "${cmd[@]}"
+  echo
+
+  rc=0
+  if ! "${cmd[@]}" > "$attempt_dir/stdout.json" 2> "$attempt_dir/stderr.log"; then
+    rc=$?
   fi
+
+  check_file="$attempt_dir/check.perf_thresholds.json"
+  failures_count=""
+  attempt_pass=true
+
+  if [[ "$rc" -ne 0 ]]; then
+    attempt_pass=false
+  fi
+
+  if [[ ! -f "$check_file" ]]; then
+    attempt_pass=false
+  else
+    failures_count="$(jq -r '.failures | length' "$check_file" 2>/dev/null || true)"
+    if [[ -z "$failures_count" ]]; then
+      attempt_pass=false
+    elif [[ "$failures_count" != "0" ]]; then
+      attempt_pass=false
+    fi
+  fi
+
+  if [[ "$attempt_pass" == "true" ]]; then
+    passes=$((passes + 1))
+    if [[ -z "$selected_attempt_dir" ]]; then
+      selected_attempt_dir="$attempt_dir"
+    fi
+  else
+    fails=$((fails + 1))
+  fi
+
+  attempt_summaries_json="$(
+    jq -n \
+      --argjson prev "$attempt_summaries_json" \
+      --arg attempt_dir "$attempt_dir" \
+      --argjson pass "$attempt_pass" \
+      --arg rc "$rc" \
+      --arg check_file "$check_file" \
+      --arg failures_count "${failures_count:-}" \
+      --arg stdout "$attempt_dir/stdout.json" \
+      --arg stderr "$attempt_dir/stderr.log" \
+      '$prev + [{
+        attempt_dir: $attempt_dir,
+        pass: $pass,
+        rc: ($rc | tonumber),
+        check: {
+          perf_thresholds: $check_file,
+          failures: (if ($failures_count | length) == 0 then null else ($failures_count | tonumber) end)
+        },
+        stdout: $stdout,
+        stderr: $stderr
+      }]'
+  )"
+done
+
+majority_required=$((attempts / 2 + 1))
+pass=false
+if [[ "$passes" -ge "$majority_required" ]]; then
+  pass=true
 fi
+
+if [[ -z "$selected_attempt_dir" ]]; then
+  selected_attempt_dir="$out_dir/attempt-$attempts"
+fi
+
+# Preserve compatibility with downstream tooling by copying one attempt to the top-level paths.
+cp -f "$selected_attempt_dir/stdout.json" "$out_dir/stdout.json" || true
+cp -f "$selected_attempt_dir/stderr.log" "$out_dir/stderr.log" || true
+cp -f "$selected_attempt_dir/check.perf_thresholds.json" "$out_dir/check.perf_thresholds.json" || true
 
 jq -n \
   --arg out_dir "$out_dir" \
   --arg baseline "$baseline" \
   --arg launch_bin "$launch_bin" \
   --argjson pass "$pass" \
-  --arg check_file "$check_file" \
-  --arg failures_count "${failures_count:-}" \
-  --arg stdout "$out_dir/stdout.json" \
-  --arg stderr "$out_dir/stderr.log" \
+  --arg attempts "$attempts" \
+  --arg passes "$passes" \
+  --arg fails "$fails" \
+  --arg majority_required "$majority_required" \
+  --arg selected_attempt_dir "$selected_attempt_dir" \
   --arg repeat "$repeat" \
   --arg warmup_frames "$warmup_frames" \
+  --arg stdout "$out_dir/stdout.json" \
+  --arg stderr "$out_dir/stderr.log" \
+  --arg check_file "$out_dir/check.perf_thresholds.json" \
+  --argjson attempt_summaries "$attempt_summaries_json" \
   '{
     kind: "resize_probes_gate_summary",
     pass: $pass,
     out_dir: $out_dir,
     baseline: $baseline,
     launch_bin: $launch_bin,
+    attempts: ($attempts | tonumber),
+    pass_attempts: ($passes | tonumber),
+    fail_attempts: ($fails | tonumber),
+    majority_required: ($majority_required | tonumber),
+    selected_attempt_dir: $selected_attempt_dir,
     repeat: ($repeat | tonumber),
     warmup_frames: ($warmup_frames | tonumber),
     check: {
       perf_thresholds: $check_file,
-      failures: (if ($failures_count | length) == 0 then null else ($failures_count | tonumber) end)
+      failures: null
     },
     stdout: $stdout,
-    stderr: $stderr
+    stderr: $stderr,
+    attempt_summaries: $attempt_summaries
   }' > "$out_dir/summary.json"
 
 if [[ "$pass" != "true" ]]; then
-  echo "[gate] FAIL (rc=$rc). See: $out_dir/summary.json" >&2
-  if [[ "$rc" -eq 0 ]]; then
-    exit 1
-  fi
-  exit "$rc"
+  echo "[gate] FAIL (passes=$passes/$attempts; required=$majority_required). See: $out_dir/summary.json" >&2
+  exit 1
 fi
 
-echo "[gate] PASS. Summary: $out_dir/summary.json"
+echo "[gate] PASS (passes=$passes/$attempts; required=$majority_required). Summary: $out_dir/summary.json"

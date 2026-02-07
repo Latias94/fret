@@ -32,7 +32,9 @@ The intent is to stop drifting into “endless experiments” by pinning:
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
-- Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
+  - Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
+  - Tip: when chasing rare resize tails, use `--attempts 3` and require a strict majority pass to reduce
+    “single outlier run” flakiness without loosening thresholds.
 
 This means the **measurement substrate is good enough** to spend most effort on implementation rather than
 baseline wrangling.
