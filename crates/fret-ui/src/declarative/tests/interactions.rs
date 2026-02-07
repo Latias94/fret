@@ -4522,7 +4522,6 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn resizable_panel_group_registers_viewport_roots_for_panels() {
     let mut app = TestHost::new();

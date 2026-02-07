@@ -921,7 +921,6 @@ fn attach_semantics_is_layout_transparent_for_flex_items() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_registration_is_recorded_in_layout_all() {
     let mut app = TestHost::new();
@@ -971,7 +970,6 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
     assert!(ui.viewport_roots().contains(&(root_b, viewport_b)));
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
     let mut app = TestHost::new();
@@ -1044,7 +1042,6 @@ fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
     assert_eq!(s4, 0, "expected per-call solve stats (not cumulative)");
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() {
     let mut app = TestHost::new();
@@ -1089,7 +1086,6 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn probe_layout_does_not_prune_layout_engine_nodes() {
     let mut app = TestHost::new();
@@ -1135,7 +1131,6 @@ fn probe_layout_does_not_prune_layout_engine_nodes() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_flush_only_lays_out_invalidated_roots() {
     use std::sync::Arc;
@@ -1201,7 +1196,6 @@ fn viewport_root_flush_only_lays_out_invalidated_roots() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
     let mut app = TestHost::new();
@@ -1267,7 +1261,6 @@ fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
     struct PrecomputesSameRootTwice {
@@ -1334,7 +1327,6 @@ fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
     struct PrecomputeThenTranslate {
@@ -1420,7 +1412,6 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
     assert!((child_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     let mut app = TestHost::new();
@@ -1469,7 +1460,6 @@ fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     assert!(ui.viewport_roots().contains(&(panel_b, bounds_b)));
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_root() {
     use std::sync::Arc;
@@ -1557,7 +1547,6 @@ fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_r
     assert!(ui.viewport_roots().contains(&(inner, inner_viewport)));
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn layout_viewport_root_defers_child_layout_until_after_parent() {
     use std::sync::Arc;
@@ -1627,7 +1616,6 @@ fn layout_viewport_root_defers_child_layout_until_after_parent() {
     assert!((child_bounds.size.width.0 - viewport.size.width.0).abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_layout_is_applied_before_overlay_root_layout() {
     use std::sync::Arc;
@@ -1727,7 +1715,6 @@ fn viewport_root_layout_is_applied_before_overlay_root_layout() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_roots_do_not_couple_fill_layout() {
     let mut app = TestHost::new();
@@ -1821,7 +1808,6 @@ fn viewport_roots_do_not_couple_fill_layout() {
     assert!((b.size.height.0 - viewport_b.size.height.0).abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn layout_engine_v2_scales_px_styles_with_scale_factor() {
     struct RegistersViewportRoot {
@@ -1933,7 +1919,6 @@ fn layout_engine_v2_scales_px_styles_with_scale_factor() {
     assert_eq!(second_1x, expected_second);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn stack_does_not_stretch_spacer_children_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -2007,7 +1992,6 @@ fn stack_does_not_stretch_spacer_children_in_engine_tree() {
     assert!(b_bounds.size.height.0.abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn container_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -2074,7 +2058,6 @@ fn container_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -2141,7 +2124,6 @@ fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -2208,7 +2190,6 @@ fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -2278,7 +2259,6 @@ fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_nested_flow_is_solved_once() {
     struct BaseRegistersViewportRoot {
@@ -2369,7 +2349,6 @@ fn viewport_root_nested_flow_is_solved_once() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -2489,7 +2468,6 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -2587,7 +2565,6 @@ fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_pointer_region_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -2704,7 +2681,6 @@ fn viewport_root_pointer_region_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_pointer_region_absolute_child_fills_region() {
     struct BaseRegistersViewportRoot {
@@ -2796,7 +2772,6 @@ fn viewport_root_pointer_region_absolute_child_fills_region() {
     assert_eq!(barrier_bounds, viewport);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn positioned_container_precomputes_flow_islands_for_multiple_children() {
     let mut app = TestHost::new();
@@ -2864,7 +2839,6 @@ fn positioned_container_precomputes_flow_islands_for_multiple_children() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn hover_region_precomputes_flow_islands_for_multiple_children() {
     let mut app = TestHost::new();
@@ -2944,7 +2918,6 @@ fn hover_region_precomputes_flow_islands_for_multiple_children() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn pressable_wraps_multiple_children_in_engine_tree() {
     let mut app = TestHost::new();
@@ -3006,7 +2979,6 @@ fn pressable_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_pressable_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3090,7 +3062,6 @@ fn viewport_root_pressable_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_semantics_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3174,7 +3145,6 @@ fn viewport_root_semantics_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3258,7 +3228,6 @@ fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3338,7 +3307,6 @@ fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3420,7 +3388,6 @@ fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3500,7 +3467,6 @@ fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_container_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3584,7 +3550,6 @@ fn viewport_root_container_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_stack_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3668,7 +3633,6 @@ fn viewport_root_stack_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_render_transform_passthrough_fill_does_not_collapse() {
     struct BaseRegistersViewportRoot {
@@ -3753,7 +3717,6 @@ fn viewport_root_render_transform_passthrough_fill_does_not_collapse() {
     assert_eq!(region_bounds.size, viewport.size);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -3851,7 +3814,6 @@ fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill() {
     struct BaseRegistersViewportRoot {
@@ -3950,7 +3912,6 @@ fn viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_wheel_region_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -4067,7 +4028,6 @@ fn viewport_root_wheel_region_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_wheel_region_absolute_child_fills_region() {
     struct BaseRegistersViewportRoot {
@@ -4159,7 +4119,6 @@ fn viewport_root_wheel_region_absolute_child_fills_region() {
     assert_eq!(barrier_bounds, viewport);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_roving_flex_is_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -4243,7 +4202,6 @@ fn viewport_root_roving_flex_is_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_anchored_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -4347,7 +4305,6 @@ fn viewport_root_anchored_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     let window = AppWindowId::default();
@@ -4429,7 +4386,6 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn overlay_root_scroll_precomputes_child_flow_islands() {
     let window = AppWindowId::default();
@@ -4515,7 +4471,6 @@ fn overlay_root_scroll_precomputes_child_flow_islands() {
     ui.put_layout_engine(engine);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn wrapper_chain_padding_is_applied_via_engine_rects() {
     let mut app = TestHost::new();
@@ -4611,7 +4566,6 @@ fn wrapper_chain_padding_is_applied_via_engine_rects() {
     assert!((outer_bounds.size.height.0 - (10.0 + 6.0 + 2.0)).abs() < 0.01);
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn nested_flow_is_solved_once_per_island() {
     let mut app = TestHost::new();
@@ -4934,7 +4888,6 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     let before = ui
         .debug_node_visual_bounds(column_node)
         .expect("column visual bounds");
-    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected scroll content subtree nodes to remain registered in the layout engine"
@@ -4966,7 +4919,6 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn scroll_translation_does_not_force_layout_engine_solves() {
     let mut app = TestHost::new();
@@ -5043,7 +4995,6 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
         0,
         "expected scroll translation to avoid triggering layout engine solves"
     );
-    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected translation-only scroll to keep engine nodes alive (stable identity)"
@@ -5052,14 +5003,12 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
     // Even when the tree is fully clean (no invalidation, no translation), the request/build phase
     // must keep barrier-mounted subtrees registered so identity remains stable across frames.
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
-    #[cfg(feature = "layout-engine-v2")]
     assert!(
         ui.layout_engine_has_node(column_node),
         "expected steady-state frames to keep scroll content nodes registered in the engine"
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
     let mut app = TestHost::new();
@@ -6451,7 +6400,6 @@ fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
     assert_eq!(outer_bounds.size.height, Px(19.0));
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
     let mut app = TestHost::new();

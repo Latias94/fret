@@ -10,8 +10,8 @@ Related plan:
 
 ### M0 — Governance and tracking
 
-- [ ] Add this workstream to `docs/workstreams/README.md`.
-- [ ] Add a short entry to `docs/todo-tracker.md` pointing to this workstream (optional).
+- [x] Add this workstream to `docs/workstreams/README.md`.
+- [x] Add a short entry to `docs/todo-tracker.md` pointing to this workstream (optional).
 - [ ] Confirm the intended wasm “golden path” bundles in `crates/fret` (`web` vs `web-winit`).
 
 ### M1 — Render split (`fret-render-core` + `fret-render-wgpu`)
@@ -33,8 +33,8 @@ Related plan:
 
 ### M3 — Layout feature fork removal (if committed)
 
-- [ ] Remove the deprecated layout engine feature fork from `crates/fret-ui` (Cargo features + code paths).
-- [ ] Update any downstream crates that relied on the removed feature.
+- [x] Remove the deprecated layout engine feature fork from `crates/fret-ui` (Cargo features + code paths).
+- [x] Update any downstream crates that relied on the removed feature.
 
 ### M4 — Router/query consolidation decision
 
@@ -49,8 +49,11 @@ Related plan:
 
 ## Validation checklist (run at each milestone)
 
-- [ ] `pwsh -NoProfile -File tools/check_layering.ps1`
-- [ ] `cargo fmt`
+- [x] `pwsh -NoProfile -File tools/check_layering.ps1`
+- [x] `cargo fmt`
 - [ ] `cargo clippy --workspace --all-targets -- -D warnings`
-- [ ] `cargo nextest run` (or `cargo test --workspace` if nextest is unavailable)
+- [x] `cargo nextest run` (or `cargo test --workspace` if nextest is unavailable)
 
+Notes:
+
+- The workspace is not currently clippy-clean under `-D warnings`; use `nextest` as the primary gate for this workstream until the lint backlog is addressed.
