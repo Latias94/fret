@@ -248,6 +248,21 @@ fn tanstack_v8_capability_smoke_grouped_row_ids_exist_and_resolve_to_row_keys() 
     let next = updater.apply(&TableState::default().row_pinning);
     assert_eq!(next.top, vec![root_row.key]);
 
+    let include_leaf = table
+        .row_pinning_updater_by_id("role:1", true, Some(RowPinPosition::Top), true, false)
+        .expect("group row pin updater (include leaf)");
+    let next_include_leaf = include_leaf.apply(&TableState::default().row_pinning);
+    assert!(next_include_leaf.top.contains(&root_row.key));
+    assert!(next_include_leaf.top.contains(&RowKey(1)));
+    assert!(next_include_leaf.top.contains(&RowKey(3)));
+
+    let include_parent = table
+        .row_pinning_updater_by_id("1", true, Some(RowPinPosition::Top), false, true)
+        .expect("leaf row pin updater (include parent)");
+    let next_include_parent = include_parent.apply(&TableState::default().row_pinning);
+    assert!(next_include_parent.top.contains(&root_row.key));
+    assert!(next_include_parent.top.contains(&RowKey(1)));
+
     let next_expanding = table
         .toggled_row_expanded_by_id("role:1", true, Some(true))
         .expect("group row expand updater");

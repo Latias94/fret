@@ -226,6 +226,8 @@ type SnapshotId =
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
   | "pinning_grouped_rows_baseline_page_0"
   | "pinning_grouped_rows_action_pin_group_role_1_top"
+  | "pinning_grouped_rows_action_pin_group_role_1_top_include_leaf_rows"
+  | "pinning_grouped_rows_action_pin_leaf_1_top_include_parent_rows"
   | "pinning_grouped_rows_state_page_1_pinned_role_1"
   | "column_pinning_default_can_pin"
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
@@ -5095,6 +5097,38 @@ function snapshotColumnPinning(
             type: "pinRow",
             row_id: "role:1",
             position: "top",
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_grouped_rows_action_pin_group_role_1_top_include_leaf_rows",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "role:1",
+            position: "top",
+            include_leaf_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_grouped_rows_action_pin_leaf_1_top_include_parent_rows",
+        baseOptions,
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 0, pageSize: 1 },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "1",
+            position: "top",
+            include_parent_rows: true,
           },
         ],
       ),
