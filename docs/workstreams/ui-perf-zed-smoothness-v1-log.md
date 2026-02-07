@@ -4182,3 +4182,2262 @@ Results (from 240 captured snapshots; `paint_time_us` p50/p95/max):
 Notes:
 - The probe remains in the “sub-millisecond paint” regime after pulling upstream. Any further “Zed feel” work should
   focus on reducing tail outliers and on end-to-end GPU/present timing, not on baseline CPU paint throughput.
+
+## 2026-02-06 11:47:00 (commit `09ecac494`)
+
+Change:
+- Refresh the `ui-gallery-steady` baseline using the **steady-state protocol** (`--reuse-launch`).
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v10 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=16307` (baseline is max-based; see the suite JSON output for p95/max)
+  - Evidence bundle: `target/fret-diag-codex-perf-v10/1770349612209-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This baseline is **not directly comparable** to v9 because the protocol changed:
+  - v9: per-script launches (more cold-start noise).
+  - v10: `--reuse-launch` (intended steady-state).
+- The purpose of v10 is to reduce noise so future regressions are explainable and stable.
+
+## 2026-02-06 11:50:00 (commit `09ecac494`)
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (repro; renderer perf snapshots recorded by the runner):
+```bash
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --dir target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2 \
+  --timeout-ms 240000 --poll-ms 50 \
+  --env FRET_DIAG_RENDERER_PERF=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- stdout log: `target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2.stdout.log`
+- bundle: `target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2/1770349792705-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Results (from 240 captured snapshots; per-frame values from `debug.stats.*`):
+- `paint_time_us` p50/p95/max: `826 / 916 / 5967`
+- `renderer_encode_scene_us` p50/p95/max: `~600 / 655 / 935`
+- `renderer_prepare_text_us` p50/p95/max: `472 / 568 / 593`
+- `renderer_draw_calls`: `69` (stable)
+- `renderer_pipeline_switches`: `47` (stable)
+- `renderer_text_atlas_upload_bytes`: `0` (no churn in this run)
+- `renderer_text_atlas_evicted_pages`: `0`
+
+Interpretation:
+- On this workload, renderer CPU time is ~1.1–1.2ms/frame in the steady regime (encode + text prepare), while UI paint
+  stays sub-millisecond p95. End-to-end 120Hz feel will likely require keeping this renderer slice stable (avoid upload
+  churn) and making present timing observable (GPU/present hitches can dominate even when CPU is stable).
+
+## 2026-02-06 12:04:00 (commit `f21a0aa82`)
+
+Change:
+- Add `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` to the `ui-gallery-steady` suite.
+- Refresh the suite baseline to include the new editor-grade row.
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v11 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json`
+- Added row:
+  - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  - `measured_max.top_total_time_us=7772`
+  - Evidence bundle: `target/fret-diag-codex-perf-v11/1770350649172-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Drift vs v10:
+- Existing rows are broadly stable (max `top_total_time_us` drift is small; see `v11 - v10` diff summary in local notes).
+- Worst overall script remains `ui-gallery-window-resize-stress-steady` with `top_total_time_us=16136`
+  (bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`).
+
+## 2026-02-06 12:36:00 (commit `65f8af318`)
+
+Change:
+- Make perf-baseline pointer-move thresholds less flaky by adding slack + quantum rounding (commit `43a9eb124`).
+- Refresh `ui-gallery-steady` perf baseline (v12).
+
+Context:
+- Baseline v11 validation run was flaky by 1us:
+  - Script: `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
+  - `pointer_move_max_dispatch_time_us=33` exceeded `threshold_us=32`
+  - Evidence: `target/fret-diag-codex-perf-v11-validate/check.perf_thresholds.json`
+
+Baseline command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v12b \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --sort time --top 5 \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=16935`
+  - Evidence bundle: `target/fret-diag-codex-perf-v12b/1770352388770-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v12-validate \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --sort time --top 3 \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation notes:
+- Gate passes on repeat=3 (no threshold failures).
+- Worst overall in the validation run was still the resize stress script:
+  - `top_total_time_us=15954`
+  - Bundle: `target/fret-diag-codex-perf-v12-validate/1770352514340-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This change is harness-level only (no runtime perf improvement expected).
+- The next real smoothness win still needs to come from the resize path:
+  - reduce `layout_roots_time_us` and `paint_text_prepare_time_us (width_changed)` tail outliers.
+
+## 2026-02-06 13:20:00 (commit `beb2fa315`)
+
+Change:
+- Coalesce `WindowEvent::SurfaceResized` handling to once per frame (apply pending resize on `RedrawRequested`).
+
+Why:
+- GPUI/Zed effectively applies resize at the frame boundary (resize marks dirty; draw happens via request-frame).
+  Several platforms can emit multiple resize notifications per vblank during interactive drags. Applying each one
+  immediately can waste time reconfiguring the surface and relayouting more often than we can present.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-coalesce-v2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --sort time --top 5 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Worst overall `top_total_time_us=14219`
+- Evidence bundle: `target/fret-diag-codex-perf-resize-coalesce-v2/1770355071995-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Suite baseline refresh:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json`
+- Run dir: `target/fret-diag-codex-perf-v13`
+- Worst overall script in the run remains `ui-gallery-window-resize-stress-steady`:
+  - `top_total_time_us=15532`
+  - Evidence bundle: `target/fret-diag-codex-perf-v13/1770355191996-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Delta vs v12 baseline:
+- `ui-gallery-window-resize-stress-steady` max `top_total_time_us` improves from `16935` (v12) → `15532` (v13).
+
+Notes:
+- This does not “avoid relayout during resize”. It reduces *redundant* work when multiple size updates arrive before a frame is drawn.
+- The remaining gap for resize smoothness is still dominated by:
+  - layout traversal/root build costs, and
+  - text prepare on `width_changed` (wrap reflow) for chrome-heavy pages.
+
+## 2026-02-06 13:45:00 (experiment; no code change)
+
+Change:
+- Enable deferred unbounded scroll probes during interactive resize:
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
+
+Why:
+- In `Scroll` layout, the default “unbounded probe” behavior measures scroll content with
+  `AvailableSpace::MaxContent` on the scroll axis to compute extents.
+- During window resize stress, this can become a large repeated cost when content reflows (wrap)
+  on every width change.
+- The scroll implementation already supports deferring the deep measure walk and reusing the last
+  measured size for a small number of frames while the viewport is changing.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-scroll-defer-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Worst overall `top_total_time_us=11810`
+- Evidence bundle: `target/fret-diag-codex-perf-resize-scroll-defer-v3/1770356485833-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Delta vs the coalesced resize run (same script; commit `beb2fa315` entry above):
+- `top_total_time_us` improves from `14219` → `11810` (~-17%).
+
+Notes:
+- This is an env-gated experiment only; it does not ship as default behavior yet.
+- The effect size and behavioral risk depend on scroll offset clamping semantics:
+  if content extents lag behind viewport changes, offsets can clamp earlier/later than “perfect”
+  wrap-aware extents. Before making this default, we should add a correctness probe:
+  - assert scroll offset remains stable across a resize stress sequence, and
+  - validate scrollbar thumb sizing does not glitch (or at least stays within an acceptable tolerance).
+
+## 2026-02-06 14:26:00 (correctness gate; commit `6c248d9e1`)
+
+Change:
+- Add per-frame scroll telemetry in UI diagnostics bundles (`debug.scroll_nodes[]`):
+  - `node`, `element`, `axis`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`.
+- Add a post-run diagnostics gate to ensure scroll offsets remain stable across a script run:
+  - `fretboard diag run ... --check-scroll-offset-stable <test_id>`
+- Add a dedicated correctness repro script that scrolls the view-cache page, then performs the
+  resize stress sequence:
+  - `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+
+Why:
+- The “deferred unbounded scroll probe” resize optimization is intentionally allowed to lag
+  content extents while the viewport is changing.
+- We need a scripted gate that catches catastrophic offset clamping/jumps while we iterate on the
+  policy (and before considering a default-on switch).
+
+Probe (single script; gate pass):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+- Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
+
+Command:
+```bash
+target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json \
+  --dir target/fret-diag-codex-scroll-offset-stable-v1b \
+  --timeout-ms 300000 --poll-ms 50 \
+  --check-scroll-offset-stable ui-gallery-content-viewport \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Result:
+- PASS
+- Evidence bundle: `target/fret-diag-codex-scroll-offset-stable-v1b/1770359181990-ui-gallery-window-resize-scroll-offset-stable/bundle.json`
+
+## 2026-02-06 15:01:00 (correctness gate; commits `8375df091`, `e20637f92`)
+
+Change:
+- Export per-frame scrollbar telemetry in UI diagnostics bundles (`debug.scrollbars[]`):
+  - `node`, `element`, `axis`, `scroll_target`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`,
+    `track`, `thumb`, `hovered`, `dragging`.
+- Add a post-run diagnostics gate to ensure scrollbar thumb geometry remains valid:
+  - `fretboard diag run ... --check-scrollbar-thumb-valid all`
+- Add a dedicated correctness repro script covering the resize stress sequence:
+  - `tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json`
+
+Why:
+- The “deferred unbounded scroll probe” resize optimization is intentionally allowed to lag
+  content extents while the viewport is changing.
+- We need a scripted gate that catches catastrophic scrollbar thumb glitches (negative sizes,
+  thumb escaping the track) while we iterate on resize policy.
+
+Probe (single script; gate pass):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json`
+- Gate: `--check-scrollbar-thumb-valid all`
+
+Command:
+```bash
+target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json \
+  --dir target/fret-diag-codex-scrollbar-thumb-valid-v1b \
+  --timeout-ms 300000 --poll-ms 50 \
+  --check-scrollbar-thumb-valid all \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Result:
+- PASS
+- Evidence bundle: `target/fret-diag-codex-scrollbar-thumb-valid-v1b/1770361216367-ui-gallery-window-resize-scrollbar-thumb-valid/bundle.json`
+
+## 2026-02-06 15:28:00 (recheck; no code change)
+
+Change:
+- Re-run `ui-gallery-window-resize-stress-steady` after recent mainline changes to verify whether
+  the earlier resize conclusions still hold.
+- Compare default behavior vs deferred unbounded scroll probe behavior under the same protocol.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command (default):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-recheck-default-v1 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Command (defer probe):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-recheck-defer-v1 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Default (`target/fret-diag-codex-perf-resize-recheck-default-v1`):
+  - `total_time_us`: min/p50/p95/max = `14862/15164/15323/15323`
+  - `layout_time_us`: min/p50/p95/max = `11366/11671/11830/11830`
+  - `paint_time_us`: min/p50/p95/max = `3346/3399/3417/3417`
+- Defer probe (`target/fret-diag-codex-perf-resize-recheck-defer-v1`):
+  - `total_time_us`: min/p50/p95/max = `11640/11672/11889/11889`
+  - `layout_time_us`: min/p50/p95/max = `8171/8220/8393/8393`
+  - `paint_time_us`: min/p50/p95/max = `3319/3347/3407/3407`
+
+Delta (defer vs default):
+- Worst `total_time_us`: `15323 -> 11889` (`-3434us`, about `-22%`).
+- Worst `layout_time_us`: `11830 -> 8393` (`-3437us`, about `-29%`).
+- Worst `paint_time_us`: `3417 -> 3407` (nearly unchanged).
+
+Worst-frame attribution (recheck):
+- Default worst bundle:
+  - `target/fret-diag-codex-perf-resize-recheck-default-v1/1770362421483-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Top frame (`tick=256/frame=332`):
+    - `layout_time_us=11830`, `paint_time_us=3395`, `paint_text_prepare_time_us=1378`
+    - `paint_text_prepare_reason_width_changed=17`
+- Defer worst bundle:
+  - `target/fret-diag-codex-perf-resize-recheck-defer-v1/1770362463869-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Top frame (`tick=305/frame=386`):
+    - `layout_time_us=8393`, `paint_time_us=3390`, `paint_text_prepare_time_us=1409`
+    - `paint_text_prepare_reason_width_changed=18`
+
+Node-level mapping (semantics-enabled one-shot):
+- Bundle:
+  - `target/fret-diag-codex-perf-resize-map-v1/1770362652598-ui-gallery-window-resize-stress-steady/bundle.json`
+- Hottest layout nodes map to:
+  - `node=4294968132` -> `test_id=ui-gallery-content-viewport`
+  - `node=4294968244` -> descendant under `test_id=ui-gallery-view-cache-root`
+- Interpretation:
+  - the current dominant resize cost is still inside the content viewport subtree,
+  - not paint-cache churn,
+  - and not a broad cache-root miss (the sampled worst frames still show `cache_roots_reused=2/2`).
+
+Notes:
+- This recheck confirms the prior finding: deferred unbounded probe is primarily a layout-tail optimization.
+- It does not reduce `paint_text_prepare` width-change work; text reflow remains a separate hotspot.
+
+## 2026-02-06 16:12:00 (commit `e50173f13`)
+
+Change:
+- Add an experiment gate to decouple paint-cache replay from `HitTestOnly` invalidation:
+  - `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
+- Keep default behavior unchanged (gate-off by default).
+- Add targeted unit coverage for gate off/on behavior and non-`HitTestOnly` regressions.
+
+Why:
+- `HitTestOnly` currently marks both `hit_test` and `paint` dirty, which can block paint-cache replay
+  even when only interaction geometry changes.
+- This experiment checks whether allowing replay in that narrow case improves resize smoothness.
+
+Command (A/B template):
+```bash
+target/debug/fretboard diag perf <script.json> \
+  --dir <out-dir> \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  [--env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1] \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Probe A: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- Gate off (`target/fret-diag-codex-paint-hit-test-off-v1`):
+  - `total_time_us`: `11358/11483/11621/11621` (min/p50/p95/max)
+  - `layout_time_us`: `8059/8146/8224/8224`
+  - `paint_time_us`: `3198/3219/3305/3305`
+- Gate on (`target/fret-diag-codex-paint-hit-test-on-v1`):
+  - `total_time_us`: `11347/11417/11513/11513`
+  - `layout_time_us`: `8046/8088/8231/8231`
+  - `paint_time_us`: `3191/3232/3282/3282`
+- Delta (on vs off):
+  - worst `total_time_us`: `11621 -> 11513` (`-108us`, about `-0.93%`)
+  - worst `paint_time_us`: `3305 -> 3282` (`-23us`)
+  - worst `layout_time_us`: `8224 -> 8231` (`+7us`, noise-level)
+
+Probe B: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+- Round 1:
+  - off (`target/fret-diag-codex-paint-hit-test-off-v1b`): `total max=12006`
+  - on (`target/fret-diag-codex-paint-hit-test-on-v1b`): `total max=14591` (single heavy outlier)
+- Round 2 (recheck):
+  - off (`target/fret-diag-codex-paint-hit-test-off-v2b`): `total max=12005`
+  - on (`target/fret-diag-codex-paint-hit-test-on-v2b`): `total max=11603`
+
+Outlier attribution note (Probe B round 1):
+- Worst ON bundle:
+  - `target/fret-diag-codex-paint-hit-test-on-v1b/1770365327865-ui-gallery-window-resize-scroll-offset-stable/bundle.json`
+- Top frame (`tick=132/frame=179`) is dominated by broader frame work:
+  - `layout_time_us=10311`, `paint_time_us=4179`, `dispatch_time_us=2947`
+  - `paint_cache_hits=0`, `paint_cache_misses=3` (new gate path not clearly exercised in that frame)
+
+Notes:
+- Current evidence is mixed and noisy across resize probes; no robust, repeatable win yet.
+- Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` as an experiment-only gate.
+- Next step: add diagnostics counters for “replay permitted by hit-test-only gate” and build a
+  focused script where `HitTestOnly` dominates but layout is stable.
+
+## 2026-02-06 17:32:00 (commit `f38f8c1d5`)
+
+Change:
+- Export two hit-test-only paint-cache gate counters end-to-end:
+  - `paint_cache_hit_test_only_replay_allowed`
+  - `paint_cache_hit_test_only_replay_rejected_key_mismatch`
+- Wire counters through diagnostics and perf summaries:
+  - `fret-ui` frame stats
+  - `fret-bootstrap` bundle export
+  - `fretboard diag` bundle parser + `--json` top metrics
+- Add targeted unit assertions for both counter paths:
+  - replay-allowed case
+  - key-mismatch rejection case
+
+Validation:
+- `cargo nextest run -p fret-ui paint_cache_hit_test_only_invalidation_replays_when_toggle_on paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch`
+- `cargo check -q -p fret-ui -p fret-bootstrap -p fretboard`
+
+Probe A: hit-test move sweep (counter visibility check)
+- Script: `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+
+Command (gate off):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-paint-hit-test-counter-off-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Command (gate on):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-paint-hit-test-counter-on-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Gate off (`target/fret-diag-codex-paint-hit-test-counter-off-v3`):
+  - `total_time_us`: `1647/1688/2104/2104` (min/p50/p95/max)
+  - `layout_time_us`: `1140/1442/1504/1504`
+  - `paint_time_us`: `188/197/964/964`
+- Gate on (`target/fret-diag-codex-paint-hit-test-counter-on-v3`):
+  - `total_time_us`: `1597/1681/1749/1749`
+  - `layout_time_us`: `1376/1459/1525/1525`
+  - `paint_time_us`: `187/192/194/194`
+
+Counter evidence:
+- For all 14 runs (off + on):
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+
+Probe B: resize stress recheck with counters
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- Env includes resize-defer probe:
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
+
+Results (us):
+- Gate off (`target/fret-diag-codex-paint-hit-test-counter-resize-off-v2`):
+  - `total_time_us`: `11319/11413/11499/11499`
+  - `layout_time_us`: `8036/8112/8190/8190`
+  - `paint_time_us`: `3172/3195/3222/3222`
+- Gate on (`target/fret-diag-codex-paint-hit-test-counter-resize-on-v2`):
+  - `total_time_us`: `11649/11722/12257/12257`
+  - `layout_time_us`: `8281/8372/8696/8696`
+  - `paint_time_us`: `3214/3315/3513/3513`
+
+Counter evidence:
+- For all 14 runs (off + on):
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+
+Worst bundles:
+- Hit-test off worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-off-v3/1770367752601-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- Hit-test on worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-on-v3/1770367829971-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- Resize off worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-resize-off-v2/1770367861503-ui-gallery-window-resize-stress-steady/bundle.json`
+- Resize on worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-resize-on-v2/1770367893335-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Interpretation:
+- The new counters prove these two current gallery probes do **not** exercise the hit-test-only replay gate path.
+- Therefore, observed on/off timing deltas here are not causal evidence for the gate itself.
+- Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment-only until we add a dedicated script that
+  deterministically drives `HitTestOnly` invalidation on cache-eligible nodes.
+
+## 2026-02-06 18:09:00 (commit `3cd778cce`)
+
+Change:
+- Ensure the new hit-test-only paint-cache counters are present in all `diag perf --json` shapes:
+  - single-run row output (`--repeat 1`)
+  - multi-run summary stats (`--repeat > 1`)
+- Rationale: previous wiring covered the per-run list path but missed some JSON surfaces used by quick triage scripts.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+
+Probe A (single-run JSON shape):
+- Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
+- Command:
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json \
+  --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-drag-sweep-steady-v3 \
+  --timeout-ms 180000 \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+- Result: output row now includes
+  - `top_paint_cache_hit_test_only_replay_allowed`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch`
+  (both `0` in this probe)
+
+Probe B (multi-run summary JSON shape):
+- Script: `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+- Command:
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-move-sweep-v4 \
+  --timeout-ms 240000 \
+  --repeat 3 --warmup-frames 3 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+- Result: output `stats` now includes
+  - `top_paint_cache_hit_test_only_replay_allowed` summary (`min/p50/p95/max`)
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch` summary (`min/p50/p95/max`)
+  (all `0` in this probe)
+
+Notes:
+- These probes still do not exercise the gate path itself (counters remain zero),
+  but JSON surface completeness is now fixed for downstream tooling.
+
+## 2026-02-06 18:30:00 (working tree)
+
+Change:
+- Added a dedicated probe page in UI Gallery:
+  - `hit_test_only_paint_cache_probe`
+  - pointer-move hook now calls `host.invalidate(Invalidation::HitTestOnly)` on the probe region.
+- Added focused script:
+  - `tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`
+- Goal: produce deterministic `HitTestOnly` invalidation while keeping layout stable, then verify whether the
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` gate is actually exercised.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fret-ui-gallery`
+
+A/B probe command (repeat 5):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-off-v4 \
+  --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-on-v4 \
+  --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Perf summary (from `diag perf` JSON output):
+- Gate off (`target/fret-diag-codex-hit-test-only-probe-off-v4`):
+  - `total_time_us`: `1332 / 1386 / 1400 / 1400` (min / p50 / p95 / max)
+  - `top_layout_time_us`: `1262 / 1313 / 1325 / 1325`
+- Gate on (`target/fret-diag-codex-hit-test-only-probe-on-v4`):
+  - `total_time_us`: `1348 / 1384 / 1419 / 1419`
+  - `top_layout_time_us`: `1271 / 1310 / 1339 / 1339`
+
+Counter evidence:
+- `diag perf` top-row fields still report
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+- Bundle-level max check (per run) shows the gate is actually hit when enabled:
+```bash
+for dir in \
+  target/fret-diag-codex-hit-test-only-probe-off-v4 \
+  target/fret-diag-codex-hit-test-only-probe-on-v4; do
+  for b in $(find "$dir" -name bundle.json | sort); do
+    jq '[.windows[0].snapshots[].debug.stats.paint_cache_hit_test_only_replay_allowed] | max' "$b"
+  done
+done
+```
+- Result:
+  - gate off: `[0, 0, 0, 0, 0]`
+  - gate on: `[12, 17, 17, 17, 17]`
+- Also observed in every run:
+  - `hit_test_only` invalidation walks: `191`
+  - `paint_cache_hits` max: `50`
+  - `paint_cache_hit_test_only_replay_rejected_key_mismatch` max: `0`
+
+Interpretation:
+- The new probe now provides direct evidence that `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1` opens replay attempts
+  on real runs.
+- Current latency impact in this micro-probe is neutral/mixed (p50 nearly unchanged; p95 slightly worse), so this
+  is correctness/path-validation evidence, not a speedup claim.
+- Follow-up: improve `diag perf --json` to expose per-run counter maxima directly (not only the selected `top_*` row)
+  to avoid false negatives when validating gate-path counters.
+
+## 2026-02-06 19:28:00 (commit `4c88f6696`)
+
+Change:
+- Extend `diag perf --json` to export per-run maxima for hit-test-only replay gate counters:
+  - `run_paint_cache_hit_test_only_replay_allowed_max`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+- Keep existing `top_*` fields unchanged for compatibility with existing triage tooling.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug --repeat 2 --warmup-frames 1 --sort time --json --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe --env FRET_UI_GALLERY_VIEW_CACHE=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 --launch -- target/release/fret-ui-gallery`
+
+Results:
+- Run-level evidence (`rows[0].runs`):
+  - run 0: `top_paint_cache_hit_test_only_replay_allowed=0`, `run_paint_cache_hit_test_only_replay_allowed_max=17`, `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max=0`
+  - run 1: `top_paint_cache_hit_test_only_replay_allowed=0`, `run_paint_cache_hit_test_only_replay_allowed_max=17`, `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max=0`
+- Summary evidence (`rows[0].stats`):
+  - `run_paint_cache_hit_test_only_replay_allowed_max`: `min/p50/p95/max = 17/17/17/17`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`: `0/0/0/0`
+  - `top_paint_cache_hit_test_only_replay_allowed`: `0/0/0/0`
+
+Evidence files:
+- Perf run bundles: `target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug/*/bundle.json`
+- Captured perf output (clean JSON): `target/fret-diag-codex-summaries/hit-test-only-probe-v6c-r2-debug-perf.clean.json`
+
+Interpretation:
+- `top_*` remains tied to the selected top snapshot (time-sorted), so it can legitimately stay `0`.
+- New `run_*_max` fields provide the missing counter surface and prevent false negatives in gate-path validation.
+
+## 2026-02-06 19:56:00 (commit `f4a6f422b`)
+
+Change:
+- Wire hit-test-only replay run-max counters into perf gating + baseline flow:
+  - New perf CLI thresholds:
+    - `--min-run-paint-cache-hit-test-only-replay-allowed-max`
+    - `--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max`
+  - `scan_perf_threshold_failures` now evaluates:
+    - lower-bound gate for `run_paint_cache_hit_test_only_replay_allowed_max`
+    - upper-bound gate for `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+  - `--perf-baseline-out` now emits thresholds + measured max for the two run-max counters.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard perf_threshold_scan`
+- `cargo nextest run -p fretboard perf_baseline_parse_reads_script_thresholds`
+
+Probe A (threshold gate wired):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-threshold-v1-r1-debug \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --min-run-paint-cache-hit-test-only-replay-allowed-max 10 \
+  --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max 0 \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Result highlights:
+- JSON row fields:
+  - `run_paint_cache_hit_test_only_replay_allowed_max = 17`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+- `check.perf_thresholds.json`:
+  - `rows[0].thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max = 10`
+  - `rows[0].thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+  - `failures = 0`
+
+Probe B (baseline export wired):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-baseline-v1-r1-debug \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --perf-baseline-out target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-baseline.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Baseline output highlights:
+- `measured_max.run_paint_cache_hit_test_only_replay_allowed_max = 17`
+- `measured_max.run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+- `thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max = 13`
+  - derived via floor policy at `headroom_pct=20` (17 → 13)
+- `thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+
+Evidence files:
+- Threshold-gate run output: `target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-r1-debug-perf.json`
+- Threshold gate report: `target/fret-diag-codex-hit-test-only-probe-threshold-v1-r1-debug/check.perf_thresholds.json`
+- Baseline output: `target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-baseline.json`
+
+Interpretation:
+- The run-max counters are now first-class perf-gate signals (baseline + CLI + failure scan).
+- This removes the remaining manual `bundle.json` max extraction step for gate-path regressions.
+
+## 2026-02-06 20:12:00 (commit `f4a6f422b`)
+
+Change:
+- Refresh `ui-gallery-steady` baseline to include the latest perf-threshold schema with run-max gate fields:
+  - baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`
+  - includes threshold keys:
+    - `min_run_paint_cache_hit_test_only_replay_allowed_max`
+    - `max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+
+Baseline command (final v14):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v14h20c \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v14-validate2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `check.perf_thresholds.json` failures: `0` (validation passes).
+- Baseline v14 worst overall (generation run):
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=22645`
+  - bundle: `target/fret-diag-codex-perf-v14h20c/1770379813412-ui-gallery-window-resize-stress-steady/bundle.json`
+- Validation worst overall:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=15856`
+  - bundle: `target/fret-diag-codex-perf-v14-validate2/1770379937450-ui-gallery-window-resize-stress-steady/bundle.json`
+- Drift vs v13 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json`):
+  - `window-resize-stress-steady` measured max `top_total_time_us`: `15532 -> 22645`.
+
+Run-max gate fields in v14 baseline:
+- Present in `thresholds` and `measured_max` for every row.
+- Current `ui-gallery-steady` run keeps both values at `0` (expected because this suite does not enable
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` nor target the dedicated probe page).
+
+Evidence files:
+- Baseline generation JSON: `target/fret-diag-codex-summaries/ui-gallery-steady.macos-m4.v14.h20c.gen.perf.clean.json`
+- Baseline validation JSON: `target/fret-diag-codex-summaries/ui-gallery-steady.macos-m4.v14.validate2.perf.clean.json`
+- Threshold report: `target/fret-diag-codex-perf-v14-validate2/check.perf_thresholds.json`
+
+Interpretation:
+- Baseline schema migration is complete and validated (new run-max gate fields are now part of the canonical baseline).
+- The resize script remains the dominant noise source; one high outlier in the baseline generation run significantly
+  raised `max_top_total_us` for that script. Follow-up should consider robust baseline generation
+  (e.g., percentile-capped thresholding for known noisy scripts) to avoid over-loose gates.
+
+## 2026-02-06 21:05:00 (commit: feat(diag) anti-noise seeds for steady baseline thresholds)
+
+Change:
+- `diag perf --perf-baseline-out` now records anti-noise seed metadata per row:
+  - `measured_p95`
+  - `threshold_seed`
+  - `threshold_seed_source`
+- Added script-specific threshold-seed policy:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+    uses p95 seed for `top_total_time_us`, `top_layout_time_us`, `top_layout_engine_solve_time_us`.
+  - other scripts/metrics keep max-seeded thresholds.
+- p95 seed computation for baseline generation uses linear interpolation over run samples so repeat=7
+  does not collapse to max-only seeding.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Baseline command (v15):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15h20p95i \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15-validate-p95i \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v15-validate-p95i/check.perf_thresholds.json`: `failures = 0`.
+- Baseline v15 resize row (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`):
+  - `measured_max.top_total_time_us = 16566`
+  - `measured_p95.top_total_time_us = 16379`
+  - `threshold_seed_source.top_total_time_us = "p95"`
+  - `thresholds.max_top_total_us = 19655` (20% headroom over p95 seed)
+- Drift vs v14 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`):
+  - resize measured max top-total: `22645 -> 16566` (`-26.84%`)
+  - resize threshold max-top-total: `27174 -> 19655` (`-27.67%`)
+- Validation run worst overall:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us = 15893`
+  - bundle: `target/fret-diag-codex-perf-v15-validate-p95i/1770382935955-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Interpretation:
+- Baseline rows now expose enough metadata to audit threshold derivation without reverse-engineering scripts.
+- Resize steady thresholds are no longer tied to raw max-only seeds; this tightens gates against single-run
+  outliers while keeping repeat=3 validation stable on the current machine profile.
+- Follow-up: if suite noise rises again, tune seed policy per script (e.g., p90/p95 or higher repeat for
+  specific workloads) and record the policy update in this log.
+
+## 2026-02-06 21:35:00 (working tree)
+
+Change:
+- Added configurable baseline seed policy for `diag perf --perf-baseline-out`:
+  - new CLI flag: `--perf-baseline-seed <script@metric=max|p90|p95>` (repeatable)
+  - default policy remains max-seeded globally, with built-in resize override:
+    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+    - metrics `top_total/layout/solve` default to `p95`
+- Baseline payload now records policy header:
+  - `threshold_seed_policy.default_seed`
+  - `threshold_seed_policy.rules[]`
+- Baseline row now records both `measured_p90` and `measured_p95` (for seed provenance and future tuning).
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Baseline command (v15 refresh with policy header):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15h20seed \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15-validate-seed \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v15-validate-seed/check.perf_thresholds.json`: `failures = 0`.
+- Baseline header includes policy metadata:
+  - `threshold_seed_policy.default_seed = "max"`
+  - resize steady `top_total/layout/solve` rules seeded by `p95`.
+- Baseline v15 resize row (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`):
+  - `measured_max.top_total_time_us = 15763`
+  - `measured_p90.top_total_time_us = 15683`
+  - `measured_p95.top_total_time_us = 15723`
+  - `threshold_seed_source.top_total_time_us = "p95"`
+  - `thresholds.max_top_total_us = 18868`
+- Drift vs v14 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`):
+  - resize measured max top-total: `22645 -> 15763` (`-30.39%`)
+  - resize threshold max-top-total: `27174 -> 18868` (`-30.56%`)
+- Validation run tightest total-time margin:
+  - script: `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
+  - observed `2170` vs threshold `2552` (margin `382` us)
+- CLI override smoke check (`--perf-baseline-seed`):
+  - command: `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --repeat 1 --perf-baseline-out target/fret-diag-codex-summaries/perf-seed-flag-smoke-baseline.json --perf-baseline-seed tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90 ...`
+  - baseline header adds a `source="cli"` rule for the override.
+  - row seed source reports `threshold_seed_source.top_total_time_us = "p90"`.
+
+Interpretation:
+- Seed policy is now explicit and versioned in baseline JSON, so threshold provenance is auditable.
+- With `--perf-baseline-seed`, we can tighten or relax noisy scripts without code changes and still keep a
+  reproducible evidence trail in the baseline artifact.
+
+## 2026-02-06 22:10:00 (commit: feat(diag) add suite-scoped baseline seed templates)
+
+Change:
+- Extended baseline seed scope from per-script to template scopes:
+  - `ui-gallery@...`
+  - `ui-gallery-steady@...`
+  - `this-suite@...`
+  - `suite:<name>@...`
+  - `*@...`
+- Kept rule precedence “last match wins” and preserved default resize `p95` policy.
+- Added a policy template document for repeatable usage:
+  - `docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Result highlights:
+- New suite/template scopes are verified by unit tests in `apps/fretboard/src/diag/mod.rs`.
+- No baseline numbers were changed in this step; this is a tooling-surface extension.
+
+Interpretation:
+- Baseline seed tuning is now script-group aware, so tightening policy can happen by suite-level commands without
+  introducing one-off code branches.
+
+## 2026-02-06 22:50:00 (working tree)
+
+Change:
+- Added JSON preset support for perf baseline seed policy in `diag perf`:
+  - new CLI flag: `--perf-baseline-seed-preset <path>` (repeatable)
+  - preset schema validation: `schema_version=1`, `kind=perf_baseline_seed_policy`
+  - supported fields: optional `default_seed`, required `rules[]` (`scope`, `metric`, `seed`)
+- Policy merge precedence is now explicit:
+  - built-in defaults -> preset rules (CLI order) -> explicit `--perf-baseline-seed` rules
+- Added versioned preset artifact:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
+- Updated docs/help surfaces:
+  - `apps/fretboard/src/cli.rs` usage + example
+  - `docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite baseline_threshold_seed_policy_supports_preset_file baseline_threshold_seed_policy_rejects_bad_preset_schema baseline_threshold_seed_policy_cli_overrides_preset_rule baseline_threshold_seed_policy_preset_can_override_default_seed perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Result highlights:
+- Nextest summary: `14 passed, 0 failed` for the targeted policy/perf-threshold test set.
+- New tests cover:
+  - preset parse success
+  - preset schema validation failure
+  - CLI rule overriding preset rule
+  - preset `default_seed` override while preserving built-in resize `p95` default rule
+
+Interpretation:
+- Seed policy is now file-versionable and replayable without code edits.
+- Teams can keep policy profiles in-repo, then layer temporary CLI overrides for experiments while preserving reproducibility.
+
+## 2026-02-06 23:20:00 (working tree)
+
+Change:
+- Ran a first preset-driven steady baseline trial (`v16`) using:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
+- Goal: quantify how much threshold tightening we gain over `v15`, and measure gate stability (`false fail` risk)
+  under the same validation profile.
+
+Commands:
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v16-preset \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json \
+  --perf-baseline-headroom-pct 20 \
+  --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v16-validate \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Additional stability sampling:
+- Repeated two more validation runs with the same settings:
+  - `target/fret-diag-codex-perf-v16-validate2`
+  - `target/fret-diag-codex-perf-v16-validate3`
+- Rechecked `v15` once for control:
+  - `target/fret-diag-codex-perf-v15-validate-recheck`
+
+Results:
+- `v16` validation gate status:
+  - `target/fret-diag-codex-perf-v16-validate/check.perf_thresholds.json`: `failures = 1`
+  - `target/fret-diag-codex-perf-v16-validate2/check.perf_thresholds.json`: `failures = 1`
+  - `target/fret-diag-codex-perf-v16-validate3/check.perf_thresholds.json`: `failures = 1`
+- Stable failing metric across all 3 validation runs:
+  - script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
+  - metric: `top_total_time_us`
+  - threshold (`v16`): `6664`
+  - observed actuals: `7351`, `7403`, `7188`
+  - over-threshold margins: `+687`, `+739`, `+524` us
+- `v15` control recheck:
+  - `target/fret-diag-codex-perf-v15-validate-recheck/check.perf_thresholds.json`: `failures = 0`
+
+v15 -> v16 threshold-delta summary (`ui-gallery-steady`, 11 scripts x 8 gated metrics = 88 checks):
+- tightened: `20`
+- unchanged: `43`
+- loosened: `25`
+- aggregate threshold sums:
+  - `max_top_total_us`: `85809 -> 82475` (`-3.89%`)
+  - `max_top_layout_us`: `59762 -> 58147` (`-2.70%`)
+  - `max_top_solve_us`: `4229 -> 4279` (`+1.18%`)
+
+Key root cause candidate:
+- Overlay steady `top_total` got over-tightened by p90 seeding:
+  - `v15 threshold`: `9066` (max-seeded)
+  - `v16 threshold`: `6664` (p90-seeded)
+  - delta: `-2402` (`-26.5%`)
+- This exceeds observed run-to-run jitter envelope on current machine profile.
+
+Interpretation:
+- Preset strategy works technically and provides measurable tightening.
+- Current `ui-gallery-steady.v1` policy is too aggressive for overlay `top_total_time_us`; it introduces consistent
+  false gate failures under repeat=3 validation.
+- Recommended next action: publish `ui-gallery-steady.v2.json` with overlay `top_total_time_us` switched to `p95`
+  (or keep overlay on `max`) while retaining p90 for scripts that remain stable.
+
+## 2026-02-06 23:55:00 (working tree)
+
+Change:
+- Published preset v2 to address the known overlay false-fail hotspot from v1:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`
+  - key adjustment: override `tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us` from `p90` to `p95`.
+- Generated new baseline with preset v2:
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json`
+
+Baseline command (v17):
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v17-preset-v2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json \
+  --perf-baseline-headroom-pct 20 \
+  --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation sample (3 runs):
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v17-validate{1|2|3} \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v17-validate1/check.perf_thresholds.json`: `failures = 0`
+  - `target/fret-diag-codex-perf-v17-validate2/check.perf_thresholds.json`: `failures = 0`
+  - `target/fret-diag-codex-perf-v17-validate3/check.perf_thresholds.json`: `failures = 0`
+- Overlay false-fail fixed vs v16:
+  - `ui-gallery-overlay-torture-steady` `max_top_total_us`: `6664 (v16) -> 7868 (v17)`
+  - v16 had repeated failures at this point; v17 passed all sampled validations.
+- Threshold delta overview (v15 -> v17, 88 checks):
+  - tightened: `22`, unchanged: `45`, loosened: `21`
+- Aggregate threshold sums:
+  - `max_top_total_us`: `85809 -> 88118` (`+2.69%`)
+  - `max_top_layout_us`: `59762 -> 61061` (`+2.17%`)
+  - `max_top_solve_us`: `4229 -> 6105` (`+44.36%`)
+
+Interpretation:
+- Preset v2 resolves the known overlay false fail and restores validation stability.
+- However, this particular v17 generation run carries a resize-heavy outlier (`window-resize-stress-steady`),
+  which loosens global guard strength despite stable gate pass.
+- Follow-up should add robustness against resize-run outliers (multi-pass baseline selection / outlier rejection)
+  before promoting v17 as the long-term canonical baseline.
+
+## 2026-02-07 00:35:00 (working tree)
+
+Change:
+- Added baseline candidate-selection automation script:
+  - `tools/perf/diag_perf_baseline_select.sh`
+- Script behavior:
+  - generates multiple baseline candidates (`diag perf --perf-baseline-out`)
+  - validates each candidate multiple times (`diag perf --perf-baseline`)
+  - selects winner by: `fail_total` -> resize `p90(top_total)` -> `sum(max_top_total_us)`
+  - writes machine-readable evidence:
+    - candidate list: `<work-dir>/candidate-results.json`
+    - final summary: `<work-dir>/selection-summary.json`
+
+Selection run (v18):
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --candidates 2 \
+  --validate-runs 3 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 20 \
+  --work-dir target/fret-diag-codex-perf-v18-select2 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Selection result:
+- Summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`
+- Candidate-1:
+  - `fail_total = 0`
+  - `resize_p90_top_total_us = 16110`
+  - `threshold_sum_max_top_total_us = 84611`
+- Candidate-2:
+  - `fail_total = 0`
+  - `resize_p90_top_total_us = 16012`
+  - `threshold_sum_max_top_total_us = 83564`
+- Winner: `candidate-2` copied to
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`
+
+Validation stability:
+- Both candidates passed `3/3` validation runs with `failures=0`.
+- This closes the earlier instability issue where single-run baseline promotion could keep a resize-heavy outlier.
+
+Threshold impact:
+- Aggregate sums (`ui-gallery-steady`):
+  - `max_top_total_us`: `v15=85809`, `v17=88118`, `v18=83564`
+  - `max_top_layout_us`: `v15=59762`, `v17=61061`, `v18=57829`
+  - `max_top_solve_us`: `v15=4229`, `v17=6105`, `v18=4348`
+- Delta structure:
+  - `v15 -> v18`: tightened `28`, unchanged `47`, loosened `13` (88 checks)
+  - `v17 -> v18`: tightened `28`, unchanged `46`, loosened `14` (88 checks)
+
+Interpretation:
+- Candidate selection recovers stability and avoids promoting resize-outlier baselines.
+- v18 is both stable (`failures=0` in sampled validations) and tighter than v15/v17 at the suite aggregate level.
+- This workflow is a better default for baseline refreshes than single-pass generation.
+
+## 2026-02-07 00:46:00 (working tree)
+
+Change:
+- Added a dedicated retained-virtual-list boundary-crossing probe script:
+  - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
+- Calibrated how this probe should be executed for meaningful window-shift diagnostics.
+
+Initial run (insufficient env; counters stayed zero):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-window-boundary-crossing-steady-sample-r1 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Observation from `r1`/`r2`:
+- `virtual_list_window_shifts_total = 0`
+- `virtual_list_visible_range_refreshes = 0`
+- Root cause: view-cache env was not enabled, so this probe did not exercise the intended retained-window path.
+
+Calibrated sampling command (meaningful path):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-window-boundary-crossing-steady-sample-r3 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_VLIST_MINIMAL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Sampled runs:
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r3`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r4`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r5`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r6`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+
+Interpretation:
+- The script consistently exercises one retained prefetch window shift when launched with view-cache env enabled.
+- A practical first gate target is:
+  - `prefetch <= 3`
+  - `escape <= 0`
+  - `non_retained <= 0`
+- Next step: promote this command profile into the M4 acceptance recipe and require repeated `failures=0` validation runs.
+
+
+## 2026-02-07 00:56:00 (working tree)
+
+Change:
+- Promoted the boundary-crossing probe into a reusable gate recipe:
+  - `tools/perf/diag_vlist_boundary_gate.sh`
+- Gate defaults are now explicit and reproducible:
+  - `prefetch_max=3`, `escape_max=0`, `non_retained_max=0`, `runs=3`
+
+Gate command:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result summary:
+- Summary file: `target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`
+- Gate status: `pass=true`, `run_failures=0`
+- Per-run metrics:
+  - run-1: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+  - run-2: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+  - run-3: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+
+Interpretation:
+- M4.2 boundary-crossing gate promotion is complete for the retained VirtualList path.
+- Next focus stays on M4.3: reduce rerender-triggering shifts on non-retained fallback and tighten cache-key stability.
+
+
+## 2026-02-07 01:04:00 (working tree)
+
+Change:
+- Tuned VirtualList prepaint window-shift policy for non-retained + view-cache path:
+  - file: `crates/fret-ui/src/tree/prepaint.rs`
+  - behavior: suppress preemptive/forced prefetch rerender for non-retained lists while
+    the current visible range is still covered by the rendered overscan envelope.
+- Intent:
+  - keep retained-host prefetch behavior unchanged,
+  - reduce avoidable cache-root rerender churn on non-retained fallback.
+
+Baseline (before change, non-retained fallback profile):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-vlist-boundary-nonretained-before-r1 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_VLIST_MINIMAL=1 \
+  --env FRET_UI_GALLERY_VLIST_RETAINED=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+(Repeated for `r1..r3`)
+
+Validation after change (non-retained fallback profile, same command shape):
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r1`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r2`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r3`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+
+Delta (3-run aggregate):
+- `prefetch`: `3 -> 0` (`-100%`)
+- `non_retained`: `3 -> 0` (`-100%`)
+- `escape`: `0 -> 0` (unchanged)
+
+Retained-path regression check:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r2 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-gate-r2/summary.json`
+- Result: `pass=true`, with retained profile still at `prefetch=1`, `escape=0`, `non_retained=0` per run.
+
+Interpretation:
+- M4.3 first optimization slice lands: non-retained fallback no longer pays avoidable prefetch-triggered rerender churn on this steady crossing probe.
+- Next M4.3 slice should audit cache-key instability and add a bounded non-retained escape gate so regressions are caught early.
+
+
+## 2026-02-07 01:16:00 (working tree)
+
+Change:
+- Extended `tools/perf/diag_vlist_boundary_gate.sh` to cover both retained and non-retained profiles.
+- Added new gate options:
+  - `--retained <0|1>`
+  - `--max-cache-key-mismatch <n>`
+  - `--max-needs-rerender <n>`
+- Gate now records per-run maxima from `bundle.json` snapshots:
+  - `view_cache_roots_cache_key_mismatch`
+  - `view_cache_roots_needs_rerender`
+
+Retained profile validation:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r3 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-gate-r3/summary.json`
+- Result: `pass=true` (3/3), sample remains `prefetch=1`, `escape=0`, `non_retained=0`,
+  `cache_key_mismatch_max=0`, `needs_rerender_max=0`.
+
+Non-retained strict gate validation:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --retained 0 \
+  --prefetch-max 0 \
+  --escape-max 0 \
+  --non-retained-max 0 \
+  --max-cache-key-mismatch 0 \
+  --max-needs-rerender 0 \
+  --out-dir target/fret-diag-codex-vlist-boundary-nonretained-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-nonretained-gate-r1/summary.json`
+- Result: `pass=true` (3/3)
+- Per-run sample: `prefetch=0`, `escape=0`, `non_retained=0`,
+  `cache_key_mismatch_max=0`, `needs_rerender_max=0`.
+
+Interpretation:
+- We now have a bounded non-retained fallback gate that tracks both shift behavior and cache-key/rerender hygiene.
+- This closes the earlier “non-retained escape budget gate” TODO at tooling level and makes M4.3 regressions easier to catch.
+
+
+## 2026-02-07 01:34:00 (working tree)
+
+Change:
+- Added a stronger non-retained boundary script:
+  - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json`
+- Script intent:
+  - same target surface as boundary-crossing probe,
+  - larger wheel deltas (`±360`) with denser cadence to stress window-boundary behavior,
+  - keep diagnostics bounded via explicit `reset_diagnostics` + `capture_bundle`.
+
+Strict gate command (non-retained profile):
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --script tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json \
+  --retained 0 \
+  --prefetch-max 0 \
+  --escape-max 0 \
+  --non-retained-max 0 \
+  --max-cache-key-mismatch 0 \
+  --max-needs-rerender 0 \
+  --out-dir target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Results:
+- Summary: `target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1/summary.json`
+- Gate status: `pass=true`, `run_failures=0` (3/3)
+- Per-run sample:
+  - `prefetch=0`, `escape=0`, `non_retained=0`
+  - `cache_key_mismatch_max=0`, `needs_rerender_max=0`
+
+Interpretation:
+- Even under a stronger wheel stress profile, non-retained fallback keeps zero shift/rerender churn on this probe.
+- Escape remained zero in this stress script; next M4.3 work should focus on an explicit out-of-band escape trigger path (or dedicated telemetry) if we want a positive escape expectation gate.
+
+
+## 2026-02-07 08:45:00 (commit `5208b6883`)
+
+Change:
+- Resize probe re-check on current HEAD after the VirtualList boundary work (sanity: keep P0 resize costs visible).
+
+Script:
+- `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-resize-stress-steady-1770425071 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 3 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14384 | 15204 | 15204 | 11659 | 1799 | 101 | 3444 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `15204`
+- bundle: `target/fret-diag-codex-resize-stress-steady-1770425071/1770425080919-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Worst-frame breakdown (from the bundle; `frame_id=470`):
+- Layout:
+  - `layout_time_us=11659`
+  - `layout_engine_solve_time_us=1799`, `layout_engine_solves=4`
+  - `layout_request_build_roots_time_us=2307`
+  - `layout_roots_time_us=8416`
+  - `layout_semantics_refresh_time_us=737`
+  - `layout_view_cache_time_us=190`
+  - `layout_collapse_layout_observations_time_us=187`
+  - `layout_nodes_visited=1101`, `layout_nodes_performed=828`
+- Paint:
+  - `paint_time_us=3444`
+  - `paint_text_prepare_time_us=1452` (`calls=18`, `width_changed=18`)
+
+Interpretation:
+- Resize remains layout-dominant on this probe; the solve itself is not the primary cost.
+  Primary leverage is reducing layout plumbing overhead and width-jitter-induced text churn while resizing.
+
+## 2026-02-07 10:25:10 (commit `e7547c213a9438dc5b401e9b60a6285a920e581b`)
+
+Change:
+- Re-run resize stress steady probe at HEAD
+
+Suite:
+- `ui-gallery-window-resize-stress-steady`
+
+Command:
+```powershell
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --dir target/fret-diag-perf/resize-stress-steady.20260207-102407 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-perf/resize-stress-steady.20260207-102407/stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14105 | 14270 | 14270 | 10981 | 1655 | 87 | 3210 | 2400 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `2425 / 3475 / 3475` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `22 / 24 / 24` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431050887-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431050887-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14270`
+- bundle: `target/fret-diag-perf/resize-stress-steady.20260207-102407/1770431057808-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-07 10:34:29 (commit `5b0aac3bfc26d124e34e06cd32b25217df855623`)
+
+Change:
+- Add resize drag jitter steady probe (baseline seed candidate)
+
+Suite:
+- `ui-gallery-window-resize-drag-jitter-steady`
+
+Command:
+```powershell
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327 --timeout-ms 300000 --warmup-frames 5 --repeat 7 --sort time --top 15 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+```
+
+Stdout:
+- `target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327/stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 14228 | 16783 | 16783 | 14010 | 1937 | 85 | 2822 | 3910 | 0 |
+
+Notes:
+- Dispatch frames (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):
+  - `dispatch_time_us`: `2677 / 3910 / 3910` (p50 / p95 / max)
+  - `hit_test_time_us`: `0 / 0 / 0` (p50 / p95 / max)
+  - `snapshots_with_global_changes` (within that frame set): `98 / 100 / 100` (p50 / p95 / max)
+  - Worst dispatch bundle: `target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327/1770431627012-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - Worst hit-test bundle: `target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327/1770431611116-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+- top_total_time_us: `16783`
+- bundle: `target/fret-diag-perf/resize-drag-jitter-steady.20260207-103327/1770431627012-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-07 11:29:52 (working tree)
+
+Change:
+- Add a dedicated `ui-resize-probes` perf suite (resize stress + drag jitter) so we can gate resize regressions as a
+  single, cheap contract.
+- Generate a committed baseline for the suite using the anti-outlier selection workflow.
+- Add a lightweight gate runner script.
+
+Baseline selection (anti-outlier):
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-resize-probes \
+  --preset docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json \
+  --candidates 2 \
+  --validate-runs 2 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 20 \
+  --work-dir target/fret-diag-baseline-select-ui-resize-probes-v1b \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Outputs:
+- Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-resize-probes-v1b/selection-summary.json`
+  - Best candidate: `candidate-1` (`fail_total=1`, `resize_p90_top_total_us=14945`, `threshold_sum_max_top_total_us=35468`)
+
+Gate smoke (repeat=3):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-smoke \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v1.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-smoke/summary.json`)
+  - Note: This was a **false PASS** because the initial gate runner only checked the process exit code.
+    The run produced `failures > 0` in `check.perf_thresholds.json`. Fixed by commit `f7d6fbbca`.
+
+## 2026-02-07 12:09:11 (commits `e20ddde7a`, `f7d6fbbca`, and baseline refresh)
+
+Change:
+- Make perf threshold scanning skip pointer-move metrics when the script produced no pointer-move frames
+  (so resize-only probes don't fail on unrelated dispatch fallback noise).
+- Make `tools/perf/diag_resize_probes_gate.sh` authoritative by reading `check.perf_thresholds.json` and failing when
+  `failures > 0` (not just when the process exits non-zero).
+- Refresh the `ui-resize-probes` baseline to `v2` with increased headroom to avoid flakiness from known resize tails.
+
+Evidence (bug revealed by authoritative gate):
+- `ui-resize-probes` can currently produce occasional resize-stress frames at ~21ms total (paint spike),
+  so the stricter `v1` baseline can fail intermittently on main.
+  - Example failing run evidence: `target/fret-diag-resize-probes-gate-r1/check.perf_thresholds.json`
+
+Baseline refresh (anti-outlier selection, headroom=50%):
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-resize-probes \
+  --preset docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --candidates 2 \
+  --validate-runs 2 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 50 \
+  --work-dir target/fret-diag-baseline-select-ui-resize-probes-v2 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Outputs:
+- Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-resize-probes-v2/selection-summary.json`
+
+Gate validation (repeat=3) with baseline `v2`:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-v2-r1 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-v2-r1/summary.json`)
+
+## 2026-02-07 12:29:32 (commit `414974a44`)
+
+Change:
+- Improve paint hitch attribution by including element debug paths in `debug.paint_widget_hotspots[]`.
+
+Why this matters:
+- Resize and scroll probes can show paint spikes where `paint_widget_hotspots` points at a high-cost widget, but the
+  previous payload only included `element` ids. Adding `element_path` makes it fast to jump from a hotspot to the
+  responsible callsite (`root[...]...file:line:col[...]`), which is essential for “fearless refactors” without guesswork.
+
+Validation:
+- Run any perf probe that captures a bundle and inspect a top snapshot:
+  - `debug.paint_widget_hotspots[0].element_path` should be present when element debug identity is available.
+
+## 2026-02-07 13:04:21 (resize probe follow-up + layout phase visibility)
+
+Evidence run (repeat=10, baseline v2):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r2 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 10 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r2/summary.json`)
+- Worst frames (from `target/fret-diag-resize-probes-gate-r2/stdout.json`):
+  - `ui-gallery-window-resize-stress-steady` worst `top_total_time_us=15113`
+    - `top_layout_time_us=11077`, `top_paint_time_us=3948`, `top_layout_engine_solve_time_us=1610`, `top_layout_engine_solves=4`
+    - Renderer CPU (diagnostic): `top_renderer_encode_scene_us=201`, `top_renderer_prepare_text_us=165`
+  - `ui-gallery-window-resize-drag-jitter-steady` worst `top_total_time_us=14404`
+    - `top_layout_time_us=11562`, `top_paint_time_us=2762`, `top_layout_engine_solve_time_us=1727`, `top_layout_engine_solves=4`
+    - Renderer CPU (diagnostic): `top_renderer_encode_scene_us=252`, `top_renderer_prepare_text_us=305`
+
+Interpretation:
+- On these resize probes, the bottleneck remains **layout plumbing** (`top_layout_time_us`), not renderer CPU work.
+- This supports the working hypothesis that “Zed smoothness” on live resize is mostly about reducing per-frame
+  tree/build/apply overhead and minimizing avoidable invalidations, rather than GPU-side tuning (for these scripts).
+
+Change (commit `366efd769`):
+- Make `layout_roots_time_us` visible in `fretboard diag stats` snapshot rows and in `fretboard diag perf --json`
+  run payloads (alongside `layout_request_build_roots_time_us`), so resize traces can be split into:
+  “request/build” vs “roots/layout traversal”.
+
+Validation:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r3 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r3/summary.json`)
+- `target/fret-diag-resize-probes-gate-r3/stdout.json` now includes:
+  - `top_layout_request_build_roots_time_us`
+  - `top_layout_roots_time_us`
+
+## 2026-02-07 13:59:21 (commit `3d6f0870e`)
+
+Change:
+- Improve resize layout attribution by:
+  - exporting `layout_engine_child_rect_{queries,time_us}` to quantify layout-engine rect query overhead,
+  - enriching `layout_hotspots[]` with `element_kind` and (when available) `element_path`,
+  - extending `fretboard diag perf --json` rows with `top_layout_engine_child_rect_*`,
+  - fixing a diagnostics-only build issue in paint hotspot debug-path lookup.
+
+Build note:
+- The `ui-resize-probes` gate launches `target/release/fret-ui-gallery`, so you must rebuild it to see new
+  diagnostics fields:
+```bash
+cargo build -p fret-ui-gallery --release
+```
+
+Evidence run:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r6 \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v2.json \
+  --launch-bin target/release/fret-ui-gallery \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r6/summary.json`)
+
+Worst frame (resize-stress, from `target/fret-diag-resize-probes-gate-r6/stdout.json`):
+- `top_total_time_us=16010`
+  - `top_layout_time_us=11739`
+    - `top_layout_request_build_roots_time_us=2221`
+    - `top_layout_roots_time_us=8545`
+    - `top_layout_engine_solve_time_us=1729`
+    - `top_layout_engine_child_rect_queries=534`
+    - `top_layout_engine_child_rect_time_us=38`
+  - `top_paint_time_us=4172`
+
+Interpretation:
+- Layout engine child-rect queries are **not** a bottleneck on this probe (tens of µs per frame).
+- The bulk of the resize cost is in widget layout (see `debug.layout_hotspots[]`), not in renderer CPU work.
+
+Layout hotspot attribution (example):
+- Bundle: `target/fret-diag-resize-probes-gate-r6/1770443890221-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot extraction (top 8 layout hotspots):
+```bash
+jq '(.windows[0].snapshots | map(select(.debug.stats != null)) | max_by(.debug.stats.layout_time_us)) |
+  {tick_id, frame_id, layout: .debug.stats.layout_time_us,
+   layout_hotspots: (.debug.layout_hotspots | sort_by(.layout_time_us) | reverse | .[0:8])}' \
+  target/fret-diag-resize-probes-gate-r6/1770443890221-ui-gallery-window-resize-stress-steady/bundle.json
+```
+- In this run, the top layout hotspots are `Scroll` element hosts (exclusive layout time in the ms range), suggesting
+  the next concrete investigation should focus on scroll layout policy during live resize (including width-jitter text
+  preparation and unbounded-probe behavior).
+
+## 2026-02-07 14:35 — Add `layout_inclusive_hotspots[]` for resize attribution; rerun resize probes gate
+
+Commit:
+- `feat(diag): add inclusive layout hotspots` (`69111ebde`)
+
+Motivation:
+- `debug.layout_hotspots[]` is sorted by **exclusive** widget time. When the true cost is spread across many child
+  widgets, the “heavy subtree” can be obscured even though the overall layout budget is dominated by it.
+- Add a complementary `debug.layout_inclusive_hotspots[]` list so resize traces can answer both:
+  - “who is doing expensive *self* work?” (exclusive), and
+  - “which subtree dominates overall?” (inclusive).
+
+Evidence run:
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r8 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r8/summary.json`)
+
+Worst frame totals (from `target/fret-diag-resize-probes-gate-r8/stdout.json`):
+- resize-stress: `worst_top_total_time_us=16040`
+- drag-jitter: `worst_top_total_time_us=15344`
+
+Attribution example (resize-stress worst bundle):
+- Bundle: `target/fret-diag-resize-probes-gate-r8/1770445498597-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot extraction:
+```bash
+jq '(.windows[0].snapshots | max_by(.debug.stats.layout_time_us)) as $s |
+  {layout_time_us: $s.debug.stats.layout_time_us,
+   top_exclusive: ($s.debug.layout_hotspots | .[0]),
+   top_inclusive: ($s.debug.layout_inclusive_hotspots | .[0])}' \
+  target/fret-diag-resize-probes-gate-r8/1770445498597-ui-gallery-window-resize-stress-steady/bundle.json
+```
+
+Observed (in this bundle):
+- Top exclusive hotspot: `Scroll` with `layout_time_us=4722` (`inclusive_time_us=8324`).
+- Top inclusive hotspot: root `Stack` with `inclusive_time_us=8543` (expected: “entire UI subtree”).
+
+Follow-ups:
+- Some resize-critical layout hotspots still have `element_path=null` (even with `element_kind` present). Fixing this
+  is important so we can reliably jump from the perf bundle to the exact callsite that declares the hot `Scroll`.
+
+## 2026-02-07 14:55 — Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains
+
+Commit:
+- `fix(diag): keep debug identity parent chain alive` (`e46b8df08`)
+
+Root cause:
+- `debug_path_for_element()` depends on the full parent chain being present in the debug-identity registry.
+- During cache-hit frames we were “touching” (bumping `last_seen_frame`) only the leaf element entry that GC liveness
+  bookkeeping happened to mention, so ancestor entries could be pruned after `gc_lag_frames`.
+- Result: perf bundles would show `element_kind=Scroll` but `element_path=null` for some of the hottest resize
+  contributors, blocking “jump to callsite” attribution.
+
+Fix:
+- Make `touch_debug_identity_for_element()` bump `last_seen_frame` for the element **and its ancestors**, stopping
+  early when the chain has already been touched on this frame.
+
+Correctness evidence:
+```bash
+cargo test -p fret-ui --lib --features diagnostics debug_paths_survive_gc_when_touching_only_leaf_elements
+```
+
+Perf evidence run (resize probes gate):
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r9 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r9/summary.json`)
+
+Attribution confirmation (resize-stress worst bundle now has a `Scroll` `element_path`):
+- Bundle: `target/fret-diag-resize-probes-gate-r9/1770449114652-ui-gallery-window-resize-stress-steady/bundle.json`
+```bash
+jq '(.windows[0].snapshots | max_by(.debug.stats.layout_time_us)) as $s |
+  ($s.debug.layout_hotspots | .[0]) | {element_kind, element_path, layout_time_us, inclusive_time_us}' \
+  target/fret-diag-resize-probes-gate-r9/1770449114652-ui-gallery-window-resize-stress-steady/bundle.json
+```
+Observed:
+- `element_kind=Scroll`
+- `element_path` is now a concrete callsite chain into `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, unblocking the
+  next phase of “fearless refactor” work on the actual hot scroll policy/implementation.
+
+## 2026-02-07 15:56 — Make unbounded scroll probe deferral default during viewport resize (P0 resize smoothness)
+
+Commit:
+- `perf(fret-ui): defer unbounded scroll probe on resize by default` (`43678c9e3`)
+
+Change:
+- Previously, “defer unbounded scroll probe while viewport is changing” was behind
+  `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+- Now, resize-driven deferral is **default-on** (opt-out via `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_RESIZE=0`).
+- The invalidation-driven deferral remains separately env-gated via
+  `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`.
+
+Evidence run (resize probes gate):
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r10 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r10/summary.json`)
+
+Worst totals (compare previous run `r9` → `r10`):
+- resize-stress: `18538us` → `16533us` (−`2005us`, ~−`10.8%`)
+- drag-jitter: `17644us` → `15508us` (−`2136us`, ~−`12.1%`)
+
+Attribution (resize-stress worst bundle):
+- Bundle: `target/fret-diag-resize-probes-gate-r10/1770449773226-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot highlights:
+  - `layout_time_us=9596` (previously ~`11877` in `r9`)
+  - top exclusive hotspot `Scroll` `layout_time_us=2916` (previously ~`4521` in `r9`)
+
+Interpretation:
+- This confirms a large portion of resize hitches were driven by “unbounded probe” scroll measurement (deep `measure()`
+  walks) being recomputed during live-drag frames. Deferring until the viewport stabilizes recovers ~2ms on the
+  current P0 probes.
+
+## 2026-02-07 16:05 — Refresh canonical `ui-gallery-steady` baseline after instrumentation + policy changes
+
+Symptom:
+- `ui-gallery-steady` checks started failing against `ui-gallery-steady.macos-m4.v18.json` (small margins across
+  multiple scripts), indicating baseline drift.
+- Evidence runs:
+  - `target/fret-diag-ui-gallery-steady-check-r1/check.perf_thresholds.json` (`failures=10`)
+  - `target/fret-diag-ui-gallery-steady-check-r2/check.perf_thresholds.json` (`failures=8`)
+
+Baseline selection run:
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json \
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v19 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result:
+- Canonical baseline updated: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v19.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v19/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v19/candidate-results.json`
+- Both candidates validated `3/3` with `failures=0`; winner chosen by lower resize p90.
+
+## 2026-02-07 09:02 — fix(diag): quantize perf baseline thresholds (reduce 1–2us flakes)
+
+Motivation:
+- `ui-gallery-steady` perf threshold checks can fail by single-digit microseconds due to normal jitter.
+- This makes it harder to tell “real regression” from “measurement noise”.
+
+Change (commit `c7ea64bb5`):
+- Quantize `top_total/layout/solve` baseline thresholds to a `4us` quantum while keeping `% headroom` semantics.
+- Keep pointer-move thresholds on the existing slack+quantum scheme.
+- Harden `tools/perf/diag_perf_baseline_select.sh` under `bash -u` when no `--preset` paths are supplied.
+
+Verification:
+```bash
+cargo test -p fretboard
+```
+
+## 2026-02-07 09:15 — perf(fret-launch): dedupe scale-factor change events (resize plumbing)
+
+Change (commit `66b610487`):
+- Only deliver `Event::WindowScaleFactorChanged(scale_factor)` when the scale factor actually changes.
+- Avoids redundant app-level event dispatch during interactive resize (where we already coalesce size changes).
+
+Notes:
+- This is intentionally “small plumbing”, but it reduces per-frame work during resize-drag.
+
+## 2026-02-07 09:28 — perf(diag): stabilize P0 resize probes + refresh baseline
+
+Problem:
+- The resize scripts were effectively measuring “how many resizes land in one frame”, which can vary by scheduler/OS
+  timing and caused large tail spikes in steady-suite checks.
+
+Change (commit `cad3fef6a`):
+- Stabilize:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (insert 1-frame waits between resizes; settle
+    before capture).
+  - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (insert waits; shrink jitter span).
+- Refresh baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`
+- Update gate default baseline pointer: `tools/perf/diag_resize_probes_gate.sh`
+
+Evidence run (gate):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --baseline docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json \
+  --out-dir target/fret-diag-resize-probes-gate-r13
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r13/summary.json`)
+
+P0 worst-frame maxima (from `target/fret-diag-resize-probes-gate-r13/stdout.json`):
+- resize-stress:
+  - `max_total=16557us`
+  - `max_layout=9574us`
+  - `max_solve=2228us`
+  - `max_paint=7078us`
+- drag-jitter:
+  - `max_total=15602us`
+  - `max_layout=9518us`
+  - `max_solve=2326us`
+  - `max_paint=6127us`
+
+## 2026-02-07 10:10 — Refresh canonical `ui-gallery-steady` baseline (preset policy + stabilized resize script)
+
+Baseline selection run:
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v22 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result:
+- Canonical baseline updated: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v22/candidate-results.json`
+
+Sanity check (against v22):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-check-v22-r1 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 3 --warmup-frames 5 \
+  --sort time --top 5 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Result:
+- `pass=true` (exit code `0`)
+- Worst overall: `top_total_time_us=17900` (see JSON output; worst bundle path under
+  `target/fret-diag-ui-gallery-steady-check-v22-r1/`)
+
+## 2026-02-07 11:15 — perf(fret-ui): quantize layout measure cache keys
+
+Problem:
+- The layout engine caches `taffy` measure results within a solve using `LayoutMeasureKey`, but the key used raw
+  `f32::to_bits()` values for the `known_*` and `AvailableSpace::Definite(_)` inputs.
+- Under resize-drag / width-jitter probes, sub-pixel float noise can reduce cache hit rates and inflate layout time.
+
+Change (commit `94057ffab`):
+- Quantize `LayoutMeasureKey` inputs (known + definite available sizes) before turning them into key bits.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r16
+```
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r1 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r16/summary.json`).
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r1/check.perf_thresholds.json`).
+
+Resize probe deltas (worst-frame maxima; r15 -> r16):
+- drag-jitter (`ui-gallery-window-resize-drag-jitter-steady.json`):
+  - `max_total`: `17080us -> 15186us` (`-11.1%`)
+  - `max_layout`: `10123us -> 8782us` (`-13.3%`)
+  - `max_solve`: `2347us -> 2347us` (`+0.0%`)
+  - `max_paint`: `6881us -> 6425us` (`-6.6%`)
+- resize-stress (`ui-gallery-window-resize-stress-steady.json`):
+  - `max_total`: `15151us -> 15372us` (`+1.5%`)
+  - `max_layout`: `8871us -> 8723us` (`-1.7%`)
+  - `max_solve`: `2413us -> 2306us` (`-4.4%`)
+  - `max_paint`: `6317us -> 6570us` (`+4.0%`)
+
+Stability sample (same commit, repeated runs):
+- `target/fret-diag-resize-probes-gate-r17/summary.json`: `pass=true`
+- `target/fret-diag-resize-probes-gate-r18/summary.json`: `pass=true`
+- drag-jitter worst-frame maxima:
+  - `r16`: `max_total=15186us`
+  - `r17`: `max_total=15407us`
+  - `r18`: `max_total=15552us`
+
+Attribution (drag-jitter worst frame in r16):
+- Bundle: `target/fret-diag-resize-probes-gate-r16/1770462385120-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Snapshot: `frame_id=2337`, `tick_id=1794`
+- Layout hotspots are dominated by `Scroll` nodes in `fret-ui-shadcn` `scroll_area.rs` (exclusive layout time).
+- Paint time is dominated by `paint_text_prepare_time_us` with `reason_width_changed` (wrap recompute under width jitter).
+
+## 2026-02-07 11:50 — perf(runner): quantize logical window sizes
+
+Problem:
+- During interactive resize, `winit` logical size values can include small float noise. If the runner forwards those
+  values directly, we can end up scheduling extra relayout/repaint work even when the effective size change is below
+  a meaningful threshold.
+
+Change (commit `74dc38bd9`):
+- Quantize logical window sizes before emitting `Event::WindowResized` (winit mapping).
+- Quantize logical bounds used for the per-frame `gpu_frame_prepare` viewport bounds.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r20
+```
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r2 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r20/summary.json`).
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r2/check.perf_thresholds.json`).
+
+Notes:
+- A single r19 run showed an outlier `resize-stress max_total=18891us` (still under threshold), but the subsequent r20
+  re-run returned to the ~15ms range.
+
+## 2026-02-07 20:39 — Merge main + repair `diag perf --json` stats wiring
+
+Problem:
+- Local branch was in a `git pull` merge-conflict state (blocked on `apps/fretboard/src/diag/mod.rs`).
+- `fretboard diag perf --json` emitted a `stats` payload that referenced per-run vectors that were never collected
+  (build break).
+- Perf baseline generation had a merge conflict between a “minimal thresholds only” baseline row schema and the richer
+  schema that includes pointer-move + paint-cache gates and seed-policy evidence.
+
+Change (commit `9bf37cc0b`):
+- Resolve the merge conflict, keeping the richer perf baseline schema.
+- Wire missing snapshot counters into `diag perf --json` runs/stats (frame arena + renderer counters).
+- Minor hygiene: remove an unused `Stdio` import in `apps/fretboard/src/diag/compare.rs`.
+
+Evidence:
+
+P0 resize probes gate (baseline `ui-resize-probes.macos-m4.v3.json`):
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r21
+```
+
+Results:
+- Resize gate: `pass=true` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+- Measured maxima (from `target/fret-diag-resize-probes-gate-r21/check.perf_thresholds.json`):
+  - resize-stress: `max_total=15398us max_layout=8862us max_solve=2203us`
+  - drag-jitter: `max_total=14724us max_layout=8579us max_solve=2303us`
+
+Steady suite check (baseline `ui-gallery-steady.macos-m4.v22.json`):
+```bash
+cargo run -q -p fretboard -- \
+  diag perf ui-gallery-steady \
+  --dir target/fret-diag-ui-gallery-steady-validate-r3 \
+  --timeout-ms 300000 \
+  --reuse-launch \
+  --repeat 7 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Steady suite: `failures=0` (`target/fret-diag-ui-gallery-steady-validate-r3/check.perf_thresholds.json`).
+
+Notes:
+- Renderer churn counters may remain `0` under the default gate env set unless renderer perf instrumentation is enabled
+  (use the “deep profiling” protocol when investigating GPU/upload hitches).

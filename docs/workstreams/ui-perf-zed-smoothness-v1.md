@@ -71,6 +71,7 @@ We treat a small set of scripts as “editor-relevant perf probes”. The suite 
   - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
 - resize + layout stability:
   - `tools/diag-scripts/ui-gallery-window-resize-stress.json`
+  - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
 - 2D pan/zoom:
   - `tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json`
   - `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json`

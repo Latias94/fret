@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::time::{Duration, Instant};
 
 use super::LaunchedDemo;
@@ -1301,6 +1301,8 @@ pub(super) struct PerfThresholds {
     pub(super) max_pointer_move_dispatch_us: Option<u64>,
     pub(super) max_pointer_move_hit_test_us: Option<u64>,
     pub(super) max_pointer_move_global_changes: Option<u64>,
+    pub(super) min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64>,
+    pub(super) max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -1311,6 +1313,12 @@ impl PerfThresholds {
             || self.max_pointer_move_dispatch_us.is_some()
             || self.max_pointer_move_hit_test_us.is_some()
             || self.max_pointer_move_global_changes.is_some()
+            || self
+                .min_run_paint_cache_hit_test_only_replay_allowed_max
+                .is_some()
+            || self
+                .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
+                .is_some()
     }
 }
 
@@ -1408,6 +1416,14 @@ pub(super) fn read_perf_baseline_file(
             max_pointer_move_global_changes: t
                 .and_then(|m| m.get("max_pointer_move_global_changes"))
                 .and_then(|v| v.as_u64()),
+            min_run_paint_cache_hit_test_only_replay_allowed_max: t
+                .and_then(|m| m.get("min_run_paint_cache_hit_test_only_replay_allowed_max"))
+                .and_then(|v| v.as_u64()),
+            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: t
+                .and_then(|m| {
+                    m.get("max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
+                })
+                .and_then(|v| v.as_u64()),
         };
 
         thresholds_by_script.insert(script.to_string(), thresholds);
@@ -1424,6 +1440,33 @@ pub(super) fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> 
     value_us.saturating_mul(100 + pct).saturating_add(99) / 100
 }
 
+pub(super) fn apply_perf_baseline_floor(value: u64, headroom_pct: u32) -> u64 {
+    if value == 0 {
+        return 0;
+    }
+    let pct = (headroom_pct as u64).min(95);
+    let floored = value.saturating_mul(100 - pct) / 100;
+    floored.max(1)
+}
+
+pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
+    value_us: u64,
+    headroom_pct: u32,
+    min_slack_us: u64,
+    quantum_us: u64,
+) -> u64 {
+    if value_us == 0 {
+        return 0;
+    }
+
+    let threshold = apply_perf_baseline_headroom(value_us, headroom_pct)
+        .max(value_us.saturating_add(min_slack_us));
+    if quantum_us <= 1 {
+        return threshold;
+    }
+    threshold.saturating_add(quantum_us - 1) / quantum_us * quantum_us
+}
+
 pub(super) fn resolve_threshold(
     cli: Option<u64>,
     baseline: Option<u64>,
@@ -1437,6 +1480,40 @@ pub(super) fn resolve_threshold(
     (None, None)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{apply_perf_baseline_floor, apply_perf_baseline_headroom_with_slack_and_quantum};
+
+    #[test]
+    fn perf_baseline_headroom_with_slack_and_quantum_is_stable_for_small_values() {
+        // Baseline "26us @ +20%" would yield 32us without slack; we want extra headroom to avoid
+        // 1–2us jitter causing flaky gates.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(26, 20, 8, 4),
+            36
+        );
+
+        // Quantum rounding is a no-op for quantum<=1.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(26, 20, 8, 1),
+            34
+        );
+
+        // Zero stays zero so scripts without pointer-move frames do not accidentally gain a gate.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(0, 20, 8, 4),
+            0
+        );
+    }
+
+    #[test]
+    fn perf_baseline_floor_preserves_non_zero_signal() {
+        assert_eq!(apply_perf_baseline_floor(17, 20), 13);
+        assert_eq!(apply_perf_baseline_floor(1, 20), 1);
+        assert_eq!(apply_perf_baseline_floor(0, 20), 0);
+    }
+}
+
 pub(super) fn scan_perf_threshold_failures(
     script: &str,
     sort: BundleStatsSort,
@@ -1445,9 +1522,12 @@ pub(super) fn scan_perf_threshold_failures(
     max_total_time_us: u64,
     max_layout_time_us: u64,
     max_layout_engine_solve_time_us: u64,
+    pointer_move_frames_present: bool,
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
     max_pointer_move_global_changes: u64,
+    max_run_paint_cache_hit_test_only_replay_allowed: u64,
+    max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch: u64,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
     let (threshold_total, source_total) =
@@ -1469,6 +1549,20 @@ pub(super) fn scan_perf_threshold_failures(
             cli.max_pointer_move_global_changes,
             baseline.max_pointer_move_global_changes,
         );
+    let (
+        threshold_min_run_paint_cache_hit_test_only_replay_allowed,
+        source_min_run_paint_cache_hit_test_only_replay_allowed,
+    ) = resolve_threshold(
+        cli.min_run_paint_cache_hit_test_only_replay_allowed_max,
+        baseline.min_run_paint_cache_hit_test_only_replay_allowed_max,
+    );
+    let (
+        threshold_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+        source_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+    ) = resolve_threshold(
+        cli.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+        baseline.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+    );
 
     if let Some(threshold_us) = threshold_total
         && max_total_time_us > threshold_us
@@ -1506,38 +1600,65 @@ pub(super) fn scan_perf_threshold_failures(
             "sort": sort.as_str(),
         }));
     }
-    if let Some(threshold_us) = threshold_pointer_move_dispatch
-        && max_pointer_move_dispatch_time_us > threshold_us
+    if pointer_move_frames_present {
+        if let Some(threshold_us) = threshold_pointer_move_dispatch
+            && max_pointer_move_dispatch_time_us > threshold_us
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_max_dispatch_time_us",
+                "threshold_us": threshold_us,
+                "threshold_source": source_pointer_move_dispatch,
+                "actual_us": max_pointer_move_dispatch_time_us,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
+        if let Some(threshold_us) = threshold_pointer_move_hit_test
+            && max_pointer_move_hit_test_time_us > threshold_us
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_max_hit_test_time_us",
+                "threshold_us": threshold_us,
+                "threshold_source": source_pointer_move_hit_test,
+                "actual_us": max_pointer_move_hit_test_time_us,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
+        if let Some(threshold) = threshold_pointer_move_global_changes
+            && max_pointer_move_global_changes > threshold
+        {
+            out.push(serde_json::json!({
+                "metric": "pointer_move_snapshots_with_global_changes",
+                "threshold": threshold,
+                "threshold_source": source_pointer_move_global_changes,
+                "actual": max_pointer_move_global_changes,
+                "script": script,
+                "sort": sort.as_str(),
+            }));
+        }
+    }
+    if let Some(threshold) = threshold_min_run_paint_cache_hit_test_only_replay_allowed
+        && max_run_paint_cache_hit_test_only_replay_allowed < threshold
     {
         out.push(serde_json::json!({
-            "metric": "pointer_move_max_dispatch_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_pointer_move_dispatch,
-            "actual_us": max_pointer_move_dispatch_time_us,
+            "metric": "run_paint_cache_hit_test_only_replay_allowed_max",
+            "threshold_min": threshold,
+            "threshold_source": source_min_run_paint_cache_hit_test_only_replay_allowed,
+            "actual": max_run_paint_cache_hit_test_only_replay_allowed,
             "script": script,
             "sort": sort.as_str(),
         }));
     }
-    if let Some(threshold_us) = threshold_pointer_move_hit_test
-        && max_pointer_move_hit_test_time_us > threshold_us
+    if let Some(threshold) =
+        threshold_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch
+        && max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch > threshold
     {
         out.push(serde_json::json!({
-            "metric": "pointer_move_max_hit_test_time_us",
-            "threshold_us": threshold_us,
-            "threshold_source": source_pointer_move_hit_test,
-            "actual_us": max_pointer_move_hit_test_time_us,
-            "script": script,
-            "sort": sort.as_str(),
-        }));
-    }
-    if let Some(threshold) = threshold_pointer_move_global_changes
-        && max_pointer_move_global_changes > threshold
-    {
-        out.push(serde_json::json!({
-            "metric": "pointer_move_snapshots_with_global_changes",
+            "metric": "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
             "threshold": threshold,
-            "threshold_source": source_pointer_move_global_changes,
-            "actual": max_pointer_move_global_changes,
+            "threshold_source": source_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+            "actual": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
             "script": script,
             "sort": sort.as_str(),
         }));
