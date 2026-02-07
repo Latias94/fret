@@ -6,6 +6,15 @@
 //! whether the next DOM `input` event should be suppressed (e.g. after shortcut handling or
 //! immediately after `compositionend`).
 //!
+//! Event ordering note:
+//!
+//! Some browsers can still emit an `input` event even when:
+//! - we handled an insertion via `beforeinput` + `prevent_default()`, or
+//! - we suppressed a DOM mutation via `beforeinput` because the edit was already handled via a
+//!   command path or `compositionend`.
+//!
+//! In those cases we must ignore the follow-up `input` once to avoid double-inserting text.
+//!
 //! Normative behavior is defined by ADR 0195: Web IME and Text Input Bridge (wasm, v1).
 
 use std::fmt;
@@ -117,7 +126,7 @@ mod tests {
     }
 
     #[test]
-    fn beforeinput_suppression_does_not_affect_followup_input_disposition() {
+    fn beforeinput_suppression_marks_followup_input_ignored() {
         let mut st = WebImeDomState::default();
         st.on_shortcut_suppressed();
         assert_eq!(
@@ -133,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn composition_end_beforeinput_suppression_does_not_affect_followup_input_disposition() {
+    fn composition_end_beforeinput_suppression_marks_followup_input_ignored() {
         let mut st = WebImeDomState::default();
         st.on_composition_start();
         st.on_composition_end();
