@@ -3529,7 +3529,10 @@ impl<H: UiHost> UiTree<H> {
                 if quantum <= 0.0 {
                     return width;
                 }
-                let snapped = (width.0 / quantum).floor() * quantum;
+                // Use a nearest-bucket snap (round) rather than `floor` so bucketing does not
+                // systematically reduce wrap widths (which would create more lines and increase
+                // layout/paint work under steady drag resizes).
+                let snapped = (width.0 / quantum).round() * quantum;
                 fret_core::Px(snapped.max(0.0))
             }
             fret_core::TextWrap::None => width,
