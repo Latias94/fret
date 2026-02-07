@@ -694,6 +694,59 @@ Rules:
 - **Aligned**: reset surfaces (`resetSorting`, `resetColumnFilters`, `resetGlobalFilter`, `resetGrouping`, `resetPagination`, `resetRowSelection`, ...)
   → `Table::reset_*` (feature fixtures + `resets.json`).
 
+#### Table instance full checklist (public surfaces)
+
+This is a **non-underscore** inventory of `table.*` members from upstream. The mapping may be Rust-native
+and does not need to preserve method names, but the **capability must exist**.
+
+Legend:
+
+- **Aligned**: fixture-gated.
+- **Partial**: implemented/mappable, but missing a dedicated fixture gate or helper surface.
+- **Missing**: no equivalent capability yet (requires engine surface and/or fixture).
+
+| Upstream (`table.*`) | Fret mapping (capability) | Status | Evidence / gate |
+| --- | --- | --- | --- |
+| `firstPage/previousPage/nextPage/lastPage` | `Table::{first_page,previous_page,next_page,last_page}` (pure `PaginationState` transitions) | Aligned | `pagination.json`, `tanstack_v8_pagination_parity.rs` |
+| `getCanPreviousPage/getCanNextPage` | `Table::{can_previous_page,can_next_page}` | Aligned | `pagination.json` |
+| `getPageCount/getRowCount/getPageOptions` | `Table::{page_count,row_count,page_options}` | Aligned | `pagination.json` |
+| `getCoreRowModel/getPreFilteredRowModel/getFilteredRowModel` | `Table::{core_row_model,pre_filtered_row_model,filtered_row_model}` | Aligned | `demo_process.json`, `filtering_fns.json` |
+| `getPreSortedRowModel/getSortedRowModel` | `Table::{pre_sorted_row_model,sorted_row_model}` | Aligned | `sorting_fns.json`, `sort_undefined.json` |
+| `getPreExpandedRowModel/getExpandedRowModel` | `Table::{pre_expanded_row_model,expanded_row_model}` | Aligned | `expanding.json` |
+| `getPrePaginationRowModel/getPaginationRowModel/getRowModel` | `Table::{pre_pagination_row_model,row_model}` | Aligned | `pagination.json` |
+| `getPreGroupedRowModel/getGroupedRowModel` | `Table::{pre_grouped_row_model,grouped_row_model}` | Aligned | `grouping.json` |
+| `getSelectedRowModel/getFilteredSelectedRowModel/getGroupedSelectedRowModel` | `Table::{selected_row_model,filtered_selected_row_model,grouped_selected_row_model}` | Aligned | `selection.json`, `selection_tree.json` |
+| `getPreSelectedRowModel` | `Table::pre_selected_row_model()` | Aligned | `selection.json`, `selection_tree.json` |
+| `getIsAllRowsSelected/getIsSomeRowsSelected/getIsAllPageRowsSelected/getIsSomePageRowsSelected` | `Table::{is_all_rows_selected,is_some_rows_selected,is_all_page_rows_selected,is_some_page_rows_selected}` | Aligned | `selection.json`, `selection_tree.json` |
+| `toggleAllRowsSelected/toggleAllPageRowsSelected` | `Table::{toggled_all_rows_selected,toggled_all_page_rows_selected}` (state transitions) | Aligned | `selection.json`, `selection_tree.json` |
+| `getIsAllRowsExpanded/getIsSomeRowsExpanded/getCanSomeRowsExpand` | `Table::{is_all_rows_expanded,is_some_rows_expanded,can_some_rows_expand}` | Aligned | `expanding.json` |
+| `toggleAllRowsExpanded` | `Table::toggled_all_rows_expanded(value)` | Aligned | `expanding.json` |
+| `getExpandedDepth` | `Table::expanded_depth()` | Partial | unit gate: `row_expanding.rs` (`expanded_depth_tracks_max_depth_plus_one`) |
+| `getTopRows/getCenterRows/getBottomRows` | `Table::{top_row_keys,center_row_keys,bottom_row_keys}` + row lookup | Aligned | `pinning.json` |
+| `getIsSomeRowsPinned` | `Table::is_some_rows_pinned(position)` | Aligned | `pinning.json` |
+| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column}` + core snapshot | Partial | `headers_cells.json` |
+| `getVisibleLeafColumns` (+ left/center/right) | `CoreModelSnapshot.leaf_columns.*` | Aligned | `headers_cells.json` |
+| `getLeft/Center/RightLeafColumns` | `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` | Aligned | `column_pinning.json` |
+| `getHeaderGroups` (+ left/center/right) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` |
+| `getFooterGroups` (+ left/center/right) | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Aligned | `headers_cells.json` |
+| `getFlatHeaders` (+ left/center/right) | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Aligned | `headers_cells.json` |
+| `getLeafHeaders` (+ left/center/right) | `Table::{leaf_headers,left_leaf_headers,center_leaf_headers,right_leaf_headers}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json` |
+| `getTotalSize` (+ left/center/right) | `Table::{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `column_sizing.json` |
+| `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
+| `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Partial | unit gates; fixture gate TBD |
+| `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Partial | unit gate: `row_model.rs` (`table_toggle_all_columns_visible_keeps_non_hideable_visible_when_hiding_all`) |
+| `getVisibleFlatColumns/getAllFlatColumns` | derive via column tree snapshot; may need `visible_flat_columns` helper | Partial | N/A |
+| `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |
+| `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | currently not first-class; upstream built-ins often yield empty/null (fixture captures) | Partial | `faceting.json` |
+| `getState` | state is external (`TableState` owned by consumers) | Partial | state conversion + presence gates |
+| `initialState` | engine keeps `initial_state` to implement `reset_*`; not exposed as an instance property | Partial | reset fixtures (`resets.json`, feature fixtures) |
+| `options` | `Table::options()` returns `TableOptions` | Partial | smoke coverage; fixture gates cover behavior |
+| `rows` | `Table::row_model()` provides root/flat rows; no `table.rows` property | Partial | `demo_process.json` etc |
+| `setState/setOptions` | rebuild `Table` from `TableState`/`TableOptions` (pure engine design) | Partial | fixture gates exercise outcomes, not API shape |
+| `setSorting/setColumnFilters/setGlobalFilter/setPagination/...` | mutate `TableState` (or apply `Updater<T>`) then rebuild | Partial | fixtures gate derived outputs after state changes |
+| `resetSorting/resetColumnFilters/resetGlobalFilter/resetPagination/...` | `Table::reset_*` surfaces exist | Aligned | `resets.json` + feature fixtures |
+| `toggleColumnSorting` | prefer engine-owned helper (see `HTP-cap-015`) | Partial | helpers exist in `sorting.rs`; consumer usage is test-only today |
+
 ### Column instance (public, non-underscore)
 
 Fret does not expose a first-class `Column` instance object yet. Capabilities map to:
