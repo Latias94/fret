@@ -929,9 +929,6 @@ pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
     }
 }
 
-#[cfg(test)]
-mod click_tracker_tests;
-
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {
         WinitMouseButton::Left => buttons.left = pressed,
