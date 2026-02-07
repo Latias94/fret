@@ -25,4 +25,5 @@ re-exports stub types that report “wasm32 only”.
 ## Refactor gates
 
 - Formatting: `cargo fmt`
-- Build/test: `cargo nextest run -p fret-platform-web --no-tests pass`
+- Native build check: `cargo nextest run -p fret-platform-web --no-tests pass`
+- Wasm build check: `cargo check -p fret-platform-web --target wasm32-unknown-unknown`
