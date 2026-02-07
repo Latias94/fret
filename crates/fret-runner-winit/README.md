@@ -13,15 +13,16 @@ This crate is intentionally “runner glue”:
 
 ## Module ownership map
 
-- `src/lib.rs`: core event mapping helpers + `WinitPlatform` state container.
+- `src/lib.rs`: public facade re-exports (stable surface for other crates).
+- `src/mapping/`: winit → `fret-core` mapping helpers (cursor/keyboard/modifiers/pointer/wheel/position).
+- `src/state/`: small runner-side state containers (`WinitPlatform`, `WinitInputState`, `WinitWindowState`).
 - `src/window_registry.rs`: window bookkeeping helpers.
 - `src/accessibility.rs`: accessibility integration entrypoints.
 - `src/accessibility_accesskit_winit.rs`: AccessKit + winit specifics.
 - `src/windows_ime.rs`: Windows IME bridge helpers (`cfg(windows)`).
-- `src/click_tracker_tests.rs`: click tracking regression tests (`cfg(test)`).
+- `src/state/input/click_tracker_tests.rs`: click tracking regression tests (`cfg(test)`).
 
 ## Refactor gates
 
 - Formatting: `cargo fmt`
 - Tests: `cargo nextest run -p fret-runner-winit`
-
