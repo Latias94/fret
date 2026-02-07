@@ -56,7 +56,7 @@ Related plan:
 
 ### M7 — Ecosystem crate graph audit (optional)
 
-- [ ] Record a reverse-deps + LOC snapshot (date-stamped) in the crate survey notes.
+- [x] Record a reverse-deps + LOC snapshot (date-stamped) in the crate survey notes.
 - [ ] List “single-consumer micro-crates” and justify each one (seam vs accidental).
 - [ ] Decide follow-up actions (merge/keep/split) and track separately if needed.
 

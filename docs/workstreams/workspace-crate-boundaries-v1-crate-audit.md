@@ -158,6 +158,33 @@ Immediate interpretation:
 - The only “small + single-consumer” crates at this snapshot (`fret-i18n-fluent`, `fret-plot3d`)
   are not clear merge wins without a stronger product direction (they might become shared soon).
 
+### 3.5 Single-consumer review (rev deps = 1)
+
+This section turns the `rev deps = 1` list into explicit recommendations. The goal is to avoid
+accidental micro-crates while still preserving real seams (optional packs, domain extraction,
+heavy dependency isolation).
+
+| crate | used by | rs files | loc | path | recommendation |
+| --- | --- | ---: | ---: | --- | --- |
+| `fret-plot3d` | `fret-examples` | 2 | 171 | `ecosystem/fret-plot3d` | **Candidate**: merge into `fret-plot` or move into `apps/fret-examples` until it has a second consumer. |
+| `fret-i18n-fluent` | `fret-bootstrap` | 1 | 225 | `ecosystem/fret-i18n-fluent` | Keep separate: third-party bridge + dependency isolation; revisit if `crates/fret-i18n` wants an opt-in Fluent backend feature. |
+| `fret-icons-radix` | `fret-bootstrap` | 3 | 448 | `ecosystem/fret-icons-radix` | Keep separate: data pack / optional dependency seam. |
+| `fret-asset-cache` | `fret-ui-assets` | 4 | 1202 | `ecosystem/fret-asset-cache` | Keep separate: reusable subsystem boundary; likely to gain more consumers. |
+| `fret-icons-lucide` | `fret-bootstrap` | 3 | 1825 | `ecosystem/fret-icons-lucide` | Keep separate: data pack / optional dependency seam. |
+| `fret-code-editor` | `fret-ui-gallery` | 7 | 4592 | `ecosystem/fret-code-editor` | Keep separate: domain boundary; expected future reuse by editor shells. |
+| `fret-ui-ai` | `fret-ui-gallery` | 20 | 4770 | `ecosystem/fret-ui-ai` | Keep separate: experimental domain; avoid infecting baseline UI deps. |
+| `fret-imui` | `fret-examples` | 3 | 4777 | `ecosystem/fret-imui` | Keep separate: facade boundary for immediate-mode authoring; expect reuse. |
+| `fret-docking` | `fret-examples` | 24 | 15287 | `ecosystem/fret-docking` | Keep separate: large domain seam (strategy-heavy, editor-grade). |
+| `fret-gizmo` | `fret-examples` | 23 | 16246 | `ecosystem/fret-gizmo` | Keep separate: domain seam (tooling + math + interaction). |
+| `fret-plot` | `fret-examples` | 31 | 25559 | `ecosystem/fret-plot` | Keep separate: domain seam; already large enough to justify isolation. |
+| `fret-ui-material3` | `fret-ui-gallery` | 107 | 79204 | `ecosystem/fret-ui-material3` | Keep separate: design-system surface; isolation enables optional adoption. |
+
+Follow-up suggestion:
+
+- If `fret-plot3d` remains tiny and single-consumer after it stabilizes, prefer merging it into
+  `fret-plot` (as a module) to reduce crate tax. If it grows into a real 3D subsystem, keep it
+  separate and ensure it has its own demos + tests.
+
 ## 4) Open questions worth auditing next
 
 1. **Facade policy (`crates/fret`)**
