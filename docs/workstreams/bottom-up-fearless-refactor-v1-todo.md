@@ -107,6 +107,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-core/src/scene/replay.rs`
     - `crates/fret-core/src/scene/mod.rs`
 
+- [x] BU-FR-core-022 Extract scene fingerprint mixing helpers into a dedicated submodule.
+  - Goal: keep the scene facade focused on vocabulary and recording APIs, while isolating hashing/fingerprinting logic.
+  - Evidence:
+    - `crates/fret-core/src/scene/fingerprint.rs`
+    - `crates/fret-core/src/scene/mod.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
