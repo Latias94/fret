@@ -24,7 +24,7 @@ use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
     FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
     PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, Table, TableOptions,
-    TableState, begin_column_resize, column_size, compute_grouped_u64_aggregations,
+    TableState, TanStackValue, begin_column_resize, column_size, compute_grouped_u64_aggregations,
     drag_column_resize, end_column_resize, is_column_visible, is_row_expanded, is_row_selected,
     is_some_rows_pinned, order_column_refs_for_grouping, order_columns, pagination_bounds,
     sort_grouped_row_indices_in_place, split_pinned_columns,
@@ -871,6 +871,144 @@ mod tests {
             assert_aligned(&snap, col);
         }
     }
+
+    #[test]
+    fn table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut initial = TableState::default();
+        initial.pagination.page_size = 8;
+        initial.column_pinning.left = vec!["a".into()];
+        initial.column_pinning.right = vec!["d".into()];
+        let state = app.models_mut().insert(initial);
+
+        let data: Arc<[u32]> = Arc::from((0u32..32).collect::<Vec<_>>());
+        let mut col_a = ColumnDef::new("a");
+        col_a.size = 120.0;
+        let mut col_b = ColumnDef::new("b");
+        col_b.size = 280.0;
+        let mut col_c = ColumnDef::new("c");
+        col_c.size = 240.0;
+        let mut col_d = ColumnDef::new("d");
+        col_d.size = 140.0;
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![col_a, col_b, col_c, col_d]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let mut props = TableViewProps::default();
+                props.overscan = 4;
+                props.enable_column_grouping = false;
+                props.row_height = Some(Px(28.0));
+                props.row_measure_mode = TableRowMeasureMode::Measured;
+
+                let table = table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props,
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                            if *row == 0 && col.id.as_ref() == "b" {
+                                stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N0),
+                                    |cx| vec![cx.text("b-0"), cx.text("extra line")],
+                                )
+                            } else {
+                                cx.text(format!("{}-{row}", col.id.as_ref()))
+                            }
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-retained-colpin-header-")),
+                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                );
+
+                vec![cx.semantics(
+                    SemanticsProps {
+                        test_id: Some(Arc::<str>::from("table-retained-colpin-root")),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![table],
+                )]
+            })
+        };
+
+        let pump = |ui: &mut UiTree<App>,
+                    app: &mut App,
+                    services: &mut FakeServices,
+                    root: &mut fret_core::NodeId| {
+            for _ in 0..2 {
+                *root = render(ui, app, services);
+                ui.set_root(*root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+                let mut scene = fret_core::Scene::default();
+                ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            }
+        };
+
+        let find_bounds = |snap: &fret_core::SemanticsSnapshot, id: &str| {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("expected semantics node `{id}`"))
+        };
+
+        let assert_aligned = |snap: &fret_core::SemanticsSnapshot, col: &str| {
+            let header_id = format!("table-retained-colpin-header-{col}");
+            let row_id = format!("table-retained-colpin-row-0-cell-{col}");
+            let header = find_bounds(snap, &header_id);
+            let body = find_bounds(snap, &row_id);
+            let dx = (header.origin.x.0 - body.origin.x.0).abs();
+            let dw = (header.size.width.0 - body.size.width.0).abs();
+            assert!(
+                dx <= 1.0,
+                "expected header/body x alignment for `{col}` (dx={dx:.2})"
+            );
+            assert!(
+                dw <= 1.0,
+                "expected header/body width alignment for `{col}` (dw={dw:.2})"
+            );
+        };
+
+        let mut root = fret_core::NodeId::default();
+        pump(&mut ui, &mut app, &mut services, &mut root);
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial render");
+
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -984,6 +1122,7 @@ struct GroupedDisplayCache {
     row_index_by_key: std::collections::HashMap<RowKey, usize>,
     group_labels: std::collections::HashMap<RowKey, Arc<str>>,
     group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+    group_aggs_any: std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
     group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
 
     deps: Option<GroupedDisplayDeps>,
@@ -2350,6 +2489,7 @@ where
                 let group_labels = &cache.group_labels;
                 let group_aggs_text = &cache.group_aggs_text;
                 let group_aggs_u64 = &cache.group_aggs_u64;
+                let group_aggs_any = &cache.group_aggs_any;
 
                 let mut visible: Vec<DisplayRow> = Vec::new();
                 let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
@@ -2362,6 +2502,7 @@ where
                     data,
                     row_index_by_key,
                     group_aggs_u64,
+                    group_aggs_any,
                 );
 
                 for root in roots {
@@ -2372,6 +2513,7 @@ where
                         group_labels,
                         group_aggs_text,
                         group_aggs_u64,
+                        group_aggs_any,
                         deps.sorting.as_slice(),
                         columns,
                         data,
@@ -2458,25 +2600,34 @@ where
             ) -> (
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
             ) {
                 if agg_columns.is_empty() {
-                    return (Default::default(), Default::default());
+                    return (Default::default(), Default::default(), Default::default());
                 }
                 let out_u64 =
                     compute_grouped_u64_aggregations(model, data, row_index_by_key, agg_columns);
 
                 let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
                     Default::default();
+                let mut out_any: std::collections::HashMap<
+                    RowKey,
+                    Arc<[(ColumnId, TanStackValue)]>,
+                > = Default::default();
                 for (&row_key, entries) in &out_u64 {
                     let mut text_values: Vec<(ColumnId, Arc<str>)> =
                         Vec::with_capacity(entries.len());
+                    let mut any_values: Vec<(ColumnId, TanStackValue)> =
+                        Vec::with_capacity(entries.len());
                     for (col_id, v) in entries.iter() {
                         text_values.push((col_id.clone(), Arc::from(v.to_string())));
+                        any_values.push((col_id.clone(), TanStackValue::Number(*v as f64)));
                     }
                     out_text.insert(row_key, Arc::from(text_values.into_boxed_slice()));
+                    out_any.insert(row_key, Arc::from(any_values.into_boxed_slice()));
                 }
 
-                (out_u64, out_text)
+                (out_u64, out_text, out_any)
             }
 
             fn group_label_for_key<TData>(
@@ -2513,6 +2664,10 @@ where
                 group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
                 group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
                 group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                group_aggs_any: &std::collections::HashMap<
+                    RowKey,
+                    Arc<[(ColumnId, TanStackValue)]>,
+                >,
                 sorting: &[SortSpec],
                 columns: &[ColumnDef<TData>],
                 data: &[TData],
@@ -2559,6 +2714,7 @@ where
                                     data,
                                     row_index_by_key,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                 );
                                 children = Some(owned);
                             }
@@ -2579,6 +2735,7 @@ where
                                     group_labels,
                                     group_aggs_text,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                     sorting,
                                     columns,
                                     data,
@@ -2601,7 +2758,7 @@ where
                 }
             }
 
-            let (group_aggs_u64, group_aggs_text) =
+            let (group_aggs_u64, group_aggs_text, group_aggs_any) =
                 compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
 
             let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
@@ -2628,6 +2785,7 @@ where
                 data,
                 &row_index_by_key,
                 &group_aggs_u64,
+                &group_aggs_any,
             );
 
             for root in roots {
@@ -2638,6 +2796,7 @@ where
                     &group_labels,
                     &group_aggs_text,
                     &group_aggs_u64,
+                    &group_aggs_any,
                     deps.sorting.as_slice(),
                     columns,
                     data,
@@ -2675,6 +2834,7 @@ where
             cache.row_index_by_key = row_index_by_key;
             cache.group_labels = group_labels;
             cache.group_aggs_u64 = group_aggs_u64;
+            cache.group_aggs_any = group_aggs_any;
             cache.group_aggs_text = group_aggs_text;
             cache.deps = Some(deps.clone());
             cache.page_rows = page_rows.clone();
@@ -4355,6 +4515,7 @@ where
                                                                 },
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
+                                                                        width: Length::Fill,
                                                                         height: body_row_height,
                                                                         ..Default::default()
                                                                     },
