@@ -1,7 +1,9 @@
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, RowId, RowKey,
-    RowPinPosition, Table, TableState, TanStackTableState,
+    ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, FilterFnDef, RowId, RowKey,
+    RowPinPosition, Table, TableState, TanStackTableState, TanStackValue,
+    set_column_filter_value_tanstack, toggle_sorting_handler_tanstack,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -32,8 +34,14 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     ];
 
     let columns = vec![
-        ColumnDef::<DemoRow>::new("a").value_u64_by(|r| r.a),
-        ColumnDef::<DemoRow>::new("b").value_u64_by(|r| r.b),
+        ColumnDef::<DemoRow>::new("a")
+            .sort_value_by(|r| TanStackValue::Number(r.a as f64))
+            .sorting_fn_auto()
+            .filtering_fn_auto(),
+        ColumnDef::<DemoRow>::new("b")
+            .sort_value_by(|r| TanStackValue::Number(r.b as f64))
+            .sorting_fn_auto()
+            .filtering_fn_auto(),
     ];
 
     let table = Table::builder(&data)
@@ -73,6 +81,24 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     let updater = table.row_pinning_updater(RowKey(2), Some(RowPinPosition::Top), false, false);
     let next_row_pinning = updater.apply(&table.state().row_pinning);
     assert_eq!(next_row_pinning.top, vec![RowKey(2)]);
+
+    // Sorting handler transition (TanStack-style "getToggleSortingHandler" behavior).
+    let mut sorting = table.state().sorting.clone();
+    let col_a = table.column("a").expect("column exists");
+    toggle_sorting_handler_tanstack(&mut sorting, col_a, table.options(), false, false);
+    assert!(!sorting.is_empty());
+
+    // Column filter state transition (TanStack-style `column.setFilterValue` behavior).
+    let mut column_filters = table.state().column_filters.clone();
+    let filter_fns: HashMap<Arc<str>, FilterFnDef> = HashMap::new();
+    set_column_filter_value_tanstack(
+        &mut column_filters,
+        &data,
+        col_a,
+        &filter_fns,
+        serde_json::json!(10),
+    );
+    assert!(!column_filters.is_empty());
 
     // Row/cell split snapshots.
     let _ = table.row_cells(RowKey(1)).expect("row exists");

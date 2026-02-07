@@ -82,7 +82,7 @@ Source of truth:
 | `row.getCanPin()` | `Table::row_can_pin(RowKey)` | Aligned | `pinning.json`, `grouping.json` |
 | `row.getIsPinned()` | `Table::row_is_pinned(RowKey)` | Aligned | `pinning.json` |
 | `row.getPinnedIndex()` | `Table::row_pinned_index(RowKey)` | Aligned | `pinning.json` |
-| `row.pin(position, includeLeafRows, includeParentRows)` | `Table::row_pinning_updater(..)` / `row_pinning_updater_by_id(..)` | Partial | tree include-leaf/include-parent is gated by `pinning_tree.json`; grouped coverage remains TODO |
+| `row.pin(position, includeLeafRows, includeParentRows)` | `Table::row_pinning_updater(..)` / `row_pinning_updater_by_id(..)` | Aligned | `pinning_tree.json`, `pinning_grouped_rows.json` |
 | `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_ids/center_row_ids/bottom_row_ids` (and `*_row_keys`) | Aligned | `pinning.json`, `grouping.json`, `pinning_grouped_rows.json` |
 | `table.getIsSomeRowsPinned(position?)` | `Table::is_some_rows_pinned(..)` | Aligned | `pinning.json` |
 | `setRowPinning/resetRowPinning` | `Table::reset_row_pinning(..)` + updater surfaces | Aligned | `pinning.json` |
@@ -107,11 +107,142 @@ Source of truth:
 
 ---
 
+## Sorting (RowSorting)
+
+Source of truth:
+
+- `table-core/src/features/RowSorting.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `getPreSortedRowModel/getSortedRowModel` | `Table::pre_sorted_row_model()` / `Table::sorted_row_model()` | Aligned | `sorting_fns.json`, `sort_undefined.json` |
+| `resetSorting(defaultState?)` | `Table::reset_sorting(default_state)` | Aligned | `resets.json`, sorting fixtures |
+| `setSorting(updater)` | Rust-native: update `TableState.sorting` outside the engine (`Updater<Vec<SortSpec>>`) | Partial | N/A (API-shape differs) |
+| `column.toggleSorting(desc?, isMulti?)` | `toggle_sorting_tanstack(&mut SortingState, &ColumnDef, options, multi, auto_sort_dir_desc)` | Aligned | `tanstack_v8_parity.rs`, `tanstack_v8_sort_undefined_parity.rs`, `tanstack_v8_sorting_manual_parity.rs` |
+| `column.getToggleSortingHandler()` gating | `toggle_sorting_handler_tanstack(..)` (models TanStack “can sort?” gating + multi-sort event) | Partial | covered indirectly by fixtures; expand explicit gate as needed |
+
+---
+
+## Filtering (ColumnFiltering / GlobalFiltering)
+
+Source of truth:
+
+- `table-core/src/features/ColumnFiltering.ts`
+- `table-core/src/features/GlobalFiltering.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `getPreFilteredRowModel/getFilteredRowModel` | `Table::pre_filtered_row_model()` / `Table::filtered_row_model()` | Aligned | `filtering_fns.json` |
+| `column.setFilterValue(updater)` | `set_column_filter_value_tanstack(&mut ColumnFiltersState, column_id, value)` | Aligned | `filtering_fns.json` |
+| `row.columnFilters` / `row.columnFiltersMeta` | `Table::row_filter_state_snapshot()` | Aligned | `filtering_meta.json` |
+| `setGlobalFilter(updater)` | Rust-native: set `TableState.global_filter` | Partial | global filter outcomes are gated, but we lack a dedicated helper fn |
+| `column.getCanFilter()` / `column.getFilterValue()` / `column.getIsFiltered()` | expressible via `TableState.column_filters` + `TableOptions` + `ColumnDef` flags; no direct helper yet | Partial | add helper APIs if consumers need them |
+| `column.getCanGlobalFilter()` | `get_column_can_global_filter` hook + filtering evaluation | Partial | gated by `filtering_fns.json`, but no direct method surface yet |
+
+---
+
+## Pagination (RowPagination)
+
+Source of truth:
+
+- `table-core/src/features/RowPagination.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `getPrePaginationRowModel/getPaginationRowModel/getRowModel` | `Table::pre_pagination_row_model()` / `Table::row_model()` | Aligned | `pagination.json` |
+| `getRowCount/getPageCount/getCanNextPage/getCanPreviousPage/getPageOptions` | `Table::{row_count,page_count,can_next_page,can_previous_page,page_options}` | Aligned | `pagination.json` |
+| `setPageIndex/setPageSize` | `Table::{set_page_index,set_page_size}` (+ updater variants) | Aligned | `pagination.json` |
+| `nextPage/previousPage/firstPage/lastPage` | `Table::{next_page,previous_page,first_page,last_page}` | Aligned | `pagination.json` |
+| `resetPageIndex/resetPageSize/resetPagination` | `Table::{reset_page_index,reset_page_size,reset_pagination}` | Aligned | `pagination.json` |
+| Auto-reset `_queue` behavior | modeled via state-transition parity gates (not a first-class runtime queue) | Partial | `auto_reset.json` |
+
+---
+
+## Row selection (RowSelection)
+
+Source of truth:
+
+- `table-core/src/features/RowSelection.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `row.getIsSelected/getIsSomeSelected/getIsAllSubRowsSelected` | `Table::{row_is_selected,row_is_some_selected,row_is_all_sub_rows_selected}` | Aligned | `selection.json`, `selection_tree.json` |
+| `row.toggleSelected(value?, { selectChildren })` | `Table::row_selection_updater(..)` (+ by-id variants) | Aligned | selection fixtures + `row_id_state_ops.json` |
+| `table.getIsAllRowsSelected/getIsSomeRowsSelected/getIsAllPageRowsSelected/getIsSomePageRowsSelected` | `Table::{is_all_rows_selected,is_some_rows_selected,is_all_page_rows_selected,is_some_page_rows_selected}` | Aligned | selection fixtures |
+| `toggleAllRowsSelected/toggleAllPageRowsSelected` | `Table::{toggled_all_rows_selected,toggled_all_page_rows_selected}` | Aligned | selection fixtures |
+| `getSelectedRowModel` (+ filtered/grouped) | `Table::{selected_row_model,filtered_selected_row_model,grouped_selected_row_model,page_selected_row_model}` | Aligned | selection fixtures |
+| `resetRowSelection` | `Table::reset_row_selection(default_state)` | Aligned | `resets.json` + selection fixtures |
+
+---
+
+## Expanding (RowExpanding)
+
+Source of truth:
+
+- `table-core/src/features/RowExpanding.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `row.toggleExpanded/getIsExpanded/getIsAllParentsExpanded/getCanExpand` | `Table::{toggled_row_expanded,row_is_expanded_for_row,row_is_all_parents_expanded,row_can_expand_for_row}` (plus by-id toggles) | Aligned | `expanding.json`, `grouping.json` |
+| `getPreExpandedRowModel/getExpandedRowModel` | `Table::{pre_expanded_row_model,expanded_row_model}` | Aligned | `expanding.json` |
+| `getIsAllRowsExpanded/getIsSomeRowsExpanded/toggleAllRowsExpanded` | `Table::{is_all_rows_expanded,is_some_rows_expanded,toggled_all_rows_expanded}` | Aligned | `expanding.json` |
+| `resetExpanded` | `Table::reset_expanded(default_state)` | Aligned | `expanding.json` |
+| `paginateExpandedRows` behavior | `TableOptions.paginate_expanded_rows` | Aligned | `expanding.json` |
+
+---
+
+## Grouping (ColumnGrouping)
+
+Source of truth:
+
+- `table-core/src/features/ColumnGrouping.ts`
+
+| Upstream API / capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `getPreGroupedRowModel/getGroupedRowModel` | `Table::pre_grouped_row_model()` + `Table::grouped_row_model()` | Aligned | `grouping.json` |
+| `setGrouping/resetGrouping` | `Table::{grouping_updater,reset_grouping}` + controlled hook parity via updater snapshots | Aligned | `grouping.json`, `resets.json` |
+| `column.getCanGroup/getIsGrouped/getGroupedIndex/toggleGrouping/handler` | `Table::{column_can_group,is_column_grouped,column_grouped_index,toggled_column_grouping,grouping_handler_updater}` | Aligned | `grouping.json` |
+| `groupedColumnMode` interactions | `TableOptions.grouped_column_mode` + `Table::ordered_columns()` | Aligned | `headers_cells.json` |
+| Aggregation registry + fallback value | `aggregation_fns.rs` + `Table::cell_render_value` | Aligned | `grouping_aggregation_fns.json`, `render_fallback.json` |
+
+---
+
+## Column ordering / visibility / sizing (core UI affordances)
+
+Source of truth:
+
+- `table-core/src/features/ColumnOrdering.ts`
+- `table-core/src/features/ColumnVisibility.ts`
+- `table-core/src/features/ColumnSizing.ts`
+
+| Upstream capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| Column ordering state + reset | `Table::{column_order,reset_column_order,toggled_column_order_move}` | Aligned | `visibility_ordering.json`, `resets.json` |
+| Column visibility state + toggle + reset | `Table::{column_visibility,is_column_visible,toggled_column_visibility,toggled_all_columns_visible,reset_column_visibility}` | Aligned | `visibility_ordering.json`, `resets.json` |
+| Visible ordered columns | `Table::{ordered_columns,visible_columns,pinned_visible_columns}` | Partial | visibility+ordering+pinning are fixture-gated; expand API inventory as needed |
+| Column sizing totals + start/after offsets | `Table::{total_size,left_total_size,center_total_size,right_total_size,column_start,column_after}` | Aligned | `column_sizing.json`, `visibility_ordering.json` |
+| Resize lifecycle (`onChange`/`onEnd`, RTL) | `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `columnSizingInfo` state | Partial | `column_sizing.json`, `column_resizing_group_headers.json` |
+
+---
+
+## Faceting (ColumnFaceting / GlobalFaceting)
+
+Source of truth:
+
+- `table-core/src/features/ColumnFaceting.ts`
+- `table-core/src/features/GlobalFaceting.ts`
+
+| Upstream capability | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `column.getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
+| “Global faceting” (`__global__`) surface | not first-class; current fixtures only assert empty/null globals (TanStack built-ins warn) | Partial | `faceting.json` |
+
+---
+
 ## Open inventory work (next)
 
 This inventory is intentionally incomplete. Next expansions (tracked in `HTP-cap-010` / `HTP-base-004`):
 
-- Sorting/filtering/grouping/expanding/selection/pagination feature-specific instance/row/column APIs.
-- Header/footer/flat/leaf header inventories under visibility + pinning + nested columns.
-- Column sizing instance APIs (start/after offsets, resize handlers, `columnSizingInfo` fields).
-
+- Header/footer/flat/leaf header inventories under visibility + pinning + nested columns (deep nesting + edge cases).
+- Fill in missing “column/row instance method” helpers where consumers should not have to reimplement logic (e.g. `getCanFilter`-style gates).
+- Global faceting instance surface (`getGlobalFaceted*`) if/when consumers need it.
