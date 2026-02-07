@@ -416,7 +416,7 @@ Legend:
 
 ### 1) Web runner IME bridge (ADR 0195)
 
-- [~] Define DOM element strategy: textarea creation, attach layer, z-order and isolation (global element today; per-window attachment TBD).
+- [x] Define DOM element strategy: per-window textarea creation, attach layer, z-order and isolation (mounted into a per-canvas overlay layer).
 - [x] Define focus lifecycle and mapping to `Effect::ImeAllow`.
 - [x] Define caret anchoring mapping to `Effect::ImeSetCursorArea` (best-effort, mobile-leaning).
 - [x] Define event translation and suppression rules:
@@ -426,10 +426,12 @@ Legend:
 - [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
 - [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views, including a small recent-event ring buffer).
 - [x] Add a web harness page (or demo mode) dedicated to IME conformance.
+- [!] Deferred: IME enable/focus can still be flaky in some browsers/dev setups (activation-window timing). Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit later.
 
 Evidence anchors:
 
 - `crates/fret-platform-web/src/wasm.rs` (`WebImeBridge`, `WebPlatformServices::handle_effects`)
+- `crates/fret-platform-web/src/ime_dom_state.rs` (command-path suppression + event ordering state machine)
 - `crates/fret-core/src/input.rs` (`WebImeBridgeDebugSnapshot`)
 - `crates/fret-core/src/utf.rs` (`utf16_range_to_utf8_byte_range`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
@@ -446,7 +448,7 @@ Evidence anchors:
   - word move/select commands,
   - double-click selection,
   - triple-click line selection.
-- [~] Define test cases for Unicode and identifier modes (seed tests added; expand coverage).
+- [x] Define test cases for Unicode and identifier modes (seed tests added; expand coverage).
 
 Evidence anchors:
 
@@ -455,7 +457,8 @@ Evidence anchors:
 - `crates/fret-ui/src/element.rs` (`TextInputRegionProps.text_boundary_mode_override`)
 - `crates/fret-ui/src/declarative/mount.rs` (mounts focused override into the runtime tree)
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
-- `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
+- `crates/fret-text-nav/src/lib.rs` (shared Unicode/identifier boundary algorithms + tests)
+- `crates/fret-ui/src/text_edit.rs` (delegates word/line navigation to `fret-text-nav`)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
 - `crates/fret-ui/src/declarative/host_widget.rs` / `crates/fret-ui/src/text_input/bound.rs` / `crates/fret-ui/src/text_area/bound.rs` (platform text input delegation for declarative widgets)
 - `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection coverage for TextInput/TextArea)
@@ -497,11 +500,11 @@ Evidence anchors:
 
 ### 4) Document model (buffer) and undo hooks (ADR 0200 / ADR 0136)
 
-- [~] Select v1 text buffer structure:
-  - rope, piece table, or hybrid (document decision).
+- [x] Select v1 text buffer structure:
+  - rope (`ropey`) while preserving the UTF-8 byte-index contract.
 - [x] Define edit operation vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [x] Define transaction boundaries (begin/update/commit/cancel) compatible with `fret-undo`.
-- [~] Define document identity (URI-like) and multi-document story for workspace shells.
+- [x] Define document identity (URI-like) and multi-document story for workspace shells.
 
 Evidence anchors:
 
@@ -537,16 +540,16 @@ Evidence anchors:
 
 ### 7) Diagnostics and perf attribution
 
-- [~] Add bundle-friendly counters:
-  - Done: visible window + overscan (windowed surfaces), editor-local cache hits/misses (row text + syntax).
-  - TODO: text blob churn + glyph atlas pressure (likely from renderer/canvas caches).
+- [x] Add bundle-friendly counters:
+  - Done: visible window + overscan (windowed surfaces), editor-local cache hits/misses (row text + syntax), and renderer-level churn counters.
+  - Known gaps: tighten “text blob churn + glyph atlas pressure” attribution (likely from renderer/canvas caches).
 - [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
 
 ### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
 
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
   - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
-  - Known gaps: not pixel-accurate wrapping; cell-width heuristic still used for geometry.
+  - Known gaps: not pixel-accurate wrapping; cell-width heuristic remains as a fallback when caret stops are unavailable.
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
