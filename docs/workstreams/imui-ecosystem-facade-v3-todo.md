@@ -91,7 +91,9 @@ Exit criteria:
 
 - imui facade touchpoints needed for docking parity are listed and linked to docking workstreams.
 
-- [ ] IMUIECO3-dock-020 Document docking handshake touchpoints and required signals/metadata.
+- [x] IMUIECO3-dock-020 Document docking handshake touchpoints and required signals/metadata.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M2 touchpoints).
+  - Evidence: `ecosystem/fret-docking/src/imui.rs`, `ecosystem/fret-docking/src/facade.rs`.
 
 ---
 

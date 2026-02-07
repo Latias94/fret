@@ -113,6 +113,41 @@ ownership in the docking layer.
 v3 only tracks the **imui facade touchpoints** (what wrappers need, what signals are required, what
 to gate), but does not move docking policy into `imui`.
 
+M2 touchpoints (normative for v3 work):
+
+- **Embed the dock host (imui authoring)**:
+  - Use `fret_docking::imui::dock_space_with(...)` to embed a dock space inside an immediate tree
+    without re-implementing retained-bridge wiring in every app.
+  - The dock host must be submitted every frame for every participating window (do not conditionally
+    omit it when panels are hidden). See: `docs/docking-arbitration-checklist.md` (Driver integration checklist).
+  - The `configure(app, window)` callback is the app seam to:
+    - ensure panels exist (`DockManager::ensure_panel`),
+    - ensure graph window roots are set,
+    - update `ViewportPanel` targets/sizes for embedded engine viewports (ADR 0007 / ADR 0147).
+  - Evidence: `ecosystem/fret-docking/src/imui.rs` (`dock_space_with`, `DockSpaceImUiOptions`).
+- **Consume docking effects (runner/driver integration)**:
+  - Docking UI emits `Effect::Dock(DockOp)` (ADR 0013). The runner/driver must consume it and apply
+    mutations / translate tear-off requests into `WindowRequest::Create`.
+  - Recommended driver façade: `fret_docking::DockingRuntime`:
+    - `on_dock_op(...)` for `Effect::Dock(op)`,
+    - `on_window_created(...)` for `CreateWindowKind::DockFloating` completion,
+    - `before_close_window(...)` to merge/clean up when an OS window is closed.
+  - Evidence: `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`),
+    `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, tear-off fallback to in-window float),
+    `crates/fret-runtime/src/effect.rs` (`Effect::Dock`).
+- **Arbitration seams (docking vs overlays vs viewports)**:
+  - Dock drag sessions are window-scoped and must close/suspend non-modal dismissable overlays in
+    the same window to avoid fighting outside-press logic (ADR 0072).
+  - While a dock drag session is active, docking suppresses forwarding pointer-move/wheel to embedded
+    viewports in that window (ADR 0072; viewport forwarding ADR 0147).
+  - Evidence: `docs/adr/0072-docking-interaction-arbitration-matrix.md`,
+    `docs/workstreams/docking-multiviewport-arbitration-v1.md`.
+- **Viewport overlay hooks (editor-owned policy)**:
+  - Editor-grade viewport overlays (gizmo/marquee/selection) must remain app-owned and be injected via
+    docking hooks instead of being re-implemented in `imui`.
+  - Evidence: `ecosystem/fret-docking/src/dock/services.rs` (`DockViewportOverlayHooksService`),
+    ADR 0075 (layering split).
+
 ### M3 - Ecosystem extension ABI v1 (adapter + metadata evolution)
 
 Goal: make it easy for third-party crates to build immediate wrappers:
