@@ -1437,6 +1437,8 @@ struct FloatWindowLayerMarker {
 #[derive(Debug, Default)]
 struct FloatWindowLayerZOrder {
     order: Vec<GlobalElementId>,
+    dirty: bool,
+    snapshot: FloatWindowLayerZOrderSnapshot,
 }
 
 impl FloatWindowLayerZOrder {
@@ -1445,6 +1447,7 @@ impl FloatWindowLayerZOrder {
             return;
         }
         self.order.push(window);
+        self.dirty = true;
     }
 
     fn bring_to_front(&mut self, window: GlobalElementId) {
@@ -1457,7 +1460,42 @@ impl FloatWindowLayerZOrder {
         }
         self.order.remove(idx);
         self.order.push(window);
+        self.dirty = true;
     }
+
+    fn prune_missing(&mut self, windows: &[AnyElement]) {
+        let before = self.order.len();
+        self.order.retain(|id| windows.iter().any(|w| w.id == *id));
+        if self.order.len() != before {
+            self.dirty = true;
+        }
+    }
+
+    fn snapshot(&mut self) -> FloatWindowLayerZOrderSnapshot {
+        if !self.dirty {
+            return self.snapshot.clone();
+        }
+
+        let order: Arc<[GlobalElementId]> = self.order.clone().into();
+        let mut rank = HashMap::with_capacity(order.len());
+        for (ix, id) in order.iter().enumerate() {
+            rank.insert(*id, ix);
+        }
+
+        self.snapshot = FloatWindowLayerZOrderSnapshot {
+            order,
+            rank: Arc::new(rank),
+        };
+        self.dirty = false;
+        self.snapshot.clone()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct FloatWindowLayerZOrderSnapshot {
+    #[allow(dead_code)]
+    order: Arc<[GlobalElementId]>,
+    rank: Arc<HashMap<GlobalElementId, usize>>,
 }
 
 fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
@@ -1706,25 +1744,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     f(&mut ui);
                 }
 
-                let mut z_order =
-                    cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
-                        for w in windows.iter() {
-                            st.ensure_present(w.id);
-                        }
-                        st.order.clone()
-                    });
-
-                // Ensure we never rank missing windows above present ones if the order vector is stale.
-                z_order.retain(|id| windows.iter().any(|w| w.id == *id));
+                let z_order = cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
+                    for w in windows.iter() {
+                        st.ensure_present(w.id);
+                    }
+                    st.prune_missing(&windows);
+                    st.snapshot()
+                });
 
                 let mut indexed: Vec<(usize, usize, AnyElement)> = windows
                     .into_iter()
                     .enumerate()
                     .map(|(original, w)| {
-                        let idx = z_order
-                            .iter()
-                            .position(|id| *id == w.id)
-                            .unwrap_or(usize::MAX);
+                        let idx = z_order.rank.get(&w.id).copied().unwrap_or(usize::MAX);
                         (idx, original, w)
                     })
                     .collect();
