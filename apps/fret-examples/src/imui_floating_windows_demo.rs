@@ -6,6 +6,7 @@ use fret_kit::prelude::*;
 
 struct ImUiFloatingWindowsState {
     open_a: Model<bool>,
+    select_mode: Model<Option<Arc<str>>>,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -18,6 +19,7 @@ pub fn run() -> anyhow::Result<()> {
 fn init_window(app: &mut App, _window: AppWindowId) -> ImUiFloatingWindowsState {
     ImUiFloatingWindowsState {
         open_a: app.models_mut().insert(true),
+        select_mode: app.models_mut().insert(None::<Arc<str>>),
     }
 }
 
@@ -33,7 +35,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
 
         let hint = fret_ui_kit::ui::text(
             ui.cx_mut(),
-            "Drag the window title bar onto the drop zone, resize from the corner, and open the context menu.",
+            "Drag the title bar onto the drop zone, double-click title to collapse/expand, resize from the corner, open the context menu, and test the select popup.",
         )
         .text_xs();
         ui.add_ui(hint);
@@ -94,6 +96,22 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                             },
                         );
                     });
+
+                    ui.separator();
+                    let select_items = [
+                        Arc::<str>::from("Alpha"),
+                        Arc::<str>::from("Beta"),
+                        Arc::<str>::from("Gamma"),
+                    ];
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &st.select_mode,
+                        &select_items,
+                        fret_ui_kit::imui::SelectOptions {
+                            test_id: Some(Arc::from("imui-float-demo.select")),
+                            ..Default::default()
+                        },
+                    );
                 },
             );
 
@@ -104,6 +122,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                 resp.area.rect,
                 resp.size,
                 resp.resizing,
+                resp.collapsed,
             );
         });
 

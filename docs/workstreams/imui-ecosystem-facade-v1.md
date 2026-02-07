@@ -35,6 +35,9 @@ Status snapshot (2026-02-06):
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
   - optional v1 resize handles via `floating_window_resizable(...)` (edges + corners; diagonal cursor supported).
 - `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
+- OS-window promotion scope for non-docking floatings is explicitly locked: docking-only in v1, with a capability-gated promotion checklist for later milestones.
+- Performance guidance is tracked in a dedicated short guide for facade authors and reviewers.
+  - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
@@ -44,6 +47,9 @@ Status snapshot (2026-02-06):
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- v2 follow-up: `docs/workstreams/imui-ecosystem-facade-v2.md`
+- v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
+- Perf guide: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - imui authoring facade v2 (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
 - Unified authoring builder surface (ADR): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
 - Docking + multi-window parity (ImGui-aligned): `docs/workstreams/docking-multiwindow-imgui-parity.md`
@@ -360,6 +366,19 @@ Tier 3 (not allowed in v1): parallel policy implementation for complex widgets
 - If Tier 1 is unavailable, defer and track in workstream TODO instead of shipping divergent
   behavior.
 
+
+#### 5.6.6 OS-window promotion gate (`IMUIECO-float-034`)
+
+- Decision (v1): generalized non-docking OS-window promotion is **out of scope**.
+- Normative behavior: non-docking `ui.window(...)` / `ui.area(...)` stay in-window; only docking-owned
+  tear-off may create/manage native windows.
+- Eligibility gate for future generalized promotion:
+  - native-capability check (`PlatformCapabilities`) with explicit fallback,
+  - docking + multi-viewport arbitration parity proven on native platforms,
+  - regression coverage in nextest + `fretboard diag` for move/resize/focus handoff.
+- Rationale: avoid splitting runner/window lifecycle ownership before docking parity workstream exits
+  sustained stabilization.
+
 ---
 
 ## 6) Text Editing Integration (Explicit Dependency)
@@ -413,12 +432,8 @@ Minimum “v1 done” outcomes:
 
 ## 9) Open Questions
 
-1) When should generalized non-docking OS-window promotion become eligible for implementation?
-   - Candidate gate: after docking tear-off + multi-viewport arbitration reaches sustained parity
-     across native platforms and has regression gates in diag.
-
-2) Which subset of `ResponseExt` is stable enough to graduate into shared `fret-authoring`
+1) Which subset of `ResponseExt` is stable enough to graduate into shared `fret-authoring`
    contract (if any), and what compatibility window should we commit to?
 
-3) What minimum adapter API should canonical component surfaces expose so third-party ecosystem
+2) What minimum adapter API should canonical component surfaces expose so third-party ecosystem
    crates can plug into the same delegation seam without leaking runtime internals?

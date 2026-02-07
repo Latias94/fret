@@ -202,7 +202,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(record.instance, declarative::ElementInstance::Pressable(_))
                     {
                         return Some(record.element);
@@ -263,7 +263,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover_region;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(
                             record.instance,
                             declarative::ElementInstance::HoverRegion(_)
@@ -473,7 +473,7 @@ impl<H: UiHost> UiTree<H> {
     fn apply_pending_invalidations(
         &mut self,
         pending: HashMap<NodeId, PendingInvalidation>,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut impl InvalidationVisited,
     ) {
         if pending.is_empty() {
             return;
@@ -1019,6 +1019,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                true,
             );
         }
 
@@ -1620,7 +1622,7 @@ impl<H: UiHost> UiTree<H> {
                         let window_frame = window_frame?;
                         let mut node = hit?;
                         loop {
-                            if let Some(record) = window_frame.instances.get(&node)
+                            if let Some(record) = window_frame.instances.get(node)
                                 && matches!(
                                     record.instance,
                                     crate::declarative::ElementInstance::InternalDragRegion(p)
@@ -2488,7 +2490,7 @@ impl<H: UiHost> UiTree<H> {
         {
             let is_scroll_target = declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
-                let record = window_frame.instances.get(&scroll_target)?;
+                let record = window_frame.instances.get(scroll_target)?;
                 Some(matches!(
                     record.instance,
                     declarative::ElementInstance::Scroll(_)
@@ -2738,6 +2740,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                true,
             );
 
             self.hit_test_path_cache = None;
@@ -2864,7 +2868,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
