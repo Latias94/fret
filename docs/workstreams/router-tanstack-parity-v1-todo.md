@@ -74,6 +74,6 @@ Status legend:
 
 ## Phase 5 - App adoption
 
-- `[ ]` Add an app-level reference integration example:
+- `[x]` Add an app-level reference integration example:
   - window-scoped router state + navigation commands
   - query prefetch tied to route matches
