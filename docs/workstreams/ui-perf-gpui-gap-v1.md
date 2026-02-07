@@ -94,6 +94,8 @@ reflow + paint work. Zed feels smooth here primarily because it keeps the per-fr
 What we already do in Fret (evidence in the perf log):
 
 - **Coalesce resizes to once per frame** at the runner boundary (apply pending size at `RedrawRequested`).
+  - Code: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`pending_surface_resize` is applied inside
+    `WindowEvent::RedrawRequested`).
 - **Defer known-expensive scroll measurement** while the viewport is actively resizing (unbounded probe deferral).
 - **Make resize probes stable and reproducible** (so baselines measure “work per resize” rather than “scheduler timing”).
 
@@ -102,11 +104,20 @@ Open questions / likely gaps (need code-level confirmation against `repo-ref/zed
 Baseline fact (quick reference):
 - On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
   (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+- On Wayland, GPUI explicitly throttles interactive resizes to once per vblank (`configure.resizing` + `resize_throttle`)
+  (see `repo-ref/zed/crates/gpui/src/platform/linux/wayland/window.rs`).
 
 1) **Text layout cache model under width jitter**
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+   - Fret experiment knob (default-off): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+   - Latest evidence (commit `68c6482cb`, `ui-resize-probes`, repeat=7; see perf log):
+     - Baseline: drag-jitter `p95 total=16470us`, stress `p95 total=15070us`.
+     - With bucketing=2px: drag-jitter improves (`p95 total=15103us`), but stress regresses (`p95 total=15729us`).
+     - Conclusion: keep this off by default until it is consistently positive and visually acceptable; the better
+       direction is still to tighten wrapped-text reuse (separate shaping vs wrapping keys) rather than rely purely on
+       quantization.
 
 2) **Layout invalidation granularity**
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.

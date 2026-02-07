@@ -40,7 +40,9 @@ Conventions:
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
-    - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off; needs visual + perf proof before promotion.
+    - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off.
+    - Evidence (mixed): perf log entry `2026-02-07 21:48` shows bucketing=2px improves `drag-jitter` p95 total but
+      regresses `resize-stress` p95 total; keep default-off until it is consistently positive and visually acceptable.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
 ## Milestones
