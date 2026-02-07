@@ -5945,7 +5945,7 @@ Interpretation:
 - This supports the working hypothesis that “Zed smoothness” on live resize is mostly about reducing per-frame
   tree/build/apply overhead and minimizing avoidable invalidations, rather than GPU-side tuning (for these scripts).
 
-Change:
+Change (commit `366efd769`):
 - Make `layout_roots_time_us` visible in `fretboard diag stats` snapshot rows and in `fretboard diag perf --json`
   run payloads (alongside `layout_request_build_roots_time_us`), so resize traces can be split into:
   “request/build” vs “roots/layout traversal”.
