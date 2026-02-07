@@ -322,8 +322,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (helper surface): `Table::global_filter_updater_set_value(..)` exists and is smoke-gated.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
-  - Remaining: `onGlobalFilterChange` noop semantics (fixture marker-driven, like other controlled hooks).
-  - Gate: extend `filtering_fns.json` (or add a dedicated fixture) to assert controlled-hook outcomes.
+  - Done (controlled hook parity): fixture marker-driven noop semantics are gated for both
+    `onColumnFiltersChange` and `onGlobalFilterChange`.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
+      (snapshots: `filtering_fns_action_set_column_filter_noop_hook_ignores`,
+      `filtering_fns_action_set_global_filter_noop_hook_ignores`)
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
+    - Fixture generator: `tools/tanstack-table-fixtures/extract-fixtures.mts`
+      (`__onColumnFiltersChange`, `__onGlobalFilterChange`)
 
 ---
 

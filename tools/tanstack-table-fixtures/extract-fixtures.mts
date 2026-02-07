@@ -373,6 +373,8 @@ type TanStackOptions = {
   __onExpandedChange?: "noop"
   __onPaginationChange?: "noop"
   __onColumnVisibilityChange?: "noop"
+  __onColumnFiltersChange?: "noop"
+  __onGlobalFilterChange?: "noop"
   __onColumnPinningChange?: "noop"
   __onColumnOrderChange?: "noop"
   __onRowPinningChange?: "noop"
@@ -1814,11 +1816,17 @@ async function main(): Promise<void> {
         currentState.sorting = next ?? []
       },
       onColumnFiltersChange: (updater: any) => {
+        if (options.__onColumnFiltersChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.columnFilters) : updater
         currentState.columnFilters = next ?? []
       },
       onGlobalFilterChange: (updater: any) => {
+        if (options.__onGlobalFilterChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.globalFilter) : updater
         currentState.globalFilter = next
@@ -4255,6 +4263,24 @@ function snapshotColumnPinning(
         actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "" }],
         expect: snapshotForActions(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }, [
           { type: "setColumnFilterValue", column_id: "text_auto", value: "" },
+        ]),
+      },
+      {
+        id: "filtering_fns_action_set_column_filter_noop_hook_ignores",
+        options: { ...base, __onColumnFiltersChange: "noop" },
+        state: {},
+        actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "ap" }],
+        expect: snapshotForActions({ ...base, __onColumnFiltersChange: "noop" }, {}, [
+          { type: "setColumnFilterValue", column_id: "text_auto", value: "ap" },
+        ]),
+      },
+      {
+        id: "filtering_fns_action_set_global_filter_noop_hook_ignores",
+        options: { ...base, __onGlobalFilterChange: "noop" },
+        state: {},
+        actions: [{ type: "setGlobalFilterValue", value: "ap" }],
+        expect: snapshotForActions({ ...base, __onGlobalFilterChange: "noop" }, {}, [
+          { type: "setGlobalFilterValue", value: "ap" },
         ]),
       },
     ]
