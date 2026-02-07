@@ -33,9 +33,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
 
-- [ ] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
+- [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
-  - Implementation options: a small PowerShell script under `tools/` or a `fretboard` subcommand.
+  - Evidence:
+    - `tools/report_largest_files.ps1`
 
 ## M1 — Core contracts closure
 

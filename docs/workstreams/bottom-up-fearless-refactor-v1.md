@@ -142,6 +142,8 @@ Exit criteria (v1):
 - `pwsh -NoProfile -File tools/check_layering.ps1` is green.
 - A documented “refactor safety set” exists (commands + minimal subsets).
 - At least one scripted diagnostics suite is considered “always-run” for regressions.
+- A lightweight module-size drift report exists (to keep “god files” visible).
+  - `pwsh -NoProfile -File tools/report_largest_files.ps1 -Top 30 -MinLines 800`
 
 ### M1 — Core contracts closure (portable kernel confidence)
 
