@@ -1,5 +1,5 @@
 [package]
-name = "fret-code-editor-view"
+name = "fret-text-nav"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,6 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [dependencies]
-fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-text-nav = { path = "../../crates/fret-text-nav" }
+fret-runtime = { path = "../fret-runtime" }
+unicode-segmentation.workspace = true
+unicode-ident.workspace = true
+

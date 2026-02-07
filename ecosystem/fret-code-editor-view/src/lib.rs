@@ -5,8 +5,8 @@
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
+use fret_text_nav as text_nav;
 use std::ops::Range;
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct DisplayPoint {
@@ -204,223 +204,31 @@ pub fn display_point_to_byte(buf: &TextBuffer, mut pt: DisplayPoint) -> usize {
 }
 
 pub fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
-    if idx >= text.len() {
-        return text.len();
-    }
-    if text.is_char_boundary(idx) {
-        return idx;
-    }
-    let mut i = idx;
-    while i > 0 && !text.is_char_boundary(i) {
-        i = i.saturating_sub(1);
-    }
-    i
+    text_nav::clamp_to_char_boundary(text, idx)
 }
 
 pub fn prev_char_boundary(text: &str, idx: usize) -> usize {
-    let idx = clamp_to_char_boundary(text, idx);
-    if idx == 0 {
-        return 0;
-    }
-
-    // Avoid scanning from the start (which is O(n)). Back up to the previous UTF-8 char boundary.
-    let mut i = idx.saturating_sub(1);
-    while i > 0 && !text.is_char_boundary(i) {
-        i = i.saturating_sub(1);
-    }
-    i
+    text_nav::prev_char_boundary(text, idx)
 }
 
 pub fn next_char_boundary(text: &str, idx: usize) -> usize {
-    let idx = clamp_to_char_boundary(text, idx);
-    if idx >= text.len() {
-        return text.len();
-    }
-    let ch = text[idx..].chars().next().unwrap_or('\0');
-    idx.saturating_add(ch.len_utf8()).min(text.len())
-}
-
-fn is_identifier_char(ch: char) -> bool {
-    ch == '_' || unicode_ident::is_xid_continue(ch)
-}
-
-fn char_at(text: &str, idx: usize) -> Option<char> {
-    let idx = clamp_to_char_boundary(text, idx);
-    text.get(idx..)?.chars().next()
-}
-
-fn is_unicode_word_char(text: &str, idx: usize) -> bool {
-    let idx = clamp_to_char_boundary(text, idx);
-    text.unicode_word_indices()
-        .any(|(start, word)| (start..start + word.len()).contains(&idx))
-}
-
-fn unicode_word_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
-    let idx = clamp_to_char_boundary(text, idx);
-    for (start, word) in text.unicode_word_indices() {
-        let end = start + word.len();
-        if (start..end).contains(&idx) {
-            return Some((start, end));
-        }
-    }
-    None
-}
-
-fn identifier_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
-    let idx = clamp_to_char_boundary(text, idx);
-    let ch = char_at(text, idx)?;
-    if !is_identifier_char(ch) {
-        return None;
-    }
-
-    let mut start = idx;
-    while start > 0 {
-        let prev = prev_char_boundary(text, start);
-        let prev_ch = char_at(text, prev).unwrap_or(' ');
-        if !is_identifier_char(prev_ch) {
-            break;
-        }
-        start = prev;
-    }
-
-    let mut end = next_char_boundary(text, idx);
-    while end < text.len() {
-        let next_ch = char_at(text, end).unwrap_or(' ');
-        if !is_identifier_char(next_ch) {
-            break;
-        }
-        end = next_char_boundary(text, end);
-    }
-
-    Some((start, end))
+    text_nav::next_char_boundary(text, idx)
 }
 
 pub fn select_word_range(text: &str, idx: usize, mode: TextBoundaryMode) -> (usize, usize) {
-    if text.is_empty() {
-        return (0, 0);
-    }
-
-    let mut idx = clamp_to_char_boundary(text, idx).min(text.len());
-    if idx >= text.len() {
-        idx = prev_char_boundary(text, idx);
-    }
-
-    if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
-        let prev = prev_char_boundary(text, idx);
-        let prev_is_word = match mode {
-            TextBoundaryMode::UnicodeWord => is_unicode_word_char(text, prev),
-            TextBoundaryMode::Identifier => char_at(text, prev).is_some_and(is_identifier_char),
-        };
-        if prev_is_word {
-            idx = prev;
-        }
-    }
-
-    let Some(ch) = char_at(text, idx) else {
-        return (0, 0);
-    };
-
-    if ch.is_whitespace() {
-        let mut start = idx;
-        while start > 0 {
-            let prev = prev_char_boundary(text, start);
-            if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
-                start = prev;
-            } else {
-                break;
-            }
-        }
-        let mut end = next_char_boundary(text, idx);
-        while end < text.len() {
-            if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
-                end = next_char_boundary(text, end);
-            } else {
-                break;
-            }
-        }
-        return (start, end);
-    }
-
-    match mode {
-        TextBoundaryMode::UnicodeWord => {
-            unicode_word_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
-        }
-        TextBoundaryMode::Identifier => {
-            identifier_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
-        }
-    }
+    text_nav::select_word_range(text, idx, mode)
 }
 
 pub fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
-    if text.is_empty() {
-        return (0, 0);
-    }
-
-    let idx = clamp_to_char_boundary(text, idx).min(text.len());
-    let start = text[..idx]
-        .rfind('\n')
-        .map(|i| (i + 1).min(text.len()))
-        .unwrap_or(0);
-    let end = text[idx..]
-        .find('\n')
-        .map(|i| (idx + i + 1).min(text.len()))
-        .unwrap_or(text.len());
-    (start, end)
+    text_nav::select_line_range(text, idx)
 }
 
 pub fn move_word_left(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-    let mut i = prev_char_boundary(text, idx);
-    while i > 0 {
-        let prev = prev_char_boundary(text, i);
-        let ch = text[prev..i].chars().next().unwrap_or(' ');
-        if !ch.is_whitespace() {
-            break;
-        }
-        i = prev;
-    }
-
-    if i == 0 {
-        return 0;
-    }
-
-    // `i` currently points to the char boundary immediately after the first non-whitespace char we
-    // found while scanning left. Use the previous boundary as the anchor so we always query a
-    // position inside the word/token (otherwise `range_at` can return `None` at word ends).
-    let anchor = prev_char_boundary(text, i);
-
-    match mode {
-        TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, anchor)
-            .map(|(start, _)| start)
-            .unwrap_or(anchor),
-        TextBoundaryMode::Identifier => identifier_range_at(text, anchor)
-            .map(|(start, _)| start)
-            .unwrap_or(anchor),
-    }
+    text_nav::move_word_left(text, idx, mode)
 }
 
 pub fn move_word_right(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-    let mut i = next_char_boundary(text, idx);
-    while i < text.len() {
-        let next = next_char_boundary(text, i);
-        let ch = text[i..next].chars().next().unwrap_or(' ');
-        if !ch.is_whitespace() {
-            break;
-        }
-        i = next;
-    }
-
-    if i >= text.len() {
-        return text.len();
-    }
-
-    match mode {
-        TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
-            .map(|(_, end)| end)
-            .unwrap_or(i),
-        TextBoundaryMode::Identifier => identifier_range_at(text, i)
-            .map(|(_, end)| end)
-            .unwrap_or(i),
-    }
+    text_nav::move_word_right(text, idx, mode)
 }
 
 /// Select a word range in a `TextBuffer` using v1 line-local semantics.

@@ -37,6 +37,7 @@ pub(crate) mod utf8 {
     use unicode_segmentation::UnicodeSegmentation;
 
     use fret_runtime::TextBoundaryMode;
+    use fret_text_nav as text_nav;
 
     pub(crate) fn clamp_selection_to_grapheme_boundaries(
         text: &str,
@@ -104,24 +105,6 @@ pub(crate) mod utf8 {
         text.len()
     }
 
-    pub(crate) fn clamp_to_grapheme_boundary_down(text: &str, idx: usize) -> usize {
-        let idx = idx.min(text.len());
-        if is_grapheme_boundary(text, idx) {
-            idx
-        } else {
-            prev_grapheme_boundary(text, idx)
-        }
-    }
-
-    pub(crate) fn clamp_to_grapheme_boundary_up(text: &str, idx: usize) -> usize {
-        let idx = idx.min(text.len());
-        if is_grapheme_boundary(text, idx) {
-            idx
-        } else {
-            next_grapheme_boundary(text, idx)
-        }
-    }
-
     pub(crate) fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
         if idx >= text.len() {
             return text.len();
@@ -136,217 +119,24 @@ pub(crate) mod utf8 {
         i
     }
 
-    pub(crate) fn prev_char_boundary(text: &str, idx: usize) -> usize {
-        let idx = clamp_to_char_boundary(text, idx);
-        if idx == 0 {
-            return 0;
-        }
-        let slice = &text[..idx];
-        slice.char_indices().last().map(|(i, _)| i).unwrap_or(0)
-    }
-
-    pub(crate) fn next_char_boundary(text: &str, idx: usize) -> usize {
-        let idx = clamp_to_char_boundary(text, idx);
-        if idx >= text.len() {
-            return text.len();
-        }
-        let ch = text[idx..].chars().next().unwrap();
-        idx + ch.len_utf8()
-    }
-
-    pub(crate) fn is_identifier_char(ch: char) -> bool {
-        ch == '_' || unicode_ident::is_xid_continue(ch)
-    }
-
-    fn char_at(text: &str, idx: usize) -> Option<char> {
-        let idx = clamp_to_char_boundary(text, idx);
-        text.get(idx..)?.chars().next()
-    }
-
-    fn is_unicode_word_char(text: &str, idx: usize) -> bool {
-        let idx = clamp_to_char_boundary(text, idx);
-        text.unicode_word_indices()
-            .any(|(start, word)| (start..start + word.len()).contains(&idx))
-    }
-
-    fn unicode_word_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
-        let idx = clamp_to_char_boundary(text, idx);
-        for (start, word) in text.unicode_word_indices() {
-            let end = start + word.len();
-            if (start..end).contains(&idx) {
-                return Some((start, end));
-            }
-        }
-        None
-    }
-
-    fn identifier_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
-        let idx = clamp_to_char_boundary(text, idx);
-        let ch = char_at(text, idx)?;
-        if !is_identifier_char(ch) {
-            return None;
-        }
-
-        let mut start = idx;
-        while start > 0 {
-            let prev = prev_char_boundary(text, start);
-            let prev_ch = char_at(text, prev).unwrap_or(' ');
-            if !is_identifier_char(prev_ch) {
-                break;
-            }
-            start = prev;
-        }
-
-        let mut end = next_char_boundary(text, idx);
-        while end < text.len() {
-            let next_ch = char_at(text, end).unwrap_or(' ');
-            if !is_identifier_char(next_ch) {
-                break;
-            }
-            end = next_char_boundary(text, end);
-        }
-
-        Some((start, end))
-    }
-
     pub(crate) fn select_word_range(
         text: &str,
         idx: usize,
         mode: TextBoundaryMode,
     ) -> (usize, usize) {
-        if text.is_empty() {
-            return (0, 0);
-        }
-
-        let mut idx = clamp_to_grapheme_boundary(text, idx).min(text.len());
-        if idx >= text.len() {
-            idx = prev_grapheme_boundary(text, idx);
-        }
-
-        // Prefer selecting the previous word when clicking just after it.
-        if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
-            let prev = prev_grapheme_boundary(text, idx);
-            let prev_is_word = match mode {
-                TextBoundaryMode::UnicodeWord => is_unicode_word_char(text, prev),
-                TextBoundaryMode::Identifier => char_at(text, prev).is_some_and(is_identifier_char),
-            };
-            if prev_is_word {
-                idx = prev;
-            }
-        }
-
-        let Some(ch) = char_at(text, idx) else {
-            return (0, 0);
-        };
-
-        if ch.is_whitespace() {
-            let mut start = idx;
-            while start > 0 {
-                let prev = prev_grapheme_boundary(text, start);
-                if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
-                    start = prev;
-                } else {
-                    break;
-                }
-            }
-            let mut end = next_grapheme_boundary(text, idx);
-            while end < text.len() {
-                if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
-                    end = next_grapheme_boundary(text, end);
-                } else {
-                    break;
-                }
-            }
-            return (
-                clamp_to_grapheme_boundary_down(text, start),
-                clamp_to_grapheme_boundary_up(text, end),
-            );
-        }
-
-        let (start, end) =
-            match mode {
-                TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, idx)
-                    .unwrap_or((idx, next_grapheme_boundary(text, idx))),
-                TextBoundaryMode::Identifier => identifier_range_at(text, idx)
-                    .unwrap_or((idx, next_grapheme_boundary(text, idx))),
-            };
-
-        (
-            clamp_to_grapheme_boundary_down(text, start),
-            clamp_to_grapheme_boundary_up(text, end),
-        )
+        text_nav::select_word_range(text, idx, mode)
     }
 
     pub(crate) fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
-        if text.is_empty() {
-            return (0, 0);
-        }
-
-        let idx = clamp_to_grapheme_boundary(text, idx).min(text.len());
-        let start = text[..idx]
-            .rfind('\n')
-            .map(|i| (i + 1).min(text.len()))
-            .unwrap_or(0);
-        let end = text[idx..]
-            .find('\n')
-            .map(|i| (idx + i + 1).min(text.len()))
-            .unwrap_or(text.len());
-        (
-            clamp_to_grapheme_boundary_down(text, start),
-            clamp_to_grapheme_boundary_up(text, end),
-        )
+        text_nav::select_line_range(text, idx)
     }
 
     pub(crate) fn move_word_left(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-        let mut i = prev_grapheme_boundary(text, idx);
-        while i > 0 {
-            let prev = prev_grapheme_boundary(text, i);
-            let ch = text[prev..i].chars().next().unwrap_or(' ');
-            if !ch.is_whitespace() {
-                break;
-            }
-            i = prev;
-        }
-
-        if i == 0 {
-            return 0;
-        }
-
-        let next = match mode {
-            TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
-                .map(|(start, _)| start)
-                .unwrap_or(i),
-            TextBoundaryMode::Identifier => identifier_range_at(text, i)
-                .map(|(start, _)| start)
-                .unwrap_or(i),
-        };
-        clamp_to_grapheme_boundary(text, next)
+        text_nav::move_word_left(text, idx, mode)
     }
 
     pub(crate) fn move_word_right(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-        let mut i = next_grapheme_boundary(text, idx);
-        while i < text.len() {
-            let next = next_grapheme_boundary(text, i);
-            let ch = text[i..next].chars().next().unwrap_or(' ');
-            if !ch.is_whitespace() {
-                break;
-            }
-            i = next;
-        }
-
-        if i >= text.len() {
-            return text.len();
-        }
-
-        let next = match mode {
-            TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
-                .map(|(_, end)| end)
-                .unwrap_or(i),
-            TextBoundaryMode::Identifier => identifier_range_at(text, i)
-                .map(|(_, end)| end)
-                .unwrap_or(i),
-        };
-        clamp_to_grapheme_boundary(text, next)
+        text_nav::move_word_right(text, idx, mode)
     }
 }
 
@@ -1359,7 +1149,7 @@ mod word_boundary_tests {
         assert_eq!(before_second, second_start);
 
         let before_first = utf8::move_word_left(&text, before_second, TextBoundaryMode::Identifier);
-        assert_eq!(before_first, first.len());
+        assert_eq!(before_first, 0);
 
         let at_start = utf8::move_word_left(&text, before_first, TextBoundaryMode::Identifier);
         assert_eq!(at_start, 0);
