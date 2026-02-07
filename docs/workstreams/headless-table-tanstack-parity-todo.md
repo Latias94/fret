@@ -273,13 +273,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ## M2 鈥?State-shape parity + reset semantics
 
-- [ ] HTP-state-010 Define TanStack-compatible JSON schema for:
+- [x] HTP-state-010 Define TanStack-compatible JSON schema for:
   - sorting, columnFilters, globalFilter, pagination, grouping, expanded, rowSelection,
     columnVisibility, columnOrder, columnSizing, columnSizingInfo, columnPinning, rowPinning.
-- [ ] HTP-state-011 Specify normalization vs lossless rules for the JSON surface:
+- [x] HTP-state-011 Specify normalization vs lossless rules for the JSON surface:
   - which keys may be omitted vs must be present,
   - how TanStack merges defaults (and what we must preserve to avoid semantic drift),
   - canonical ordering rules for stable fixtures (maps/arrays).
+  - Evidence: `docs/workstreams/headless-table-tanstack-parity.md` (state JSON schema + rules)
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_state_json_semantics_parity.rs`
 - [x] HTP-state-020 Implement round-trip conversions (Rust 鈫?TanStack JSON) without loss.
   - Done (partial): JSON 鈫?`TableState` conversions for a growing subset of TanStack state keys, plus a round-trip parity gate.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`TanStackTableState::{to_table_state,from_table_state}`)

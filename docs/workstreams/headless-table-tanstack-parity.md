@@ -347,6 +347,75 @@ Fixture schema (v0; evolving, but kept stable for tests):
     - `core` / `filtered` / `sorted` / `paginated` / `row_model`: row id lists (`root` + `flat`)
     - `next_state?`: expected post-action state subset (when `actions` is present)
 
+### TanStack-compatible state JSON schema (v0)
+
+This workstream treats TanStack Table v8 `getState()` as the reference “shape”. Fret supports a
+**TanStack-compatible subset** for import/export via `TanStackTableState`.
+
+Supported top-level keys (all optional):
+
+- `sorting`: `[{ id: string, desc: boolean }]`
+- `columnFilters`: `[{ id: string, value: any }]`
+- `globalFilter`: `any | null` (`null` is treated as unset)
+- `pagination`: `{ pageIndex: number, pageSize: number } | null`
+- `grouping`: `string[]`
+- `expanded`: `true | false | Record<string, boolean> | null`
+- `rowPinning`: `{ top: string[], bottom: string[] } | null`
+- `rowSelection`: `Record<string, boolean> | null`
+- `columnPinning`: `{ left: string[], right: string[] } | null`
+- `columnOrder`: `string[]`
+- `columnVisibility`: `Record<string, boolean> | null` (TanStack typically stores only `false` entries)
+- `columnSizing`: `Record<string, number>`
+- `columnSizingInfo`:
+
+  ```ts
+  type ColumnSizingInfo =
+    | null
+    | {
+        columnSizingStart: Array<[string, number]>
+        deltaOffset: number | null
+        deltaPercentage: number | null
+        isResizingColumn: false | null | string
+        startOffset: number | null
+        startSize: number | null
+      }
+  ```
+
+Row-id keyed maps (`expanded` map form, `rowSelection`, `rowPinning.top/bottom`) use TanStack row
+ids (string). If the ids are not numeric, use the row-model-aware conversions:
+
+- JSON → `TableState`: `TanStackTableState::to_table_state_with_row_models(..)`
+- `TableState` → JSON: `TanStackTableState::from_table_state_with_row_models_and_shape(..)`
+
+### Normalization vs lossless rules (state JSON)
+
+The engine supports two distinct goals:
+
+1. **Semantics parity**: `TableState` always has a complete Rust-native representation.
+2. **Shape parity**: when importing TanStack-shaped JSON and exporting it back, we avoid losing
+   “omitted vs explicit default” intent that can matter to controlled-state flows and persistence.
+
+Rules:
+
+- `TanStackTableState::from_json(..)` records **top-level key presence** (even if the value is
+  empty, `{}`, `[]`, or `null`).
+- `TanStackTableState::to_json()` emits a key when either:
+  - the key was present in the source JSON (presence hint), or
+  - the value is non-default / non-empty.
+- When a key is present but the parsed value is logically absent (`Option::None`), `to_json()`
+  emits `null` for that key (e.g. `globalFilter: null`, `pagination: null`).
+- To preserve explicit-default shapes across a `TableState` round-trip, export with a shape hint:
+  `TanStackTableState::from_table_state_with_shape(&state, &source)`.
+- Nested object field presence is **not** tracked; some nested shapes are canonicalized on export.
+  In particular, when `columnSizingInfo` is present, it is exported in a canonical “full key set”
+  shape.
+
+Gates:
+
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_roundtrip_parity.rs` (state semantics)
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_presence_rowid_parity.rs` (RowId + presence)
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_json_semantics_parity.rs` (omitted vs explicit defaults)
+
 ---
 
 ## Next Actions
