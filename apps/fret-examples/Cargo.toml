@@ -45,6 +45,7 @@ fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }
 fret-executor = { path = "../../ecosystem/fret-executor" }
 fret-query = { path = "../../ecosystem/fret-query" }
+fret-router = { path = "../../ecosystem/fret-router", features = ["query-integration"] }
 fret-selector = { path = "../../ecosystem/fret-selector" }
 bytemuck.workspace = true
 glam.workspace = true

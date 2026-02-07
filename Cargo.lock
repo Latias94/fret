@@ -1227,6 +1227,7 @@ dependencies = [
  "fret-plot3d",
  "fret-query",
  "fret-render",
+ "fret-router",
  "fret-runtime",
  "fret-selector",
  "fret-ui",
