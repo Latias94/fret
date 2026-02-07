@@ -419,8 +419,13 @@ type SortingHelpersSnapshot = {
     string,
     {
       can_sort: boolean
+      can_multi_sort: boolean
       is_sorted: "asc" | "desc" | null
       sort_index: number
+      auto_sort_dir: "asc" | "desc" | null
+      first_sort_dir: "asc" | "desc" | null
+      next_sorting_order: "asc" | "desc" | null
+      next_sorting_order_multi: "asc" | "desc" | null
     }
   >
 }
@@ -2238,10 +2243,43 @@ function snapshotSortingHelpers(table: any): SortingHelpersSnapshot {
     const is_sorted =
       raw === undefined || raw === false ? null : (String(raw) as "asc" | "desc")
 
+    const auto_sort_dir_raw = col.getAutoSortDir?.()
+    const auto_sort_dir =
+      auto_sort_dir_raw === undefined || auto_sort_dir_raw === null
+        ? null
+        : (String(auto_sort_dir_raw) as "asc" | "desc")
+
+    const first_sort_dir_raw = col.getFirstSortDir?.()
+    const first_sort_dir =
+      first_sort_dir_raw === undefined || first_sort_dir_raw === null
+        ? null
+        : (String(first_sort_dir_raw) as "asc" | "desc")
+
+    const next_sorting_order_raw = col.getNextSortingOrder?.()
+    const next_sorting_order =
+      next_sorting_order_raw === undefined ||
+      next_sorting_order_raw === null ||
+      next_sorting_order_raw === false
+        ? null
+        : (String(next_sorting_order_raw) as "asc" | "desc")
+
+    const next_sorting_order_multi_raw = col.getNextSortingOrder?.(true)
+    const next_sorting_order_multi =
+      next_sorting_order_multi_raw === undefined ||
+      next_sorting_order_multi_raw === null ||
+      next_sorting_order_multi_raw === false
+        ? null
+        : (String(next_sorting_order_multi_raw) as "asc" | "desc")
+
     out.columns[id] = {
       can_sort: Boolean(col.getCanSort?.()),
+      can_multi_sort: Boolean(col.getCanMultiSort?.()),
       is_sorted,
       sort_index: Number(col.getSortIndex?.() ?? -1),
+      auto_sort_dir,
+      first_sort_dir,
+      next_sorting_order,
+      next_sorting_order_multi,
     }
   }
 

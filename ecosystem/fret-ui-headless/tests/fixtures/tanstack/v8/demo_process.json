@@ -187,43 +187,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         }
@@ -378,43 +418,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "desc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         }
@@ -569,43 +649,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": null,
+              "next_sorting_order_multi": null
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         }
@@ -849,43 +969,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "desc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         },
@@ -1176,43 +1336,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             }
           }
         },
@@ -1499,43 +1699,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         },
@@ -1827,43 +2067,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 1
+              "sort_index": 1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         },
@@ -2153,43 +2433,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         },
@@ -2475,43 +2795,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             }
           }
         },
@@ -2791,43 +3151,83 @@
           "columns": {
             "name": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": false,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             }
           }
         },
@@ -3102,43 +3502,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             }
           }
         },
@@ -3421,43 +3861,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 0
+              "sort_index": 0,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": "asc",
-              "sort_index": 1
+              "sort_index": 1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         },
@@ -3631,43 +4111,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         }
@@ -3810,43 +4330,83 @@
           "columns": {
             "name": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "status": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "asc",
+              "first_sort_dir": "asc",
+              "next_sorting_order": "asc",
+              "next_sorting_order_multi": "asc"
             },
             "cpu": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_desc_first": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_multi": {
               "can_sort": true,
+              "can_multi_sort": false,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_no_sort": {
               "can_sort": false,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "cpu_invert": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             },
             "mem_mb": {
               "can_sort": true,
+              "can_multi_sort": true,
               "is_sorted": null,
-              "sort_index": -1
+              "sort_index": -1,
+              "auto_sort_dir": "desc",
+              "first_sort_dir": "desc",
+              "next_sorting_order": "desc",
+              "next_sorting_order_multi": "desc"
             }
           }
         }

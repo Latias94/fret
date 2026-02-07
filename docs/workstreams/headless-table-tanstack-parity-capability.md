@@ -771,8 +771,12 @@ Initial mapping (WIP):
 - **Aligned**: `getCanPin/getIsPinned/getPinnedIndex` → `Table::{column_can_pin,column_pin_position,column_pinned_index}` (`column_pinning.json`).
 - **Aligned**: `getCanResize/getIsResizing/getSize/getStart/getAfter`
   → `Table::{column_can_resize,is_column_resizing,column_size,column_start,column_after}` (`column_sizing.json`).
-- **Aligned**: `getCanSort/getIsSorted/getSortIndex` → `Table::{column_can_sort,column_is_sorted,column_sort_index}` (parity-gated via `demo_process.json`).
-- **Partial**: `getNextSortingOrder/getFirstSortDir/getAutoSortDir` (UI affordances) still lack a consolidated helper surface/gate.
+- **Aligned**: sorting query surfaces:
+  - `getCanSort/getIsSorted/getSortIndex/getCanMultiSort`
+    → `Table::{column_can_sort,column_is_sorted,column_sort_index,column_can_multi_sort}`
+  - `getAutoSortDir/getFirstSortDir/getNextSortingOrder`
+    → `Table::{column_auto_sort_dir_desc_tanstack,column_first_sort_dir_desc_tanstack,column_next_sorting_order_desc_tanstack}`
+  (parity-gated via `demo_process.json`).
 - **Partial**: grouping instance surfaces (`getCanGroup/getIsGrouped/getGroupedIndex/getToggleGroupingHandler/toggleGrouping`)
   → `grouping.rs` helpers + `TableState.grouping` (fixture-gated for outcomes, but no consolidated “column instance” helper surface yet).
 - **Partial**: faceting instance surfaces (`getFaceted*`) are supported via `Table::{faceted_*}` (fixture-gated), but we do not expose them as `Column` instance methods.
@@ -805,7 +809,8 @@ and does not need to preserve method names, but the **capability must exist**.
 | `getFacetedRowModel/getFacetedUniqueValues/getFacetedMinMaxValues` | `Table::{faceted_row_model,faceted_unique_values,faceted_min_max_u64}` | Aligned | `faceting.json` |
 | `clearSorting` | remove column from `TableState.sorting` (engine helper TBD) | Partial | N/A |
 | `getCanSort/getIsSorted/getSortIndex` | `Table::{column_can_sort,column_is_sorted,column_sort_index}` + `sort_for_column(&TableState.sorting, id)` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
-| `getNextSortingOrder/getFirstSortDir/getAutoSortDir` | sorting policy in `sorting.rs` (`toggle_sorting_tanstack`, `toggle_sorting_handler_tanstack`) | Partial | sorting outcomes gated (`demo_process.json`, `sorting_fns.json`); still missing a dedicated “query helper” surface |
+| `getCanMultiSort` | `Table::column_can_multi_sort(column_id)` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
+| `getAutoSortDir/getFirstSortDir/getNextSortingOrder` | `Table::{column_auto_sort_dir_desc_tanstack,column_first_sort_dir_desc_tanstack,column_next_sorting_order_desc_tanstack}` | Aligned | `demo_process.json` (`sorting_helpers`), `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` |
 | `toggleSorting/getToggleSortingHandler` | `Table::{sorting_updater_tanstack,sorting_handler_updater_tanstack}` (+ `toggled_*` convenience) | Aligned | `demo_process.json`, `sorting_fns.json` |
 | `getSortingFn/getAutoSortingFn` | `SortingFnSpec` resolution + registry (`sorting.rs`) | Aligned | `sorting_fns.json` |
 

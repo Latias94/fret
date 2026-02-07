@@ -1820,6 +1820,98 @@ impl<'a, TData> Table<'a, TData> {
         Some(self.options.enable_sorting && col.enable_sorting && has_sort_value_source)
     }
 
+    /// TanStack-aligned: `column.getCanMultiSort()`.
+    pub fn column_can_multi_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+
+        // TanStack: `columnDef.enableMultiSort ?? table.options.enableMultiSort ?? !!accessorFn`
+        // We treat “accessorFn exists” as “has a sort value source”.
+        if has_sort_value_source {
+            Some(self.options.enable_multi_sort && col.enable_multi_sort)
+        } else {
+            Some(false)
+        }
+    }
+
+    /// TanStack-aligned: `column.getAutoSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`.
+    pub fn column_auto_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream uses `firstRow.getValue(column.id)` (accessorFn). In the Rust engine, we only
+        // have a stable “getValue” equivalent when the column provides `sort_value_by`.
+        //
+        // When `sort_value_by` is unavailable, we fall back to `desc` (matching upstream’s
+        // empty-row behavior where the first value is `undefined` and `typeof undefined !== "string"`).
+        let Some(get_value) = col.sort_value.as_ref() else {
+            return Some(true);
+        };
+
+        let model = self.filtered_row_model();
+        let first_value = model
+            .flat_rows()
+            .first()
+            .and_then(|&i| model.row(i))
+            .map(|r| (get_value)(r.original));
+
+        let desc = match first_value {
+            Some(super::TanStackValue::String(_)) => false,
+            _ => true,
+        };
+        Some(desc)
+    }
+
+    /// TanStack-aligned: `column.getFirstSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`. Returns `None` when we cannot infer the
+    /// direction (because the column has neither an explicit `sortDescFirst` override nor a stable
+    /// `sort_value_by` surface for auto inference).
+    pub fn column_first_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream:
+        // `sortDescFirst = columnDef.sortDescFirst ?? table.options.sortDescFirst ?? (getAutoSortDir() === 'desc')`
+        if let Some(explicit) = col.sort_desc_first.or(self.options.sort_desc_first) {
+            return Some(explicit);
+        }
+
+        self.column_auto_sort_dir_desc_tanstack(column_id)
+    }
+
+    /// TanStack-aligned: `column.getNextSortingOrder(multi?)`.
+    ///
+    /// Returns:
+    /// - `Some(Some(true))`  => `'desc'`
+    /// - `Some(Some(false))` => `'asc'`
+    /// - `Some(None)`        => `false` (remove)
+    /// - `None`              => unknown column id
+    pub fn column_next_sorting_order_desc_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+    ) -> Option<Option<bool>> {
+        let first_desc = self.column_first_sort_dir_desc_tanstack(column_id)?;
+        let is_sorted = super::sort_for_column(&self.state.sorting, column_id);
+
+        let enable_sorting_removal = self.options.enable_sorting_removal;
+        let enable_multi_remove = self.options.enable_multi_remove;
+
+        match is_sorted {
+            None => Some(Some(first_desc)),
+            Some(current_desc) => {
+                if current_desc != first_desc
+                    && enable_sorting_removal
+                    && (!multi || enable_multi_remove)
+                {
+                    return Some(None);
+                }
+                Some(Some(!current_desc))
+            }
+        }
+    }
+
     /// TanStack-aligned: `column.getIsSorted()` (boolean form).
     pub fn column_is_sorted(&self, column_id: &str) -> Option<bool> {
         self.column(column_id)?;

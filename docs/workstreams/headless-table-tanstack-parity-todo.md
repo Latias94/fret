@@ -395,6 +395,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sort_undefined.json`
 - [x] HTP-sort-020 Implement `invertSorting` behavior.
 - [x] HTP-sort-021 Implement `sortDescFirst` behavior.
+- [x] HTP-sort-022 Gate sorting query helper surfaces:
+  - `getCanMultiSort`, `getAutoSortDir`, `getFirstSortDir`, `getNextSortingOrder`.
+  - Parity-gated via `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/demo_process.json`
+    (`sorting_helpers`) + `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`.
+  - Evidence: `Table::{column_can_multi_sort,column_auto_sort_dir_desc_tanstack,column_first_sort_dir_desc_tanstack,column_next_sorting_order_desc_tanstack}`.
 - [x] HTP-sort-030 Implement option gates and transitions:
   - `enableSorting`, `enableMultiSort`, `maxMultiSortColCount`,
   - `enableSortingRemoval`, `enableMultiRemove`.
