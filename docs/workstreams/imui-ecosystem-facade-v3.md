@@ -1,7 +1,7 @@
 # imui Ecosystem Facade v3 (ImGui Parity + Ecosystem ABI + Perf Ceilings)
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-06
+Last updated: 2026-02-07
 
 This workstream starts after `imui` ecosystem facade v2 is locked and complete.
 
@@ -54,6 +54,41 @@ must come with evidence (tests/diag) and explicit ownership decisions.
 - Confirm v3 boundaries relative to docking and text ecosystems.
 - Define what is considered a breaking change for floating window flags/behavior.
 - Add/refresh contribution checklist entries specific to floating/z-order/focus behavior.
+
+M0 contract notes (normative for v3 work):
+
+- **Activation / bring-to-front (in-window floating)**:
+  - Default behavior is ImGui-like: pointer down anywhere inside a floating window (title bar or
+    content) activates the window for z-order purposes when nested under a `floating_layer(...)`.
+  - Activation must be recorded in a way that is robust to child controls stopping pointer event
+    propagation (i.e. it must still activate when clicking a pressable inside the window).
+  - Activation should also move keyboard focus into the floating surface (either the clicked control
+    or a surface-level focus proxy) to keep shortcut routing deterministic.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs` (capture-phase hook path for `PointerRegion`).
+  - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`.
+  - `no_inputs` disables activation and all pointer interactions for the floating window surface.
+- **Overlay composition (menu/popover vs floating z-order)**:
+  - A menu-like overlay (`OverlayRequest::dismissible_menu`, `disableOutsidePointerEvents=true`) must
+    dismiss on outside press without click-through: the underlay floating surface must not activate
+    and in-window z-order must not change as a result of the outside press.
+  - A click-through popover (`OverlayRequest::dismissible_popover`) dismisses on outside press and
+    still allows the underlay floating surface to receive the click (activation / bring-to-front).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_layer_menu_outside_press_dismisses_without_activating_underlay`,
+    `floating_layer_popover_outside_press_allows_underlay_activation_when_click_through`).
+- **`no_inputs` semantics (portable minimum)**:
+  - `no_inputs` means "rendered but non-interactive": the window surface must not activate,
+    capture, drag, resize, or allow child pressables to receive pointer input.
+  - `no_inputs` does **not** imply "click-through" by default. Hit-test passthrough is explicitly
+    deferred until a capability-gated policy is designed.
+- **No parallel runtime / no policy duplication**:
+  - Immediate wrappers must not re-implement canonical component state machines.
+  - Any new flags/options must remain a facade-layer policy surface (`fret-ui-kit::imui`), not a
+    mechanism-layer contract.
+- **Breaking criteria (v3 floating flags/behavior)**:
+  - Changes to default activation, move/resize/collapse/close semantics, or focus/dismiss
+    choreography are treated as breaking and require:
+    - a TODO tracker update with evidence anchors (tests/diag/docs),
+    - explicit migration notes when call-site expectations change.
 
 ### M1 - Floating window primitives (ImGui-aligned, in-window)
 
