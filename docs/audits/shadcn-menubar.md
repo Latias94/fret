@@ -31,6 +31,9 @@ Key upstream behaviors/surfaces:
 - Pass: Hover switches the open menu when a menu is already active.
 - Pass: Outside press + Escape dismiss via menu policy; outside-press dismissal is click-through and
   underlay pointer interaction remains enabled (Radix Menubar uses `Menu.modal=false`).
+- Pass: Base UI-compatible modal toggle is exposed via `Menubar::modal(bool)`.
+  - Default remains `false` to preserve shadcn/Radix menubar click-through behavior.
+  - `modal=true` enables underlay pointer blocking while menus are open.
 - Pass: root-level disabled gate now forces closed-state render semantics (menu content hidden and
   trigger `expanded=false`) even when an internal menu open model was previously `true`.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
@@ -81,6 +84,7 @@ _None tracked at this time._
 - Interaction test: `menubar_hover_switches_open_menu`
 - Interaction test: `menubar_triggers_roving_moves_focus_with_arrow_keys`
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
+- Contract test: `menubar_modal_builder_updates_flag`
 - Contract test: `menubar_disabled_hides_content_even_when_menu_open_model_true`
 - Submenu openSteps parity (web-vs-fret): `menubar-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
   while `menubar-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.

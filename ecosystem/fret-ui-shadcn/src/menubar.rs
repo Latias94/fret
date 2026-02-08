@@ -762,6 +762,7 @@ fn submenu_chevron_right_text<H: UiHost>(
 #[derive(Clone)]
 pub struct Menubar {
     menus: Vec<MenubarMenuEntries>,
+    modal: bool,
     disabled: bool,
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
@@ -776,6 +777,7 @@ impl std::fmt::Debug for Menubar {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Menubar")
             .field("menus_len", &self.menus.len())
+            .field("modal", &self.modal)
             .field("disabled", &self.disabled)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
@@ -790,6 +792,7 @@ impl Menubar {
         let menus = menus.into_iter().collect();
         Self {
             menus,
+            modal: false,
             disabled: false,
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
@@ -803,6 +806,14 @@ impl Menubar {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Controls whether outside interactions are blocked while submenus are open (Base UI `modal`).
+    ///
+    /// Default is `false` to preserve current shadcn menubar behavior.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -889,6 +900,7 @@ impl Menubar {
             let layout = decl_style::layout_style(&theme, self.layout.clone());
 
             let disabled = self.disabled;
+            let modal = self.modal;
             let menus = self.menus;
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
             let align_leading_icons = self.align_leading_icons;
@@ -914,7 +926,8 @@ impl Menubar {
             let menus: Vec<MenubarMenuEntries> = menus
                 .into_iter()
                 .map(|menu| {
-                    menu.on_dismiss_request(on_dismiss_request.clone())
+                    menu.modal(modal)
+                        .on_dismiss_request(on_dismiss_request.clone())
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone())
                 })
@@ -1066,6 +1079,7 @@ impl MenubarMenu {
         MenubarMenuEntries {
             menu: self,
             entries: Arc::from(entries.into_boxed_slice()),
+            modal: false,
             align_leading_icons: true,
             on_dismiss_request: None,
             on_open_auto_focus: None,
@@ -1098,6 +1112,7 @@ impl MenubarMenu {
 pub struct MenubarMenuEntries {
     menu: MenubarMenu,
     entries: Arc<[MenubarEntry]>,
+    modal: bool,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -1110,6 +1125,7 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("label", &self.menu.label)
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
+            .field("modal", &self.modal)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
@@ -1118,6 +1134,11 @@ impl std::fmt::Debug for MenubarMenuEntries {
 }
 
 impl MenubarMenuEntries {
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
+        self
+    }
+
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = align;
         self
@@ -1142,6 +1163,7 @@ impl MenubarMenuEntries {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
+        let modal = self.modal;
         let align_leading_icons = self.align_leading_icons;
         let on_dismiss_request = self.on_dismiss_request.clone();
         let on_open_auto_focus = self.on_open_auto_focus.clone();
@@ -3385,7 +3407,7 @@ impl MenubarMenuEntries {
                         on_close_auto_focus.clone(),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
-                        false,
+                        modal,
                     );
                     OverlayController::request(cx, request);
                     if keyboard_focus_last_on_open_now {
@@ -3461,6 +3483,17 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn menubar_modal_builder_updates_flag() {
+        let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>()).modal(true);
+        assert!(menubar.modal);
+
+        let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>())
+            .modal(true)
+            .modal(false);
+        assert!(!menubar.modal);
+    }
 
     #[derive(Default)]
     struct FakeServices;
