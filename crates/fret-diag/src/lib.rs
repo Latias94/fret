@@ -6,9 +6,13 @@ use std::time::{Duration, Instant};
 
 use zip::write::FileOptions;
 
+pub mod api;
+pub mod artifacts;
 mod compare;
+pub mod devtools;
 mod gates;
 mod stats;
+pub mod transport;
 mod util;
 
 use compare::{
@@ -8283,8 +8287,8 @@ fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::diag::compare::compare_bundles_json;
-    use crate::diag::stats::{
+    use crate::compare::compare_bundles_json;
+    use crate::stats::{
         bundle_stats_from_json_with_options, check_bundle_for_dock_drag_min_json,
         check_bundle_for_gc_sweep_liveness, check_bundle_for_overlay_synthesis_min_json,
         check_bundle_for_retained_vlist_attach_detach_max_json,

@@ -248,8 +248,10 @@ pub struct UiDiagnosticsService {
     last_picked_selector_json: HashMap<AppWindowId, String>,
     last_hovered_node_id: HashMap<AppWindowId, u64>,
     last_hovered_selector_json: HashMap<AppWindowId, String>,
+    last_hovered_bounds: HashMap<AppWindowId, RectV1>,
     inspect_focus_node_id: HashMap<AppWindowId, u64>,
     inspect_focus_selector_json: HashMap<AppWindowId, String>,
+    inspect_focus_bounds: HashMap<AppWindowId, RectV1>,
     inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
     inspect_pending_nav: HashMap<AppWindowId, InspectNavCommand>,
     inspect_focus_summary_line: HashMap<AppWindowId, String>,
@@ -526,17 +528,57 @@ impl UiDiagnosticsService {
                 }
 
                 if self.inspect_enabled {
+                    let mut cleared_windows: HashSet<AppWindowId> = HashSet::new();
+                    cleared_windows.extend(self.last_hovered_node_id.keys().copied());
+                    cleared_windows.extend(self.last_picked_node_id.keys().copied());
+                    cleared_windows.extend(self.inspect_focus_node_id.keys().copied());
+
                     self.inspect_enabled = false;
                     self.inspect_locked_windows.clear();
                     self.last_hovered_selector_json.clear();
                     self.last_picked_selector_json.clear();
                     self.last_hovered_node_id.clear();
+                    self.last_hovered_bounds.clear();
                     self.inspect_focus_node_id.clear();
                     self.inspect_focus_selector_json.clear();
+                    self.inspect_focus_bounds.clear();
                     self.inspect_focus_down_stack.clear();
                     self.inspect_pending_nav.clear();
                     self.inspect_focus_summary_line.clear();
                     self.inspect_focus_path_line.clear();
+
+                    for w in cleared_windows {
+                        self.ws_bridge.send(
+                            self.cfg.devtools_ws_url.as_deref(),
+                            self.cfg.devtools_token.as_deref(),
+                            DiagTransportMessageV1 {
+                                schema_version: 1,
+                                r#type: "inspect.hover".to_string(),
+                                session_id: None,
+                                request_id: None,
+                                payload: serde_json::json!({
+                                    "window": w.data().as_ffi(),
+                                    "node_id": serde_json::Value::Null,
+                                    "locked": false,
+                                }),
+                            },
+                        );
+                        self.ws_bridge.send(
+                            self.cfg.devtools_ws_url.as_deref(),
+                            self.cfg.devtools_token.as_deref(),
+                            DiagTransportMessageV1 {
+                                schema_version: 1,
+                                r#type: "inspect.focus".to_string(),
+                                session_id: None,
+                                request_id: None,
+                                payload: serde_json::json!({
+                                    "window": w.data().as_ffi(),
+                                    "node_id": serde_json::Value::Null,
+                                    "locked": false,
+                                }),
+                            },
+                        );
+                    }
 
                     let _ = write_json(
                         self.cfg.inspect_path.clone(),
@@ -3036,8 +3078,10 @@ impl UiDiagnosticsService {
         self.last_picked_selector_json.remove(&window);
         self.last_hovered_node_id.remove(&window);
         self.last_hovered_selector_json.remove(&window);
+        self.last_hovered_bounds.remove(&window);
         self.inspect_focus_node_id.remove(&window);
         self.inspect_focus_selector_json.remove(&window);
+        self.inspect_focus_bounds.remove(&window);
         self.inspect_focus_down_stack.remove(&window);
         self.inspect_pending_nav.remove(&window);
         self.inspect_focus_summary_line.remove(&window);
@@ -3074,8 +3118,31 @@ impl UiDiagnosticsService {
             return;
         };
         let Some(hovered_id) = hovered_node_id else {
+            let had_hover = self.last_hovered_node_id.contains_key(&window)
+                || self.last_hovered_selector_json.contains_key(&window)
+                || self.last_hovered_bounds.contains_key(&window);
             self.last_hovered_node_id.remove(&window);
             self.last_hovered_selector_json.remove(&window);
+            self.last_hovered_bounds.remove(&window);
+
+            if had_hover {
+                self.ws_bridge.send(
+                    self.cfg.devtools_ws_url.as_deref(),
+                    self.cfg.devtools_token.as_deref(),
+                    DiagTransportMessageV1 {
+                        schema_version: 1,
+                        r#type: "inspect.hover".to_string(),
+                        session_id: None,
+                        request_id: None,
+                        payload: serde_json::json!({
+                            "window": window.data().as_ffi(),
+                            "node_id": serde_json::Value::Null,
+                            "bounds": serde_json::Value::Null,
+                            "locked": self.inspect_is_locked(window),
+                        }),
+                    },
+                );
+            }
             return;
         };
         if self.inspect_is_locked(window) {
@@ -3096,13 +3163,61 @@ impl UiDiagnosticsService {
             return;
         };
         if let Ok(json) = serde_json::to_string(&selector) {
+            let prev_id = self.last_hovered_node_id.get(&window).copied();
+            let prev_sel = self
+                .last_hovered_selector_json
+                .get(&window)
+                .map(|s| s.as_str());
+            let bounds = RectV1::from(node.bounds);
+            let prev_bounds = self.last_hovered_bounds.get(&window).copied();
+            if prev_id == Some(hovered_id)
+                && prev_sel == Some(json.as_str())
+                && prev_bounds == Some(bounds)
+            {
+                return;
+            }
+
             self.last_hovered_node_id.insert(window, hovered_id);
             self.last_hovered_selector_json.insert(window, json);
+            self.last_hovered_bounds.insert(window, bounds);
             self.inspect_focus_node_id.insert(window, hovered_id);
             if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
                 self.inspect_focus_selector_json.insert(window, sel);
             }
             self.inspect_focus_down_stack.insert(window, Vec::new());
+
+            let role = semantics_role_label(node.role);
+            let test_id = node.test_id.as_deref();
+            let label = (!self.cfg.redact_text)
+                .then_some(node.label.as_deref())
+                .flatten()
+                .map(|s| truncate_debug_value(s, 120));
+
+            let selector_json = self
+                .last_hovered_selector_json
+                .get(&window)
+                .map(|s| s.to_string())
+                .unwrap_or_default();
+            self.ws_bridge.send(
+                self.cfg.devtools_ws_url.as_deref(),
+                self.cfg.devtools_token.as_deref(),
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "inspect.hover".to_string(),
+                    session_id: None,
+                    request_id: None,
+                    payload: serde_json::json!({
+                        "window": window.data().as_ffi(),
+                        "node_id": hovered_id,
+                        "selector_json": selector_json,
+                        "role": role,
+                        "test_id": test_id,
+                        "label": label,
+                        "bounds": bounds,
+                        "locked": self.inspect_is_locked(window),
+                    }),
+                },
+            );
         }
     }
 
@@ -3239,9 +3354,36 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
+        let can_send = self.inspect_enabled;
+
         let Some(snapshot) = snapshot else {
+            if can_send
+                && (self.inspect_focus_node_id.contains_key(&window)
+                    || self.last_picked_node_id.contains_key(&window)
+                    || self.last_hovered_node_id.contains_key(&window)
+                    || self.inspect_focus_summary_line.contains_key(&window)
+                    || self.inspect_focus_path_line.contains_key(&window)
+                    || self.inspect_focus_bounds.contains_key(&window))
+            {
+                self.ws_bridge.send(
+                    self.cfg.devtools_ws_url.as_deref(),
+                    self.cfg.devtools_token.as_deref(),
+                    DiagTransportMessageV1 {
+                        schema_version: 1,
+                        r#type: "inspect.focus".to_string(),
+                        session_id: None,
+                        request_id: None,
+                        payload: serde_json::json!({
+                            "window": window.data().as_ffi(),
+                            "node_id": serde_json::Value::Null,
+                            "locked": self.inspect_is_locked(window),
+                        }),
+                    },
+                );
+            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -3252,8 +3394,30 @@ impl UiDiagnosticsService {
             .or_else(|| self.last_picked_node_id.get(&window).copied())
             .or_else(|| self.last_hovered_node_id.get(&window).copied());
         let Some(node_id) = node_id else {
+            if can_send
+                && (self.inspect_focus_summary_line.contains_key(&window)
+                    || self.inspect_focus_path_line.contains_key(&window)
+                    || self.inspect_focus_bounds.contains_key(&window))
+            {
+                self.ws_bridge.send(
+                    self.cfg.devtools_ws_url.as_deref(),
+                    self.cfg.devtools_token.as_deref(),
+                    DiagTransportMessageV1 {
+                        schema_version: 1,
+                        r#type: "inspect.focus".to_string(),
+                        session_id: None,
+                        request_id: None,
+                        payload: serde_json::json!({
+                            "window": window.data().as_ffi(),
+                            "node_id": serde_json::Value::Null,
+                            "locked": self.inspect_is_locked(window),
+                        }),
+                    },
+                );
+            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -3262,8 +3426,30 @@ impl UiDiagnosticsService {
             .iter()
             .find(|n| n.id.data().as_ffi() == node_id)
         else {
+            if can_send
+                && (self.inspect_focus_summary_line.contains_key(&window)
+                    || self.inspect_focus_path_line.contains_key(&window)
+                    || self.inspect_focus_bounds.contains_key(&window))
+            {
+                self.ws_bridge.send(
+                    self.cfg.devtools_ws_url.as_deref(),
+                    self.cfg.devtools_token.as_deref(),
+                    DiagTransportMessageV1 {
+                        schema_version: 1,
+                        r#type: "inspect.focus".to_string(),
+                        session_id: None,
+                        request_id: None,
+                        payload: serde_json::json!({
+                            "window": window.data().as_ffi(),
+                            "node_id": serde_json::Value::Null,
+                            "locked": self.inspect_is_locked(window),
+                        }),
+                    },
+                );
+            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -3291,11 +3477,63 @@ impl UiDiagnosticsService {
 
         let path = format_inspect_path(snapshot, node_id, self.cfg.redact_text, 10);
 
-        self.inspect_focus_summary_line.insert(window, summary);
+        let prev_summary = self.inspect_focus_summary_line.get(&window).cloned();
+        let prev_path = self.inspect_focus_path_line.get(&window).cloned();
+        let prev_selector_json = self
+            .inspect_best_selector_json(window)
+            .map(|s| s.to_string());
+        let prev_bounds = self.inspect_focus_bounds.get(&window).copied();
+        let bounds = RectV1::from(node.bounds);
+        let test_id = node.test_id.as_deref();
+        let label = (!self.cfg.redact_text)
+            .then_some(node.label.as_deref())
+            .flatten()
+            .map(|s| truncate_debug_value(s, 120));
+
+        self.inspect_focus_summary_line
+            .insert(window, summary.clone());
         if let Some(path) = path {
-            self.inspect_focus_path_line.insert(window, path);
+            self.inspect_focus_path_line.insert(window, path.clone());
         } else {
             self.inspect_focus_path_line.remove(&window);
+        }
+        self.inspect_focus_bounds.insert(window, bounds);
+
+        if can_send {
+            let selector_json = self
+                .inspect_best_selector_json(window)
+                .map(|s| s.to_string());
+            let next_summary = Some(summary);
+            let next_path = self.inspect_focus_path_line.get(&window).cloned();
+
+            let changed = prev_selector_json != selector_json
+                || prev_summary != next_summary
+                || prev_path != next_path
+                || prev_bounds != Some(bounds);
+            if changed {
+                self.ws_bridge.send(
+                    self.cfg.devtools_ws_url.as_deref(),
+                    self.cfg.devtools_token.as_deref(),
+                    DiagTransportMessageV1 {
+                        schema_version: 1,
+                        r#type: "inspect.focus".to_string(),
+                        session_id: None,
+                        request_id: None,
+                        payload: serde_json::json!({
+                            "window": window.data().as_ffi(),
+                            "node_id": node_id,
+                            "selector_json": selector_json,
+                            "role": role,
+                            "test_id": test_id,
+                            "label": label,
+                            "bounds": bounds,
+                            "summary": next_summary,
+                            "path": next_path,
+                            "locked": self.inspect_is_locked(window),
+                        }),
+                    },
+                );
+            }
         }
     }
 
@@ -3844,8 +4082,62 @@ impl UiDiagnosticsService {
                 let enabled = msg.payload.get("enabled").and_then(|v| v.as_bool());
                 let consume_clicks = msg.payload.get("consume_clicks").and_then(|v| v.as_bool());
                 if let (Some(enabled), Some(consume_clicks)) = (enabled, consume_clicks) {
-                    self.inspect_enabled = enabled;
                     self.inspect_consume_clicks = consume_clicks;
+                    if enabled {
+                        self.inspect_enabled = true;
+                    } else {
+                        let mut cleared_windows: HashSet<AppWindowId> = HashSet::new();
+                        cleared_windows.extend(self.last_hovered_node_id.keys().copied());
+                        cleared_windows.extend(self.last_picked_node_id.keys().copied());
+                        cleared_windows.extend(self.inspect_focus_node_id.keys().copied());
+
+                        self.inspect_enabled = false;
+                        self.inspect_locked_windows.clear();
+                        self.last_hovered_selector_json.clear();
+                        self.last_picked_selector_json.clear();
+                        self.last_hovered_node_id.clear();
+                        self.last_hovered_bounds.clear();
+                        self.inspect_focus_node_id.clear();
+                        self.inspect_focus_selector_json.clear();
+                        self.inspect_focus_bounds.clear();
+                        self.inspect_focus_down_stack.clear();
+                        self.inspect_pending_nav.clear();
+                        self.inspect_focus_summary_line.clear();
+                        self.inspect_focus_path_line.clear();
+
+                        for w in cleared_windows {
+                            self.ws_bridge.send(
+                                self.cfg.devtools_ws_url.as_deref(),
+                                self.cfg.devtools_token.as_deref(),
+                                DiagTransportMessageV1 {
+                                    schema_version: 1,
+                                    r#type: "inspect.hover".to_string(),
+                                    session_id: None,
+                                    request_id: None,
+                                    payload: serde_json::json!({
+                                        "window": w.data().as_ffi(),
+                                        "node_id": serde_json::Value::Null,
+                                        "locked": false,
+                                    }),
+                                },
+                            );
+                            self.ws_bridge.send(
+                                self.cfg.devtools_ws_url.as_deref(),
+                                self.cfg.devtools_token.as_deref(),
+                                DiagTransportMessageV1 {
+                                    schema_version: 1,
+                                    r#type: "inspect.focus".to_string(),
+                                    session_id: None,
+                                    request_id: None,
+                                    payload: serde_json::json!({
+                                        "window": w.data().as_ffi(),
+                                        "node_id": serde_json::Value::Null,
+                                        "locked": false,
+                                    }),
+                                },
+                            );
+                        }
+                    }
                 }
             }
             "pick.arm" => {
@@ -9528,7 +9820,7 @@ impl From<Point> for PointV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct RectV1 {
     pub x: f32,
     pub y: f32,
