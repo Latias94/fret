@@ -187,9 +187,9 @@ mod tests {
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
     use fret_ui_kit::imui::{
-        FloatingWindowOptions, FloatingWindowResizeOptions, GridOptions, HorizontalOptions,
-        InputTextOptions, MenuItemOptions, PopupMenuOptions, ScrollOptions, SelectOptions,
-        SliderOptions, SwitchOptions, ToggleOptions, VerticalOptions,
+        FloatingAreaOptions, FloatingWindowOptions, FloatingWindowResizeOptions, GridOptions,
+        HorizontalOptions, InputTextOptions, MenuItemOptions, PopupMenuOptions, ScrollOptions,
+        SelectOptions, SliderOptions, SwitchOptions, ToggleOptions, VerticalOptions,
     };
     use fret_ui_kit::{OverlayPresence, OverlayRequest};
 
@@ -2204,6 +2204,133 @@ mod tests {
     }
 
     #[test]
+    fn drag_threshold_metric_controls_drag_start() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        fret_ui::Theme::with_global_mut(&mut app, |theme| {
+            let mut cfg = fret_ui::theme::ThemeConfig {
+                name: "Test".to_string(),
+                ..fret_ui::theme::ThemeConfig::default()
+            };
+            cfg.metrics
+                .insert("component.imui.drag_threshold_px".to_string(), 7.0);
+            theme.apply_config_patch(&cfg);
+        });
+        let mut services = FakeTextService::default();
+
+        let started = Rc::new(Cell::new(false));
+        let dragging = Rc::new(Cell::new(false));
+        let delta = Rc::new(Cell::new(Point::default()));
+
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let delta_out = delta.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-threshold-metric",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+
+        let start = first_child_point(&ui, root);
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+
+        // Move below the configured threshold (7px).
+        let p1 = Point::new(Px(start.x.0 + 6.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p1,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-threshold-metric",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+
+        // Move past the threshold; delta should be the frame delta (8 - 6 = 2).
+        let p2 = Point::new(Px(start.x.0 + 8.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p2,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-threshold-metric",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(started.get());
+        assert!(dragging.get());
+        assert_eq!(delta.get(), Point::new(Px(2.0), Px(0.0)));
+    }
+
+    #[test]
     fn long_press_sets_long_pressed_true_once_and_reports_holding() {
         let window = AppWindowId::default();
         let bounds = Rect::new(
@@ -3201,6 +3328,13 @@ mod tests {
             "imui.float_window.window:b",
         );
 
+        if std::env::var_os("FRET_DEBUG_IMUI_HIT_TEST_PASSTHROUGH").is_some() {
+            let kind_a = ui.debug_declarative_instance_kind(&mut app, window, window_a);
+            let kind_b = ui.debug_declarative_instance_kind(&mut app, window, window_b);
+            eprintln!("debug: window_a={window_a:?} kind={kind_a:?}");
+            eprintln!("debug: window_b={window_b:?} kind={kind_b:?}");
+        }
+
         let layer_stack = ui.children(root)[0];
         let stack_children = ui.children(layer_stack);
         let stack_idx_a = stack_children
@@ -3232,7 +3366,7 @@ mod tests {
     }
 
     #[test]
-    fn floating_window_no_inputs_blocks_child_pressables() {
+    fn floating_window_inputs_enabled_false_blocks_child_pressables() {
         let window = AppWindowId::default();
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -3279,7 +3413,7 @@ mod tests {
                                             role: Some(SemanticsRole::Button),
                                             label: Some(Arc::from("Blocked")),
                                             test_id: Some(Arc::from(
-                                                "imui-test.float_window.no_inputs.pressable",
+                                                "imui-test.float_window.inputs_enabled_false.pressable",
                                             )),
                                             ..Default::default()
                                         };
@@ -3310,7 +3444,7 @@ mod tests {
             &mut app,
             &mut services,
             bounds,
-            "imui-test.float_window.no_inputs.pressable",
+            "imui-test.float_window.inputs_enabled_false.pressable",
         );
         click_at(&mut ui, &mut app, &mut services, at);
 
@@ -3342,7 +3476,119 @@ mod tests {
 
         assert!(
             !app.models().get_copied(&clicked_model).unwrap_or(false),
-            "expected no-inputs window to block child pressable activation"
+            "expected inputs_enabled=false window to block child pressable activation"
+        );
+    }
+
+    #[test]
+    fn floating_window_no_inputs_is_skipped_by_focus_traversal() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-no-inputs-focus-traversal",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.menu_item_ex(
+                        "Underlay A",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-a")),
+                            ..Default::default()
+                        },
+                    );
+
+                    ui.floating_layer("layer", |ui| {
+                        let _ = ui.window_ex(
+                            "overlay",
+                            "Overlay",
+                            Point::new(Px(120.0), Px(80.0)),
+                            FloatingWindowOptions {
+                                no_inputs: true,
+                                ..Default::default()
+                            },
+                            |ui| {
+                                ui.menu_item_ex(
+                                    "Overlay",
+                                    MenuItemOptions {
+                                        test_id: Some(Arc::from("imui-overlay-item")),
+                                        ..Default::default()
+                                    },
+                                );
+                            },
+                        );
+                    });
+
+                    ui.menu_item_ex(
+                        "Underlay B",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-b")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let underlay_a_node =
+            node_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-underlay-a");
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Tab,
+            Modifiers::default(),
+        );
+        let _ = ui.dispatch_command(
+            &mut app,
+            &mut services,
+            &fret_runtime::CommandId::from("focus.next"),
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_a_node),
+            "expected focus traversal to start at underlay A"
+        );
+
+        let _ = ui.dispatch_command(
+            &mut app,
+            &mut services,
+            &fret_runtime::CommandId::from("focus.next"),
+        );
+
+        let underlay_b_node =
+            node_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-underlay-b");
+        let overlay_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-overlay-item",
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_b_node),
+            "expected focus traversal to skip no-inputs overlay window"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(overlay_node),
+            "expected no-inputs overlay item to be skipped by focus traversal"
         );
     }
 
@@ -3566,6 +3812,806 @@ mod tests {
         assert!(
             path_after.contains(&window_b),
             "expected window B to remain top after clicking A content when activation is disabled"
+        );
+
+        let title_bar_a = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:a",
+        );
+        click_at(&mut ui, &mut app, &mut services, title_bar_a);
+
+        app.advance_frame();
+        let root3 = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-layer-activate-on-click-disabled",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        let _ = ui.window_ex(
+                            "a",
+                            "A",
+                            Point::new(Px(10.0), Px(10.0)),
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                        let _ = ui.window_ex(
+                            "b",
+                            "B",
+                            Point::new(Px(60.0), Px(10.0)),
+                            FloatingWindowOptions::default(),
+                            |_ui| {},
+                        );
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let layer_stack = ui.children(root3)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected window B to remain after A when activation is disabled"
+        );
+    }
+
+    #[test]
+    fn floating_window_activate_on_click_can_be_disabled_for_resize_handles() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(240.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-layer-activate-on-click-disabled-resize",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        let _ = ui.window_resizable_ex(
+                            "a",
+                            "A",
+                            Point::new(Px(10.0), Px(10.0)),
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                        let _ = ui.window_resizable_ex(
+                            "b",
+                            "B",
+                            Point::new(Px(260.0), Px(10.0)),
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions::default(),
+                            |_ui| {},
+                        );
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected window B to be after A initially"
+        );
+
+        let resize_corner_a = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.resize.corner:a",
+        );
+        click_at(&mut ui, &mut app, &mut services, resize_corner_a);
+
+        app.advance_frame();
+        let root2 = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-layer-activate-on-click-disabled-resize",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        let _ = ui.window_resizable_ex(
+                            "a",
+                            "A",
+                            Point::new(Px(10.0), Px(10.0)),
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions {
+                                activate_on_click: false,
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                        let _ = ui.window_resizable_ex(
+                            "b",
+                            "B",
+                            Point::new(Px(260.0), Px(10.0)),
+                            Size::new(Px(180.0), Px(120.0)),
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions::default(),
+                            |_ui| {},
+                        );
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let layer_stack = ui.children(root2)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected window B to remain after A when activation is disabled for resize handles"
+        );
+    }
+
+    #[test]
+    fn floating_window_pointer_passthrough_allows_underlay_hit_testing() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-pointer-passthrough",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        let fixed = Size::new(Px(200.0), Px(120.0));
+                        let _ = ui.window_resizable_ex(
+                            "a",
+                            "A",
+                            Point::new(Px(10.0), Px(10.0)),
+                            fixed,
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions::default(),
+                            |_ui| {},
+                        );
+                        let _ = ui.window_resizable_ex(
+                            "b",
+                            "B",
+                            Point::new(Px(60.0), Px(10.0)),
+                            fixed,
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions {
+                                pointer_passthrough: true,
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected window B to be after A (painted on top)"
+        );
+
+        let a_bounds = ui.debug_node_bounds(window_a).expect("window a bounds");
+        let b_bounds = ui.debug_node_bounds(window_b).expect("window b bounds");
+        let overlap_left = a_bounds.origin.x.0.max(b_bounds.origin.x.0);
+        let overlap_top = a_bounds.origin.y.0.max(b_bounds.origin.y.0);
+        let overlap_right = (a_bounds.origin.x.0 + a_bounds.size.width.0)
+            .min(b_bounds.origin.x.0 + b_bounds.size.width.0);
+        let overlap_bottom = (a_bounds.origin.y.0 + a_bounds.size.height.0)
+            .min(b_bounds.origin.y.0 + b_bounds.size.height.0);
+        assert!(
+            overlap_right > overlap_left && overlap_bottom > overlap_top,
+            "expected floating windows to overlap for hit-test passthrough"
+        );
+        let overlap = Point::new(Px(overlap_left + 2.0), Px(overlap_top + 2.0));
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&window_a),
+            "expected underlay window A to receive hits through a pass-through window"
+        );
+        assert!(
+            !path.contains(&window_b),
+            "expected pass-through window B to be skipped by hit testing"
+        );
+    }
+
+    #[test]
+    fn floating_window_no_inputs_allows_underlay_hit_testing() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-no-inputs-hit-test",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        let fixed = Size::new(Px(200.0), Px(120.0));
+                        let _ = ui.window_resizable_ex(
+                            "a",
+                            "A",
+                            Point::new(Px(10.0), Px(10.0)),
+                            fixed,
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions::default(),
+                            |_ui| {},
+                        );
+                        let _ = ui.window_resizable_ex(
+                            "b",
+                            "B",
+                            Point::new(Px(60.0), Px(10.0)),
+                            fixed,
+                            FloatingWindowResizeOptions::default(),
+                            FloatingWindowOptions {
+                                no_inputs: true,
+                                ..Default::default()
+                            },
+                            |_ui| {},
+                        );
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let a_bounds = ui.debug_node_bounds(window_a).expect("window a bounds");
+        let b_bounds = ui.debug_node_bounds(window_b).expect("window b bounds");
+        let overlap_left = a_bounds.origin.x.0.max(b_bounds.origin.x.0);
+        let overlap_top = a_bounds.origin.y.0.max(b_bounds.origin.y.0);
+        let overlap_right = (a_bounds.origin.x.0 + a_bounds.size.width.0)
+            .min(b_bounds.origin.x.0 + b_bounds.size.width.0);
+        let overlap_bottom = (a_bounds.origin.y.0 + a_bounds.size.height.0)
+            .min(b_bounds.origin.y.0 + b_bounds.size.height.0);
+        assert!(
+            overlap_right > overlap_left && overlap_bottom > overlap_top,
+            "expected floating windows to overlap for no-inputs hit testing"
+        );
+        let overlap = Point::new(Px(overlap_left + 2.0), Px(overlap_top + 2.0));
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&window_a),
+            "expected underlay window A to receive hits through a no-inputs window"
+        );
+        assert!(
+            !path.contains(&window_b),
+            "expected no-inputs window B to be skipped by hit testing"
+        );
+
+        // Keep `root` alive to ensure the layer stack is present for debugging.
+        let _ = root;
+    }
+
+    #[test]
+    fn hit_test_passthrough_keeps_focus_traversal_and_nav_highlight() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let overlay_nav_highlighted = Rc::new(Cell::new(false));
+        let overlay_hovered_like_imgui = Rc::new(Cell::new(false));
+
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-hit-test-passthrough-focus-traversal",
+            |cx| {
+                let overlay_nav_highlighted = overlay_nav_highlighted.clone();
+                let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
+                crate::imui(cx, |ui| {
+                    ui.menu_item_ex(
+                        "Underlay",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-item")),
+                            ..Default::default()
+                        },
+                    );
+
+                    ui.floating_area_ex(
+                        "area",
+                        Point::new(Px(0.0), Px(0.0)),
+                        FloatingAreaOptions {
+                            hit_test_passthrough: true,
+                            ..Default::default()
+                        },
+                        |ui, _area| {
+                            let resp = ui.menu_item_ex(
+                                "Overlay",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-overlay-item")),
+                                    ..Default::default()
+                                },
+                            );
+                            overlay_nav_highlighted.set(resp.nav_highlighted());
+                            overlay_hovered_like_imgui.set(resp.hovered_like_imgui());
+                        },
+                    );
+                })
+            },
+        );
+
+        // Clicking the overlay item should focus the underlay item because the overlay subtree is
+        // hit-test transparent.
+        let overlay_bounds = bounds_for_test_id(&ui, "imui-overlay-item");
+        let overlay_center = Point::new(
+            Px(overlay_bounds.origin.x.0 + overlay_bounds.size.width.0 * 0.5),
+            Px(overlay_bounds.origin.y.0 + overlay_bounds.size.height.0 * 0.5),
+        );
+        click_at(&mut ui, &mut app, &mut services, overlay_center);
+
+        let underlay_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-underlay-item",
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected click-through to focus the underlay item"
+        );
+
+        // Simulate keyboard navigation becoming active (focus-visible), then traverse to the next
+        // focusable item. The overlay subtree should still participate in focus traversal even
+        // though it is pointer-transparent.
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Tab,
+            Modifiers::default(),
+        );
+        let _ = ui.dispatch_command(
+            &mut app,
+            &mut services,
+            &fret_runtime::CommandId::from("focus.next"),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _ = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-hit-test-passthrough-focus-traversal",
+            |cx| {
+                let overlay_nav_highlighted = overlay_nav_highlighted.clone();
+                let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
+                crate::imui(cx, |ui| {
+                    ui.menu_item_ex(
+                        "Underlay",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-item")),
+                            ..Default::default()
+                        },
+                    );
+                    ui.floating_area_ex(
+                        "area",
+                        Point::new(Px(0.0), Px(0.0)),
+                        FloatingAreaOptions {
+                            hit_test_passthrough: true,
+                            ..Default::default()
+                        },
+                        |ui, _area| {
+                            let resp = ui.menu_item_ex(
+                                "Overlay",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-overlay-item")),
+                                    ..Default::default()
+                                },
+                            );
+                            overlay_nav_highlighted.set(resp.nav_highlighted());
+                            overlay_hovered_like_imgui.set(resp.hovered_like_imgui());
+                        },
+                    );
+                })
+            },
+        );
+
+        let overlay_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-overlay-item",
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(overlay_node),
+            "expected focus traversal to reach pointer-transparent overlay item"
+        );
+        assert!(
+            overlay_nav_highlighted.get(),
+            "expected overlay item to report nav highlight when focus-visible is active"
+        );
+        assert!(
+            overlay_hovered_like_imgui.get(),
+            "expected hovered_like_imgui to be true under nav highlight"
+        );
+    }
+
+    #[test]
+    fn no_inputs_is_click_through_and_skips_focus_traversal() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let overlay_nav_highlighted = Rc::new(Cell::new(false));
+        let overlay_hovered_like_imgui = Rc::new(Cell::new(false));
+
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-no-inputs-focus-traversal",
+            |cx| {
+                let overlay_nav_highlighted = overlay_nav_highlighted.clone();
+                let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
+                crate::imui(cx, |ui| {
+                    ui.menu_item_ex(
+                        "Underlay A",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-a")),
+                            ..Default::default()
+                        },
+                    );
+
+                    ui.floating_area_ex(
+                        "area",
+                        Point::new(Px(0.0), Px(0.0)),
+                        FloatingAreaOptions {
+                            hit_test_passthrough: true,
+                            no_inputs: true,
+                            ..Default::default()
+                        },
+                        |ui, _area| {
+                            let resp = ui.menu_item_ex(
+                                "Overlay",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-overlay-item")),
+                                    ..Default::default()
+                                },
+                            );
+                            overlay_nav_highlighted.set(resp.nav_highlighted());
+                            overlay_hovered_like_imgui.set(resp.hovered_like_imgui());
+                        },
+                    );
+
+                    ui.menu_item_ex(
+                        "Underlay B",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-b")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let underlay_a_node =
+            node_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-underlay-a");
+        let underlay_b_node =
+            node_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-underlay-b");
+        let overlay_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-overlay-item",
+        );
+
+        // The overlay subtree should be hit-test transparent.
+        let overlay_bounds = bounds_for_test_id(&ui, "imui-overlay-item");
+        let overlay_center = Point::new(
+            Px(overlay_bounds.origin.x.0 + overlay_bounds.size.width.0 * 0.5),
+            Px(overlay_bounds.origin.y.0 + overlay_bounds.size.height.0 * 0.5),
+        );
+        let hit = ui
+            .debug_hit_test(overlay_center)
+            .hit
+            .expect("expected overlay point to hit an underlay node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            !path.contains(&overlay_node),
+            "expected no-inputs overlay subtree to be skipped by hit testing"
+        );
+        assert!(
+            path.contains(&underlay_a_node) || path.contains(&underlay_b_node),
+            "expected an underlay node to receive hits under the overlay point"
+        );
+
+        // Clicking the overlay should not focus the overlay subtree.
+        click_at(&mut ui, &mut app, &mut services, overlay_center);
+        assert_ne!(
+            ui.focus(),
+            Some(overlay_node),
+            "expected click-through not to focus the overlay subtree"
+        );
+
+        // Focus traversal should skip the overlay subtree entirely.
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Tab,
+            Modifiers::default(),
+        );
+        for _ in 0..4 {
+            let _ = ui.dispatch_command(
+                &mut app,
+                &mut services,
+                &fret_runtime::CommandId::from("focus.next"),
+            );
+            assert_ne!(ui.focus(), Some(overlay_node));
+        }
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _ = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-no-inputs-focus-traversal",
+            |cx| {
+                let overlay_nav_highlighted = overlay_nav_highlighted.clone();
+                let overlay_hovered_like_imgui = overlay_hovered_like_imgui.clone();
+                crate::imui(cx, |ui| {
+                    ui.menu_item_ex(
+                        "Underlay A",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-a")),
+                            ..Default::default()
+                        },
+                    );
+                    ui.floating_area_ex(
+                        "area",
+                        Point::new(Px(0.0), Px(0.0)),
+                        FloatingAreaOptions {
+                            hit_test_passthrough: true,
+                            no_inputs: true,
+                            ..Default::default()
+                        },
+                        |ui, _area| {
+                            let resp = ui.menu_item_ex(
+                                "Overlay",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-overlay-item")),
+                                    ..Default::default()
+                                },
+                            );
+                            overlay_nav_highlighted.set(resp.nav_highlighted());
+                            overlay_hovered_like_imgui.set(resp.hovered_like_imgui());
+                        },
+                    );
+                    ui.menu_item_ex(
+                        "Underlay B",
+                        MenuItemOptions {
+                            test_id: Some(Arc::from("imui-underlay-b")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let overlay_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-overlay-item",
+        );
+        assert_ne!(ui.focus(), Some(overlay_node));
+        assert!(
+            !overlay_nav_highlighted.get(),
+            "expected overlay item not to report nav highlight when no_inputs is enabled"
+        );
+        assert!(
+            !overlay_hovered_like_imgui.get(),
+            "expected hovered_like_imgui to be false when no_inputs is enabled"
         );
     }
 

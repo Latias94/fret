@@ -160,6 +160,12 @@ pub struct DragResponse {
 pub struct ResponseExt {
     pub core: Response,
     pub id: Option<GlobalElementId>,
+    /// True when the item is focused and the window's focus-visible policy indicates keyboard
+    /// navigation is active.
+    ///
+    /// This is intended as an immediate-mode equivalent of ImGui's "nav highlight under nav"
+    /// behavior used by `IsItemHovered()` when `NavHighlightItemUnderNav` is active.
+    pub nav_highlighted: bool,
     pub secondary_clicked: bool,
     pub double_clicked: bool,
     pub long_pressed: bool,
@@ -264,6 +270,18 @@ impl ResponseExt {
 
     pub fn context_menu_anchor(self) -> Option<Point> {
         self.context_menu_anchor
+    }
+
+    pub fn nav_highlighted(self) -> bool {
+        self.nav_highlighted
+    }
+
+    /// ImGui-style "hovered" default: pointer-hover OR nav-highlight.
+    ///
+    /// Note: this does not currently implement ImGui's hovered flags (e.g.
+    /// `AllowWhenBlockedByPopup`, hover delays, `AllowWhenDisabled`).
+    pub fn hovered_like_imgui(self) -> bool {
+        self.core.hovered || self.nav_highlighted
     }
 
     pub fn drag_started(self) -> bool {
@@ -708,12 +726,22 @@ const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
 
-const DRAG_THRESHOLD_PX: f32 = 4.0;
+// ImGui default: `MouseDragThreshold = 6`.
+const DEFAULT_DRAG_THRESHOLD_PX: f32 = 6.0;
 const LONG_PRESS_DELAY: Duration = Duration::from_millis(450);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
 
 fn drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
     fret_runtime::DragKindId(DRAG_KIND_MASK | element.0)
+}
+
+fn drag_threshold_sq_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    let px = theme
+        .metric_by_key(crate::theme_tokens::metric::COMPONENT_IMUI_DRAG_THRESHOLD_PX)
+        .unwrap_or(Px(DEFAULT_DRAG_THRESHOLD_PX));
+    let v = px.0.max(0.0);
+    v * v
 }
 
 fn point_sub(a: Point, b: Point) -> Point {
@@ -1048,6 +1076,27 @@ pub struct FloatingWindowOptions {
     /// When false, the window is rendered but pointer interactions are blocked (no activation,
     /// drag, resize, or child clicks).
     pub inputs_enabled: bool,
+    /// When true, the window is rendered but is inert for pointer and keyboard navigation:
+    /// it does not participate in pointer hit-testing and is skipped by focus traversal.
+    ///
+    /// This is intended to model Dear ImGui's `NoInputs` window flag, which implies mouse
+    /// pass-through and disables nav/focus participation.
+    ///
+    /// Note: `no_inputs=true` is different from `inputs_enabled=false`:
+    /// - `inputs_enabled=false` blocks pointer hits (not click-through) but still participates
+    ///   in focus traversal.
+    /// - `no_inputs=true` is click-through and is skipped by focus traversal.
+    pub no_inputs: bool,
+    /// When true, the floating window is hit-test transparent (pointer events pass through to
+    /// underlay content).
+    ///
+    /// This is intended to model Dear ImGui's "mouse pass-through" style behavior (`NoMouseInputs`
+    /// for in-window floating surfaces. In Fret's current facade, this is pointer pass-through
+    /// only: the subtree remains present for focus traversal / keyboard navigation.
+    ///
+    /// Note: `inputs_enabled=false` is *not* click-through; it is "non-interactive but blocks
+    /// pointer hits". Use `pointer_passthrough=true` when you explicitly want click-through.
+    pub pointer_passthrough: bool,
 }
 
 impl Default for FloatingWindowOptions {
@@ -1059,6 +1108,8 @@ impl Default for FloatingWindowOptions {
             closable: true,
             activate_on_click: true,
             inputs_enabled: true,
+            no_inputs: false,
+            pointer_passthrough: false,
         }
     }
 }
@@ -1092,6 +1143,20 @@ pub struct FloatingAreaOptions {
     pub test_id_prefix: &'static str,
     /// Explicitly overrides the semantics test-id for the floating area root element.
     pub test_id: Option<Arc<str>>,
+    /// When true, the floating area root is hit-test transparent (pointer events pass through).
+    ///
+    /// This is a facade-level policy knob intended for click-through / pass-through floating
+    /// surfaces. It wraps the area in a `HitTestGate` so the subtree does not intercept pointer
+    /// input while still allowing focus traversal.
+    pub hit_test_passthrough: bool,
+    /// When true, the floating area is rendered but is inert for pointer and focus traversal:
+    /// it is click-through and skipped by focus traversal.
+    ///
+    /// This wraps the area in an `InteractivityGate(present=true, interactive=false)` to model
+    /// ImGui-style `NoInputs` behavior.
+    ///
+    /// Precedence: when `no_inputs == true`, `hit_test_passthrough` is ignored.
+    pub no_inputs: bool,
 }
 
 impl Default for FloatingAreaOptions {
@@ -1099,6 +1164,8 @@ impl Default for FloatingAreaOptions {
         Self {
             test_id_prefix: "imui.float_area.area:",
             test_id: None,
+            hit_test_passthrough: false,
+            no_inputs: false,
         }
     }
 }
@@ -1554,6 +1621,7 @@ fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
     props: PointerRegionProps,
     on_left_double_click: Option<OnFloatingAreaLeftDoubleClick>,
     enable_drag: bool,
+    enable_activation: bool,
     setup: Setup,
     build: Build,
 ) -> AnyElement
@@ -1601,11 +1669,14 @@ where
                     },
                 );
             }
-            host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+            if enable_activation {
+                host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+            }
             host.notify(acx);
             false
         }));
 
+        let drag_threshold_sq = drag_threshold_sq_for(cx);
         cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
             if !enable_drag {
                 return false;
@@ -1630,7 +1701,7 @@ where
 
             let d = point_sub(drag.position, drag.start_position);
             let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-            if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+            if !drag.dragging && dist_sq >= drag_threshold_sq {
                 drag.dragging = true;
                 drag.phase = DragPhase::Dragging;
             }
@@ -1980,13 +2051,43 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     ..Default::default()
                 };
 
-                let mut area = cx.container(props, move |_cx| out);
-                // `cx.container(...)` introduces a fresh scoped id; normalize the outer area element id
-                // back to the named scope id so z-order state can track areas by `area_id`.
-                area.id = area_id;
-                let area = area.attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
-                );
+                let area = if options.no_inputs {
+                    let layout = props.layout;
+                    let mut gate = cx.interactivity_gate_props(
+                        fret_ui::element::InteractivityGateProps {
+                            layout,
+                            present: true,
+                            interactive: false,
+                        },
+                        |_cx| out,
+                    );
+                    gate.id = area_id;
+                    gate.attach_semantics(
+                        fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
+                    )
+                } else if options.hit_test_passthrough {
+                    let layout = props.layout;
+                    let mut gate = cx.hit_test_gate_props(
+                        fret_ui::element::HitTestGateProps {
+                            layout,
+                            hit_test: false,
+                        },
+                        |_cx| out,
+                    );
+                    gate.id = area_id;
+                    gate.attach_semantics(
+                        fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
+                    )
+                } else {
+                    let mut area = cx.container(props, move |_cx| out);
+                    // `cx.container(...)` introduces a fresh scoped id; normalize the outer area
+                    // element id back to the named scope id so z-order state can track areas by
+                    // `area_id`.
+                    area.id = area_id;
+                    area.attach_semantics(
+                        fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
+                    )
+                };
 
                 let response = FloatingAreaResponse {
                     id: area_id,
@@ -2015,7 +2116,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
         self.with_cx_mut(|cx| {
-            floating_area_drag_surface_element(cx, area, props, None, true, setup, f)
+            floating_area_drag_surface_element(cx, area, props, None, true, true, setup, f)
         })
     }
 
@@ -2634,6 +2735,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     response.core.hovered = state.hovered;
                     response.core.pressed = state.pressed;
                     response.core.focused = state.focused;
+                    response.nav_highlighted = state.focused
+                        && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                     response.id = Some(id);
                     response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                     response.core.rect = cx.last_bounds_for_element(id);
@@ -2755,6 +2858,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     PressablePointerDownResult::Continue
                 }));
 
+                let drag_threshold_sq = drag_threshold_sq_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                     let mut cancel_long_press = false;
 
@@ -2786,7 +2890,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                    if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                    if !drag.dragging && dist_sq >= drag_threshold_sq {
                         cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
@@ -2839,6 +2943,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.nav_highlighted = state.focused
+                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                 response.id = Some(id);
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
@@ -2990,6 +3096,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     PressablePointerDownResult::Continue
                 }));
 
+                let drag_threshold_sq = drag_threshold_sq_for(cx);
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
                     let mut cancel_long_press = false;
 
@@ -3021,7 +3128,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                    if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                    if !drag.dragging && dist_sq >= drag_threshold_sq {
                         cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
@@ -3071,6 +3178,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.nav_highlighted = state.focused
+                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                 response.id = Some(id);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
@@ -3203,6 +3312,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.nav_highlighted = state.focused
+                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                 response.id = Some(id);
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
@@ -3372,6 +3483,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.nav_highlighted = state.focused
+                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
                 response.id = Some(id);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.core.rect = cx.last_bounds_for_element(id);
@@ -4008,6 +4121,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             FloatingAreaOptions {
                 test_id_prefix: "imui.float_window.window:",
                 test_id: None,
+                hit_test_passthrough: options.pointer_passthrough,
+                no_inputs: options.no_inputs,
             },
             move |ui, area| {
                 let chrome = floating_window_on_area::render_floating_window_in_area(
@@ -4512,6 +4627,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                         },
                                     ));
 
+                                    let drag_threshold_sq = drag_threshold_sq_for(cx);
                                     cx.pointer_region_on_pointer_move(Arc::new(
                                         move |host, acx, mv| {
                                             let Some(drag) = host.drag_mut(mv.pointer_id) else {
@@ -4536,9 +4652,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                                             let d = point_sub(drag.position, drag.start_position);
                                             let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                                            if !drag.dragging
-                                                && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX
-                                            {
+                                            if !drag.dragging && dist_sq >= drag_threshold_sq {
                                                 drag.dragging = true;
                                                 drag.phase = DragPhase::Dragging;
                                             }

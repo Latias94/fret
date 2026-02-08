@@ -47,6 +47,7 @@ Status snapshot (2026-02-06):
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- ImGui parity audit notes: `docs/workstreams/imui-imgui-parity-audit-v1.md`
 - State integration note: `docs/workstreams/imui-state-integration-v1.md`
 - v2 follow-up: `docs/workstreams/imui-ecosystem-facade-v2.md`
 - v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
@@ -295,6 +296,10 @@ Multi-window / “tear-off” alignment:
 
 Upstream reference anchors (Dear ImGui docking branch):
 
+Note: `repo-ref/imgui` is local state. When citing behavior, record the commit you audited:
+
+- `git -C repo-ref/imgui rev-parse --short HEAD`
+
 - Viewports and platform window lifecycle:
   - `repo-ref/imgui/imgui.h` (Viewports section; `ImGuiViewportFlags_*`, `RenderPlatformWindowsDefault`, platform callbacks)
   - `repo-ref/imgui/imgui.cpp` (`UpdateViewportsNewFrame`, `UpdateViewportsEndFrame`, `RenderPlatformWindowsDefault`)
@@ -303,6 +308,12 @@ Upstream reference anchors (Dear ImGui docking branch):
   - `repo-ref/imgui/imgui_internal.h` (declarations)
 - Hovered-viewport detection (backend contract):
   - `repo-ref/imgui/docs/BACKENDS.md` (HasMouseHoveredViewport, `io.AddMouseViewportEvent`, and handling `ImGuiViewportFlags_NoInputs`)
+- Window flags vocabulary (what "NoInputs" means upstream):
+  - `repo-ref/imgui/imgui.h` (`enum ImGuiWindowFlags_`, notably `ImGuiWindowFlags_NoMouseInputs` and `ImGuiWindowFlags_NoInputs`)
+- Item query semantics (hover/active/focus/click, incl. nav highlight interaction):
+  - `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemActive`, `IsItemFocused`, `IsItemClicked`)
+- Popups/context menus (open stack + close policies):
+  - `repo-ref/imgui/imgui.cpp` (`OpenPopupEx`, `BeginPopupEx`, `BeginPopupContextItem/Window/Void`, `CloseCurrentPopup`)
 
 ### 5.6 M0 seam decisions (locked for v1)
 

@@ -9,4 +9,11 @@ pub mod metric {
     // Tailwind Typography (`prose`) defaults for body copy.
     pub const COMPONENT_TEXT_PROSE_PX: &str = "component.text.prose_px";
     pub const COMPONENT_TEXT_PROSE_LINE_HEIGHT: &str = "component.text.prose_line_height";
+
+    /// Pointer drag threshold used by the `imui` facade before a drag session transitions to
+    /// `dragging=true`.
+    ///
+    /// This aligns with Dear ImGui's `ImGuiIO::MouseDragThreshold` default (`6.0f`), but Fret's
+    /// facade keeps its own fallback default unless the token is configured.
+    pub const COMPONENT_IMUI_DRAG_THRESHOLD_PX: &str = "component.imui.drag_threshold_px";
 }

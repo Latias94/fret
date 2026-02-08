@@ -54,6 +54,8 @@ Exit criteria:
     - Any behavior-changing default must update: this tracker + migration notes in the v3 note.
     - Any perf-sensitive wrapper change must add (or update) a cheap regression gate test.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M0 contract notes: activation + `no_inputs` semantics).
+- [x] IMUIECO3-docs-002 Add explicit ImGui reference anchors and mapping notes.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` ("ImGui Reference Anchors (Audited)").
 
 ---
 
@@ -82,6 +84,46 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
   - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
+- [x] IMUIECO3-float-015 Define a click-through policy surface aligned with ImGui `NoMouseInputs`/`NoInputs`.
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiWindowFlags_NoMouseInputs`, `ImGuiWindowFlags_NoInputs`).
+  - Reference: `repo-ref/imgui/imgui.cpp` (hovered-viewport detection expects `ImGuiViewportFlags_NoInputs` to be honored).
+  - Note: current `inputs_enabled=false` is "non-interactive" but not click-through (by design).
+  - Evidence (initial click-through): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.pointer_passthrough`,
+    `FloatingAreaOptions.hit_test_passthrough`, `floating_area_show_ex` wrapping with `HitTestGate`).
+  - Evidence (gate): `ecosystem/fret-imui/src/lib.rs` (`floating_window_pointer_passthrough_allows_underlay_hit_testing`).
+  - Evidence (`NoInputs`): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.no_inputs`, `FloatingAreaOptions.no_inputs`,
+    `floating_area_show_ex` wrapping with `InteractivityGate`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`floating_window_no_inputs_allows_underlay_hit_testing`,
+    `floating_window_no_inputs_is_skipped_by_focus_traversal`, `no_inputs_is_click_through_and_skips_focus_traversal`).
+- [ ] IMUIECO3-float-016 Align activation semantics with ImGui `NoBringToFrontOnFocus` (focus vs z-order).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiWindowFlags_NoBringToFrontOnFocus`).
+  - Evidence (current Fret behavior): `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` + `ecosystem/fret-ui-kit/src/imui.rs`
+    (`activate_on_click` gates bring-to-front activation for title bar, content, and resize handles).
+- [x] IMUIECO3-resp-017 Decide whether keyboard-nav highlight should participate in "hovered" (ImGui-style) or a separate signal.
+  - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemFocused`).
+  - Decision: keep `hovered` pointer-driven; add a separate `nav_highlighted` signal + a helper that composes them.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt.nav_highlighted`, `ResponseExt.hovered_like_imgui`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`hit_test_passthrough_keeps_focus_traversal_and_nav_highlight`).
+- [ ] IMUIECO3-scope-018 Add an explicit identity ergonomics note (and/or helper) covering ImGui `"##"`/`"###"` patterns.
+  - Reference: `repo-ref/imgui/imgui.h` (label/ID guidance) + `repo-ref/imgui/imgui.cpp` (`PushID`, `GetID`).
+  - Evidence (current Fret behavior): `ecosystem/fret-imui/src/lib.rs` (`id`, `for_each_keyed`, `for_each_unkeyed`) + `docs/workstreams/imui-authoring-facade-v1.md` (identity section).
+- [x] IMUIECO3-float-019 Make drag threshold a theme/metric knob (align with ImGui `MouseDragThreshold`).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiIO::MouseDragThreshold` default `6.0f`).
+  - Evidence (token + default): `ecosystem/fret-ui-kit/src/theme_tokens.rs` (`component.imui.drag_threshold_px`),
+    `ecosystem/fret-ui-kit/src/imui.rs` (`DEFAULT_DRAG_THRESHOLD_PX = 6.0`, `drag_threshold_sq_for`).
+  - Evidence (test): `ecosystem/fret-imui/src/lib.rs` (`drag_threshold_metric_controls_drag_start`).
+- [ ] IMUIECO3-resp-020 Decide whether to expose ImGui-style hovered query flags (or document divergence).
+  - Reference: `repo-ref/imgui/imgui.h` (`enum ImGuiHoveredFlags_`, incl. `AllowWhenDisabled`, `AllowWhenBlockedByPopup`,
+    `DelayShort/DelayNormal`, `ForTooltip`, `NoNavOverride`).
+  - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered` implements nav-highlight participation, delay gating, and disabled gating).
+  - Evidence (current Fret behavior): `ecosystem/fret-authoring/src/lib.rs` (`Response.hovered` is a single boolean),
+    `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt.core.hovered` is pointer-hover driven by canonical pressable state).
+  - Note: recommended direction is to keep `Response` stable/minimal and add a facade-only helper surface (e.g. `hovered_for_tooltip`)
+    if upstream-like defaults are important for editor UX.
+- [ ] IMUIECO3-resp-021 Add a scoped disable helper aligned with ImGui `BeginDisabled` (and define how it affects responses).
+  - Reference: `repo-ref/imgui/imgui.h` (`BeginDisabled`) + `repo-ref/imgui/imgui.cpp` (`BeginDisabled`, `EndDisabled`).
+  - Evidence (current Fret behavior): `ecosystem/fret-ui-kit/src/imui.rs` (some widgets have per-call `enabled`, but no subtree scope helper).
+  - Decision required: should disabled items report `hovered=false` by default (ImGui-style), and should tooltips be allowed via an explicit flag?
 
 ---
 

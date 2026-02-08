@@ -19,10 +19,87 @@ Related:
 - `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
+- `docs/workstreams/imui-imgui-parity-audit-v1.md` (behavior-focused parity audit notes)
 - `docs/workstreams/docking-multiwindow-imgui-parity.md` (OS-window tear-off parity)
 - `docs/workstreams/code-editor-ecosystem-v1.md` (text/editor ecosystem)
 
 ---
+
+## 0) ImGui Reference Anchors (Audited)
+
+This workstream uses Dear ImGui (C++) as the primary behavior reference for "immediate-mode editor UI feel".
+
+Note: `repo-ref/imgui` is local state (not committed). When citing behavior, record the exact commit:
+
+- `git -C repo-ref/imgui rev-parse --short HEAD` (example on one machine: `913a3c605`)
+
+Authoritative anchors used for v3 audits:
+
+- Window flags and semantics vocabulary:
+  - `repo-ref/imgui/imgui.h` (`enum ImGuiWindowFlags_`, incl. `ImGuiWindowFlags_NoMove`, `NoResize`,
+    `NoCollapse`, `NoBringToFrontOnFocus`, `NoMouseInputs`, `NoInputs`)
+- Focus + z-order choreography:
+  - `repo-ref/imgui/imgui.cpp` (`FocusWindow`, `BringWindowToDisplayFront`, `BringWindowToDisplayBehind`)
+- Item query semantics (hover/active/focus/click):
+  - `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemActive`, `IsItemFocused`, `IsItemClicked`)
+- ID stack / stable identity patterns:
+  - `repo-ref/imgui/imgui.cpp` (`PushID`, `PopID`, `GetID`)
+  - `repo-ref/imgui/imgui.h` (FAQ-style guidance: loops should `PushID()` or use `"##suffix"` / `"###id"` patterns)
+- Popups / context menus:
+  - `repo-ref/imgui/imgui.cpp` (`OpenPopupEx`, `BeginPopupEx`, `BeginPopupContextItem`,
+    `BeginPopupContextWindow`, `BeginPopupContextVoid`, `CloseCurrentPopup`, `ClosePopupToLevel`)
+- Drag threshold defaults (policy knob):
+  - `repo-ref/imgui/imgui.h` (`ImGuiIO::MouseDragThreshold` default `6.0f`)
+- Multi-viewport / platform windows (docking + viewports):
+  - `repo-ref/imgui/imgui.cpp` (`UpdateViewportsNewFrame`, `UpdateViewportsEndFrame`,
+    `RenderPlatformWindowsDefault`)
+  - `repo-ref/imgui/docs/BACKENDS.md` (backend contract, incl. honoring `ImGuiViewportFlags_NoInputs`)
+
+Mapping notes (Fret vs ImGui):
+
+- `FloatingWindowOptions` (`ecosystem/fret-ui-kit/src/imui.rs`) is intended to mirror a *subset* of `ImGuiWindowFlags_*`:
+  - `movable` ↔ `ImGuiWindowFlags_NoMove`
+  - `resizable` ↔ `ImGuiWindowFlags_NoResize`
+  - `collapsible` ↔ `ImGuiWindowFlags_NoCollapse`
+  - `activate_on_click` is closest to (but not identical to) `ImGuiWindowFlags_NoBringToFrontOnFocus`:
+    - in Fret it gates bring-to-front activation for **content clicks**, **title-bar drag surfaces**, and
+      **resize handles**.
+  - `inputs_enabled=false` is closest in intent to `ImGuiWindowFlags_NoInputs` but **does not** currently
+    implement ImGui's "mouse pass-through" (`NoMouseInputs`) by itself. In Fret v3, `no_inputs` means
+    "rendered but non-interactive" and is intentionally **not click-through** by default.
+  - `pointer_passthrough=true` provides an explicit click-through outcome (hit-test transparent subtree),
+    and it is intended to mirror ImGui's `NoMouseInputs` outcome (pointer pass-through) while still
+    allowing focus traversal / keyboard navigation.
+- `ResponseExt` is the immediate-mode *return value* equivalent of calling a sequence of `IsItem*()` queries
+  after rendering an ImGui item. Important divergence:
+  - ImGui's `IsItemHovered()` can return true under keyboard/gamepad nav highlight. Today, Fret's
+    `Response.core.hovered` is pointer-hover driven; use `ResponseExt.nav_highlighted` /
+    `ResponseExt.hovered_like_imgui()` when you want nav-highlight-as-hover parity.
+- Popup lifetime differs:
+  - In ImGui, `OpenPopupEx()` marks a popup open in the open stack until closed by outside click, activation,
+    or `CloseCurrentPopup()`.
+  - In Fret, popup scopes are kept alive by `begin_popup_*` calls (`keep_alive_frame`) to avoid stale overlays
+    when a declarative subtree stops submitting a popup.
+- Context menu helpers differ:
+  - ImGui commonly uses `BeginPopupContextItem(NULL)` (implicit "last item" identity).
+  - Fret favors explicit identity: wrappers return `ResponseExt` (including `id` + last-bounds), and
+    `begin_popup_context_menu(id, trigger_response, ...)` consumes the trigger response.
+
+Known gaps vs ImGui (tracked in this v3 TODO):
+
+- No clean separation between ImGui `NoMouseInputs` (pointer pass-through but nav still allowed) vs `NoInputs`
+  (pointer + nav disabled). Today `pointer_passthrough` only covers the `NoMouseInputs`-style outcome.
+- `activate_on_click` is not yet a full `NoBringToFrontOnFocus` analog (ImGui separates focus from z-order more cleanly).
+- No ID-stack ergonomics (`PushID`-style nesting, `"##"` / `"###"` label parsing) at the facade level; callers must
+  explicitly scope identity with `ui.push_id(...)` / `ui.keyed(...)`.
+- `Response.core.hovered` remains pointer-hover driven, but `ResponseExt` now exposes an explicit `nav_highlighted`
+  signal and a `hovered_like_imgui()` helper (pointer-hover OR nav-highlight). Remaining gap: no
+  ImGui-style hovered query flags (`ImGuiHoveredFlags_*`).
+- No ImGui-style hovered query flag surface (`ImGuiHoveredFlags_*`) and no scoped disable helper (`BeginDisabled`).
+  Today, `ResponseExt` exposes a single `hovered` boolean and some wrappers have per-call `enabled`, but the facade
+  does not offer hover-delay/tooltip defaults or define how "disabled" interacts with hover/tooltip queries.
+- Drag threshold is currently a fixed facade constant (Fret uses `4px`; ImGui defaults `MouseDragThreshold=6px`) and
+  is not yet expressed as a theme/metric knob.
 
 ## 1) Why v3
 

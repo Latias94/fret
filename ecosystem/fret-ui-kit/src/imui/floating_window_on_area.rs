@@ -333,6 +333,7 @@ where
                         },
                         on_left_double_click,
                         can_move,
+                        options.activate_on_click,
                         move |cx, region_id| {
                             cx.key_clear_on_key_down_for(region_id);
                             if can_close && let Some(open) = open_for_key {
@@ -494,6 +495,7 @@ where
                 return vec![body];
             }
 
+            let enable_activation = options.activate_on_click;
             let mut resize_handle = |handle: super::FloatWindowResizeHandle, test_id: Arc<str>| {
                 let (cursor, layout) = match handle {
                     super::FloatWindowResizeHandle::Left => {
@@ -628,7 +630,9 @@ where
                                     down.position,
                                 );
                             }
-                            host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                            if enable_activation {
+                                host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                            }
                             host.notify(acx);
                             false
                         }));
