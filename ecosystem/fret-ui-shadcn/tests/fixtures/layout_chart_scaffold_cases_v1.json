@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "chart_area_default",
+      "web_name": "chart-area-default",
+      "gate_curve": true
+    },
+    {
+      "id": "chart_line_default",
+      "web_name": "chart-line-default",
+      "gate_curve": true
+    },
+    {
+      "id": "chart_bar_default",
+      "web_name": "chart-bar-default",
+      "gate_curve": false
+    }
+  ]
+}

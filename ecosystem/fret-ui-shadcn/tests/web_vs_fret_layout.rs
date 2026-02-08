@@ -163,6 +163,13 @@ struct LayoutShellContainerCenteredCase {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct LayoutChartScaffoldCase {
+    id: String,
+    web_name: String,
+    gate_curve: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum LayoutRadioGroupRecipe {
     RowGeometry,
@@ -27467,18 +27474,23 @@ fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) 
 }
 
 #[test]
-fn web_vs_fret_layout_chart_area_default_scaffold_geometry_matches_web() {
-    assert_chart_scaffold_geometry_matches_web("chart-area-default", true);
-}
+fn web_vs_fret_layout_chart_scaffold_geometry_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_chart_scaffold_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutChartScaffoldCase> =
+        serde_json::from_str(raw).expect("layout chart scaffold fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-#[test]
-fn web_vs_fret_layout_chart_line_default_scaffold_geometry_matches_web() {
-    assert_chart_scaffold_geometry_matches_web("chart-line-default", true);
-}
-
-#[test]
-fn web_vs_fret_layout_chart_bar_default_scaffold_geometry_matches_web() {
-    assert_chart_scaffold_geometry_matches_web("chart-bar-default", false);
+    for case in suite.cases {
+        eprintln!(
+            "layout chart scaffold case={} web_name={}",
+            case.id, case.web_name
+        );
+        assert_chart_scaffold_geometry_matches_web(&case.web_name, case.gate_curve);
+    }
 }
 
 #[test]
