@@ -1,5 +1,5 @@
-use super::super::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
 use super::*;
+use crate::ui::canvas::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_timer<H: UiHost>(

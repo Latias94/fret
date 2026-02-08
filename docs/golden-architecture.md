@@ -277,8 +277,8 @@ flowchart LR
 
 **Code entry points**
 
-- `crates/fret-render/src/renderer/mod.rs`
-- `crates/fret-render/src/text.rs`
+- `crates/fret-render-wgpu/src/renderer/mod.rs`
+- `crates/fret-render-wgpu/src/text.rs`
 
 **Closure checklist (P0)**
 

@@ -665,12 +665,12 @@ impl<H: UiHost> UiTree<H> {
             && self.layout_invalidations_count == 0
         {
             self.debug_stats.layout_fast_path_taken = true;
+            self.prepaint_after_layout(app, scale_factor);
+
             if self.semantics_requested {
                 self.semantics_requested = false;
                 self.refresh_semantics_snapshot(app);
             }
-
-            self.prepaint_after_layout(app, scale_factor);
             self.flush_deferred_cleanup(services);
 
             self.last_layout_bounds = Some(bounds);
@@ -810,7 +810,6 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
             }
         }
-
         if pass_kind == LayoutPassKind::Final {
             let prepaint_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
@@ -822,7 +821,6 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
             }
         }
-
         let started_phase = profile_layout_all.then(Instant::now);
         if pass_kind == LayoutPassKind::Final {
             let focus_started = self.debug_enabled.then(Instant::now);

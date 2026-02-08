@@ -274,7 +274,7 @@ Likely touch points:
   - `crates/fret-launch/src/runner/common.rs` (`WindowCreateSpec` may need style fields)
   - `crates/fret-launch/src/runner/desktop/mod.rs` (apply style to winit window)
 - Renderer/surface:
-  - `crates/fret-render/src/surface.rs` (alpha mode selection + clear alpha policy)
+  - `crates/fret-render-wgpu/src/surface.rs` (alpha mode selection + clear alpha policy)
 
 Recommended validation:
 

@@ -13,6 +13,16 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         return;
     }
 
+    // PointerRegion pointer-down hooks run during the capture phase (root → target) so that
+    // wrappers can observe activation even when a descendant pressable stops bubble propagation.
+    //
+    // Bubble-phase pointer-down handling is skipped to avoid double-dispatch.
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
+        && matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. }))
+    {
+        return;
+    }
+
     let pixels_per_point = cx
         .app
         .global::<fret_core::WindowMetricsService>()

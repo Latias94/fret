@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::query::{decode_component, encode_component};
+use crate::query::{decode_path_component, encode_component};
 
 pub const WILDCARD_PARAM: &str = "*";
 
@@ -21,6 +21,30 @@ enum PathSegment {
 pub struct PathPattern {
     raw: String,
     segments: Vec<PathSegment>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PathSpecificity {
+    pub(crate) static_segments: usize,
+    pub(crate) param_segments: usize,
+    pub(crate) wildcard_segments: usize,
+    pub(crate) total_segments: usize,
+}
+
+impl Ord for PathSpecificity {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.static_segments
+            .cmp(&other.static_segments)
+            .then_with(|| self.param_segments.cmp(&other.param_segments))
+            .then_with(|| other.wildcard_segments.cmp(&self.wildcard_segments))
+            .then_with(|| self.total_segments.cmp(&other.total_segments))
+    }
+}
+
+impl PartialOrd for PathSpecificity {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -132,7 +156,7 @@ impl PathPattern {
                 continue;
             }
 
-            segments.push(PathSegment::Static(decode_component(segment)));
+            segments.push(PathSegment::Static(decode_path_component(segment)));
         }
 
         Ok(Self { raw, segments })
@@ -146,6 +170,70 @@ impl PathPattern {
         self.segments.len() == 1 && matches!(self.segments[0], PathSegment::Wildcard(_))
     }
 
+    pub(crate) fn specificity(&self) -> PathSpecificity {
+        let mut static_segments = 0usize;
+        let mut param_segments = 0usize;
+        let mut wildcard_segments = 0usize;
+
+        for segment in &self.segments {
+            match segment {
+                PathSegment::Static(_) => static_segments += 1,
+                PathSegment::Param(_) => param_segments += 1,
+                PathSegment::Wildcard(_) => wildcard_segments += 1,
+            }
+        }
+
+        PathSpecificity {
+            static_segments,
+            param_segments,
+            wildcard_segments,
+            total_segments: self.segments.len(),
+        }
+    }
+
+    pub(crate) fn match_prefix_segments(&self, segments: &[&str]) -> Option<PathPrefixMatch> {
+        let mut params = Vec::new();
+        let mut cursor = 0usize;
+
+        for segment in &self.segments {
+            match segment {
+                PathSegment::Static(expected) => {
+                    let actual = segments.get(cursor)?;
+                    if decode_path_component(actual) != *expected {
+                        return None;
+                    }
+                    cursor += 1;
+                }
+                PathSegment::Param(name) => {
+                    let actual = segments.get(cursor)?;
+                    params.push(PathParam {
+                        name: name.clone(),
+                        value: decode_path_component(actual),
+                    });
+                    cursor += 1;
+                }
+                PathSegment::Wildcard(name) => {
+                    let value = segments[cursor..]
+                        .iter()
+                        .map(|segment| decode_path_component(segment))
+                        .collect::<Vec<_>>()
+                        .join("/");
+                    params.push(PathParam {
+                        name: name.clone().unwrap_or_else(|| WILDCARD_PARAM.to_string()),
+                        value,
+                    });
+                    cursor = segments.len();
+                    break;
+                }
+            }
+        }
+
+        Some(PathPrefixMatch {
+            consumed_segments: cursor,
+            params,
+        })
+    }
+
     pub fn match_path(&self, path: &str) -> Option<PathMatch> {
         let normalized_path = normalize_path(path);
         let target = path_segments(normalized_path.as_str());
@@ -157,7 +245,7 @@ impl PathPattern {
             match segment {
                 PathSegment::Static(expected) => {
                     let actual = target.get(cursor)?;
-                    if decode_component(actual) != *expected {
+                    if decode_path_component(actual) != *expected {
                         return None;
                     }
                     cursor += 1;
@@ -166,14 +254,14 @@ impl PathPattern {
                     let actual = target.get(cursor)?;
                     params.push(PathParam {
                         name: name.clone(),
-                        value: decode_component(actual),
+                        value: decode_path_component(actual),
                     });
                     cursor += 1;
                 }
                 PathSegment::Wildcard(name) => {
                     let value = target[cursor..]
                         .iter()
-                        .map(|segment| decode_component(segment))
+                        .map(|segment| decode_path_component(segment))
                         .collect::<Vec<_>>()
                         .join("/");
                     params.push(PathParam {
@@ -228,6 +316,12 @@ impl PathPattern {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PathPrefixMatch {
+    pub consumed_segments: usize,
+    pub params: Vec<PathParam>,
+}
+
 impl<R> RouteTable<R> {
     pub fn new(entries: Vec<RouteEntry<R>>) -> Self {
         Self { entries }
@@ -243,6 +337,7 @@ impl<R> RouteTable<R> {
 
     pub fn resolve(&self, path: &str) -> Option<RouteResolution<'_, R>> {
         let mut fallback: Option<(&RouteEntry<R>, PathMatch)> = None;
+        let mut best: Option<(&RouteEntry<R>, PathMatch, PathSpecificity)> = None;
 
         for entry in &self.entries {
             let Some(matched) = entry.pattern.match_path(path) else {
@@ -256,6 +351,18 @@ impl<R> RouteTable<R> {
                 continue;
             }
 
+            let specificity = entry.pattern.specificity();
+            let is_better = match best.as_ref() {
+                None => true,
+                Some((_entry, _matched, best_specificity)) => specificity > *best_specificity,
+            };
+
+            if is_better {
+                best = Some((entry, matched, specificity));
+            }
+        }
+
+        if let Some((entry, matched, _specificity)) = best {
             return Some(RouteResolution {
                 route: &entry.route,
                 pattern: &entry.pattern,
@@ -377,6 +484,38 @@ mod tests {
         assert_eq!(matched_fallback.params[0].name, WILDCARD_PARAM);
         assert_eq!(matched_fallback.params[0].value, "unknown/feature");
         assert!(matched_fallback.is_fallback);
+    }
+
+    #[test]
+    fn route_table_prefers_more_specific_routes_over_ordering() {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum RouteId {
+            UserById,
+            UserSettings,
+        }
+
+        let table = RouteTable::new(vec![
+            RouteEntry {
+                route: RouteId::UserById,
+                pattern: PathPattern::parse("/users/:id").expect("pattern should parse"),
+            },
+            RouteEntry {
+                route: RouteId::UserSettings,
+                pattern: PathPattern::parse("/users/settings").expect("pattern should parse"),
+            },
+        ]);
+
+        let matched = table
+            .resolve("/users/settings")
+            .expect("route should resolve");
+        assert_eq!(*matched.route, RouteId::UserSettings);
+    }
+
+    #[test]
+    fn path_params_do_not_decode_plus_as_space() {
+        let pattern = PathPattern::parse("/lang/:name").expect("pattern should parse");
+        let matched = pattern.match_path("/lang/c++").expect("path should match");
+        assert_eq!(matched.param("name"), Some("c++"));
     }
 
     #[test]

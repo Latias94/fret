@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size};
+use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
 use fret_kit::prelude::*;
 
 struct ImUiFloatingWindowsState {
     open_a: Model<bool>,
+    select_mode: Model<Option<Arc<str>>>,
+    a_overlap_clicked: Model<bool>,
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -18,6 +20,8 @@ pub fn run() -> anyhow::Result<()> {
 fn init_window(app: &mut App, _window: AppWindowId) -> ImUiFloatingWindowsState {
     ImUiFloatingWindowsState {
         open_a: app.models_mut().insert(true),
+        select_mode: app.models_mut().insert(None::<Arc<str>>),
+        a_overlap_clicked: app.models_mut().insert(false),
     }
 }
 
@@ -33,7 +37,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
 
         let hint = fret_ui_kit::ui::text(
             ui.cx_mut(),
-            "Drag the window title bar onto the drop zone, resize from the corner, and open the context menu.",
+            "Drag the title bar onto the drop zone, double-click title to collapse/expand, resize from the corner, open the context menu, and test the select popup.",
         )
         .text_xs();
         ui.add_ui(hint);
@@ -70,7 +74,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
             // Window A: used by diag scripts for drag/resize/context-menu overlay coexistence.
             let id = "a";
             let initial_position = Point::new(Px(24.0), Px(96.0));
-            let initial_size = Size::new(Px(120.0), Px(80.0));
+            let initial_size = Size::new(Px(220.0), Px(160.0));
 
             let resp = ui.window_open_resizable(
                 id,
@@ -79,20 +83,140 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                 initial_position,
                 initial_size,
                 |ui| {
-                    ui.text("Right click the button to open a context menu.");
-                    ui.separator();
+                    ui.vertical(|ui| {
+                        ui.mount(|cx| {
+                            let clicked_model = st.a_overlap_clicked.clone();
 
-                    let trigger = ui.button("Context menu (right click)");
-                    ui.begin_popup_context_menu("ctx", trigger, |ui| {
-                        let open = ui.popup_open_model("ctx");
-                        let _ = ui.menu_item_ex(
-                            "Close menu",
-                            fret_ui_kit::imui::MenuItemOptions {
-                                close_popup: Some(open),
-                                test_id: Some(Arc::from("imui-float-demo.ctx.close")),
+                            let activate = cx.pressable(
+                                {
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y = fret_ui::element::PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Activate A (content)")),
+                                        test_id: Some(Arc::from("imui-float-demo.a.activate")),
+                                        ..Default::default()
+                                    };
+                                    props
+                                },
+                                |cx, _state| vec![cx.text("Activate A (content)")],
+                            );
+
+                            let overlap = cx.pressable(
+                                {
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y = fret_ui::element::PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("Overlap target (A)")),
+                                        test_id: Some(Arc::from("imui-float-demo.a.overlap")),
+                                        ..Default::default()
+                                    };
+                                    props
+                                },
+                                move |cx, _state| {
+                                    cx.pressable_on_activate(Arc::new(
+                                        move |host, acx, _reason| {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&clicked_model, |v| *v = true);
+                                            host.notify(acx);
+                                        },
+                                    ));
+                                    vec![cx.text("Overlap target (A)")]
+                                },
+                            );
+
+                            let clicked = cx
+                                .read_model(
+                                    &st.a_overlap_clicked,
+                                    fret_ui::Invalidation::Paint,
+                                    |_app, v| *v,
+                                )
+                                .unwrap_or(false);
+
+                            let clicked_label = clicked.then(|| {
+                                cx.text("A overlap clicked").attach_semantics(
+                                    fret_ui::element::SemanticsDecoration::default()
+                                        .test_id(Arc::from("imui-float-demo.a.overlap.clicked")),
+                                )
+                            });
+
+                            let row = cx.row(
+                                {
+                                    let mut props = fret_ui::element::RowProps::default();
+                                    props.layout.size.width = fret_ui::element::Length::Fill;
+                                    props.gap = Px(8.0);
+                                    props
+                                },
+                                move |_cx| vec![activate, overlap],
+                            );
+
+                            let mut out = vec![
+                                row,
+                                cx.text("Click 'Activate A' to bring Window A to front.")
+                                    .attach_semantics(
+                                        fret_ui::element::SemanticsDecoration::default()
+                                            .test_id(Arc::from("imui-float-demo.a.activate.hint")),
+                                    ),
+                            ];
+                            if let Some(clicked_label) = clicked_label {
+                                out.push(clicked_label);
+                            }
+                            vec![cx.column(
+                                {
+                                    let mut props = fret_ui::element::ColumnProps::default();
+                                    props.layout.size.width = fret_ui::element::Length::Fill;
+                                    props.gap = Px(8.0);
+                                    props
+                                },
+                                move |_cx| out,
+                            )]
+                        });
+
+                        ui.separator();
+                        ui.text("Right click the button to open a context menu.");
+                        let trigger = ui.button("Context menu (right click)");
+                        ui.begin_popup_context_menu("ctx", trigger, |ui| {
+                            let open = ui.popup_open_model("ctx");
+                            let _ = ui.menu_item_ex(
+                                "Close menu",
+                                fret_ui_kit::imui::MenuItemOptions {
+                                    close_popup: Some(open),
+                                    test_id: Some(Arc::from("imui-float-demo.ctx.close")),
+                                    ..Default::default()
+                                },
+                            );
+                        });
+
+                        ui.separator();
+                        let select_items = [
+                            Arc::<str>::from("Alpha"),
+                            Arc::<str>::from("Beta"),
+                            Arc::<str>::from("Gamma"),
+                        ];
+                        let _ = ui.select_model_ex(
+                            "Mode",
+                            &st.select_mode,
+                            &select_items,
+                            fret_ui_kit::imui::SelectOptions {
+                                test_id: Some(Arc::from("imui-float-demo.select")),
                                 ..Default::default()
                             },
                         );
+                    });
+                },
+            );
+
+            // Window B: used by v3 diag scripts to assert content-click activation/z-order.
+            let _ = ui.window_resizable(
+                "b",
+                "Window B",
+                Point::new(Px(176.0), Px(116.0)),
+                Size::new(Px(180.0), Px(120.0)),
+                |ui| {
+                    ui.vertical(|ui| {
+                        ui.text("This window starts on top of A's overlap target.");
+                        ui.separator();
+                        ui.text("Then click A's 'Activate' button.");
                     });
                 },
             );
@@ -104,6 +228,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                 resp.area.rect,
                 resp.size,
                 resp.resizing,
+                resp.collapsed,
             );
         });
 

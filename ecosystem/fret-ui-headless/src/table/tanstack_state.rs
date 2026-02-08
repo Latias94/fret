@@ -2,12 +2,12 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use super::{
     ColumnFilter, ColumnId, ColumnPinningState, ColumnSizingInfoState, ColumnSizingState,
-    ColumnVisibilityState, ExpandingState, GroupingState, PaginationState, RowKey, RowModel,
-    RowPinningState, SortSpec, TableState,
+    ColumnVisibilityState, ExpandingState, GroupedRowModel, GroupingState, PaginationState, RowKey,
+    RowModel, RowPinningState, SortSpec, TableState,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +56,47 @@ pub struct TanStackColumnPinningState {
     pub right: Vec<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct TanStackStatePresence {
+    sorting: bool,
+    column_filters: bool,
+    global_filter: bool,
+    pagination: bool,
+    grouping: bool,
+    expanded: bool,
+    row_pinning: bool,
+    row_selection: bool,
+    column_pinning: bool,
+    column_order: bool,
+    column_visibility: bool,
+    column_sizing: bool,
+    column_sizing_info: bool,
+}
+
+impl TanStackStatePresence {
+    fn from_json(value: &Value) -> Self {
+        let mut out = Self::default();
+        let Some(map) = value.as_object() else {
+            return out;
+        };
+
+        out.sorting = map.contains_key("sorting");
+        out.column_filters = map.contains_key("columnFilters");
+        out.global_filter = map.contains_key("globalFilter");
+        out.pagination = map.contains_key("pagination");
+        out.grouping = map.contains_key("grouping");
+        out.expanded = map.contains_key("expanded");
+        out.row_pinning = map.contains_key("rowPinning");
+        out.row_selection = map.contains_key("rowSelection");
+        out.column_pinning = map.contains_key("columnPinning");
+        out.column_order = map.contains_key("columnOrder");
+        out.column_visibility = map.contains_key("columnVisibility");
+        out.column_sizing = map.contains_key("columnSizing");
+        out.column_sizing_info = map.contains_key("columnSizingInfo");
+        out
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TanStackTableState {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -66,23 +107,43 @@ pub struct TanStackTableState {
         skip_serializing_if = "Vec::is_empty"
     )]
     pub column_filters: Vec<TanStackColumnFilter>,
-    #[serde(default, rename = "globalFilter")]
+    #[serde(
+        default,
+        rename = "globalFilter",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub global_filter: Option<Value>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pagination: Option<TanStackPaginationState>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub grouping: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expanded: Option<TanStackExpandedState>,
-    #[serde(default, rename = "rowPinning")]
+    #[serde(
+        default,
+        rename = "rowPinning",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub row_pinning: Option<TanStackRowPinningState>,
-    #[serde(default, rename = "rowSelection")]
+    #[serde(
+        default,
+        rename = "rowSelection",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub row_selection: Option<BTreeMap<String, bool>>,
-    #[serde(default, rename = "columnPinning")]
+    #[serde(
+        default,
+        rename = "columnPinning",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub column_pinning: Option<TanStackColumnPinningState>,
     #[serde(default, rename = "columnOrder", skip_serializing_if = "Vec::is_empty")]
     pub column_order: Vec<String>,
-    #[serde(default, rename = "columnVisibility")]
+    #[serde(
+        default,
+        rename = "columnVisibility",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub column_visibility: Option<BTreeMap<String, bool>>,
     #[serde(
         default,
@@ -90,8 +151,14 @@ pub struct TanStackTableState {
         skip_serializing_if = "BTreeMap::is_empty"
     )]
     pub column_sizing: TanStackColumnSizingState,
-    #[serde(default, rename = "columnSizingInfo")]
+    #[serde(
+        default,
+        rename = "columnSizingInfo",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub column_sizing_info: Option<TanStackColumnSizingInfoState>,
+    #[serde(skip)]
+    presence: TanStackStatePresence,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -111,11 +178,26 @@ pub struct TanStackRowPinningState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TanStackStateError {
-    InvalidRowSelectionKey { row_id: String },
-    InvalidExpandedKey { row_id: String },
-    InvalidRowPinningKey { row_id: String },
-    UnresolvedRowId { field: &'static str, row_id: String },
-    InvalidIsResizingColumnValue { value: Value },
+    InvalidRowSelectionKey {
+        row_id: String,
+    },
+    InvalidExpandedKey {
+        row_id: String,
+    },
+    InvalidRowPinningKey {
+        row_id: String,
+    },
+    UnresolvedRowId {
+        field: &'static str,
+        row_id: String,
+    },
+    UnresolvedRowKey {
+        field: &'static str,
+        row_key: RowKey,
+    },
+    InvalidIsResizingColumnValue {
+        value: Value,
+    },
 }
 
 impl std::fmt::Display for TanStackStateError {
@@ -145,6 +227,13 @@ impl std::fmt::Display for TanStackStateError {
                     "tanstack row id must resolve via row model (field={field}, row_id={row_id})"
                 )
             }
+            Self::UnresolvedRowKey { field, row_key } => {
+                write!(
+                    f,
+                    "tanstack row key must resolve via row model (field={field}, row_key={})",
+                    row_key.0
+                )
+            }
             Self::InvalidIsResizingColumnValue { value } => {
                 write!(
                     f,
@@ -159,11 +248,13 @@ impl std::error::Error for TanStackStateError {}
 
 impl TanStackTableState {
     pub fn from_json(value: &Value) -> serde_json::Result<Self> {
-        serde_json::from_value(value.clone())
+        let mut out: Self = serde_json::from_value(value.clone())?;
+        out.presence = TanStackStatePresence::from_json(value);
+        Ok(out)
     }
 
     pub fn from_table_state(state: &TableState) -> Self {
-        let sorting = state
+        let sorting: Vec<TanStackSortingSpec> = state
             .sorting
             .iter()
             .map(|s| TanStackSortingSpec {
@@ -172,7 +263,7 @@ impl TanStackTableState {
             })
             .collect();
 
-        let column_filters = state
+        let column_filters: Vec<TanStackColumnFilter> = state
             .column_filters
             .iter()
             .map(|f| TanStackColumnFilter {
@@ -195,7 +286,7 @@ impl TanStackTableState {
             })
         };
 
-        let grouping = state
+        let grouping: Vec<String> = state
             .grouping
             .iter()
             .map(|s| s.as_ref().to_string())
@@ -261,7 +352,7 @@ impl TanStackTableState {
                 })
             };
 
-        let column_order = state
+        let column_order: Vec<String> = state
             .column_order
             .iter()
             .map(|s| s.as_ref().to_string())
@@ -314,6 +405,22 @@ impl TanStackTableState {
             }
         };
 
+        let presence = TanStackStatePresence {
+            sorting: !sorting.is_empty(),
+            column_filters: !column_filters.is_empty(),
+            global_filter: global_filter.is_some(),
+            pagination: pagination.is_some(),
+            grouping: !grouping.is_empty(),
+            expanded: expanded.is_some(),
+            row_pinning: row_pinning.is_some(),
+            row_selection: row_selection.is_some(),
+            column_pinning: column_pinning.is_some(),
+            column_order: !column_order.is_empty(),
+            column_visibility: column_visibility.is_some(),
+            column_sizing: !column_sizing.is_empty(),
+            column_sizing_info: column_sizing_info.is_some(),
+        };
+
         Self {
             sorting,
             column_filters,
@@ -328,11 +435,294 @@ impl TanStackTableState {
             column_visibility,
             column_sizing,
             column_sizing_info,
+            presence,
         }
     }
 
     pub fn to_json(&self) -> serde_json::Result<Value> {
-        serde_json::to_value(self)
+        let mut out = Map::new();
+
+        if self.presence.sorting || !self.sorting.is_empty() {
+            out.insert("sorting".to_string(), serde_json::to_value(&self.sorting)?);
+        }
+
+        if self.presence.column_filters || !self.column_filters.is_empty() {
+            out.insert(
+                "columnFilters".to_string(),
+                serde_json::to_value(&self.column_filters)?,
+            );
+        }
+
+        if self.presence.global_filter || self.global_filter.is_some() {
+            out.insert(
+                "globalFilter".to_string(),
+                self.global_filter.clone().unwrap_or(Value::Null),
+            );
+        }
+
+        if self.presence.pagination || self.pagination.is_some() {
+            out.insert(
+                "pagination".to_string(),
+                match self.pagination.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.grouping || !self.grouping.is_empty() {
+            out.insert(
+                "grouping".to_string(),
+                serde_json::to_value(&self.grouping)?,
+            );
+        }
+
+        if self.presence.expanded || self.expanded.is_some() {
+            out.insert(
+                "expanded".to_string(),
+                match self.expanded.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.row_pinning || self.row_pinning.is_some() {
+            out.insert(
+                "rowPinning".to_string(),
+                match self.row_pinning.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.row_selection || self.row_selection.is_some() {
+            out.insert(
+                "rowSelection".to_string(),
+                match self.row_selection.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.column_pinning || self.column_pinning.is_some() {
+            out.insert(
+                "columnPinning".to_string(),
+                match self.column_pinning.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.column_order || !self.column_order.is_empty() {
+            out.insert(
+                "columnOrder".to_string(),
+                serde_json::to_value(&self.column_order)?,
+            );
+        }
+
+        if self.presence.column_visibility || self.column_visibility.is_some() {
+            out.insert(
+                "columnVisibility".to_string(),
+                match self.column_visibility.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        if self.presence.column_sizing || !self.column_sizing.is_empty() {
+            out.insert(
+                "columnSizing".to_string(),
+                serde_json::to_value(&self.column_sizing)?,
+            );
+        }
+
+        if self.presence.column_sizing_info || self.column_sizing_info.is_some() {
+            out.insert(
+                "columnSizingInfo".to_string(),
+                match self.column_sizing_info.as_ref() {
+                    Some(v) => serde_json::to_value(v)?,
+                    None => Value::Null,
+                },
+            );
+        }
+
+        Ok(Value::Object(out))
+    }
+
+    fn with_presence_hint(mut self, source: &Self) -> Self {
+        self.presence = source.presence;
+
+        if source.presence.expanded && self.expanded.is_none() {
+            self.expanded = source.expanded.clone();
+        }
+        if source.presence.row_pinning && self.row_pinning.is_none() {
+            self.row_pinning = source.row_pinning.clone();
+        }
+        if source.presence.row_selection && self.row_selection.is_none() {
+            self.row_selection = source.row_selection.clone();
+        }
+        if source.presence.column_pinning && self.column_pinning.is_none() {
+            self.column_pinning = source.column_pinning.clone();
+        }
+        if source.presence.column_visibility && self.column_visibility.is_none() {
+            self.column_visibility = source.column_visibility.clone();
+        }
+        if source.presence.column_sizing_info && self.column_sizing_info.is_none() {
+            self.column_sizing_info = source.column_sizing_info.clone();
+        }
+        if source.presence.pagination && self.pagination.is_none() {
+            self.pagination = source.pagination;
+        }
+        if source.presence.global_filter && self.global_filter.is_none() {
+            self.global_filter = source.global_filter.clone();
+        }
+
+        self
+    }
+
+    pub fn from_table_state_with_shape(state: &TableState, source: &Self) -> Self {
+        Self::from_table_state(state).with_presence_hint(source)
+    }
+
+    fn resolve_row_id_for_key<'a, TData>(
+        core_row_model: &RowModel<'a, TData>,
+        grouped_row_model: Option<&GroupedRowModel>,
+        field: &'static str,
+        row_key: RowKey,
+    ) -> Result<String, TanStackStateError> {
+        if let Some(grouped) = grouped_row_model {
+            if let Some(index) = grouped.row_by_key(row_key) {
+                if let Some(row) = grouped.row(index) {
+                    return Ok(row.id.as_str().to_string());
+                }
+            }
+        }
+
+        let index = core_row_model
+            .row_by_key(row_key)
+            .ok_or(TanStackStateError::UnresolvedRowKey { field, row_key })?;
+        let row = core_row_model
+            .row(index)
+            .ok_or(TanStackStateError::UnresolvedRowKey { field, row_key })?;
+        Ok(row.id.as_str().to_string())
+    }
+
+    pub fn from_table_state_with_row_models<'a, TData>(
+        state: &TableState,
+        core_row_model: &RowModel<'a, TData>,
+        grouped_row_model: Option<&GroupedRowModel>,
+    ) -> Result<Self, TanStackStateError> {
+        let mut out = Self::from_table_state(state);
+
+        out.expanded = match &state.expanding {
+            ExpandingState::All => Some(TanStackExpandedState::All(true)),
+            ExpandingState::Keys(keys) if keys.is_empty() => None,
+            ExpandingState::Keys(keys) => Some(TanStackExpandedState::Map(
+                keys.iter()
+                    .map(|row_key| {
+                        let row_id = Self::resolve_row_id_for_key(
+                            core_row_model,
+                            grouped_row_model,
+                            "expanded",
+                            *row_key,
+                        )?;
+                        Ok((row_id, true))
+                    })
+                    .collect::<Result<BTreeMap<_, _>, TanStackStateError>>()?,
+            )),
+        };
+
+        out.row_pinning = if state.row_pinning.top.is_empty() && state.row_pinning.bottom.is_empty()
+        {
+            None
+        } else {
+            Some(TanStackRowPinningState {
+                top: state
+                    .row_pinning
+                    .top
+                    .iter()
+                    .map(|row_key| {
+                        Self::resolve_row_id_for_key(
+                            core_row_model,
+                            grouped_row_model,
+                            "rowPinning.top",
+                            *row_key,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+                bottom: state
+                    .row_pinning
+                    .bottom
+                    .iter()
+                    .map(|row_key| {
+                        Self::resolve_row_id_for_key(
+                            core_row_model,
+                            grouped_row_model,
+                            "rowPinning.bottom",
+                            *row_key,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            })
+        };
+
+        out.row_selection = if state.row_selection.is_empty() {
+            None
+        } else {
+            Some(
+                state
+                    .row_selection
+                    .iter()
+                    .map(|row_key| {
+                        let row_id = Self::resolve_row_id_for_key(
+                            core_row_model,
+                            grouped_row_model,
+                            "rowSelection",
+                            *row_key,
+                        )?;
+                        Ok((row_id, true))
+                    })
+                    .collect::<Result<BTreeMap<_, _>, TanStackStateError>>()?,
+            )
+        };
+
+        out.presence.expanded = out.expanded.is_some();
+        out.presence.row_pinning = out.row_pinning.is_some();
+        out.presence.row_selection = out.row_selection.is_some();
+
+        Ok(out)
+    }
+
+    pub fn from_table_state_with_row_model<'a, TData>(
+        state: &TableState,
+        core_row_model: &RowModel<'a, TData>,
+    ) -> Result<Self, TanStackStateError> {
+        Self::from_table_state_with_row_models(state, core_row_model, None)
+    }
+
+    pub fn from_table_state_with_row_models_and_shape<'a, TData>(
+        state: &TableState,
+        core_row_model: &RowModel<'a, TData>,
+        grouped_row_model: Option<&GroupedRowModel>,
+        source: &Self,
+    ) -> Result<Self, TanStackStateError> {
+        Ok(
+            Self::from_table_state_with_row_models(state, core_row_model, grouped_row_model)?
+                .with_presence_hint(source),
+        )
+    }
+
+    pub fn from_table_state_with_row_model_and_shape<'a, TData>(
+        state: &TableState,
+        core_row_model: &RowModel<'a, TData>,
+        source: &Self,
+    ) -> Result<Self, TanStackStateError> {
+        Self::from_table_state_with_row_models_and_shape(state, core_row_model, None, source)
     }
 
     pub fn to_table_state(&self) -> Result<TableState, TanStackStateError> {
@@ -507,15 +897,29 @@ impl TanStackTableState {
         Ok(out)
     }
 
-    pub fn to_table_state_with_row_model<'a, TData>(
+    pub fn to_table_state_with_row_models<'a, TData>(
         &self,
         core_row_model: &RowModel<'a, TData>,
+        grouped_row_model: Option<&GroupedRowModel>,
     ) -> Result<TableState, TanStackStateError> {
         fn resolve_row_key<'a, TData>(
             core: &RowModel<'a, TData>,
+            grouped: Option<&GroupedRowModel>,
             field: &'static str,
             row_id: &str,
         ) -> Result<RowKey, TanStackStateError> {
+            if let Some(grouped) = grouped {
+                if let Some(index) = grouped.row_by_id(row_id) {
+                    let row =
+                        grouped
+                            .row(index)
+                            .ok_or_else(|| TanStackStateError::UnresolvedRowId {
+                                field,
+                                row_id: row_id.to_string(),
+                            })?;
+                    return Ok(row.key);
+                }
+            }
             if let Some(index) = core.row_by_id(row_id) {
                 let row = core
                     .row(index)
@@ -545,7 +949,7 @@ impl TanStackTableState {
             out.row_selection = sel
                 .iter()
                 .filter(|(_k, v)| **v)
-                .map(|(k, _)| resolve_row_key(core_row_model, "rowSelection", k))
+                .map(|(k, _)| resolve_row_key(core_row_model, grouped_row_model, "rowSelection", k))
                 .collect::<Result<_, _>>()?;
         }
 
@@ -556,7 +960,9 @@ impl TanStackTableState {
                 TanStackExpandedState::Map(map) => ExpandingState::from_iter(
                     map.iter()
                         .filter(|(_k, v)| **v)
-                        .map(|(k, _)| resolve_row_key(core_row_model, "expanded", k))
+                        .map(|(k, _)| {
+                            resolve_row_key(core_row_model, grouped_row_model, "expanded", k)
+                        })
                         .collect::<Result<Vec<_>, _>>()?,
                 ),
             };
@@ -565,16 +971,31 @@ impl TanStackTableState {
         if let Some(pinning) = self.row_pinning.as_ref() {
             let mut next = RowPinningState::default();
             for id in &pinning.top {
-                next.top
-                    .push(resolve_row_key(core_row_model, "rowPinning.top", id)?);
+                next.top.push(resolve_row_key(
+                    core_row_model,
+                    grouped_row_model,
+                    "rowPinning.top",
+                    id,
+                )?);
             }
             for id in &pinning.bottom {
-                next.bottom
-                    .push(resolve_row_key(core_row_model, "rowPinning.bottom", id)?);
+                next.bottom.push(resolve_row_key(
+                    core_row_model,
+                    grouped_row_model,
+                    "rowPinning.bottom",
+                    id,
+                )?);
             }
             out.row_pinning = next;
         }
 
         Ok(out)
+    }
+
+    pub fn to_table_state_with_row_model<'a, TData>(
+        &self,
+        core_row_model: &RowModel<'a, TData>,
+    ) -> Result<TableState, TanStackStateError> {
+        self.to_table_state_with_row_models(core_row_model, None)
     }
 }

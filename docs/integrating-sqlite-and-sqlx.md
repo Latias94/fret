@@ -115,6 +115,7 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
 
 Notes:
 
+- Enable `fret-query/ui` if you want `ElementContext` sugar like `cx.use_query_async(...)`.
 - Use a dot-separated namespace with a version suffix (`...v1`) so you can bulk-invalidate safely.
 - SQLite often produces “database is locked” under write contention; treat it as `Transient` and
   rely on retry/backoff instead of surfacing it as a hard failure.

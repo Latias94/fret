@@ -1,4 +1,4 @@
-use crate::query::decode_component;
+use crate::query::decode_path_component;
 
 /// Parse a token-style hash value.
 ///
@@ -19,7 +19,7 @@ pub fn hash_token(hash: &str) -> Option<String> {
         .trim_start_matches('/')
         .split('/')
         .find(|segment| !segment.is_empty())?;
-    let token = decode_component(token);
+    let token = decode_path_component(token);
     if token.is_empty() { None } else { Some(token) }
 }
 
@@ -38,5 +38,10 @@ mod tests {
         assert_eq!(hash_token("#ui_gallery").as_deref(), Some("ui_gallery"));
         assert_eq!(hash_token("#/ui_gallery").as_deref(), Some("ui_gallery"));
         assert_eq!(hash_token("#demo=ui_gallery"), None);
+    }
+
+    #[test]
+    fn hash_token_does_not_decode_plus_as_space() {
+        assert_eq!(hash_token("#c++").as_deref(), Some("c++"));
     }
 }

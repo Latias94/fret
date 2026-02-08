@@ -70,12 +70,15 @@ impl Message {
         let gap = self.gap;
         let children = self.children;
         let layout = self.layout.merge(LayoutRefinement::default().w_full());
+        let inner_layout = if self.from == MessageRole::User {
+            LayoutRefinement::default().min_w_0()
+        } else {
+            LayoutRefinement::default().w_full().min_w_0()
+        };
 
         let inner = stack::vstack(
             cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(gap),
+            stack::VStackProps::default().layout(inner_layout).gap(gap),
             move |_cx| children,
         );
 
@@ -170,7 +173,15 @@ impl MessageContent {
         };
 
         let chrome = base_chrome.merge(self.chrome);
-        let layout = self.layout.merge(LayoutRefinement::default().min_w_0());
+        let base_layout = if self.from == MessageRole::User {
+            // User messages should size to their bubble content.
+            LayoutRefinement::default().min_w_0()
+        } else {
+            // Assistant/system/tool messages should participate in the full-width flow so text
+            // measurement receives stable width constraints (avoids 0-width wrap explosions).
+            LayoutRefinement::default().w_full().min_w_0()
+        };
+        let layout = base_layout.merge(self.layout);
         let children = self.children;
 
         let props = decl_style::container_props(&theme, chrome, layout);
@@ -178,7 +189,7 @@ impl MessageContent {
             vec![stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .layout(LayoutRefinement::default().min_w_0())
                     .gap(Space::N2),
                 move |_cx| children,
             )]

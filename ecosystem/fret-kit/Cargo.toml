@@ -41,7 +41,7 @@ workspace-shell = ["dep:fret-workspace", "fret-workspace/shadcn-context-menu", "
 thiserror.workspace = true
 
 # Re-exported stable surface for core framework types.
-fret = { path = "../../crates/fret", optional = true }
+fret = { path = "../../crates/fret", optional = true, default-features = false }
 
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { path = "../fret-bootstrap", default-features = false }

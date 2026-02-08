@@ -15,7 +15,6 @@ alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
 hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
 node-graph-demos = ["fret-node/imui"]
-layout-engine-v2 = ["fret-ui/layout-engine-v2", "fret-docking/layout-engine-v2"]
 
 [dependencies]
 anyhow.workspace = true
@@ -44,8 +43,10 @@ fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }
 fret-executor = { path = "../../ecosystem/fret-executor" }
-fret-query = { path = "../../ecosystem/fret-query" }
-fret-selector = { path = "../../ecosystem/fret-selector" }
+fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] }
+fret-router = { path = "../../ecosystem/fret-router", features = ["query-integration"] }
+fret-router-ui = { path = "../../ecosystem/fret-router-ui" }
+fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] }
 bytemuck.workspace = true
 glam.workspace = true
 serde_json.workspace = true

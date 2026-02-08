@@ -4151,6 +4151,69 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    pub fn debug_node_element(&self, node: NodeId) -> Option<GlobalElementId> {
+        self.nodes.get(node).and_then(|n| n.element)
+    }
+
+    pub fn debug_node_clips_hit_test(&self, node: NodeId) -> Option<bool> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        Some(
+            prepaint
+                .as_ref()
+                .map(|p| p.clips_hit_test)
+                .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true)),
+        )
+    }
+
+    pub fn debug_node_can_scroll_descendant_into_view(&self, node: NodeId) -> Option<bool> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        Some(
+            prepaint
+                .as_ref()
+                .map(|p| p.can_scroll_descendant_into_view)
+                .unwrap_or_else(|| {
+                    widget
+                        .map(|w| w.can_scroll_descendant_into_view())
+                        .unwrap_or(false)
+                }),
+        )
+    }
+
+    pub fn debug_node_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        if let Some(inv) = prepaint.as_ref().and_then(|p| p.render_transform_inv) {
+            return inv.inverse();
+        }
+        widget.and_then(|w| w.render_transform(n.bounds))
+    }
+
+    pub fn debug_node_children_render_transform(&self, node: NodeId) -> Option<Transform2D> {
+        let n = self.nodes.get(node)?;
+        let widget = n.widget.as_ref();
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        if let Some(inv) = prepaint
+            .as_ref()
+            .and_then(|p| p.children_render_transform_inv)
+        {
+            return inv.inverse();
+        }
+        widget.and_then(|w| w.children_render_transform(n.bounds))
+    }
+
     pub fn debug_text_constraints_snapshot(&self, node: NodeId) -> UiDebugTextConstraintsSnapshot {
         #[cfg(feature = "diagnostics")]
         {
@@ -4183,7 +4246,7 @@ impl<H: UiHost> UiTree<H> {
         let mut transform = Transform2D::IDENTITY;
         for (idx, id) in path.iter().copied().enumerate() {
             let node_transform = self
-                .node_render_transform(id)
+                .debug_node_render_transform(id)
                 .unwrap_or(Transform2D::IDENTITY);
             let at_node = before.compose(node_transform);
             if id == node {
@@ -4191,7 +4254,7 @@ impl<H: UiHost> UiTree<H> {
                 break;
             }
             let child_transform = self
-                .node_children_render_transform(id)
+                .debug_node_children_render_transform(id)
                 .unwrap_or(Transform2D::IDENTITY);
             before = at_node.compose(child_transform);
 
@@ -7086,9 +7149,28 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     }
 
-                    let node_transform = widget
-                        .and_then(|w| w.render_transform(node.bounds))
-                        .filter(|t| t.inverse().is_some())
+                    // Prefer prepaint-derived transforms when they are known to be valid, but
+                    // fall back to live widget transforms while hit-test invalidations are
+                    // pending.
+                    //
+                    // Hit-testing intentionally avoids `prepaint_hit_test` when `hit_test` is
+                    // invalidated (see `hit_test.rs`) to prevent stale transforms from affecting
+                    // pointer routing. Semantics should follow the same rule so scripted
+                    // diagnostics (which pick click points from semantics bounds) remain aligned
+                    // with the actual hit-test coordinate space.
+                    let prepaint = (!self.inspection_active && !node.invalidation.hit_test)
+                        .then_some(node.prepaint_hit_test)
+                        .flatten();
+
+                    let node_transform = prepaint
+                        .as_ref()
+                        .and_then(|p| p.render_transform_inv)
+                        .and_then(|inv| inv.inverse())
+                        .or_else(|| {
+                            widget
+                                .and_then(|w| w.render_transform(node.bounds))
+                                .filter(|t| t.inverse().is_some())
+                        })
                         .unwrap_or(Transform2D::IDENTITY);
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
@@ -7111,9 +7193,15 @@ impl<H: UiHost> UiTree<H> {
                     let is_text_input = widget.is_some_and(|w| w.is_text_input());
                     let is_focusable = widget.is_some_and(|w| w.is_focusable());
                     let traverse_children = widget.map(|w| w.semantics_children()).unwrap_or(true);
-                    let child_transform = widget
-                        .and_then(|w| w.children_render_transform(node.bounds))
-                        .filter(|t| t.inverse().is_some())
+                    let child_transform = prepaint
+                        .as_ref()
+                        .and_then(|p| p.children_render_transform_inv)
+                        .and_then(|inv| inv.inverse())
+                        .or_else(|| {
+                            widget
+                                .and_then(|w| w.children_render_transform(node.bounds))
+                                .filter(|t| t.inverse().is_some())
+                        })
                         .unwrap_or(Transform2D::IDENTITY);
                     let before_child = at_node.compose(child_transform);
 

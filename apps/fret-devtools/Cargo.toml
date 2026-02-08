@@ -1,0 +1,30 @@
+[package]
+name = "fret-devtools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+default-run = "fret-devtools"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
+fret-app = { path = "../../crates/fret-app" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-launch = { path = "../../crates/fret-launch" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "icons-lucide", "diagnostics"] }
+fret-diag = { path = "../../crates/fret-diag" }
+fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
+fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["client-native", "server-native"] }

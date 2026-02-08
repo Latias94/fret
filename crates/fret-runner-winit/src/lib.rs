@@ -14,12 +14,6 @@ use winit::event::{
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::Window;
 
-#[cfg(target_arch = "wasm32")]
-use std::rc::Rc;
-
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowExtWeb;
-
 pub mod accessibility;
 
 #[cfg(windows)]
@@ -101,144 +95,6 @@ impl WinitPlatform {
     pub fn prepare_frame(&mut self, window: &dyn Window) {
         self.window.prepare_frame(window);
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunnerError {
-    message: String,
-}
-
-impl RunnerError {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
-    }
-}
-
-impl std::fmt::Display for RunnerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for RunnerError {}
-
-#[cfg(target_arch = "wasm32")]
-pub fn canvas_by_id(id: &str) -> Result<web_sys::HtmlCanvasElement, RunnerError> {
-    use wasm_bindgen::JsCast as _;
-
-    let window = web_sys::window().ok_or_else(|| RunnerError::new("window is not available"))?;
-    let document = window
-        .document()
-        .ok_or_else(|| RunnerError::new("document is not available"))?;
-    let el = document
-        .get_element_by_id(id)
-        .ok_or_else(|| RunnerError::new("canvas element not found"))?;
-    el.dyn_into::<web_sys::HtmlCanvasElement>()
-        .map_err(|_| RunnerError::new("element is not a canvas"))
-}
-
-#[cfg(target_arch = "wasm32")]
-pub struct WebCursorListener {
-    canvas: web_sys::HtmlCanvasElement,
-    on_move: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
-    on_leave: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Drop for WebCursorListener {
-    fn drop(&mut self) {
-        use wasm_bindgen::JsCast as _;
-
-        let _ = self.canvas.remove_event_listener_with_callback(
-            "pointermove",
-            self.on_move.as_ref().unchecked_ref(),
-        );
-        let _ = self.canvas.remove_event_listener_with_callback(
-            "pointerleave",
-            self.on_leave.as_ref().unchecked_ref(),
-        );
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-mod web_cursor {
-    use std::cell::Cell;
-
-    use wasm_bindgen::JsCast as _;
-    use wasm_bindgen::prelude::wasm_bindgen;
-
-    thread_local! {
-        static LAST_POS: Cell<Option<(f32, f32)>> = const { Cell::new(None) };
-    }
-
-    pub(super) fn set(pos: Option<(f32, f32)>) {
-        LAST_POS.with(|cell| cell.set(pos));
-    }
-
-    pub(super) fn get() -> Option<(f32, f32)> {
-        LAST_POS.with(|cell| cell.get())
-    }
-
-    pub(super) fn pointer_offset(event: &web_sys::PointerEvent) -> (f32, f32) {
-        #[wasm_bindgen]
-        extern "C" {
-            type PointerEventExt;
-
-            #[wasm_bindgen(method, getter, js_name = offsetX)]
-            fn offset_x(this: &PointerEventExt) -> f64;
-
-            #[wasm_bindgen(method, getter, js_name = offsetY)]
-            fn offset_y(this: &PointerEventExt) -> f64;
-        }
-
-        let event: &PointerEventExt = event.unchecked_ref();
-        (event.offset_x() as f32, event.offset_y() as f32)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn install_web_cursor_listener(
-    window: &dyn winit::window::Window,
-    wake: impl Fn() + 'static,
-) -> Result<WebCursorListener, RunnerError> {
-    use wasm_bindgen::JsCast as _;
-
-    let Some(canvas) = window.canvas() else {
-        return Err(RunnerError::new("winit window has no canvas"));
-    };
-    let canvas: web_sys::HtmlCanvasElement = canvas.clone();
-
-    let wake = Rc::new(wake);
-    let wake_move = wake.clone();
-    let on_move =
-        wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
-            let (x, y) = web_cursor::pointer_offset(&event);
-            web_cursor::set(Some((x, y)));
-            wake_move();
-        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
-
-    let wake_leave = wake.clone();
-    let on_leave =
-        wasm_bindgen::closure::Closure::wrap(Box::new(move |_event: web_sys::PointerEvent| {
-            web_cursor::set(None);
-            wake_leave();
-        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
-
-    canvas
-        .add_event_listener_with_callback("pointermove", on_move.as_ref().unchecked_ref())
-        .map_err(|_| RunnerError::new("failed to add pointermove listener"))?;
-
-    canvas
-        .add_event_listener_with_callback("pointerleave", on_leave.as_ref().unchecked_ref())
-        .map_err(|_| RunnerError::new("failed to add pointerleave listener"))?;
-
-    Ok(WebCursorListener {
-        canvas,
-        on_move,
-        on_leave,
-    })
 }
 
 #[derive(Debug, Default, Clone)]
@@ -832,8 +688,13 @@ impl WinitInputState {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn poll_web_cursor_updates(&mut self, window_scale_factor: f64, out: &mut Vec<Event>) {
-        let Some((x, y)) = web_cursor::get() else {
+    pub fn poll_web_cursor_updates(
+        &mut self,
+        window_scale_factor: f64,
+        offset_px: Option<(f32, f32)>,
+        out: &mut Vec<Event>,
+    ) {
+        let Some((x, y)) = offset_px else {
             self.cursor_pos_physical = None;
             return;
         };
@@ -1067,9 +928,6 @@ pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
         PointerKind::Unknown => PointerType::Unknown,
     }
 }
-
-#[cfg(test)]
-mod click_tracker_tests;
 
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {

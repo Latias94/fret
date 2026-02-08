@@ -35,8 +35,8 @@ We “follow the mature upstream” here:
   - `crates/fret-core/src/vector_path.rs` (`PathCommand`, `PathService`)
   - `crates/fret-core/src/scene.rs` (`SceneOp::Path`, `SceneOp::MaskImage`)
 - Renderer:
-  - `crates/fret-render/src/renderer/mod.rs` (path tessellation cache, path MSAA intermediate + composite, mask pipeline)
-  - `crates/fret-render/src/svg.rs` (CPU SVG rasterization + upload helpers)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (path tessellation cache, path MSAA intermediate + composite, mask pipeline)
+  - `crates/fret-render-wgpu/src/svg.rs` (CPU SVG rasterization + upload helpers)
 - UI primitives:
   - `SvgIcon` (tinted alpha-mask icon): `crates/fret-ui/src/element.rs` (`SvgIconProps`), paint in `crates/fret-ui/src/declarative/host_widget/paint.rs`
   - `SceneOp::Path` (used by plots today): `ecosystem/fret-plot/src/retained/canvas/mod.rs`

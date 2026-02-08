@@ -21,6 +21,19 @@ pub enum SortingFnDef<TData> {
     Cmp(SortCmpFn<TData>),
 }
 
+/// A Send+Sync subset of upstream `Column` needed for sorting state transitions.
+///
+/// This exists because `ColumnDef<TData>` carries non-Send/Sync function pointers, but the
+/// headless engine's `Updater<T>` closures are required to be Send+Sync.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SortToggleColumn {
+    pub id: ColumnId,
+    pub enable_sorting: bool,
+    pub enable_multi_sort: bool,
+    pub sort_desc_first: Option<bool>,
+    pub has_sort_value_source: bool,
+}
+
 pub fn sort_for_column(sorting: &[SortSpec], id: &str) -> Option<bool> {
     sorting
         .iter()
@@ -75,9 +88,9 @@ pub fn toggle_sort_for_column(sorting: &mut SortingState, column: ColumnId, mult
 /// - This currently does not implement TanStack’s `getAutoSortDir()` inference (string => asc, else
 ///   desc) when `sortDescFirst` is unset. Until we add a stable “sort value extractor” surface,
 ///   the fallback first direction is `asc`.
-pub fn toggle_sorting_tanstack<TData>(
+pub fn toggle_sorting_state_tanstack(
     sorting: &mut SortingState,
-    column: &ColumnDef<TData>,
+    column: &SortToggleColumn,
     options: TableOptions,
     multi: bool,
     auto_sort_dir_desc: bool,
@@ -193,6 +206,46 @@ pub fn toggle_sorting_tanstack<TData>(
     }
 }
 
+pub fn toggle_sorting_tanstack<TData>(
+    sorting: &mut SortingState,
+    column: &ColumnDef<TData>,
+    options: TableOptions,
+    multi: bool,
+    auto_sort_dir_desc: bool,
+) {
+    let col = SortToggleColumn {
+        id: column.id.clone(),
+        enable_sorting: column.enable_sorting,
+        enable_multi_sort: column.enable_multi_sort,
+        sort_desc_first: column.sort_desc_first,
+        has_sort_value_source: column.sort_cmp.is_some() || column.sort_value.is_some(),
+    };
+    toggle_sorting_state_tanstack(sorting, &col, options, multi, auto_sort_dir_desc);
+}
+
+/// TanStack-aligned sorting handler state transition (UI handler semantics).
+///
+/// This mirrors `column.getToggleSortingHandler()` which first checks `getCanSort()` (and thus
+/// respects `enableSorting`) and uses `getCanMultiSort()` + `isMultiSortEvent` to decide whether a
+/// multi-sort toggle is active.
+pub fn toggle_sorting_state_handler_tanstack(
+    sorting: &mut SortingState,
+    column: &SortToggleColumn,
+    options: TableOptions,
+    event_multi: bool,
+    auto_sort_dir_desc: bool,
+) {
+    let can_sort = options.enable_sorting && column.enable_sorting && column.has_sort_value_source;
+    if !can_sort {
+        return;
+    }
+
+    let can_multi_sort = options.enable_multi_sort && column.enable_multi_sort;
+    let multi = if can_multi_sort { event_multi } else { false };
+
+    toggle_sorting_state_tanstack(sorting, column, options, multi, auto_sort_dir_desc);
+}
+
 /// TanStack-aligned sorting handler state transition (UI handler semantics).
 ///
 /// This mirrors `column.getToggleSortingHandler()` which first checks `getCanSort()` (and thus
@@ -205,17 +258,14 @@ pub fn toggle_sorting_handler_tanstack<TData>(
     event_multi: bool,
     auto_sort_dir_desc: bool,
 ) {
-    let can_sort = options.enable_sorting
-        && column.enable_sorting
-        && (column.sort_cmp.is_some() || column.sort_value.is_some());
-    if !can_sort {
-        return;
-    }
-
-    let can_multi_sort = options.enable_multi_sort && column.enable_multi_sort;
-    let multi = if can_multi_sort { event_multi } else { false };
-
-    toggle_sorting_tanstack(sorting, column, options, multi, auto_sort_dir_desc);
+    let col = SortToggleColumn {
+        id: column.id.clone(),
+        enable_sorting: column.enable_sorting,
+        enable_multi_sort: column.enable_multi_sort,
+        sort_desc_first: column.sort_desc_first,
+        has_sort_value_source: column.sort_cmp.is_some() || column.sort_value.is_some(),
+    };
+    toggle_sorting_state_handler_tanstack(sorting, &col, options, event_multi, auto_sort_dir_desc);
 }
 
 fn builtin_sorting_fn_key(key: &str) -> Option<BuiltInSortingFn> {

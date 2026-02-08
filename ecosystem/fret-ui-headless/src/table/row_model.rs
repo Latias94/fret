@@ -172,6 +172,8 @@ pub struct TableBuilder<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    filtered_row_model_override_pre_filtered: bool,
+    sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     initial_state: Option<super::TableState>,
@@ -200,6 +202,8 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_id: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            filtered_row_model_override_pre_filtered: false,
+            sorted_row_model_override_pre_sorted: false,
             expanded_row_model_override_pre_expanded: false,
             pagination_row_model_override_pre_pagination: false,
             initial_state: None,
@@ -258,13 +262,25 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Register a named filter function with TanStack-like `addMeta` support.
+    pub fn filter_fn_value_with_meta(
+        mut self,
+        key: impl Into<Arc<str>>,
+        f: impl Fn(&super::TanStackValue, &serde_json::Value, &mut dyn FnMut(serde_json::Value)) -> bool
+        + 'static,
+    ) -> Self {
+        self.filter_fns
+            .insert(key.into(), super::FilterFnDef::ValueWithMeta(Arc::new(f)));
+        self
+    }
+
     /// Configure the global filter function (TanStack `globalFilterFn`).
     pub fn global_filter_fn(mut self, spec: super::FilteringFnSpec) -> Self {
         self.global_filter_fn = spec;
         self
     }
 
-    /// Configure the table-level “can global filter” hook (TanStack `getColumnCanGlobalFilter`).
+    /// Configure the table-level global filter hook (TanStack `getColumnCanGlobalFilter`).
     pub fn get_column_can_global_filter(
         mut self,
         f: impl Fn(&super::ColumnDef<TData>, &TData) -> bool + 'static,
@@ -296,8 +312,30 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn filter_from_leaf_rows(mut self, enabled: bool) -> Self {
+        self.options.filter_from_leaf_rows = enabled;
+        self
+    }
+
+    pub fn max_leaf_row_filter_depth(mut self, depth: usize) -> Self {
+        self.options.max_leaf_row_filter_depth = depth;
+        self
+    }
+
+    /// TanStack-aligned: override `getFilteredRowModel` to return `getPreFilteredRowModel()`.
+    pub fn override_filtered_row_model_pre_filtered(mut self) -> Self {
+        self.filtered_row_model_override_pre_filtered = true;
+        self
+    }
+
     pub fn manual_sorting(mut self, manual: bool) -> Self {
         self.options.manual_sorting = manual;
+        self
+    }
+
+    /// TanStack-aligned: override `getSortedRowModel` to return `getPreSortedRowModel()`.
+    pub fn override_sorted_row_model_pre_sorted(mut self) -> Self {
+        self.sorted_row_model_override_pre_sorted = true;
         self
     }
 
@@ -481,6 +519,8 @@ pub struct Table<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    filtered_row_model_override_pre_filtered: bool,
+    sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
@@ -491,6 +531,8 @@ pub struct Table<'a, TData> {
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_row_model: OnceCell<super::GroupedRowModel>,
+    grouped_pre_sorted_row_model: OnceCell<RowModel<'a, TData>>,
+    grouped_sorted_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_u64_aggregations: OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, u64)]>>>,
     grouped_any_aggregations:
         OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, super::TanStackValue)]>>>,
@@ -586,6 +628,9 @@ impl<'a, TData> Table<'a, TData> {
             get_row_id: builder.get_row_id,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            filtered_row_model_override_pre_filtered: builder
+                .filtered_row_model_override_pre_filtered,
+            sorted_row_model_override_pre_sorted: builder.sorted_row_model_override_pre_sorted,
             expanded_row_model_override_pre_expanded: builder
                 .expanded_row_model_override_pre_expanded,
             pagination_row_model_override_pre_pagination: builder
@@ -597,6 +642,8 @@ impl<'a, TData> Table<'a, TData> {
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             grouped_row_model: OnceCell::new(),
+            grouped_pre_sorted_row_model: OnceCell::new(),
+            grouped_sorted_row_model: OnceCell::new(),
             grouped_u64_aggregations: OnceCell::new(),
             grouped_any_aggregations: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
@@ -737,6 +784,22 @@ impl<'a, TData> Table<'a, TData> {
         None
     }
 
+    pub fn row_id_for_key(&self, row_key: RowKey) -> Option<RowId> {
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            if let Some(i) = grouped.row_by_key(row_key) {
+                if let Some(row) = grouped.row(i) {
+                    return Some(row.id.clone());
+                }
+            }
+        }
+
+        let core = self.core_row_model();
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+        Some(row.id.clone())
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
     }
@@ -831,9 +894,71 @@ impl<'a, TData> Table<'a, TData> {
         row_key: RowKey,
         value: Option<bool>,
     ) -> super::ExpandingState {
-        let mut next = self.state.expanding.clone();
-        super::toggle_row_expanded(&mut next, self.row_model(), row_key, value);
-        next
+        self.row_expanding_updater(row_key, value)
+            .apply(&self.state.expanding)
+    }
+
+    pub fn row_expanding_updater(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+    ) -> super::Updater<super::ExpandingState> {
+        let visible_row_keys: Vec<RowKey> = if self.state.grouping.is_empty() {
+            self.row_model().rows_by_key().keys().copied().collect()
+        } else {
+            let grouped = self.grouped_row_model();
+            grouped
+                .flat_rows()
+                .iter()
+                .filter_map(|&index| grouped.row(index).map(|row| row.key))
+                .collect()
+        };
+        super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            let exists = super::is_row_expanded(row_key, &next);
+            let expanded_value = value.unwrap_or(!exists);
+
+            match &mut next {
+                super::ExpandingState::All => {
+                    if expanded_value {
+                        return next;
+                    }
+
+                    let mut keys: HashSet<RowKey> = visible_row_keys.iter().copied().collect();
+                    keys.remove(&row_key);
+                    next = super::ExpandingState::Keys(keys);
+                }
+                super::ExpandingState::Keys(keys) => {
+                    if expanded_value {
+                        keys.insert(row_key);
+                    } else {
+                        keys.remove(&row_key);
+                    }
+                }
+            }
+
+            next
+        }))
+    }
+
+    pub fn row_expanding_updater_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+    ) -> Option<super::Updater<super::ExpandingState>> {
+        let row_key = self.row_key_for_id(row_id, search_all)?;
+        Some(self.row_expanding_updater(row_key, value))
+    }
+
+    pub fn toggled_row_expanded_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+    ) -> Option<super::ExpandingState> {
+        let updater = self.row_expanding_updater_by_id(row_id, search_all, value)?;
+        Some(updater.apply(&self.state.expanding))
     }
 
     /// TanStack-aligned: `autoResetAll ?? autoResetExpanded ?? !manualExpanding`.
@@ -1089,8 +1214,23 @@ impl<'a, TData> Table<'a, TData> {
         self.filtered_row_model()
     }
 
+    fn can_compute_grouped_row_model(&self) -> bool {
+        if self.state.grouping.is_empty() {
+            return false;
+        }
+
+        self.state.grouping.iter().all(|column_id| {
+            self.column(column_id.as_ref()).is_some_and(|column| {
+                column.facet_key_fn.is_some() || column.facet_str_fn.is_some()
+            })
+        })
+    }
+
     pub fn grouped_row_model(&self) -> &super::GroupedRowModel {
-        if self.options.manual_grouping || self.state.grouping.is_empty() {
+        if self.options.manual_grouping
+            || self.state.grouping.is_empty()
+            || !self.can_compute_grouped_row_model()
+        {
             return self
                 .grouped_row_model
                 .get_or_init(|| super::grouped_row_model_from_leaf(self.pre_grouped_row_model()));
@@ -1110,6 +1250,257 @@ impl<'a, TData> Table<'a, TData> {
                 &self.columns,
                 &self.state.grouping,
             )
+        })
+    }
+
+    fn grouped_row_original(&self, grouped_row: &super::GroupedRow) -> Option<&'a TData> {
+        let row_key = match &grouped_row.kind {
+            super::GroupedRowKind::Leaf { row_key } => *row_key,
+            super::GroupedRowKind::Group {
+                first_leaf_row_key, ..
+            } => *first_leaf_row_key,
+        };
+        let core = self.core_row_model();
+        core.row_by_key(row_key)
+            .and_then(|index| core.row(index).map(|row| row.original))
+    }
+
+    fn grouped_row_index_in_core(&self, grouped_row: &super::GroupedRow, fallback: usize) -> usize {
+        let row_key = match &grouped_row.kind {
+            super::GroupedRowKind::Leaf { row_key } => *row_key,
+            super::GroupedRowKind::Group {
+                first_leaf_row_key, ..
+            } => *first_leaf_row_key,
+        };
+        let core = self.core_row_model();
+        core.row_by_key(row_key)
+            .and_then(|index| core.row(index).map(|row| row.index))
+            .unwrap_or(fallback)
+    }
+
+    fn build_grouped_row_model_as_row_model(
+        &self,
+        sorting: &[super::SortSpec],
+        preserve_grouped_flat_rows: bool,
+    ) -> RowModel<'a, TData> {
+        let grouped = self.grouped_row_model();
+
+        let mut row_model = RowModel {
+            root_rows: Vec::new(),
+            flat_rows: Vec::new(),
+            rows_by_key: HashMap::new(),
+            rows_by_id: HashMap::new(),
+            arena: Vec::new(),
+        };
+
+        if grouped.root_rows().is_empty() {
+            return row_model;
+        }
+
+        let mut root_grouped_rows: Vec<super::GroupedRowIndex> = grouped.root_rows().to_vec();
+        let mut sorted_children_by_grouped_index: HashMap<
+            super::GroupedRowIndex,
+            Vec<super::GroupedRowIndex>,
+        > = HashMap::new();
+
+        let mut row_index_by_key: HashMap<RowKey, usize> = HashMap::new();
+        let core = self.core_row_model();
+        for &index in core.flat_rows() {
+            let Some(row) = core.row(index) else {
+                continue;
+            };
+            row_index_by_key.entry(row.key).or_insert(row.index);
+        }
+
+        if !sorting.is_empty() {
+            super::sort_grouped_row_indices_in_place(
+                grouped,
+                root_grouped_rows.as_mut_slice(),
+                sorting,
+                self.columns.as_slice(),
+                self.data,
+                &row_index_by_key,
+                self.grouped_u64_aggregations(),
+                self.grouped_aggregations_any(),
+            );
+
+            fn sort_children_recursive<TData>(
+                table: &Table<'_, TData>,
+                grouped: &super::GroupedRowModel,
+                node: super::GroupedRowIndex,
+                sorting: &[super::SortSpec],
+                columns: &[super::ColumnDef<TData>],
+                data: &[TData],
+                row_index_by_key: &HashMap<RowKey, usize>,
+                sorted_children_by_grouped_index: &mut HashMap<
+                    super::GroupedRowIndex,
+                    Vec<super::GroupedRowIndex>,
+                >,
+            ) {
+                let Some(row) = grouped.row(node) else {
+                    return;
+                };
+                if row.sub_rows.is_empty() {
+                    return;
+                }
+
+                let mut children = row.sub_rows.clone();
+                super::sort_grouped_row_indices_in_place(
+                    grouped,
+                    children.as_mut_slice(),
+                    sorting,
+                    columns,
+                    data,
+                    row_index_by_key,
+                    table.grouped_u64_aggregations(),
+                    table.grouped_aggregations_any(),
+                );
+
+                for &child in &children {
+                    sort_children_recursive(
+                        table,
+                        grouped,
+                        child,
+                        sorting,
+                        columns,
+                        data,
+                        row_index_by_key,
+                        sorted_children_by_grouped_index,
+                    );
+                }
+
+                sorted_children_by_grouped_index.insert(node, children);
+            }
+
+            for &root in &root_grouped_rows {
+                sort_children_recursive(
+                    self,
+                    grouped,
+                    root,
+                    sorting,
+                    self.columns.as_slice(),
+                    self.data,
+                    &row_index_by_key,
+                    &mut sorted_children_by_grouped_index,
+                );
+            }
+        }
+
+        let mut grouped_to_row_index: HashMap<super::GroupedRowIndex, RowIndex> = HashMap::new();
+
+        fn materialize_grouped_row<'a, TData>(
+            table: &Table<'a, TData>,
+            grouped: &super::GroupedRowModel,
+            grouped_index: super::GroupedRowIndex,
+            parent: Option<RowIndex>,
+            parent_key: Option<RowKey>,
+            sorted_children_by_grouped_index: &HashMap<
+                super::GroupedRowIndex,
+                Vec<super::GroupedRowIndex>,
+            >,
+            row_model: &mut RowModel<'a, TData>,
+            grouped_to_row_index: &mut HashMap<super::GroupedRowIndex, RowIndex>,
+        ) -> Option<RowIndex> {
+            let grouped_row = grouped.row(grouped_index)?;
+            let original = table.grouped_row_original(grouped_row)?;
+            let depth = u16::try_from(grouped_row.depth).unwrap_or(u16::MAX);
+            let index = match &grouped_row.kind {
+                super::GroupedRowKind::Leaf { .. } => {
+                    table.grouped_row_index_in_core(grouped_row, grouped_index)
+                }
+                super::GroupedRowKind::Group { .. } => grouped_index,
+            };
+
+            let row_index = row_model.arena.len();
+            row_model.arena.push(Row {
+                id: grouped_row.id.clone(),
+                key: grouped_row.key,
+                original,
+                index,
+                depth,
+                parent,
+                parent_key,
+                sub_rows: Vec::new(),
+            });
+
+            row_model.rows_by_key.insert(grouped_row.key, row_index);
+            row_model
+                .rows_by_id
+                .insert(grouped_row.id.clone(), row_index);
+            grouped_to_row_index.insert(grouped_index, row_index);
+
+            if parent.is_none() {
+                row_model.root_rows.push(row_index);
+            }
+
+            row_model.flat_rows.push(row_index);
+
+            let grouped_children = sorted_children_by_grouped_index
+                .get(&grouped_index)
+                .map(|children| children.as_slice())
+                .unwrap_or_else(|| grouped_row.sub_rows.as_slice());
+
+            let mut row_children: Vec<RowIndex> = Vec::with_capacity(grouped_children.len());
+            for &child_grouped_index in grouped_children {
+                let Some(child_row_index) = materialize_grouped_row(
+                    table,
+                    grouped,
+                    child_grouped_index,
+                    Some(row_index),
+                    Some(grouped_row.key),
+                    sorted_children_by_grouped_index,
+                    row_model,
+                    grouped_to_row_index,
+                ) else {
+                    continue;
+                };
+                row_children.push(child_row_index);
+            }
+
+            if let Some(row) = row_model.arena.get_mut(row_index) {
+                row.sub_rows = row_children;
+            }
+
+            Some(row_index)
+        }
+
+        for &root_grouped_index in &root_grouped_rows {
+            let _ = materialize_grouped_row(
+                self,
+                grouped,
+                root_grouped_index,
+                None,
+                None,
+                &sorted_children_by_grouped_index,
+                &mut row_model,
+                &mut grouped_to_row_index,
+            );
+        }
+
+        if preserve_grouped_flat_rows {
+            row_model.flat_rows.clear();
+            for &grouped_index in grouped.flat_rows() {
+                let Some(row_index) = grouped_to_row_index.get(&grouped_index).copied() else {
+                    continue;
+                };
+                row_model.flat_rows.push(row_index);
+            }
+        }
+
+        row_model
+    }
+
+    fn grouped_pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        self.grouped_pre_sorted_row_model
+            .get_or_init(|| self.build_grouped_row_model_as_row_model(&[], true))
+    }
+
+    fn grouped_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.state.sorting.is_empty() {
+            return self.grouped_pre_sorted_row_model();
+        }
+        self.grouped_sorted_row_model.get_or_init(|| {
+            self.build_grouped_row_model_as_row_model(self.state.sorting.as_slice(), false)
         })
     }
 
@@ -1385,6 +1776,264 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// Returns a stable, memoized ordering of the root row list after filtering + sorting.
+    ///
+    /// This helper exists to support "rebuild each frame" callers: they can rebuild a fresh `Table`
+    /// while keeping a persistent memo cache (TanStack-style) outside the ephemeral instance.
+    ///
+    /// Notes:
+    /// - The returned ordering is based on the **flat core row model** (no grouping, no sub-rows).
+    /// - Cache invalidation is driven by `items_revision` plus a dependency snapshot derived from
+    ///   `state`, `options`, and the configured column/filter/sort surfaces.
+    pub fn tanstack_sorted_flat_row_order_with_cache(
+        &self,
+        items_revision: u64,
+        cache: &mut super::TanStackSortedFlatRowOrderCache,
+    ) -> (Arc<[super::FlatRowOrderEntry]>, bool) {
+        let deps = super::TanStackSortedFlatRowOrderDeps {
+            items_revision,
+            data_len: self.data.len(),
+            sorting: self.state.sorting.clone(),
+            column_filters: self.state.column_filters.clone(),
+            global_filter: self.state.global_filter.clone(),
+            options: self.options,
+            global_filter_fn: self.global_filter_fn.clone(),
+            has_get_column_can_global_filter: self.get_column_can_global_filter.is_some(),
+        };
+
+        let (order, recomputed) = cache.sorted_order(
+            self.data,
+            &self.columns,
+            self.get_row_key.as_ref(),
+            &self.filter_fns,
+            &self.sorting_fns,
+            self.get_column_can_global_filter.as_deref(),
+            deps,
+        );
+        (order.clone(), recomputed)
+    }
+
+    /// TanStack-aligned: `column.getCanSort()`.
+    pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+        Some(self.options.enable_sorting && col.enable_sorting && has_sort_value_source)
+    }
+
+    /// TanStack-aligned: `column.getCanMultiSort()`.
+    pub fn column_can_multi_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+
+        // TanStack: `columnDef.enableMultiSort ?? table.options.enableMultiSort ?? !!accessorFn`
+        // We treat “accessorFn exists” as “has a sort value source”.
+        if has_sort_value_source {
+            Some(self.options.enable_multi_sort && col.enable_multi_sort)
+        } else {
+            Some(false)
+        }
+    }
+
+    /// TanStack-aligned: `column.getAutoSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`.
+    pub fn column_auto_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream uses `firstRow.getValue(column.id)` (accessorFn). In the Rust engine, we only
+        // have a stable “getValue” equivalent when the column provides `sort_value_by`.
+        //
+        // When `sort_value_by` is unavailable, we fall back to `desc` (matching upstream’s
+        // empty-row behavior where the first value is `undefined` and `typeof undefined !== "string"`).
+        let Some(get_value) = col.sort_value.as_ref() else {
+            return Some(true);
+        };
+
+        let model = self.filtered_row_model();
+        let first_value = model
+            .flat_rows()
+            .first()
+            .and_then(|&i| model.row(i))
+            .map(|r| (get_value)(r.original));
+
+        let desc = match first_value {
+            Some(super::TanStackValue::String(_)) => false,
+            _ => true,
+        };
+        Some(desc)
+    }
+
+    /// TanStack-aligned: `column.getFirstSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`. Returns `None` when we cannot infer the
+    /// direction (because the column has neither an explicit `sortDescFirst` override nor a stable
+    /// `sort_value_by` surface for auto inference).
+    pub fn column_first_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream:
+        // `sortDescFirst = columnDef.sortDescFirst ?? table.options.sortDescFirst ?? (getAutoSortDir() === 'desc')`
+        if let Some(explicit) = col.sort_desc_first.or(self.options.sort_desc_first) {
+            return Some(explicit);
+        }
+
+        self.column_auto_sort_dir_desc_tanstack(column_id)
+    }
+
+    /// TanStack-aligned: `column.getNextSortingOrder(multi?)`.
+    ///
+    /// Returns:
+    /// - `Some(Some(true))`  => `'desc'`
+    /// - `Some(Some(false))` => `'asc'`
+    /// - `Some(None)`        => `false` (remove)
+    /// - `None`              => unknown column id
+    pub fn column_next_sorting_order_desc_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+    ) -> Option<Option<bool>> {
+        let first_desc = self.column_first_sort_dir_desc_tanstack(column_id)?;
+        let is_sorted = super::sort_for_column(&self.state.sorting, column_id);
+
+        let enable_sorting_removal = self.options.enable_sorting_removal;
+        let enable_multi_remove = self.options.enable_multi_remove;
+
+        match is_sorted {
+            None => Some(Some(first_desc)),
+            Some(current_desc) => {
+                if current_desc != first_desc
+                    && enable_sorting_removal
+                    && (!multi || enable_multi_remove)
+                {
+                    return Some(None);
+                }
+                Some(Some(!current_desc))
+            }
+        }
+    }
+
+    /// TanStack-aligned: `column.clearSorting()`.
+    pub fn cleared_column_sorting(&self, column_id: &str) -> Option<super::SortingState> {
+        self.column(column_id)?;
+
+        let mut next = self.state.sorting.clone();
+        next.retain(|spec| spec.column.as_ref() != column_id);
+        Some(next)
+    }
+
+    /// TanStack-aligned: `column.getIsSorted()` (boolean form).
+    pub fn column_is_sorted(&self, column_id: &str) -> Option<bool> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .any(|s| s.column.as_ref() == column_id),
+        )
+    }
+
+    /// TanStack-aligned: `column.getSortIndex()`.
+    ///
+    /// Returns `-1` when the column is not currently sorted. Returns `None` when the column id
+    /// does not exist.
+    pub fn column_sort_index(&self, column_id: &str) -> Option<i32> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .position(|s| s.column.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
+    /// TanStack-aligned sorting state transition for `column.toggleSorting(...)`.
+    ///
+    /// This models the "direct toggle" policy (see `sorting.rs::toggle_sorting_tanstack`).
+    pub fn sorting_updater_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// TanStack-aligned sorting state transition for `column.getToggleSortingHandler()`.
+    ///
+    /// This models the "handler" policy (including `getCanSort` gating), aligning with
+    /// `sorting.rs::toggle_sorting_handler_tanstack`.
+    pub fn sorting_handler_updater_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_handler_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                event_multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// Convenience: apply [`Self::sorting_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater = self.sorting_updater_tanstack(column_id, multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
+    /// Convenience: apply [`Self::sorting_handler_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_handler_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater =
+            self.sorting_handler_updater_tanstack(column_id, event_multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
     /// TanStack-aligned: `table.resetColumnFilters(defaultState?)`.
     pub fn reset_column_filters(&self, default_state: bool) -> super::ColumnFiltersState {
         if default_state {
@@ -1401,6 +2050,115 @@ impl<'a, TData> Table<'a, TData> {
         } else {
             self.initial_state.global_filter.clone()
         }
+    }
+
+    pub fn column_can_filter(&self, column_id: &str) -> Option<bool> {
+        fn column_has_filter_value_source<TData>(col: &super::ColumnDef<TData>) -> bool {
+            if col.filter_fn.is_some() || col.filter_fn_with_meta.is_some() {
+                return true;
+            }
+            col.filtering_fn.is_some() && col.sort_value.is_some()
+        }
+
+        let col = self.column(column_id)?;
+        Some(
+            self.options.enable_filters
+                && self.options.enable_column_filters
+                && col.enable_column_filter
+                && column_has_filter_value_source(col),
+        )
+    }
+
+    pub fn column_filter_value(&self, column_id: &str) -> Option<&serde_json::Value> {
+        self.column(column_id)?;
+        self.state
+            .column_filters
+            .iter()
+            .find(|f| f.column.as_ref() == column_id)
+            .map(|f| &f.value)
+    }
+
+    pub fn column_is_filtered(&self, column_id: &str) -> Option<bool> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .column_filters
+                .iter()
+                .any(|f| f.column.as_ref() == column_id),
+        )
+    }
+
+    /// TanStack-aligned: `column.getFilterIndex()`.
+    ///
+    /// Returns `-1` when the column is not currently filtered. Returns `None` when the column id
+    /// does not exist.
+    pub fn column_filter_index(&self, column_id: &str) -> Option<i32> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .column_filters
+                .iter()
+                .position(|f| f.column.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
+    /// TanStack-aligned: `column.setFilterValue(value)` as a state updater.
+    pub fn column_filters_updater_set_value(
+        &self,
+        column_id: &str,
+        value: serde_json::Value,
+    ) -> Option<super::Updater<super::ColumnFiltersState>> {
+        let col = self.column(column_id)?;
+        Some(super::filtering::column_filters_updater_set_value_tanstack(
+            self.data,
+            col,
+            &self.filter_fns,
+            value,
+        ))
+    }
+
+    /// TanStack-aligned: `table.setGlobalFilter(value)` as a state updater.
+    pub fn global_filter_updater_set_value(
+        &self,
+        value: super::GlobalFilterState,
+    ) -> super::Updater<super::GlobalFilterState> {
+        super::filtering::global_filter_updater_set_value_tanstack(value)
+    }
+
+    /// TanStack-aligned: `column.getCanGlobalFilter()`.
+    pub fn column_can_global_filter(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_filters
+            && self.options.enable_global_filter
+            && col.enable_global_filter)
+        {
+            return Some(false);
+        }
+
+        let first_row_original = self
+            .pre_filtered_row_model()
+            .flat_rows()
+            .first()
+            .and_then(|&i| self.pre_filtered_row_model().row(i))
+            .map(|r| r.original);
+
+        let can_global_filter = match self.get_column_can_global_filter.as_deref() {
+            Some(f) => first_row_original.is_some_and(|first| f(col, first)),
+            None => match first_row_original {
+                Some(first) => match col.sort_value.as_ref() {
+                    Some(get_value) => matches!(
+                        (get_value)(first),
+                        super::TanStackValue::String(_) | super::TanStackValue::Number(_)
+                    ),
+                    None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
+                },
+                None => false,
+            },
+        };
+
+        Some(can_global_filter)
     }
 
     /// TanStack-aligned: `table.resetGrouping(defaultState?)`.
@@ -1477,12 +2235,89 @@ impl<'a, TData> Table<'a, TData> {
         include_leaf_rows: bool,
         include_parent_rows: bool,
     ) -> super::Updater<super::RowPinningState> {
-        let keys = super::pin_row_keys(
-            self.core_row_model(),
-            row_key,
-            include_leaf_rows,
-            include_parent_rows,
-        );
+        fn pin_grouped_row_keys(
+            grouped: &super::GroupedRowModel,
+            row_key: RowKey,
+            include_leaf_rows: bool,
+            include_parent_rows: bool,
+        ) -> Vec<RowKey> {
+            let Some(row_index) = grouped.row_by_key(row_key) else {
+                return vec![row_key];
+            };
+
+            let mut keys: Vec<RowKey> = Vec::new();
+
+            if include_parent_rows {
+                let mut parents_rev: Vec<RowKey> = Vec::new();
+                let mut current = grouped.row(row_index);
+                while let Some(row) = current {
+                    let Some(parent) = row.parent else {
+                        break;
+                    };
+                    let Some(parent_row) = grouped.row(parent) else {
+                        break;
+                    };
+                    parents_rev.push(parent_row.key);
+                    current = Some(parent_row);
+                }
+                parents_rev.reverse();
+                keys.extend(parents_rev);
+            }
+
+            keys.push(row_key);
+
+            if include_leaf_rows {
+                fn push_descendant_keys(
+                    grouped: &super::GroupedRowModel,
+                    row: usize,
+                    out: &mut Vec<RowKey>,
+                ) {
+                    let Some(r) = grouped.row(row) else {
+                        return;
+                    };
+                    for &child in &r.sub_rows {
+                        let Some(child_row) = grouped.row(child) else {
+                            continue;
+                        };
+                        out.push(child_row.key);
+                        push_descendant_keys(grouped, child, out);
+                    }
+                }
+
+                push_descendant_keys(grouped, row_index, &mut keys);
+            }
+
+            let mut deduped: Vec<RowKey> = Vec::with_capacity(keys.len());
+            let mut seen: HashSet<RowKey> = HashSet::new();
+            for key in keys {
+                if seen.insert(key) {
+                    deduped.push(key);
+                }
+            }
+
+            deduped
+        }
+
+        let keys = if self.state.grouping.is_empty() {
+            super::pin_row_keys(
+                self.core_row_model(),
+                row_key,
+                include_leaf_rows,
+                include_parent_rows,
+            )
+        } else {
+            let grouped = self.grouped_row_model();
+            if grouped.row_by_key(row_key).is_some() {
+                pin_grouped_row_keys(grouped, row_key, include_leaf_rows, include_parent_rows)
+            } else {
+                super::pin_row_keys(
+                    self.core_row_model(),
+                    row_key,
+                    include_leaf_rows,
+                    include_parent_rows,
+                )
+            }
+        };
 
         super::Updater::Func(Arc::new(move |old| {
             let mut next = old.clone();
@@ -1507,13 +2342,86 @@ impl<'a, TData> Table<'a, TData> {
         self.pinned_row_keys(super::RowPinPosition::Top)
     }
 
+    pub fn top_row_ids(&self) -> Vec<RowId> {
+        self.top_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
+            .collect()
+    }
+
     pub fn bottom_row_keys(&self) -> Vec<RowKey> {
         self.pinned_row_keys(super::RowPinPosition::Bottom)
     }
 
+    pub fn bottom_row_ids(&self) -> Vec<RowId> {
+        self.bottom_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
+            .collect()
+    }
+
     pub fn center_row_keys(&self) -> Vec<RowKey> {
-        let model = self.row_model();
-        super::center_row_keys(model.root_rows(), model, &self.state.row_pinning)
+        if self.state.grouping.is_empty() || self.options.manual_grouping {
+            let model = self.row_model();
+            return super::center_row_keys(model.root_rows(), model, &self.state.row_pinning);
+        }
+
+        let grouped = self.grouped_row_model();
+        let mut roots: Vec<super::GroupedRowIndex> = grouped.root_rows().to_vec();
+
+        let core = self.core_row_model();
+        let mut row_index_by_key: HashMap<RowKey, usize> = HashMap::new();
+        for &index in core.flat_rows() {
+            let Some(row) = core.row(index) else {
+                continue;
+            };
+            row_index_by_key.entry(row.key).or_insert(row.index);
+        }
+
+        super::sort_grouped_row_indices_in_place(
+            grouped,
+            &mut roots,
+            self.state.sorting.as_slice(),
+            self.columns.as_slice(),
+            self.data,
+            &row_index_by_key,
+            self.grouped_u64_aggregations(),
+            self.grouped_aggregations_any(),
+        );
+
+        let visible_roots: &[super::GroupedRowIndex] = if self.options.manual_pagination {
+            roots.as_slice()
+        } else if self.state.pagination.page_size == 0 {
+            &[]
+        } else {
+            let page_start = self
+                .state
+                .pagination
+                .page_index
+                .saturating_mul(self.state.pagination.page_size);
+            let page_end = page_start.saturating_add(self.state.pagination.page_size);
+            let start = page_start.min(roots.len());
+            let end = page_end.min(roots.len());
+            roots.get(start..end).unwrap_or_default()
+        };
+
+        let mut pinned: HashSet<RowKey> = HashSet::new();
+        pinned.extend(self.state.row_pinning.top.iter().copied());
+        pinned.extend(self.state.row_pinning.bottom.iter().copied());
+
+        visible_roots
+            .iter()
+            .filter_map(|&i| grouped.row(i))
+            .map(|row| row.key)
+            .filter(|key| !pinned.contains(key))
+            .collect()
+    }
+
+    pub fn center_row_ids(&self) -> Vec<RowId> {
+        self.center_row_keys()
+            .into_iter()
+            .filter_map(|k| self.row_id_for_key(k))
+            .collect()
     }
 
     fn pinned_row_keys(&self, position: super::RowPinPosition) -> Vec<RowKey> {
@@ -1801,9 +2709,141 @@ impl<'a, TData> Table<'a, TData> {
         )
     }
 
+    pub fn footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn left_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.left_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn center_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.center_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn right_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.right_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn center_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn right_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn center_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn right_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    /// TanStack-style `getLeafHeaders` (postorder traversal from top headers).
+    pub fn leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        fn recurse(
+            id: &Arc<str>,
+            headers_by_id: &HashMap<Arc<str>, super::HeaderSnapshot>,
+            out: &mut Vec<super::HeaderSnapshot>,
+        ) {
+            let Some(h) = headers_by_id.get(id) else {
+                return;
+            };
+            for child in &h.sub_header_ids {
+                recurse(child, headers_by_id, out);
+            }
+            out.push(h.clone());
+        }
+
+        let left = self.left_header_groups();
+        let center = self.center_header_groups();
+        let right = self.right_header_groups();
+
+        let mut roots: Vec<Arc<str>> = Vec::new();
+        for groups in [&left, &center, &right] {
+            if let Some(top) = groups.first() {
+                roots.extend(top.headers.iter().map(|h| h.id.clone()));
+            }
+        }
+
+        let mut headers_by_id: HashMap<Arc<str>, super::HeaderSnapshot> = HashMap::new();
+        for groups in [left, center, right] {
+            for g in groups {
+                for h in g.headers {
+                    headers_by_id.insert(h.id.clone(), h);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        for root in roots {
+            recurse(&root, &headers_by_id, &mut out);
+        }
+        out
+    }
+
     pub fn row_cells(&self, row_key: RowKey) -> Option<super::RowCellsSnapshot> {
         let row = self.row(row_key, true)?;
         let row_id = row.id.as_str();
+
+        let grouped_column_ids = self.state.grouping.as_slice();
+        let mut row_grouping_column_id: Option<&str> = None;
+        if !grouped_column_ids.is_empty() {
+            let grouped = self.grouped_row_model();
+            if let Some(grouped_row_index) = grouped.row_by_key(row.key)
+                && let Some(grouped_row) = grouped.row(grouped_row_index)
+                && let super::GroupedRowKind::Group {
+                    grouping_column, ..
+                } = &grouped_row.kind
+            {
+                row_grouping_column_id = Some(grouping_column.as_ref());
+            }
+        }
+
+        let row_has_sub_rows = !row.sub_rows.is_empty();
 
         let all_leaf_columns = self.ordered_columns();
         let (left, center, right) = self.pinned_visible_columns();
@@ -1814,6 +2854,9 @@ impl<'a, TData> Table<'a, TData> {
             left.as_slice(),
             center.as_slice(),
             right.as_slice(),
+            grouped_column_ids,
+            row_grouping_column_id,
+            row_has_sub_rows,
         ))
     }
 
@@ -1920,6 +2963,36 @@ impl<'a, TData> Table<'a, TData> {
     ) {
         let visible = self.visible_columns();
         super::split_pinned_columns(visible.as_slice(), &self.state.column_pinning)
+    }
+
+    /// TanStack-aligned: `table.getLeft/Center/RightLeafColumns()`.
+    ///
+    /// Note: this returns **leaf columns** split by pinning state and does not apply column
+    /// visibility filtering. Use [`Self::pinned_visible_columns`] for visible-only splits.
+    pub fn pinned_leaf_columns(
+        &self,
+    ) -> (
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+    ) {
+        let leaf = self.ordered_columns();
+        super::split_pinned_columns(leaf.as_slice(), &self.state.column_pinning)
+    }
+
+    pub fn left_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (left, _, _) = self.pinned_leaf_columns();
+        left
+    }
+
+    pub fn center_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (_, center, _) = self.pinned_leaf_columns();
+        center
+    }
+
+    pub fn right_leaf_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        let (_, _, right) = self.pinned_leaf_columns();
+        right
     }
 
     pub fn column_size(&self, id: &str) -> Option<f32> {
@@ -2354,7 +3427,7 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn filtered_row_model(&self) -> &RowModel<'a, TData> {
-        if self.options.manual_filtering {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
             return self.pre_filtered_row_model();
         }
         self.filtered_row_model.get_or_init(|| {
@@ -2371,13 +3444,35 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn row_filter_state_snapshot(&self) -> super::RowFilterStateSnapshot {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
+            return super::RowFilterStateSnapshot::default();
+        }
+        super::evaluate_row_filter_state(
+            self.pre_filtered_row_model(),
+            &self.columns,
+            &self.state.column_filters,
+            self.state.global_filter.clone(),
+            self.options,
+            &self.filter_fns,
+            &self.global_filter_fn,
+            self.get_column_can_global_filter.as_deref(),
+        )
+    }
+
     pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
+            return self.grouped_pre_sorted_row_model();
+        }
         self.filtered_row_model()
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
-        if self.options.manual_sorting {
+        if self.options.manual_sorting || self.sorted_row_model_override_pre_sorted {
             return self.pre_sorted_row_model();
+        }
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
+            return self.grouped_sorted_row_model();
         }
         self.sorted_row_model.get_or_init(|| {
             super::sort_row_model(
@@ -2403,6 +3498,9 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn expanded_row_model(&self) -> &RowModel<'a, TData> {
         if !self.options.paginate_expanded_rows {
+            return self.pre_expanded_row_model();
+        }
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
             return self.pre_expanded_row_model();
         }
         if self.options.manual_expanding {
@@ -2555,29 +3653,192 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn row_selection_updater(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> super::Updater<super::RowSelectionState> {
+        #[derive(Clone)]
+        struct SelectionRowMeta {
+            sub_rows: Vec<RowKey>,
+            can_select: bool,
+            can_multi_select: bool,
+            can_select_sub_rows: bool,
+        }
+
+        fn mutate_row_selection(
+            row_meta_by_key: &HashMap<RowKey, SelectionRowMeta>,
+            selection: &mut super::RowSelectionState,
+            row_key: RowKey,
+            value: bool,
+            include_children: bool,
+        ) {
+            let Some(row_meta) = row_meta_by_key.get(&row_key) else {
+                return;
+            };
+
+            if value {
+                if !row_meta.can_multi_select {
+                    selection.clear();
+                }
+                if row_meta.can_select {
+                    selection.insert(row_key);
+                }
+            } else {
+                selection.remove(&row_key);
+            }
+
+            if include_children && row_meta.can_select_sub_rows {
+                for child_key in &row_meta.sub_rows {
+                    mutate_row_selection(
+                        row_meta_by_key,
+                        selection,
+                        *child_key,
+                        value,
+                        include_children,
+                    );
+                }
+            }
+        }
+
+        let mut row_meta_by_key: HashMap<RowKey, SelectionRowMeta> = HashMap::new();
+        let core = self.core_row_model();
+        for row in core.arena() {
+            let sub_rows = row
+                .sub_rows
+                .iter()
+                .filter_map(|&index| core.row(index).map(|child| child.key))
+                .collect::<Vec<_>>();
+            row_meta_by_key.insert(
+                row.key,
+                SelectionRowMeta {
+                    sub_rows,
+                    can_select: self.row_can_select_for_row(row.key, row),
+                    can_multi_select: self.row_can_multi_select_for_row(row.key, row),
+                    can_select_sub_rows: self.row_can_select_sub_rows_for_row(row.key, row),
+                },
+            );
+        }
+
+        if !self.state.grouping.is_empty() {
+            let grouped = self.grouped_row_model();
+            for &row_index in grouped.flat_rows() {
+                let Some(row) = grouped.row(row_index) else {
+                    continue;
+                };
+                let sub_rows = row
+                    .sub_rows
+                    .iter()
+                    .filter_map(|&index| grouped.row(index).map(|child| child.key))
+                    .collect::<Vec<_>>();
+
+                let leaf_original = match &row.kind {
+                    super::GroupedRowKind::Leaf { row_key } => core
+                        .row_by_key(*row_key)
+                        .and_then(|index| core.row(index).map(|row| row.original)),
+                    super::GroupedRowKind::Group {
+                        first_leaf_row_key, ..
+                    } => core
+                        .row_by_key(*first_leaf_row_key)
+                        .and_then(|index| core.row(index).map(|row| row.original)),
+                };
+
+                let can_select = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_row_selection) = self.enable_row_selection.as_ref() {
+                            enable_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_row_selection
+                        }
+                    }
+                    None => self.options.enable_row_selection,
+                };
+                let can_multi_select = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_multi_row_selection) =
+                            self.enable_multi_row_selection.as_ref()
+                        {
+                            enable_multi_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_multi_row_selection
+                        }
+                    }
+                    None => self.options.enable_multi_row_selection,
+                };
+                let can_select_sub_rows = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_sub_row_selection) =
+                            self.enable_sub_row_selection.as_ref()
+                        {
+                            enable_sub_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_sub_row_selection
+                        }
+                    }
+                    None => self.options.enable_sub_row_selection,
+                };
+
+                row_meta_by_key.insert(
+                    row.key,
+                    SelectionRowMeta {
+                        sub_rows,
+                        can_select,
+                        can_multi_select,
+                        can_select_sub_rows,
+                    },
+                );
+            }
+        }
+
+        super::Updater::Func(Arc::new(move |old| {
+            let current = old.contains(&row_key);
+            let value = value.unwrap_or(!current);
+
+            let mut next = old.clone();
+
+            if let Some(row_meta) = row_meta_by_key.get(&row_key) {
+                if row_meta.can_select && current == value {
+                    return next;
+                }
+            }
+
+            mutate_row_selection(&row_meta_by_key, &mut next, row_key, value, select_children);
+            next
+        }))
+    }
+
+    pub fn row_selection_updater_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> Option<super::Updater<super::RowSelectionState>> {
+        let row_key = self.row_key_for_id(row_id, search_all)?;
+        Some(self.row_selection_updater(row_key, value, select_children))
+    }
+
+    pub fn toggled_row_selected_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> Option<super::RowSelectionState> {
+        let updater =
+            self.row_selection_updater_by_id(row_id, search_all, value, select_children)?;
+        Some(updater.apply(&self.state.row_selection))
+    }
+
     pub fn toggled_row_selected(
         &self,
         row_key: RowKey,
         value: Option<bool>,
         select_children: bool,
     ) -> super::RowSelectionState {
-        let can_select =
-            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
-        let can_multi =
-            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_multi_select_for_row(row_key, row);
-        let can_sub = |row_key: RowKey, row: &Row<'a, TData>| {
-            self.row_can_select_sub_rows_for_row(row_key, row)
-        };
-        super::toggle_row_selected(
-            self.core_row_model(),
-            &self.state.row_selection,
-            row_key,
-            value,
-            select_children,
-            &can_select,
-            &can_multi,
-            &can_sub,
-        )
+        self.row_selection_updater(row_key, value, select_children)
+            .apply(&self.state.row_selection)
     }
 
     pub fn is_all_rows_selected(&self) -> bool {
@@ -2627,6 +3888,48 @@ impl<'a, TData> Table<'a, TData> {
         super::selected_flat_row_count(self.filtered_row_model(), &self.state.row_selection)
     }
 
+    /// TanStack-aligned: `row.getCanSelect()`.
+    pub fn row_can_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanMultiSelect()`.
+    pub fn row_can_multi_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_multi_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanSelectSubRows()`.
+    pub fn row_can_select_sub_rows(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_sub_rows_for_row(row_key, r))
+    }
+
+    pub fn row_can_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_multi_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_multi_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_select_sub_rows_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_sub_rows_for_row(row.key, row))
+    }
+
     pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
         let can_select =
             |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
@@ -2660,7 +3963,7 @@ impl<'a, TData> Table<'a, TData> {
     pub fn faceted_row_model(&self, column_id: &str) -> Option<&RowModel<'a, TData>> {
         let column_index = self.column_index(column_id)?;
 
-        if self.options.manual_filtering {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
             return Some(self.pre_filtered_row_model());
         }
 
@@ -3358,6 +4661,54 @@ mod tests {
     }
 
     #[test]
+    fn filtered_row_model_override_skips_filtered_and_faceted_row_models() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                label: Arc::from("a"),
+            },
+            Item {
+                label: Arc::from("b"),
+            },
+        ];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![
+            helper
+                .accessor("label", |it| it.label.clone())
+                .filter_by(|row, q| row.label.as_ref() == q),
+        ];
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "label".into(),
+            value: serde_json::Value::String("b".to_string()),
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .override_filtered_row_model_pre_filtered()
+            .build();
+
+        assert!(std::ptr::eq(
+            table.filtered_row_model(),
+            table.pre_filtered_row_model()
+        ));
+        let faceted = table.faceted_row_model("label").expect("faceted row model");
+        assert!(std::ptr::eq(faceted, table.pre_filtered_row_model()));
+
+        let snapshot = table.row_filter_state_snapshot();
+        assert!(snapshot.filterable_ids.is_empty());
+        assert!(snapshot.row_column_filters.is_empty());
+        assert!(snapshot.row_column_filters_meta.is_empty());
+    }
+
+    #[test]
     fn manual_sorting_skips_sorted_row_model() {
         #[derive(Debug, Clone)]
         struct Item {
@@ -3381,6 +4732,35 @@ mod tests {
                 manual_sorting: true,
                 ..Default::default()
             })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.sorted_row_model(),
+            table.pre_sorted_row_model()
+        ));
+    }
+
+    #[test]
+    fn sorted_row_model_override_skips_sorted_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = vec![Item { value: 2 }, Item { value: 1 }];
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let mut state = TableState::default();
+        state.sorting = vec![SortSpec {
+            column: "value".into(),
+            desc: false,
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .override_sorted_row_model_pre_sorted()
             .build();
 
         assert!(std::ptr::eq(

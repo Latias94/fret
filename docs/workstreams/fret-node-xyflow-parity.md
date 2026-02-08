@@ -213,6 +213,10 @@ Work items (initial):
   - a graph edit commit must rebuild the affected derived geometry and update internals deterministically,
   - pan-only must not accidentally force the same rebuild path.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+- [x] Add rebuild-counter gates for derived-cache invalidation discipline (pan-only vs graph edit vs index-tuning).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`DerivedBuildCounters`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`debug_derived_build_counters`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - [x] Add a short “refactor guide” section to `docs/node-graph-xyflow-parity.md` explaining which
   invariants are locked and where to find the tests.
 - [x] Add spatial-index equivalence conformance tests (fast path vs slow scan) so refactors cannot
@@ -351,8 +355,8 @@ Perf/scale targets (placeholders; make these measurable as we add instrumentatio
 
 - Target graph sizes: 5k nodes (P2), 20k nodes (P3).
 - Interaction frame time budget: TBD (document per platform; start with “no visible hitching” + measured numbers).
-- Derived geometry rebuild budget: “no per-frame rebuild while panning” (expressed as counters once available).
-- Spatial index rebuild budget: “no rebuild on pan; rebuild on graph edits only” (unless explicitly forced).
+- Derived geometry rebuild budget: “no per-frame rebuild while panning” (counter-gated in `internals_conformance.rs`).
+- Spatial index rebuild budget: “no rebuild on pan; rebuild on graph edits or index-tuning edits only” (counter-gated in `internals_conformance.rs`).
 
 ### M6 — Deterministic patch units (collaboration readiness) (P3)
 

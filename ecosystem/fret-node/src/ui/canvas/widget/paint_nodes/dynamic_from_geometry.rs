@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::geometry::node_size_default_px;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_nodes_dynamic_from_geometry<H: UiHost>(

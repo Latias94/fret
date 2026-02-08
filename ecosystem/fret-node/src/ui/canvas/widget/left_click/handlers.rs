@@ -3,12 +3,12 @@ use fret_ui::UiHost;
 
 use crate::interaction::NodeGraphDragHandleMode;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use super::hit::Hit;
 use crate::ui::canvas::state::{
     EdgeDrag, PendingEdgeInsertDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag,
     PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
+use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -73,7 +73,7 @@ pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     canvas.interaction.wire_drag = Some(w);
                     canvas.interaction.click_connect = false;
                     canvas.interaction.pending_wire_drag = None;
-                    let _ = super::super::wire_drag::handle_wire_left_up_with_forced_target(
+                    let _ = crate::ui::canvas::widget::wire_drag::handle_wire_left_up_with_forced_target(
                         canvas,
                         cx,
                         snapshot,
@@ -566,11 +566,11 @@ pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 // We still begin a pending marquee so a click (no drag) can clear selection. Once
                 // the drag exceeds the threshold, `marquee::handle_marquee_move` will decide
                 // whether to start a selection box or switch into panning.
-                super::super::marquee::begin_background_marquee(
+                crate::ui::canvas::widget::marquee::begin_background_marquee(
                     canvas, cx, snapshot, position, modifiers, true,
                 );
             } else if snapshot.interaction.pan_on_drag.left {
-                let _ = super::super::pan_zoom::begin_panning(
+                let _ = crate::ui::canvas::widget::pan_zoom::begin_panning(
                     canvas,
                     cx,
                     snapshot,

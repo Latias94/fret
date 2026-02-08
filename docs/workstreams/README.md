@@ -10,6 +10,13 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/workspace-crate-boundaries-v1.md`
+- `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+- `docs/workstreams/workspace-crate-boundaries-v1-crate-audit.md`
+- `docs/workstreams/diag-devtools-gui-v1.md`
+- `docs/workstreams/diag-devtools-gui-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1.md`
+- `docs/workstreams/retained-bridge-exit-v1-todo.md`
 - `docs/workstreams/localization-i18n-v1.md`
 - `docs/workstreams/localization-i18n-v1-todo.md`
 - `docs/workstreams/state-management-v1.md`
@@ -23,6 +30,7 @@ Active workstreams:
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
+- `docs/workstreams/ai-elements-port-milestones.md`
 - `docs/workstreams/ui-gallery-visual-parity.md`
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
@@ -33,6 +41,18 @@ Active workstreams:
 - `docs/workstreams/imui-authoring-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
 - `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md`
+- `docs/workstreams/imui-ecosystem-facade-v3.md`
+- `docs/workstreams/imui-ecosystem-facade-v3-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
+- `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)
 - `docs/workstreams/imui-authoring-facade-v1-todo.md` (baseline / historical reference)
 - `docs/workstreams/shadcn-web-goldens-v4.md`
@@ -64,3 +84,7 @@ Active workstreams:
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`
 - `docs/workstreams/router-v1.md`
 - `docs/workstreams/router-v1-todo.md`
+- `docs/workstreams/router-tanstack-parity-v1.md`
+- `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- `docs/workstreams/router-ui-v1.md`
+- `docs/workstreams/router-ui-v1-todo.md`

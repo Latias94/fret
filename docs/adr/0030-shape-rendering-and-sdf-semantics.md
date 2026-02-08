@@ -7,7 +7,7 @@ Status: Accepted
 Fret uses GPU rendering (`wgpu`) and already implements rounded rectangles via an analytic SDF quad shader.
 
 - Current Fret quad shader (analytic rounded-rect SDF):
-  - `crates/fret-render/src/renderer/mod.rs`
+  - `crates/fret-render-wgpu/src/renderer/mod.rs`
 - GPUI’s reference implementation (quad SDF + borders + shadows + clip/transforms):
   - `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
 

@@ -5,7 +5,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         &mut self,
         host: &H,
         snapshot: &ViewSnapshot,
-    ) -> (Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>) {
+    ) -> (Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>) {
         let (geom, index) = self.ensure_canvas_derived_base(host, snapshot);
         let node_drag = self.interaction.node_drag.clone();
         let group_drag = self.interaction.group_drag.clone();
@@ -51,7 +51,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(in super::super) fn update_ports_for_node_rect_change(
         geom: &mut CanvasGeometry,
-        index: &mut CanvasSpatialIndex,
+        index: &mut CanvasSpatialDerived,
         node_id: GraphNodeId,
         prev_rect: Rect,
         next_rect: Rect,
@@ -103,7 +103,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(in super::super) fn update_edges_for_ports(
         geom: &mut CanvasGeometry,
-        index: &mut CanvasSpatialIndex,
+        index: &mut CanvasSpatialDerived,
         zoom: f32,
         ports: &[PortId],
         resolve_edges: impl FnOnce(&[EdgeId]) -> Vec<(EdgeId, PortId, PortId)>,
@@ -128,7 +128,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     fn collect_edges_for_ports_sorted_dedup<'a>(
-        index: &CanvasSpatialIndex,
+        index: &CanvasSpatialDerived,
         ports: &[PortId],
         out: &'a mut Vec<EdgeId>,
     ) -> &'a [EdgeId] {

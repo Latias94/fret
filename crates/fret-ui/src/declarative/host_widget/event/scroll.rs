@@ -2,6 +2,9 @@ use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 
 const SCROLL_CONSUMED_EPS: f32 = 0.001;
+static DEBUG_VLIST_WHEEL_PRINTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+const DEBUG_VLIST_WHEEL_ENV: &str = "FRET_DEBUG_SCROLL_WHEEL_VLIST";
 
 pub(super) fn handle_virtual_list<H: UiHost>(
     this: &mut ElementHostWidget,
@@ -57,6 +60,32 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         }
                     };
                     let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
+                    if std::env::var(DEBUG_VLIST_WHEEL_ENV)
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                        && !DEBUG_VLIST_WHEEL_PRINTED
+                            .swap(true, std::sync::atomic::Ordering::Relaxed)
+                    {
+                        let max = props.scroll_handle.max_offset();
+                        let viewport_size = props.scroll_handle.viewport_size();
+                        let content_size = props.scroll_handle.content_size();
+                        eprintln!(
+                            "scroll wheel vlist element={:?} handle_key={} axis={:?} delta={:.3} prev={:.3} next={:.3} viewport=({:.3},{:.3}) content=({:.3},{:.3}) max=({:.3},{:.3})",
+                            this.element,
+                            props.scroll_handle.base_handle().binding_key(),
+                            axis,
+                            delta.0,
+                            prev_offset.0,
+                            next.0,
+                            viewport_size.width.0,
+                            viewport_size.height.0,
+                            content_size.width.0,
+                            content_size.height.0,
+                            max.x.0,
+                            max.y.0,
+                        );
+                    }
+
                     if (prev_offset.0 - next.0).abs() > SCROLL_CONSUMED_EPS {
                         let visible_range = state.metrics.visible_range(next, viewport, 0);
                         let needs_visible_range_rerender =

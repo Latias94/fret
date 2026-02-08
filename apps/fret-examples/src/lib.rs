@@ -72,6 +72,8 @@ pub mod imui_hello_demo;
 pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_response_signals_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod imui_shadcn_adapter_demo;
 pub mod inf_lines_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -90,6 +92,8 @@ pub mod plot_image_demo;
 pub mod plot_stress_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod router_query_demo;
 pub mod shaded_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sonner_demo;

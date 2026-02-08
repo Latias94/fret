@@ -621,7 +621,7 @@ fn tanstack_v8_column_pinning_parity() {
         }
 
         if let Some(expected) = snap.expect.column_pinning.as_ref() {
-            let (left, center, right) = table.pinned_visible_columns();
+            let (left, center, right) = table.pinned_leaf_columns();
 
             let left: Vec<String> = left
                 .into_iter()

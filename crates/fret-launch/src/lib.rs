@@ -1,3 +1,11 @@
+//! Launch/runner facade for Fret apps and demos.
+//!
+//! This crate provides the higher-level entrypoints that wire together runner, platform, UI
+//! runtime, and renderer. Application code should generally depend on this facade rather than
+//! reaching into lower-level runner/platform crates directly.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-launch/README.md`.
+
 mod error;
 pub mod runner;
 mod stacksafe_config;

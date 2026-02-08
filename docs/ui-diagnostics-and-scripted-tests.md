@@ -15,6 +15,8 @@ Scope note:
   how to author stable, selector-driven repros).
 - For the **interactive inspect workflow** (hover/pick overlay, shortcuts, and selector copy UX), see:
   `docs/debugging-ui-with-inspector-and-scripts.md`.
+- For the planned **DevTools GUI** that wraps these same contracts (inspect/pick/scripts/bundles) with a user-facing UI,
+  see: `docs/workstreams/diag-devtools-gui-v1.md`.
 
 The goal is GPUI/Zed-style "inspectable, shareable repro units":
 
@@ -27,6 +29,12 @@ Related ADRs:
 - ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+
+Implementation pointers (where the code lives today):
+
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Script/selector/result types (serde): `crates/fret-diag-protocol`
+- CLI tooling engine (pack/stats/gates/compare): `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 
 ## Quick Start (manual bundle dump)
 

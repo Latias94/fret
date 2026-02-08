@@ -261,7 +261,12 @@ pub fn apply_settings_globals(app: &mut crate::App, settings: &SettingsFileV1) {
     app.set_global(settings.docking_interaction_settings());
 
     let mut i18n = settings.i18n_service();
-    crate::core_commands::ensure_core_i18n_backend(&mut i18n);
+    if let Some(existing) = app.global::<fret_runtime::fret_i18n::I18nService>() {
+        if let Some(lookup) = existing.lookup() {
+            i18n.set_lookup(Some(lookup.clone()));
+        }
+        i18n.set_missing_message_behavior(existing.missing_message_behavior());
+    }
     app.set_global(i18n);
     crate::core_commands::apply_core_command_localization(app);
 }

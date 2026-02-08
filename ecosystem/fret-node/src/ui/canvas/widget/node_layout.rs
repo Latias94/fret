@@ -1,5 +1,5 @@
-use super::super::geometry::node_size_default_px;
 use super::*;
+use crate::ui::canvas::geometry::node_size_default_px;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn node_default_size_for_ports(&self, inputs: usize, outputs: usize) -> (f32, f32) {

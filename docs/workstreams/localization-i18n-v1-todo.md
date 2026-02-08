@@ -26,11 +26,11 @@ Status legend:
   - Progress: command + workspace menu baseline key map is documented in
     `docs/workstreams/localization-i18n-v1.md`.
 
-## Phase 1 - i18n core contract crate (`ecosystem/fret-i18n`)
+## Phase 1 - i18n core contract crate (`crates/fret-i18n`)
 
 Goal: lock a backend-agnostic, ergonomic API without changing runtime contracts.
 
-- `[x]` Scaffold `ecosystem/fret-i18n` crate in workspace.
+- `[x]` Scaffold `crates/fret-i18n` crate in workspace.
 - `[x]` Define stable domain types:
   - `LocaleId`,
   - `MessageKey`,
@@ -210,7 +210,7 @@ Exit criteria:
 
 ## Current evidence anchors (2026-02-06)
 
-- `ecosystem/fret-i18n/src/lib.rs`
+- `crates/fret-i18n/src/lib.rs`
 - `ecosystem/fret-i18n-fluent/src/lib.rs`
 - `crates/fret-app/src/settings.rs`
 - `crates/fret-app/src/config_files.rs`

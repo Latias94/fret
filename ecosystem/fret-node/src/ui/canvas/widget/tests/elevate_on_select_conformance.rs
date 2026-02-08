@@ -8,11 +8,11 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::NodeGraphViewState;
+
 use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -69,7 +69,7 @@ fn elevate_nodes_on_select_draws_selected_node_body_last() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
@@ -323,7 +323,7 @@ fn elevate_edges_on_select_controls_selection_z_order() {
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value.clone());
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;
@@ -571,7 +571,7 @@ fn elevate_edges_on_select_controls_selection_z_order_for_custom_paths() {
     let paths_with = |elevate: bool| {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value.clone());
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = CanvasPoint::default();
             s.zoom = 1.0;

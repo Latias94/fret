@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::state::{ViewportAnimationEase, ViewportAnimationInterpolate};
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn set_viewport_with_options<H: UiHost>(

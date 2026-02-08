@@ -1,11 +1,10 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
 
-use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::prelude::NodeGraphCanvas;
+use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn set_viewport_via_view_queue_updates_pan_and_zoom() {
@@ -16,9 +15,7 @@ fn set_viewport_via_view_queue_updates_pan_and_zoom() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
@@ -50,9 +47,7 @@ fn set_viewport_via_view_queue_clamps_zoom_to_style_limits() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let _ = view.update(&mut host, |s, _cx| {

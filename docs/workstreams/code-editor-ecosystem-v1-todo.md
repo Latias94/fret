@@ -218,7 +218,7 @@ Evidence anchors:
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json`
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-drag-baseline.json`
-    - `apps/fretboard/src/diag/stats.rs` (a11y selection/composition checkers + evidence JSON)
+    - `crates/fret-diag/src/stats.rs` (a11y selection/composition checkers + evidence JSON)
 
 ---
 
@@ -231,7 +231,7 @@ Evidence anchors:
 - [x] Export editor/IME harness state into diagnostics snapshots (ui-gallery app snapshot + web IME bridge snapshot; enables “single artifact” repros).
 - [x] Add renderer-level churn counters:
   - Text blob churn + glyph atlas pressure are captured by the runner as a per-frame app global (`fret_core::RendererTextPerfSnapshot`) and exported into UI diagnostics bundles.
-  - Evidence: `crates/fret-core/src/render_text.rs`, `crates/fret-render/src/text.rs`, `crates/fret-launch/src/runner/desktop/app_handler.rs`, `crates/fret-launch/src/runner/web.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Evidence: `crates/fret-core/src/render_text.rs`, `crates/fret-render-wgpu/src/text.rs`, `crates/fret-launch/src/runner/desktop/app_handler.rs`, `crates/fret-launch/src/runner/web.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
 
 ---
 
@@ -242,7 +242,7 @@ Evidence anchors:
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json`
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json`
     - `apps/fret-ui-gallery/src/ui.rs` (wrap gate viewports + preedit inject/clear buttons)
-    - `apps/fretboard/src/diag/stats.rs` (wrap gate checkers + evidence JSON)
+    - `crates/fret-diag/src/stats.rs` (wrap gate checkers + evidence JSON)
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
@@ -252,4 +252,3 @@ Evidence anchors:
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
-

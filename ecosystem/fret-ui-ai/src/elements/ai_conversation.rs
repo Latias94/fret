@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Edges, Px, SemanticsRole};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -27,6 +27,7 @@ pub struct AiConversationTranscript {
     layout: LayoutRefinement,
     content_padding: Space,
     content_gap: Space,
+    tail_padding: Px,
     content_revision: u64,
     stick_to_bottom: bool,
     stick_threshold: Px,
@@ -44,6 +45,7 @@ impl std::fmt::Debug for AiConversationTranscript {
             .field("layout", &self.layout)
             .field("content_padding", &self.content_padding)
             .field("content_gap", &self.content_gap)
+            .field("tail_padding", &self.tail_padding)
             .field("content_revision", &self.content_revision)
             .field("stick_to_bottom", &self.stick_to_bottom)
             .field("stick_threshold", &self.stick_threshold)
@@ -73,6 +75,7 @@ impl AiConversationTranscript {
             layout: LayoutRefinement::default(),
             content_padding: Space::N4,
             content_gap: Space::N8,
+            tail_padding: Px(96.0),
             content_revision: 0,
             stick_to_bottom: true,
             stick_threshold: Px(8.0),
@@ -102,6 +105,16 @@ impl AiConversationTranscript {
 
     pub fn content_gap(mut self, gap: Space) -> Self {
         self.content_gap = gap;
+        self
+    }
+
+    /// Extra blank space appended after the last message row.
+    ///
+    /// This is a pragmatic safety margin for virtualization tail underestimation: it ensures the
+    /// last message's actions/blocks can be scrolled fully into view even when their measured
+    /// height is larger than the initial estimate.
+    pub fn tail_padding(mut self, padding: Px) -> Self {
+        self.tail_padding = Px(padding.0.max(0.0));
         self
     }
 
@@ -207,20 +220,59 @@ impl AiConversationTranscript {
         let content_padding = self.content_padding;
         let content_gap = self.content_gap;
         let messages = self.messages;
+        let messages_len = messages.len();
+        let tail_padding = self.tail_padding;
+        let has_tail_padding = tail_padding.0 > 0.01 && messages_len > 0;
+        let list_len = if has_tail_padding {
+            messages_len.saturating_add(1)
+        } else {
+            messages_len
+        };
         let debug_row_test_id_prefix = self.debug_row_test_id_prefix;
         let on_link_activate = self.on_link_activate;
         let test_id_message_prefix = self.test_id_message_prefix;
 
-        let key_at: Arc<dyn Fn(usize) -> u64> = Arc::new({
+        let mut key_at = {
             let messages = messages.clone();
-            move |index| messages.get(index).map(|m| m.id).unwrap_or(index as u64)
-        });
+            move |index: usize| {
+                messages
+                    .get(index)
+                    .map(|m| m.id)
+                    .unwrap_or(u64::MAX.saturating_sub(index as u64))
+            }
+        };
 
-        let row: Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement> = Arc::new({
+        let mut row = {
             let messages = messages.clone();
             let prefix = debug_row_test_id_prefix.clone();
             let on_link_activate = on_link_activate.clone();
-            move |cx, index| {
+            move |cx: &mut ElementContext<'_, H>, index: usize| {
+                if index >= messages.len() {
+                    // Tail padding is modeled as an extra virtual list row to provide additional
+                    // scroll reach beyond the last message. However, this row can temporarily
+                    // overlap richer last-message content while measurement stabilizes (variable
+                    // row height + estimate).
+                    //
+                    // Make the tail row non-interactive so it never intercepts pointer events
+                    // (it is a blank spacer by construction).
+                    return cx.interactivity_gate(true, false, |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: fret_ui::element::Length::Fill,
+                                        height: fret_ui::element::Length::Px(tail_padding),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )]
+                    });
+                }
+
                 let Some(msg) = messages.get(index) else {
                     return cx.text("");
                 };
@@ -240,16 +292,26 @@ impl AiConversationTranscript {
                 };
 
                 let test_id: Arc<str> = Arc::from(format!("{prefix}{index}"));
-                cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Group,
-                        test_id: Some(test_id),
+                cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            // Note: VirtualList already applies a per-row clip in paint. Clipping
+                            // at this wrapper can desync hit-testing vs. visual geometry when row
+                            // bounds lag behind dynamically-sized content.
+                            overflow: fret_ui::element::Overflow::Visible,
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
                     move |_cx| vec![bubble],
                 )
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id(test_id),
+                )
             }
-        });
+        };
 
         let mut options = fret_ui::element::VirtualListOptions::new(Px(96.0), 8);
         options.items_revision = revision;
@@ -271,14 +333,8 @@ impl AiConversationTranscript {
             ..Default::default()
         };
 
-        let list = cx.virtual_list_keyed_retained_with_layout(
-            list_layout,
-            messages.len(),
-            options,
-            &handle,
-            key_at,
-            row,
-        );
+        let list =
+            cx.virtual_list_keyed_with_layout(list_layout, list_len, options, &handle, key_at, row);
 
         let padding_px = if content_padding == Space::N4 {
             theme
@@ -299,14 +355,10 @@ impl AiConversationTranscript {
         let Some(test_id) = self.debug_root_test_id else {
             return list;
         };
-
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::List,
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            move |_cx| vec![list],
+        list.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::List)
+                .test_id(test_id),
         )
     }
 }

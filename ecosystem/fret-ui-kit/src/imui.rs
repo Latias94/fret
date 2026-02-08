@@ -8,15 +8,18 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
 use fret_core::{
-    Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole, Size,
+    AppWindowId, Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole,
+    Size,
 };
-use fret_runtime::DragPhase;
+use fret_runtime::{DragPhase, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
     DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
@@ -34,6 +37,7 @@ use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::{UiIntoElement, UiPatchTarget};
 
+pub mod adapters;
 mod floating_window_on_area;
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
@@ -158,6 +162,8 @@ pub struct ResponseExt {
     pub id: Option<GlobalElementId>,
     pub secondary_clicked: bool,
     pub double_clicked: bool,
+    pub long_pressed: bool,
+    pub press_holding: bool,
     pub context_menu_requested: bool,
     pub context_menu_anchor: Option<Point>,
     pub drag: DragResponse,
@@ -191,6 +197,7 @@ pub struct FloatingWindowResponse {
     pub area: FloatingAreaResponse,
     pub size: Option<Size>,
     pub resizing: bool,
+    pub collapsed: bool,
 }
 
 impl FloatingWindowResponse {
@@ -213,12 +220,17 @@ impl FloatingWindowResponse {
     pub fn resizing(self) -> bool {
         self.resizing
     }
+
+    pub fn collapsed(self) -> bool {
+        self.collapsed
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 struct FloatingWindowChromeResponse {
     size: Option<Size>,
     resizing: bool,
+    collapsed: bool,
 }
 
 impl ResponseExt {
@@ -236,6 +248,14 @@ impl ResponseExt {
 
     pub fn double_clicked(self) -> bool {
         self.double_clicked
+    }
+
+    pub fn long_pressed(self) -> bool {
+        self.long_pressed
+    }
+
+    pub fn press_holding(self) -> bool {
+        self.press_holding
     }
 
     pub fn context_menu_requested(self) -> bool {
@@ -272,9 +292,25 @@ struct DragReportState {
     last_position: Option<Point>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct LongPressSignalState {
+    timer: Option<fret_runtime::TimerToken>,
+    holding: bool,
+}
+
 #[derive(Default)]
 struct ImUiContextMenuAnchorStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<Option<Point>>>,
+}
+
+#[derive(Default)]
+struct ImUiLongPressStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<LongPressSignalState>>,
+}
+
+#[derive(Default)]
+struct ImUiFloatWindowCollapsedStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<bool>>,
 }
 
 fn context_menu_anchor_model_for<H: UiHost>(
@@ -286,6 +322,32 @@ fn context_menu_anchor_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(None::<Point>))
+                .clone()
+        })
+}
+
+fn long_press_signal_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<LongPressSignalState> {
+    cx.app
+        .with_global_mut_untracked(ImUiLongPressStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(LongPressSignalState::default()))
+                .clone()
+        })
+}
+
+fn float_window_collapsed_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<bool> {
+    cx.app
+        .with_global_mut_untracked(ImUiFloatWindowCollapsedStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(false))
                 .clone()
         })
 }
@@ -349,36 +411,280 @@ impl Default for MenuItemOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct InputTextOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub a11y_role: Option<SemanticsRole>,
+    pub placeholder: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub submit_command: Option<fret_runtime::CommandId>,
+    pub cancel_command: Option<fret_runtime::CommandId>,
+}
+
+impl Default for InputTextOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            a11y_role: Some(SemanticsRole::TextField),
+            placeholder: None,
+            test_id: None,
+            submit_command: None,
+            cancel_command: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TextAreaOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub min_height: Px,
+}
+
+impl Default for TextAreaOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            min_height: Px(80.0),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SwitchOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for SwitchOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+}
+
+pub type ToggleOptions = SwitchOptions;
+
+#[derive(Debug, Clone)]
+pub struct SliderOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub min: f32,
+    pub max: f32,
+    pub step: f32,
+}
+
+impl Default for SliderOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            min: 0.0,
+            max: 100.0,
+            step: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    /// Optional stable popup scope id override.
+    ///
+    /// When set, `select_model_ex` will use this id for its internal popup scope instead of
+    /// deriving one from `test_id`/`label`. This is useful to avoid accidental collisions (e.g.
+    /// multiple selects with the same label) and to keep popup store growth bounded when call sites
+    /// generate dynamic labels.
+    pub popup_scope_id: Option<Arc<str>>,
+    pub placeholder: Option<Arc<str>>,
+    pub popup: PopupMenuOptions,
+}
+
+impl Default for SelectOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            popup_scope_id: None,
+            placeholder: Some(Arc::from("Select?")),
+            popup: PopupMenuOptions::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct HorizontalOptions {
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+}
+
+impl Default for HorizontalOptions {
+    fn default() -> Self {
+        Self {
+            gap: crate::MetricRef::space(crate::Space::N0),
+            justify: crate::Justify::Start,
+            items: crate::Items::Center,
+            wrap: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerticalOptions {
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+}
+
+impl Default for VerticalOptions {
+    fn default() -> Self {
+        Self {
+            gap: crate::MetricRef::space(crate::Space::N0),
+            justify: crate::Justify::Start,
+            items: crate::Items::Stretch,
+            wrap: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GridOptions {
+    pub columns: usize,
+    pub column_gap: crate::MetricRef,
+    pub row_gap: crate::MetricRef,
+    pub row_justify: crate::Justify,
+    pub row_items: crate::Items,
+}
+
+impl Default for GridOptions {
+    fn default() -> Self {
+        Self {
+            columns: 1,
+            column_gap: crate::MetricRef::space(crate::Space::N0),
+            row_gap: crate::MetricRef::space(crate::Space::N0),
+            row_justify: crate::Justify::Start,
+            row_items: crate::Items::Center,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ScrollOptions {
+    pub axis: fret_ui::element::ScrollAxis,
+    pub show_scrollbar_x: bool,
+    pub show_scrollbar_y: bool,
+    pub handle: Option<fret_ui::scroll::ScrollHandle>,
+}
+
+impl Default for ScrollOptions {
+    fn default() -> Self {
+        Self {
+            axis: fret_ui::element::ScrollAxis::Y,
+            show_scrollbar_x: false,
+            show_scrollbar_y: true,
+            handle: None,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct PopupStoreState {
     open: fret_runtime::Model<bool>,
     anchor: fret_runtime::Model<Option<fret_core::Rect>>,
     panel_id: Option<GlobalElementId>,
+    /// Last frame id where the popup was "kept alive" by a `begin_popup_*` call.
+    keep_alive_frame: Option<FrameId>,
+}
+
+#[derive(Default)]
+struct PopupStoreWindowState {
+    by_id: HashMap<Arc<str>, PopupStoreState>,
+    prepared_frame: Option<FrameId>,
 }
 
 #[derive(Default)]
 struct ImUiPopupStore {
-    by_id: HashMap<Arc<str>, PopupStoreState>,
+    by_window: HashMap<AppWindowId, PopupStoreWindowState>,
+}
+
+fn prepare_popup_store_for_frame<H: UiHost>(
+    store: &mut ImUiPopupStore,
+    app: &mut H,
+    window: AppWindowId,
+    frame_id: FrameId,
+) {
+    let state = store.by_window.entry(window).or_default();
+    if state.prepared_frame == Some(frame_id) {
+        return;
+    }
+    state.prepared_frame = Some(frame_id);
+
+    let required_keep_alive = FrameId(frame_id.0.saturating_sub(1));
+    for st in state.by_id.values_mut() {
+        let is_open = app.models().get_copied(&st.open).unwrap_or(false);
+        if !is_open {
+            continue;
+        }
+        if st.keep_alive_frame == Some(required_keep_alive) {
+            continue;
+        }
+        let _ = app.models_mut().update(&st.open, |v| *v = false);
+        let _ = app.models_mut().update(&st.anchor, |v| *v = None);
+        st.panel_id = None;
+    }
 }
 
 fn with_popup_store_for_id<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
     id: &str,
-    f: impl FnOnce(&mut PopupStoreState) -> R,
+    f: impl FnOnce(&mut PopupStoreState, &mut H) -> R,
 ) -> R {
+    let window = cx.window;
+    let frame_id = cx.frame_id;
     cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
-            if let Some(existing) = st.by_id.get_mut(id) {
-                return f(existing);
+        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
+            prepare_popup_store_for_frame(store, app, window, frame_id);
+
+            let state = store.by_window.entry(window).or_default();
+            if let Some(existing) = state.by_id.get_mut(id) {
+                return f(existing, app);
             }
 
             let key: Arc<str> = Arc::from(id);
-            let entry = st.by_id.entry(key).or_insert_with(|| PopupStoreState {
+            let entry = state.by_id.entry(key).or_insert_with(|| PopupStoreState {
                 open: app.models_mut().insert(false),
                 anchor: app.models_mut().insert(None::<fret_core::Rect>),
                 panel_id: None,
+                keep_alive_frame: None,
             });
-            f(entry)
+            f(entry, app)
         })
 }
 
@@ -397,11 +703,13 @@ const KEY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.clicked.v1");
 const KEY_CHANGED: u64 = fnv1a64(b"fret-ui-kit.imui.changed.v1");
 const KEY_SECONDARY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.secondary_clicked.v1");
 const KEY_DOUBLE_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.double_clicked.v1");
+const KEY_LONG_PRESSED: u64 = fnv1a64(b"fret-ui-kit.imui.long_pressed.v1");
 const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_requested.v1");
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
 
 const DRAG_THRESHOLD_PX: f32 = 4.0;
+const LONG_PRESS_DELAY: Duration = Duration::from_millis(450);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
 
 fn drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
@@ -414,6 +722,276 @@ fn point_sub(a: Point, b: Point) -> Point {
 
 fn point_add(a: Point, b: Point) -> Point {
     Point::new(Px(a.x.0 + b.x.0), Px(a.y.0 + b.y.0))
+}
+
+fn model_value_changed_for<H: UiHost, T>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    current: T,
+) -> bool
+where
+    T: Clone + PartialEq + 'static,
+{
+    cx.with_state_for(
+        id,
+        || current.clone(),
+        |previous| {
+            let changed = previous != &current;
+            if changed {
+                *previous = current.clone();
+            }
+            changed
+        },
+    )
+}
+
+fn text_model_changed_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    current: &str,
+) -> bool {
+    model_value_changed_for(cx, id, current.to_string())
+}
+
+fn slider_step_or_default(step: f32) -> f32 {
+    if step.is_finite() && step > 0.0 {
+        step
+    } else {
+        1.0
+    }
+}
+
+fn slider_normalize_range(min: f32, max: f32) -> (f32, f32) {
+    if min <= max { (min, max) } else { (max, min) }
+}
+
+fn slider_clamp_and_snap(value: f32, min: f32, max: f32, step: f32) -> f32 {
+    let (min, max) = slider_normalize_range(min, max);
+    if !value.is_finite() {
+        return min;
+    }
+    if (max - min).abs() <= f32::EPSILON {
+        return min;
+    }
+    let step = slider_step_or_default(step);
+    let snapped = min + ((value - min) / step).round() * step;
+    snapped.clamp(min, max)
+}
+
+fn slider_value_from_pointer(bounds: Rect, pointer: Point, min: f32, max: f32, step: f32) -> f32 {
+    let (min, max) = slider_normalize_range(min, max);
+    if (max - min).abs() <= f32::EPSILON {
+        return min;
+    }
+
+    let width = bounds.size.width.0.max(1.0);
+    let t = ((pointer.x.0 - bounds.origin.x.0) / width).clamp(0.0, 1.0);
+    let raw = min + (max - min) * t;
+    slider_clamp_and_snap(raw, min, max, step)
+}
+
+fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAreaStyle {
+    let input_style = crate::recipes::input::default_text_input_style(theme);
+    let mut preedit_bg_color = input_style.selection_color;
+    preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
+
+    fret_ui::TextAreaStyle {
+        padding_x: input_style.padding.left,
+        padding_y: input_style.padding.top,
+        background: input_style.background,
+        border: input_style.border,
+        border_color: input_style.border_color,
+        focus_ring: input_style.focus_ring,
+        corner_radii: input_style.corner_radii,
+        text_color: input_style.text_color,
+        selection_color: input_style.selection_color,
+        caret_color: input_style.caret_color,
+        preedit_bg_color,
+        preedit_underline_color: input_style.preedit_color,
+    }
+}
+
+fn build_imui_children_with_focus<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    out: &mut Vec<AnyElement>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) {
+    let mut ui = ImUiFacade {
+        cx,
+        out,
+        build_focus,
+    };
+    f(&mut ui);
+}
+
+fn horizontal_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: HorizontalOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::h_flex_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .gap_metric(options.gap)
+        .justify(options.justify)
+        .items(options.items);
+    if options.wrap {
+        builder = builder.wrap();
+    } else {
+        builder = builder.no_wrap();
+    }
+    builder.into_element(cx)
+}
+
+fn vertical_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: VerticalOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::v_flex_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .gap_metric(options.gap)
+        .justify(options.justify)
+        .items(options.items);
+    if options.wrap {
+        builder = builder.wrap();
+    } else {
+        builder = builder.no_wrap();
+    }
+    builder.into_element(cx)
+}
+
+fn scroll_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: ScrollOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::scroll_area_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .axis(options.axis)
+        .show_scrollbars(options.show_scrollbar_x, options.show_scrollbar_y);
+    if let Some(handle) = options.handle {
+        builder = builder.handle(handle);
+    }
+    builder.into_element(cx)
+}
+
+fn grid_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: GridOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut cells: Vec<AnyElement> = Vec::new();
+    build_imui_children_with_focus(cx, &mut cells, build_focus, f);
+
+    let columns = options.columns.max(1);
+    let mut rows: Vec<AnyElement> = Vec::new();
+    let mut row_index = 0usize;
+    let mut iter = cells.into_iter();
+
+    loop {
+        let mut row_cells: Vec<AnyElement> = Vec::with_capacity(columns);
+        for _ in 0..columns {
+            let Some(cell) = iter.next() else {
+                break;
+            };
+            row_cells.push(cell);
+        }
+        if row_cells.is_empty() {
+            break;
+        }
+
+        let row = cx.keyed(row_index, |cx| {
+            crate::ui::h_flex(cx, move |_cx| row_cells)
+                .gap_metric(options.column_gap.clone())
+                .justify(options.row_justify)
+                .items(options.row_items)
+                .no_wrap()
+                .into_element(cx)
+        });
+        rows.push(row);
+        row_index += 1;
+    }
+
+    crate::ui::v_flex(cx, move |_cx| rows)
+        .gap_metric(options.row_gap)
+        .justify(crate::Justify::Start)
+        .items(crate::Items::Stretch)
+        .no_wrap()
+        .into_element(cx)
+}
+fn arm_long_press_timer_for(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    model: &fret_runtime::Model<LongPressSignalState>,
+) {
+    let token = host.next_timer_token();
+    let previous = host
+        .update_model(model, |state| {
+            let previous = state.timer.take();
+            state.timer = Some(token);
+            state.holding = false;
+            previous
+        })
+        .flatten();
+    if let Some(previous) = previous {
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: previous });
+    }
+    host.push_effect(fret_runtime::Effect::SetTimer {
+        window: Some(action_cx.window),
+        token,
+        after: LONG_PRESS_DELAY,
+        repeat: None,
+    });
+}
+
+fn cancel_long_press_timer_for(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &fret_runtime::Model<LongPressSignalState>,
+) {
+    let previous = host
+        .update_model(model, |state| {
+            let previous = state.timer.take();
+            state.holding = false;
+            previous
+        })
+        .flatten();
+    if let Some(previous) = previous {
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: previous });
+    }
+}
+
+fn emit_long_press_if_matching(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    model: &fret_runtime::Model<LongPressSignalState>,
+    token: fret_runtime::TimerToken,
+) -> bool {
+    let fired = host
+        .update_model(model, |state| {
+            if state.timer != Some(token) {
+                return false;
+            }
+            state.timer = None;
+            state.holding = true;
+            true
+        })
+        .unwrap_or(false);
+    if fired {
+        host.record_transient_event(action_cx, KEY_LONG_PRESSED);
+        host.notify(action_cx);
+    }
+    fired
 }
 
 const FLOAT_WINDOW_DRAG_KIND_MASK: u64 = 0x4000_0000_0000_0000;
@@ -445,6 +1023,42 @@ impl Default for FloatingWindowResizeOptions {
         Self {
             min_size: Size::new(Px(120.0), Px(72.0)),
             max_size: None,
+        }
+    }
+}
+
+/// Behavior flags for in-window floating windows.
+///
+/// This is an ecosystem-level facade surface (not a mechanism-layer contract). The goal is to
+/// provide ImGui-like control over common floating window behavior without introducing a parallel
+/// runtime or duplicating canonical policy.
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingWindowOptions {
+    /// When true, the window can be moved by dragging the title bar.
+    pub movable: bool,
+    /// When true, resize handles are active when the window is rendered with an initial size.
+    pub resizable: bool,
+    /// When true, title-bar double click toggles collapse/expand.
+    pub collapsible: bool,
+    /// When true and an `open` model is provided, the close button and `Escape`-to-close are enabled.
+    pub closable: bool,
+    /// When true, pointer down anywhere in the window activates it for z-order (when nested under
+    /// `floating_layer(...)`).
+    pub activate_on_click: bool,
+    /// When false, the window is rendered but pointer interactions are blocked (no activation,
+    /// drag, resize, or child clicks).
+    pub inputs_enabled: bool,
+}
+
+impl Default for FloatingWindowOptions {
+    fn default() -> Self {
+        Self {
+            movable: true,
+            resizable: true,
+            collapsible: true,
+            closable: true,
+            activate_on_click: true,
+            inputs_enabled: true,
         }
     }
 }
@@ -497,6 +1111,11 @@ pub struct FloatingAreaContext {
 }
 
 const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
+const KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED: u64 =
+    fnv1a64(b"fret-ui-kit.imui.float_window.toggle_collapsed.v1");
+
+type OnFloatingAreaLeftDoubleClick =
+    Arc<dyn Fn(&mut dyn fret_ui::action::UiPointerActionHost, fret_ui::action::ActionCx) + 'static>;
 
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
 ///
@@ -529,6 +1148,103 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
 
     pub fn add(&mut self, element: AnyElement) {
         self.out.push(element);
+    }
+
+    pub fn id<K: Hash>(
+        &mut self,
+        key: K,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let out = &mut *self.out;
+        let build_focus = self.build_focus.clone();
+        self.cx.keyed(key, |cx| {
+            let mut ui = ImUiFacade {
+                cx,
+                out,
+                build_focus,
+            };
+            f(&mut ui);
+        });
+    }
+
+    pub fn push_id<K: Hash>(
+        &mut self,
+        key: K,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.id(key, f);
+    }
+
+    pub fn for_each_keyed<I, K, T>(
+        &mut self,
+        items: I,
+        mut f: impl FnMut(&mut ImUiFacade<'_, '_, H>, &K, T),
+    ) where
+        I: IntoIterator<Item = (K, T)>,
+        K: Hash,
+    {
+        let f = &mut f;
+        for (key, item) in items {
+            self.id(&key, |ui| f(ui, &key, item));
+        }
+    }
+
+    pub fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.horizontal_ex(HorizontalOptions::default(), f);
+    }
+
+    pub fn horizontal_ex(
+        &mut self,
+        options: HorizontalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element =
+            self.with_cx_mut(|cx| horizontal_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.vertical_ex(VerticalOptions::default(), f);
+    }
+
+    pub fn vertical_ex(
+        &mut self,
+        options: VerticalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element =
+            self.with_cx_mut(|cx| vertical_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.grid_ex(GridOptions::default(), f);
+    }
+
+    pub fn grid_ex(
+        &mut self,
+        options: GridOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| grid_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.scroll_ex(ScrollOptions::default(), f);
+    }
+
+    pub fn scroll_ex(
+        &mut self,
+        options: ScrollOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| scroll_container_element(cx, build_focus, options, f));
+        self.add(element);
     }
 
     pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
@@ -598,6 +1314,120 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.record_focusable(resp.id, true);
         resp
     }
+
+    pub fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.input_text_model_ex(model, InputTextOptions::default())
+    }
+
+    pub fn input_text_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: InputTextOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.textarea_model_ex(model, TextAreaOptions::default())
+    }
+
+    pub fn textarea_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: TextAreaOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::textarea_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn toggle_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.toggle_model_ex(label, model, ToggleOptions::default())
+    }
+
+    pub fn toggle_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: ToggleOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::toggle_model_ex(self, label, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn switch_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, SwitchOptions::default())
+    }
+
+    pub fn switch_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: SwitchOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::switch_model_ex(self, label, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn slider_f32_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+    ) -> ResponseExt {
+        self.slider_f32_model_ex(label, model, SliderOptions::default())
+    }
+
+    pub fn slider_f32_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+        options: SliderOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::slider_f32_model_ex(self, label, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn select_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+    ) -> ResponseExt {
+        self.select_model_ex(label, model, items, SelectOptions::default())
+    }
+
+    pub fn select_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+        options: SelectOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::select_model_ex(self, label, model, items, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
 }
 
 impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
@@ -657,6 +1487,8 @@ struct FloatWindowLayerMarker {
 #[derive(Debug, Default)]
 struct FloatWindowLayerZOrder {
     order: Vec<GlobalElementId>,
+    dirty: bool,
+    snapshot: FloatWindowLayerZOrderSnapshot,
 }
 
 impl FloatWindowLayerZOrder {
@@ -665,6 +1497,7 @@ impl FloatWindowLayerZOrder {
             return;
         }
         self.order.push(window);
+        self.dirty = true;
     }
 
     fn bring_to_front(&mut self, window: GlobalElementId) {
@@ -677,13 +1510,50 @@ impl FloatWindowLayerZOrder {
         }
         self.order.remove(idx);
         self.order.push(window);
+        self.dirty = true;
     }
+
+    fn prune_missing(&mut self, windows: &[AnyElement]) {
+        let before = self.order.len();
+        self.order.retain(|id| windows.iter().any(|w| w.id == *id));
+        if self.order.len() != before {
+            self.dirty = true;
+        }
+    }
+
+    fn snapshot(&mut self) -> FloatWindowLayerZOrderSnapshot {
+        if !self.dirty {
+            return self.snapshot.clone();
+        }
+
+        let order: Arc<[GlobalElementId]> = self.order.clone().into();
+        let mut rank = HashMap::with_capacity(order.len());
+        for (ix, id) in order.iter().enumerate() {
+            rank.insert(*id, ix);
+        }
+
+        self.snapshot = FloatWindowLayerZOrderSnapshot {
+            order,
+            rank: Arc::new(rank),
+        };
+        self.dirty = false;
+        self.snapshot.clone()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct FloatWindowLayerZOrderSnapshot {
+    #[allow(dead_code)]
+    order: Arc<[GlobalElementId]>,
+    rank: Arc<HashMap<GlobalElementId, usize>>,
 }
 
 fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
     cx: &mut ElementContext<'_, H>,
     area: FloatingAreaContext,
     props: PointerRegionProps,
+    on_left_double_click: Option<OnFloatingAreaLeftDoubleClick>,
+    enable_drag: bool,
     setup: Setup,
     build: Build,
 ) -> AnyElement
@@ -693,6 +1563,7 @@ where
 {
     let mut build = Some(build);
     let mut setup = Some(setup);
+    let on_left_double_click_for_down = on_left_double_click.clone();
     cx.pointer_region(props, move |cx| {
         let region_id = cx.root_id();
         float_layer_bring_to_front_if_activated(cx, region_id, area.id);
@@ -708,9 +1579,27 @@ where
             }
 
             host.request_focus(acx.target);
-            host.capture_pointer();
-            if host.drag(down.pointer_id).is_none() {
-                host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+            if enable_drag {
+                host.capture_pointer();
+                if host.drag(down.pointer_id).is_none() {
+                    host.begin_drag_with_kind(
+                        down.pointer_id,
+                        drag_kind,
+                        acx.window,
+                        down.position,
+                    );
+                }
+            }
+            if down.click_count == 2
+                && let Some(on_left_double_click) = on_left_double_click_for_down.as_ref()
+            {
+                on_left_double_click(
+                    host,
+                    fret_ui::action::ActionCx {
+                        window: acx.window,
+                        target: area.id,
+                    },
+                );
             }
             host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
             host.notify(acx);
@@ -718,6 +1607,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+            if !enable_drag {
+                return false;
+            }
             let Some(drag) = host.drag_mut(mv.pointer_id) else {
                 return false;
             };
@@ -748,6 +1640,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+            if !enable_drag {
+                return false;
+            }
             if let Some(drag) = host.drag(up.pointer_id)
                 && drag.kind == drag_kind
                 && drag.source_window == acx.window
@@ -778,6 +1673,28 @@ where
 /// still compiling down to Fret's declarative element tree and delegating complex policy to
 /// higher-level components.
 pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
+    fn push_id<K: Hash, R>(
+        &mut self,
+        key: K,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>) -> R,
+    ) -> R {
+        let mut result = None;
+        let elements = self.with_cx_mut(|cx| {
+            cx.keyed(key, |cx| {
+                let mut out = Vec::new();
+                let mut ui = ImUiFacade {
+                    cx,
+                    out: &mut out,
+                    build_focus: None,
+                };
+                result = Some(f(&mut ui));
+                out
+            })
+        });
+        self.extend(elements);
+        result.expect("imui push_id closure should produce a result")
+    }
+
     fn text(&mut self, text: impl Into<Arc<str>>) {
         let element = self.with_cx_mut(|cx| cx.text(text));
         self.add(element);
@@ -792,6 +1709,58 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
             cx.container(props, |_| Vec::new())
         });
+        self.add(element);
+    }
+
+    fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.horizontal_ex(HorizontalOptions::default(), f);
+    }
+
+    fn horizontal_ex(
+        &mut self,
+        options: HorizontalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| horizontal_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.vertical_ex(VerticalOptions::default(), f);
+    }
+
+    fn vertical_ex(
+        &mut self,
+        options: VerticalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| vertical_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.grid_ex(GridOptions::default(), f);
+    }
+
+    fn grid_ex(
+        &mut self,
+        options: GridOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| grid_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.scroll_ex(ScrollOptions::default(), f);
+    }
+
+    fn scroll_ex(
+        &mut self,
+        options: ScrollOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| scroll_container_element(cx, None, options, f));
         self.add(element);
     }
 
@@ -825,25 +1794,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     f(&mut ui);
                 }
 
-                let mut z_order =
-                    cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
-                        for w in windows.iter() {
-                            st.ensure_present(w.id);
-                        }
-                        st.order.clone()
-                    });
-
-                // Ensure we never rank missing windows above present ones if the order vector is stale.
-                z_order.retain(|id| windows.iter().any(|w| w.id == *id));
+                let z_order = cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
+                    for w in windows.iter() {
+                        st.ensure_present(w.id);
+                    }
+                    st.prune_missing(&windows);
+                    st.snapshot()
+                });
 
                 let mut indexed: Vec<(usize, usize, AnyElement)> = windows
                     .into_iter()
                     .enumerate()
                     .map(|(original, w)| {
-                        let idx = z_order
-                            .iter()
-                            .position(|id| *id == w.id)
-                            .unwrap_or(usize::MAX);
+                        let idx = z_order.rank.get(&w.id).copied().unwrap_or(usize::MAX);
                         (idx, original, w)
                     })
                     .collect();
@@ -1051,7 +2014,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, setup, f))
+        self.with_cx_mut(|cx| {
+            floating_area_drag_surface_element(cx, area, props, None, true, setup, f)
+        })
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -1059,12 +2024,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
-        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st| st.open.clone()))
+        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st, _app| st.open.clone()))
+    }
+
+    /// Drops all internal state for a named popup scope.
+    ///
+    /// This is primarily intended for ephemeral/dynamic scopes where the id space could grow
+    /// without bound (e.g. popups keyed by user-generated strings). Dropping a scope will close the
+    /// popup (if open) and release the internal models if no other references exist.
+    fn drop_popup_scope(&mut self, id: &str) {
+        self.with_cx_mut(|cx| {
+            cx.app
+                .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
+                    prepare_popup_store_for_frame(st, app, cx.window, cx.frame_id);
+                    let Some(window_state) = st.by_window.get_mut(&cx.window) else {
+                        return;
+                    };
+                    let Some(entry) = window_state.by_id.remove(id) else {
+                        return;
+                    };
+                    let _ = app.models_mut().update(&entry.open, |v| *v = false);
+                    let _ = app.models_mut().update(&entry.anchor, |v| *v = None);
+                });
+            cx.app.request_redraw(cx.window);
+        });
     }
 
     fn open_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let keep_alive_frame = cx.frame_id;
+            let open = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                st.open.clone()
+            });
             let _ = cx.app.models_mut().update(&open, |v| *v = true);
             cx.app.request_redraw(cx.window);
         });
@@ -1072,8 +2064,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model) =
-                with_popup_store_for_id(cx, id, |st| (st.open.clone(), st.anchor.clone()));
+            let keep_alive_frame = cx.frame_id;
+            let (open, anchor_model) = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                (st.open.clone(), st.anchor.clone())
+            });
             let _ = cx
                 .app
                 .models_mut()
@@ -1085,7 +2080,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn close_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let _ = cx.app.models_mut().update(&open, |v| *v = false);
             cx.app.request_redraw(cx.window);
         });
@@ -1108,7 +2103,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st| {
+            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st, _app| {
                 (st.open.clone(), st.anchor.clone(), st.panel_id)
             });
             let is_open = cx
@@ -1122,8 +2117,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 .read_model(&anchor_model, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(None);
             let Some(anchor) = anchor else {
+                let _ = cx.app.models_mut().update(&open, |v| *v = false);
+                let _ = cx.app.models_mut().update(&anchor_model, |v| *v = None);
+                with_popup_store_for_id(cx, id, |st, _app| {
+                    st.panel_id = None;
+                    st.keep_alive_frame = None;
+                });
+                cx.app.request_redraw(cx.window);
                 return false;
             };
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -1200,7 +2207,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         })]
                     });
                     menu_id_for_focus = Some(menu.id);
-                    with_popup_store_for_id(cx, id, |st| st.panel_id = Some(menu.id));
+                    with_popup_store_for_id(cx, id, |st, _app| st.panel_id = Some(menu.id));
                     menu
                 })
             });
@@ -1247,13 +2254,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let is_open = cx
                 .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(false);
             if !is_open {
                 return false;
             }
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -1506,9 +2518,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     row.gap = Px(8.0);
 
                     let indicator = match (role, checked) {
-                        (SemanticsRole::MenuItemCheckbox, Some(true)) => Some(Arc::from("✓")),
+                        (SemanticsRole::MenuItemCheckbox, Some(true)) => {
+                            Some(Arc::from("\u{2713}"))
+                        }
                         (SemanticsRole::MenuItemCheckbox, Some(false)) => Some(Arc::from(" ")),
-                        (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("●")),
+                        (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("\u{25CF}")),
                         (SemanticsRole::MenuItemRadio, Some(false)) => Some(Arc::from(" ")),
                         _ => None,
                     };
@@ -1684,6 +2698,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
+                let long_press_signal_model = long_press_signal_model_for(cx, id);
+                let long_press_signal_model_for_timer = long_press_signal_model.clone();
+                let long_press_signal_model_for_down = long_press_signal_model.clone();
+                let long_press_signal_model_for_move = long_press_signal_model.clone();
+                let long_press_signal_model_for_up = long_press_signal_model.clone();
+
+                cx.timer_on_timer_for(
+                    id,
+                    Arc::new(move |host, action_cx, token| {
+                        emit_long_press_if_matching(
+                            host,
+                            action_cx,
+                            &long_press_signal_model_for_timer,
+                            token,
+                        )
+                    }),
+                );
 
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
@@ -1710,6 +2741,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
+
                     if host.drag(down.pointer_id).is_none() {
                         host.begin_drag_with_kind(
                             down.pointer_id,
@@ -1723,6 +2756,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let mut cancel_long_press = false;
+
                     let Some(drag) = host.drag_mut(mv.pointer_id) else {
                         return false;
                     };
@@ -1736,11 +2771,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     drag.position = mv.position;
 
                     if !mv.buttons.left {
+                        cancel_long_press = true;
                         if drag.dragging {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
                         host.cancel_drag(mv.pointer_id);
+                        if cancel_long_press {
+                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                        }
                         host.notify(acx);
                         return false;
                     }
@@ -1748,16 +2787,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
                     if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
                         host.record_transient_event(acx, KEY_DRAG_STARTED);
                     }
 
+                    if cancel_long_press {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                    }
                     host.notify(acx);
                     false
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if up.button == MouseButton::Left {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
+                    }
+
                     if let Some(drag) = host.drag(up.pointer_id)
                         && drag.kind == drag_kind_for_element(acx.target)
                         && drag.source_window == acx.window
@@ -1796,6 +2843,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.long_pressed = cx.take_transient_for(id, KEY_LONG_PRESSED);
+                response.press_holding = cx
+                    .read_model(
+                        &long_press_signal_model,
+                        fret_ui::Invalidation::Paint,
+                        |_app, value| value.holding,
+                    )
+                    .unwrap_or(false);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
                 response.context_menu_anchor = cx
@@ -1876,6 +2931,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
+                let long_press_signal_model = long_press_signal_model_for(cx, id);
+                let long_press_signal_model_for_timer = long_press_signal_model.clone();
+                let long_press_signal_model_for_down = long_press_signal_model.clone();
+                let long_press_signal_model_for_move = long_press_signal_model.clone();
+                let long_press_signal_model_for_up = long_press_signal_model.clone();
+
+                cx.timer_on_timer_for(
+                    id,
+                    Arc::new(move |host, action_cx, token| {
+                        emit_long_press_if_matching(
+                            host,
+                            action_cx,
+                            &long_press_signal_model_for_timer,
+                            token,
+                        )
+                    }),
+                );
 
                 let model = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -1904,6 +2976,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
+
                     if host.drag(down.pointer_id).is_none() {
                         host.begin_drag_with_kind(
                             down.pointer_id,
@@ -1917,6 +2991,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let mut cancel_long_press = false;
+
                     let Some(drag) = host.drag_mut(mv.pointer_id) else {
                         return false;
                     };
@@ -1930,11 +3006,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     drag.position = mv.position;
 
                     if !mv.buttons.left {
+                        cancel_long_press = true;
                         if drag.dragging {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
                         host.cancel_drag(mv.pointer_id);
+                        if cancel_long_press {
+                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                        }
                         host.notify(acx);
                         return false;
                     }
@@ -1942,16 +3022,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
                     if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
                         host.record_transient_event(acx, KEY_DRAG_STARTED);
                     }
 
+                    if cancel_long_press {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                    }
                     host.notify(acx);
                     false
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if up.button == MouseButton::Left {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
+                    }
+
                     if let Some(drag) = host.drag(up.pointer_id)
                         && drag.kind == drag_kind_for_element(acx.target)
                         && drag.source_window == acx.window
@@ -1987,6 +3075,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.long_pressed = cx.take_transient_for(id, KEY_LONG_PRESSED);
+                response.press_holding = cx
+                    .read_model(
+                        &long_press_signal_model,
+                        fret_ui::Invalidation::Paint,
+                        |_app, value| value.holding,
+                    )
+                    .unwrap_or(false);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
                 response.context_menu_anchor = cx
@@ -2035,6 +3131,465 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     Arc::from("[ ] ")
                 };
                 vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn toggle_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.toggle_model_ex(label, model, ToggleOptions::default())
+    }
+
+    fn toggle_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: ToggleOptions,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, options)
+    }
+
+    fn switch_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, SwitchOptions::default())
+    }
+
+    fn switch_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: SwitchOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            let value = cx
+                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(false);
+
+            let mut props = PressableProps::default();
+            props.enabled = options.enabled;
+            props.focusable = options.focusable;
+            props.a11y = crate::primitives::switch::switch_a11y(
+                options.a11y_label.clone().or_else(|| Some(label.clone())),
+                value,
+            );
+            props.a11y.test_id = options.test_id.clone();
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                cx.pressable_clear_on_pointer_down();
+                cx.pressable_clear_on_pointer_move();
+                cx.pressable_clear_on_pointer_up();
+
+                let model_for_activate = model.clone();
+                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                    let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
+                    host.record_transient_event(acx, KEY_CLICKED);
+                    host.record_transient_event(acx, KEY_CHANGED);
+                    host.notify(acx);
+                }));
+
+                response.core.hovered = state.hovered;
+                response.core.pressed = state.pressed;
+                response.core.focused = state.focused;
+                response.id = Some(id);
+                response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
+                response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let prefix: Arc<str> = if value {
+                    Arc::from("[on] ")
+                } else {
+                    Arc::from("[off] ")
+                };
+                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn slider_f32_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+    ) -> ResponseExt {
+        self.slider_f32_model_ex(label, model, SliderOptions::default())
+    }
+
+    fn slider_f32_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+        options: SliderOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let min = options.min;
+        let max = options.max;
+        let step = options.step;
+
+        let element = self.with_cx_mut(|cx| {
+            let mut props = PressableProps::default();
+            props.enabled = options.enabled;
+            props.focusable = options.focusable;
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Px(Px(24.0));
+
+            props.a11y = PressableA11y {
+                role: Some(SemanticsRole::Slider),
+                label: options.a11y_label.clone().or_else(|| Some(label.clone())),
+                test_id: options.test_id.clone(),
+                ..Default::default()
+            };
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                cx.pressable_clear_on_pointer_down();
+                cx.pressable_clear_on_pointer_move();
+                cx.pressable_clear_on_pointer_up();
+                cx.key_clear_on_key_down_for(id);
+
+                let model_for_down = model.clone();
+                cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                    if down.button != MouseButton::Left {
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    host.capture_pointer();
+                    host.request_focus(acx.target);
+
+                    let next =
+                        slider_value_from_pointer(host.bounds(), down.position, min, max, step);
+                    let mut changed = false;
+                    let _ = host.update_model(&model_for_down, |value: &mut f32| {
+                        let current = slider_clamp_and_snap(*value, min, max, step);
+                        if (current - next).abs() > f32::EPSILON {
+                            *value = next;
+                            changed = true;
+                        }
+                    });
+                    if changed {
+                        host.record_transient_event(acx, KEY_CHANGED);
+                        host.notify(acx);
+                    }
+
+                    PressablePointerDownResult::Continue
+                }));
+
+                let model_for_move = model.clone();
+                cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    if !mv.buttons.left {
+                        host.release_pointer_capture();
+                        return false;
+                    }
+
+                    let next =
+                        slider_value_from_pointer(host.bounds(), mv.position, min, max, step);
+                    let mut changed = false;
+                    let _ = host.update_model(&model_for_move, |value: &mut f32| {
+                        let current = slider_clamp_and_snap(*value, min, max, step);
+                        if (current - next).abs() > f32::EPSILON {
+                            *value = next;
+                            changed = true;
+                        }
+                    });
+                    if changed {
+                        host.record_transient_event(acx, KEY_CHANGED);
+                        host.notify(acx);
+                    }
+                    changed
+                }));
+
+                cx.pressable_on_pointer_up(Arc::new(move |host, _acx, up| {
+                    if up.button == MouseButton::Left {
+                        host.release_pointer_capture();
+                    }
+                    PressablePointerUpResult::Continue
+                }));
+
+                let model_for_key = model.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        let (min, max) = slider_normalize_range(min, max);
+                        let step = slider_step_or_default(step);
+                        let delta = match down.key {
+                            KeyCode::ArrowLeft | KeyCode::ArrowDown => Some(-step),
+                            KeyCode::ArrowRight | KeyCode::ArrowUp => Some(step),
+                            KeyCode::PageDown => Some(-step * 10.0),
+                            KeyCode::PageUp => Some(step * 10.0),
+                            _ => None,
+                        };
+
+                        let mut changed = false;
+                        let _ = host.update_model(&model_for_key, |value: &mut f32| {
+                            let current = slider_clamp_and_snap(*value, min, max, step);
+                            let next = match down.key {
+                                KeyCode::Home => min,
+                                KeyCode::End => max,
+                                _ => {
+                                    let Some(delta) = delta else {
+                                        return;
+                                    };
+                                    slider_clamp_and_snap(current + delta, min, max, step)
+                                }
+                            };
+                            if (current - next).abs() > f32::EPSILON {
+                                *value = next;
+                                changed = true;
+                            }
+                        });
+
+                        if changed {
+                            host.record_transient_event(acx, KEY_CHANGED);
+                            host.notify(acx);
+                        }
+
+                        changed
+                    }),
+                );
+
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| {
+                        slider_clamp_and_snap(*v, min, max, step)
+                    })
+                    .unwrap_or_else(|_| slider_clamp_and_snap(min, min, max, step));
+
+                response.core.hovered = state.hovered;
+                response.core.pressed = state.pressed;
+                response.core.focused = state.focused;
+                response.id = Some(id);
+                response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                vec![cx.text(Arc::from(format!("{label}: {current:.2}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn select_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+    ) -> ResponseExt {
+        self.select_model_ex(label, model, items, SelectOptions::default())
+    }
+
+    fn select_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+        options: SelectOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+
+        let selected = self.with_cx_mut(|cx| {
+            cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                .unwrap_or(None)
+        });
+
+        let selected_label: Arc<str> = selected
+            .clone()
+            .or_else(|| options.placeholder.clone())
+            .unwrap_or_else(|| Arc::from("Select..."));
+        let trigger_text: Arc<str> = Arc::from(format!("{label}: {selected_label}"));
+
+        let popup_scope_id: Arc<str> = options.popup_scope_id.clone().unwrap_or_else(|| {
+            let base = options
+                .test_id
+                .as_deref()
+                .map(str::to_owned)
+                .unwrap_or_else(|| label.as_ref().to_string());
+            let mut normalized = String::with_capacity(base.len());
+            for ch in base.chars() {
+                if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
+                    normalized.push(ch);
+                } else {
+                    normalized.push('-');
+                }
+            }
+            Arc::from(format!("imui-select-popup-{normalized}"))
+        });
+        let popup_open = self.popup_open_model(popup_scope_id.as_ref());
+
+        let trigger = self.push_id(format!("{popup_scope_id}.trigger"), |ui| {
+            ui.menu_item_ex(
+                trigger_text,
+                MenuItemOptions {
+                    enabled: options.enabled,
+                    test_id: options.test_id.clone(),
+                    ..Default::default()
+                },
+            )
+        });
+
+        if options.enabled && trigger.clicked() {
+            if let Some(anchor) = trigger.core.rect {
+                self.open_popup_at(popup_scope_id.as_ref(), anchor);
+            }
+        }
+
+        let selected_before = selected.clone();
+        let model_for_pick = model.clone();
+        let popup_open_for_items = popup_open.clone();
+        let trigger_test_id = options.test_id.clone();
+        let popup_opened = self.begin_popup_menu_ex(
+            popup_scope_id.as_ref(),
+            trigger.id,
+            options.popup,
+            move |ui| {
+                for (index, item) in items.iter().enumerate() {
+                    let checked = selected_before
+                        .as_ref()
+                        .is_some_and(|current| current.as_ref() == item.as_ref());
+                    let item_test_id = trigger_test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{id}.option.{index}")));
+                    let item_response = ui.menu_item_radio_ex(
+                        item.clone(),
+                        checked,
+                        MenuItemOptions {
+                            test_id: item_test_id,
+                            ..Default::default()
+                        },
+                    );
+                    if item_response.clicked() {
+                        if !checked {
+                            let next_value = Some(item.clone());
+                            let _ = ui
+                                .cx_mut()
+                                .app
+                                .models_mut()
+                                .update(&model_for_pick, |value| *value = next_value.clone());
+                        }
+                        let _ = ui
+                            .cx_mut()
+                            .app
+                            .models_mut()
+                            .update(&popup_open_for_items, |value| *value = false);
+                    }
+                }
+            },
+        );
+
+        if !options.enabled && popup_opened {
+            self.close_popup(popup_scope_id.as_ref());
+        }
+
+        let selected_now = self.with_cx_mut(|cx| {
+            cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                .unwrap_or(None)
+        });
+
+        let mut response = trigger;
+        response.core.changed = response.id.is_some_and(|id| {
+            self.with_cx_mut(|cx| model_value_changed_for(cx, id, selected_now.clone()))
+        });
+        response
+    }
+
+    fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.input_text_model_ex(model, InputTextOptions::default())
+    }
+
+    fn input_text_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: InputTextOptions,
+    ) -> ResponseExt {
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            cx.scope(|cx| {
+                let id = cx.root_id();
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                    .unwrap_or_default();
+
+                response.id = Some(id);
+                response.core.focused = cx.is_focused_element(id);
+                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                let mut props = fret_ui::element::TextInputProps::new(model.clone());
+                props.enabled = options.enabled;
+                props.focusable = options.focusable;
+                props.a11y_label = options.a11y_label.clone();
+                props.a11y_role = options.a11y_role;
+                props.test_id = options.test_id.clone();
+                props.placeholder = options.placeholder.clone();
+                props.submit_command = options.submit_command.clone();
+                props.cancel_command = options.cancel_command.clone();
+                props.chrome = crate::recipes::input::default_text_input_style(&theme);
+
+                let mut element = cx.text_input(props);
+                element.id = id;
+                element
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.textarea_model_ex(model, TextAreaOptions::default())
+    }
+
+    fn textarea_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: TextAreaOptions,
+    ) -> ResponseExt {
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            cx.scope(|cx| {
+                let id = cx.root_id();
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                    .unwrap_or_default();
+
+                response.id = Some(id);
+                response.core.focused = cx.is_focused_element(id);
+                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                let mut props = fret_ui::element::TextAreaProps::new(model.clone());
+                props.enabled = options.enabled;
+                props.focusable = options.focusable;
+                props.a11y_label = options.a11y_label.clone();
+                props.test_id = options.test_id.clone();
+                props.min_height = options.min_height;
+                props.chrome = default_text_area_style_from_theme(&theme);
+
+                let mut element = cx.text_area(props);
+                element.id = id;
+                element
             })
         });
 
@@ -2312,13 +3867,37 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        self.floating_window_impl_on_area_show(
+        self.floating_window_impl_on_area_show_with_options(
             id,
             title,
             open,
             initial_position,
             initial_size,
             resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            options,
             f,
         )
     }
@@ -2375,6 +3954,29 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_on_area_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
         if let Some(open) = open {
             let is_open = self
                 .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
@@ -2390,6 +3992,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     },
                     size: initial_size,
                     resizing: false,
+                    collapsed: false,
                 };
             }
         }
@@ -2416,6 +4019,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     initial_position,
                     initial_size,
                     resize,
+                    options,
                     f,
                 );
                 chrome_out.set(chrome);
@@ -2427,7 +4031,98 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             area,
             size: chrome.size,
             resizing: chrome.resizing,
+            collapsed: chrome.collapsed,
         }
+    }
+
+    /// Render a floating window with explicit behavior flags.
+    fn window_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model floating window with explicit behavior flags.
+    fn window_open_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render a resizable floating window with explicit behavior flags.
+    fn window_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model resizable floating window with explicit behavior flags.
+    fn window_open_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
     }
 
     fn floating_window_impl_legacy(

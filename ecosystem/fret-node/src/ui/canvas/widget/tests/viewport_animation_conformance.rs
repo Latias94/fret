@@ -2,10 +2,9 @@ use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::Effect;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 
-use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes};
+use super::prelude::NodeGraphCanvas;
+use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes};
 
 #[test]
 fn frame_view_animates_over_timer_ticks_and_reaches_target() {
@@ -17,9 +16,7 @@ fn frame_view_animates_over_timer_ticks_and_reaches_target() {
     let (mut graph_value, a, b) = make_test_graph_two_nodes();
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 5000.0, y: 0.0 };
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let did = canvas.frame_nodes_in_view(&mut host, None, bounds, &[a, b]);
@@ -64,9 +61,7 @@ fn frame_view_animates_over_timer_ticks_and_reaches_target() {
     let (mut graph_value, a, b) = make_test_graph_two_nodes();
     graph_value.nodes.get_mut(&b).expect("node b exists").pos = CanvasPoint { x: 5000.0, y: 0.0 };
 
-    let mut host2 = TestUiHostImpl::default();
-    let graph2 = host2.models.insert(graph_value);
-    let view2 = host2.models.insert(NodeGraphViewState::default());
+    let (mut host2, graph2, view2) = make_host_graph_view(graph_value);
     let _ = view2.update(&mut host2, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
     });

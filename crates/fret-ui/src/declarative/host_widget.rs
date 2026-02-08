@@ -216,6 +216,10 @@ impl ElementHostWidget {
 }
 
 impl<H: UiHost> Widget<H> for ElementHostWidget {
+    fn event_capture(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        self.event_capture_impl(cx, event);
+    }
+
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         let Some(window) = cx.window else {
             return false;

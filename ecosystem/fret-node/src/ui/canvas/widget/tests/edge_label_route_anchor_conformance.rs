@@ -7,11 +7,10 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
 struct CaptureServices;
@@ -305,7 +304,7 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
         s.interaction.only_render_visible_elements = false;
