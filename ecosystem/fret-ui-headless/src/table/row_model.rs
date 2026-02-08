@@ -892,6 +892,19 @@ impl<'a, TData> Table<'a, TData> {
         Some(row.id.clone())
     }
 
+    /// Rust-native equivalent of TanStack `cell.getContext()`.
+    pub fn cell_context(&self, row_key: RowKey, column_id: &str) -> Option<super::CellContextSnapshot> {
+        let row_id = self.row_id_for_key(row_key)?;
+        let col = self.column(column_id)?;
+        let id = Arc::<str>::from(format!("{}_{}", row_id.as_str(), col.id.as_ref()));
+        Some(super::CellContextSnapshot {
+            id,
+            row_id,
+            row_key,
+            column_id: col.id.clone(),
+        })
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
     }

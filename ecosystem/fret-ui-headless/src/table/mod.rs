@@ -38,7 +38,7 @@ pub use aggregation_fns::{
     AggregationFn, AggregationFnSpec, BuiltInAggregationFn, apply_builtin_aggregation,
     resolve_auto_aggregation,
 };
-pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
+pub use cells::{CellContextSnapshot, CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
     FilterFnWithMeta, FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec,
