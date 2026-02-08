@@ -80,6 +80,10 @@ pub(super) fn handle_pressable<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
+            crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
@@ -362,24 +366,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                 click_count,
                 pointer_type,
             } => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                let pressed =
-                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
-                let (down_pointer_id, down_position) = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    this.element,
-                    PressablePressTracking::default,
-                    |st| {
-                        let out = (st.pointer_id, st.down_position);
-                        st.pointer_id = None;
-                        st.down_position = None;
-                        out
-                    },
-                );
-
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -389,7 +375,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 );
 
                 let mut skip_activate = false;
-                if let Some(h) = hook {
+                if let Some(h) = hook.clone() {
                     let up = action::PointerUpCx {
                         pointer_id: *pointer_id,
                         position: *position,
@@ -431,6 +417,30 @@ pub(super) fn handle_pressable<H: UiHost>(
                     );
                 }
 
+                if *button != MouseButton::Left {
+                    if hook.is_some() {
+                        cx.request_redraw();
+                    }
+                    return;
+                }
+
+                let pressed =
+                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
+
+                let (down_pointer_id, down_position) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    PressablePressTracking::default,
+                    |st| {
+                        let out = (st.pointer_id, st.down_position);
+                        st.pointer_id = None;
+                        st.down_position = None;
+                        out
+                    },
+                );
+
+                cx.release_pointer_capture();
                 if let Some(prev_node) =
                     crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
                 {

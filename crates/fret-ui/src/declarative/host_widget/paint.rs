@@ -2,6 +2,7 @@ use super::super::frame::*;
 use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
+use std::time::Instant;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -10,19 +11,37 @@ impl ElementHostWidget {
             return;
         };
 
-        for (model, invalidation) in
-            crate::elements::observed_models_for_element(cx.app, window, self.element)
-        {
-            (cx.observe_model)(model, invalidation);
-        }
+        let models_started = cx.tree.debug_enabled().then(Instant::now);
+        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
+            for &(model, invalidation) in items {
+                (cx.observe_model)(model, invalidation);
+            }
+            if let Some(started) = models_started.as_ref() {
+                cx.tree
+                    .debug_record_paint_host_widget_observed_models(started.elapsed(), items.len());
+            }
+        });
 
-        for (global, invalidation) in
-            crate::elements::observed_globals_for_element(cx.app, window, self.element)
-        {
-            (cx.observe_global)(global, invalidation);
-        }
+        let globals_started = cx.tree.debug_enabled().then(Instant::now);
+        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
+            for &(global, invalidation) in items {
+                (cx.observe_global)(global, invalidation);
+            }
+            if let Some(started) = globals_started.as_ref() {
+                cx.tree.debug_record_paint_host_widget_observed_globals(
+                    started.elapsed(),
+                    items.len(),
+                );
+            }
+        });
 
-        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+        let instance_started = cx.tree.debug_enabled().then(Instant::now);
+        let instance = self.instance(cx.app, window, cx.node);
+        if let Some(instance_started) = instance_started {
+            cx.tree
+                .debug_record_paint_host_widget_instance_lookup(instance_started.elapsed());
+        }
+        let Some(instance) = instance else {
             return;
         };
 
@@ -299,8 +318,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -309,20 +330,66 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_text.as_ref() != Some(&props.text)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let text_changed = self.text_cache.last_text.as_ref() != Some(&props.text);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || text_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((text_changed as u16) << 2)
+                    | ((false as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        text_changed,
+                        false,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "Text",
+                            props.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -330,7 +397,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -366,8 +433,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -376,20 +445,66 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((false as u16) << 2)
+                    | ((rich_changed as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        false,
+                        rich_changed,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "StyledText",
+                            props.rich.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -398,7 +513,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -434,8 +549,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -444,20 +561,66 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((false as u16) << 2)
+                    | ((rich_changed as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        false,
+                        rich_changed,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "SelectableText",
+                            props.rich.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -466,7 +629,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -1155,39 +1318,79 @@ impl ElementHostWidget {
                 );
 
                 let is_horizontal = matches!(props.axis, crate::element::ScrollbarAxis::Horizontal);
-                let thumb = if is_horizontal {
-                    let offset_x = handle.offset().x;
-                    let viewport_w = handle.viewport_size().width;
-                    let content_w = handle.content_size().width;
-                    let max_offset = Px((content_w.0 - viewport_w.0).max(0.0));
-                    if max_offset.0 <= 0.0 {
-                        return;
-                    }
+                let offset = handle.offset();
+                let viewport = handle.viewport_size();
+                let content = handle.content_size();
+                let has_overflow = if is_horizontal {
+                    (content.width.0 - viewport.width.0).max(0.0) > 0.0
+                } else {
+                    (content.height.0 - viewport.height.0).max(0.0) > 0.0
+                };
 
+                if !has_overflow {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_scrollbar_telemetry(
+                            crate::tree::UiDebugScrollbarTelemetry {
+                                node: cx.node,
+                                element: Some(self.element),
+                                axis: if is_horizontal {
+                                    crate::tree::UiDebugScrollAxis::X
+                                } else {
+                                    crate::tree::UiDebugScrollAxis::Y
+                                },
+                                scroll_target: props.scroll_target,
+                                offset,
+                                viewport,
+                                content,
+                                track: cx.bounds,
+                                thumb: None,
+                                hovered,
+                                dragging,
+                            },
+                        );
+                    }
+                    return;
+                }
+
+                let thumb = if is_horizontal {
                     scrollbar_thumb_rect_horizontal(
                         cx.bounds,
-                        viewport_w,
-                        content_w,
-                        offset_x,
+                        viewport.width,
+                        content.width,
+                        offset.x,
                         props.style.track_padding,
                     )
                 } else {
-                    let offset_y = handle.offset().y;
-                    let viewport_h = handle.viewport_size().height;
-                    let content_h = handle.content_size().height;
-                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-                    if max_offset.0 <= 0.0 {
-                        return;
-                    }
-
                     scrollbar_thumb_rect(
                         cx.bounds,
-                        viewport_h,
-                        content_h,
-                        offset_y,
+                        viewport.height,
+                        content.height,
+                        offset.y,
                         props.style.track_padding,
                     )
                 };
+
+                if cx.tree.debug_enabled() {
+                    cx.tree.debug_record_scrollbar_telemetry(
+                        crate::tree::UiDebugScrollbarTelemetry {
+                            node: cx.node,
+                            element: Some(self.element),
+                            axis: if is_horizontal {
+                                crate::tree::UiDebugScrollAxis::X
+                            } else {
+                                crate::tree::UiDebugScrollAxis::Y
+                            },
+                            scroll_target: props.scroll_target,
+                            offset,
+                            viewport,
+                            content,
+                            track: cx.bounds,
+                            thumb,
+                            hovered,
+                            dragging,
+                        },
+                    );
+                }
 
                 let Some(thumb) = thumb else {
                     return;

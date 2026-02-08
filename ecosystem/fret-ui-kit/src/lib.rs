@@ -84,6 +84,9 @@ pub mod prelude {
     #[cfg(feature = "imui")]
     pub use crate::imui::UiWriterUiKitExt as _;
 
+    #[cfg(feature = "imui")]
+    pub use crate::imui::UiWriterImUiFacadeExt as _;
+
     #[cfg(feature = "icons")]
     pub use crate::declarative::icon;
     #[cfg(feature = "icons")]

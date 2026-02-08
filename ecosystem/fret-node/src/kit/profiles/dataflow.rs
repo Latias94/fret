@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use crate::core::{
     EdgeKind, Graph, NodeId, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    SYMBOL_REF_NODE_KIND, symbol_ref_target_symbol_id,
 };
 use crate::ops::GraphOpBuilderExt;
 use crate::rules::{ConnectPlan, Diagnostic, DiagnosticSeverity, plan_connect_typed};
@@ -112,11 +113,13 @@ impl GraphProfile for DataflowProfile {
         let mut ops: Vec<crate::ops::GraphOp> = Vec::new();
 
         for (node_id, node) in &graph.nodes {
-            if node.kind.0 != VARIADIC_MERGE_KIND {
+            if node.kind.0 == VARIADIC_MERGE_KIND {
+                ops.extend(concretize_variadic_merge(graph, *node_id));
                 continue;
             }
-
-            ops.extend(concretize_variadic_merge(graph, *node_id));
+            if node.kind.0 == SYMBOL_REF_NODE_KIND {
+                ops.extend(concretize_symbol_ref_node(graph, *node_id));
+            }
         }
 
         ops
@@ -154,6 +157,91 @@ fn port_has_incoming_edge(graph: &Graph, port: PortId) -> bool {
         .edges
         .values()
         .any(|e| e.kind == EdgeKind::Data && e.to == port)
+}
+
+fn concretize_symbol_ref_node(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::GraphOp> {
+    let mut ops: Vec<crate::ops::GraphOp> = Vec::new();
+    let Some(node) = graph.nodes.get(&node_id) else {
+        return ops;
+    };
+
+    let Ok(Some(symbol_id)) = symbol_ref_target_symbol_id(node_id, node) else {
+        // Invalid node data is handled by structural validation; skip concretization so we don't
+        // create ports for an invalid contract shape.
+        return ops;
+    };
+
+    let desired_ty: Option<TypeDesc> = graph.symbols.get(&symbol_id).and_then(|s| s.ty.clone());
+
+    let out_key = PortKey::new("out");
+    let mut out: Option<PortId> = None;
+    let mut unmanaged: Vec<PortId> = Vec::new();
+
+    for port_id in &node.ports {
+        let Some(port) = graph.ports.get(port_id) else {
+            continue;
+        };
+        if port.node != node_id {
+            continue;
+        }
+
+        if port.dir == PortDirection::Out && port.kind == PortKind::Data && port.key.0 == out_key.0
+        {
+            if out.is_none() {
+                out = Some(*port_id);
+                continue;
+            }
+        }
+
+        unmanaged.push(*port_id);
+    }
+
+    if out.is_none() {
+        let id = alloc_port_id(graph, node_id, &out_key);
+        ops.push(crate::ops::GraphOp::AddPort {
+            id,
+            port: Port {
+                node: node_id,
+                key: out_key.clone(),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: desired_ty.clone(),
+                data: serde_json::Value::Null,
+            },
+        });
+        out = Some(id);
+    }
+
+    if let Some(out) = out
+        && let Some(current) = graph.ports.get(&out)
+        && current.ty != desired_ty
+    {
+        ops.push(crate::ops::GraphOp::SetPortType {
+            id: out,
+            from: current.ty.clone(),
+            to: desired_ty,
+        });
+    }
+
+    let mut desired: Vec<PortId> = Vec::new();
+    if let Some(out) = out {
+        desired.push(out);
+    }
+    desired.extend(unmanaged.iter().copied());
+
+    if desired != node.ports {
+        ops.push(crate::ops::GraphOp::SetNodePorts {
+            id: node_id,
+            from: node.ports.clone(),
+            to: desired,
+        });
+    }
+
+    ops
 }
 
 fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::GraphOp> {
@@ -312,7 +400,7 @@ mod tests {
     use super::*;
     use crate::core::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
-        PortDirection, PortId, PortKey, PortKind,
+        PortDirection, PortId, PortKey, PortKind, Symbol, SymbolId,
     };
 
     fn make_node(kind: &str) -> Node {
@@ -493,6 +581,45 @@ mod tests {
 
         // Ensure output is still present.
         assert!(ports.contains(&out));
+    }
+
+    #[test]
+    fn symbol_ref_concretize_creates_typed_output_port() {
+        let mut graph = Graph::default();
+
+        let symbol_id = SymbolId::from_u128(10);
+        graph.symbols.insert(
+            symbol_id,
+            Symbol {
+                name: "S".to_string(),
+                ty: Some(TypeDesc::Float),
+                default_value: None,
+                meta: serde_json::Value::Null,
+            },
+        );
+
+        let node_id = NodeId::new();
+        let mut node = make_node(SYMBOL_REF_NODE_KIND);
+        node.data = serde_json::json!({ "symbol_id": symbol_id });
+        graph.nodes.insert(node_id, node);
+
+        let mut profile = DataflowProfile::new();
+        let _ = crate::profile::apply_transaction_with_profile(
+            &mut graph,
+            &mut profile,
+            &crate::ops::GraphTransaction::new(),
+        )
+        .unwrap();
+
+        let ports = graph.nodes.get(&node_id).unwrap().ports.clone();
+        assert_eq!(ports.len(), 1);
+
+        let out = ports[0];
+        let port = graph.ports.get(&out).expect("out port");
+        assert_eq!(port.key.0.as_str(), "out");
+        assert_eq!(port.dir, PortDirection::Out);
+        assert_eq!(port.kind, PortKind::Data);
+        assert_eq!(port.ty, Some(TypeDesc::Float));
     }
 
     #[test]

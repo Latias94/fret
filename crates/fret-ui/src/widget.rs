@@ -380,7 +380,9 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 
     pub fn layout_engine_child_bounds(&mut self, child: NodeId) -> Option<Rect> {
-        let local = self.tree.layout_engine_child_local_rect(self.node, child)?;
+        let local = self
+            .tree
+            .layout_engine_child_local_rect_profiled(self.node, child)?;
         Some(Rect::new(
             Point::new(
                 fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),
@@ -577,6 +579,8 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -604,6 +608,8 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -627,6 +633,8 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
@@ -640,6 +648,46 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
             return;
         };
         self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    /// Records a debug-only "sampling window shift" prepaint action.
+    ///
+    /// This is intended for ecosystem canvases (charts/plots) that maintain an explicit sampling
+    /// window contract and want to expose a stable output key in diagnostics bundles.
+    pub fn debug_record_chart_sampling_window_shift(&mut self, sampling_window_key: u64) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: None,
+                kind: crate::tree::UiDebugPrepaintActionKind::ChartSamplingWindowShift,
+                invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: Some(sampling_window_key),
+                node_graph_cull_window_key: None,
+                frame_id: self.app.frame_id(),
+            });
+    }
+
+    /// Records a debug-only "cull window shift" prepaint action.
+    ///
+    /// This is intended for ecosystem canvases (e.g. node graphs) that maintain a windowed
+    /// viewport culling contract and want to expose a stable output key in diagnostics bundles.
+    pub fn debug_record_node_graph_cull_window_shift(&mut self, cull_window_key: u64) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: None,
+                kind: crate::tree::UiDebugPrepaintActionKind::NodeGraphCullWindowShift,
+                invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
+                node_graph_cull_window_key: Some(cull_window_key),
+                frame_id: self.app.frame_id(),
+            });
     }
 }
 
@@ -772,6 +820,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
+        let was_widget_timer_running = self.tree.debug_paint_widget_exclusive_pause();
         let child_transform = self.children_render_transform;
         if let Some(transform) = child_transform {
             self.scene
@@ -794,6 +843,9 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
 
         if child_transform.is_some() {
             self.scene.push(fret_core::SceneOp::PopTransform);
+        }
+        if was_widget_timer_running {
+            self.tree.debug_paint_widget_exclusive_resume();
         }
     }
 

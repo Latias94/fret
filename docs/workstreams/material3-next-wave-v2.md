@@ -18,6 +18,26 @@ Non-goals:
   outcomes.
 - Favor suite-style headless goldens + small scripted interaction tests over pixel snapshots.
 
+### Infrastructure notes (2026-02-06)
+
+Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing
+before continuing component surface work:
+
+- Timer dispatch: targeted `Event::Timer { token }` dispatch must still bubble so overlay-root timer
+  hooks can observe descendant timers (e.g. snackbar auto-dismiss). Evidence:
+  `crates/fret-ui/src/tree/dispatch.rs`, tests in
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+  (`snackbar_action_emits_command_and_dismisses`,
+  `snackbar_dismiss_button_dismisses_without_emitting_command`).
+- Popover placement: unconstrained-height popovers should allow main-axis overflow on tiny viewports
+  (Radix/Floating UI style), while constrained/scrollable popovers should clamp to available space.
+  Evidence: `ecosystem/fret-ui-shadcn/src/popover.rs`,
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_{chrome,placement}.rs` (calendar + combobox).
+- Layout max-size: treat `max_width`/`max_height` as border-box constraints for shadcn-style
+  `w-full max-w-*` overlays so centered dialogs match web geometry. Evidence:
+  `crates/fret-ui/src/layout_engine/flow.rs`, overlay placement tests in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (Dialog / AlertDialog).
+
 ## P0 (recommended)
 
 - [x] FAB (Floating Action Button) MVP surface in `ecosystem/fret-ui-material3`.
@@ -266,6 +286,133 @@ Non-goals:
           - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
             (`material3-select-trigger-error`).
 
+- [x] SearchBar (MVP) token surface + headless goldens.
+  - Goal: add a low-risk, token-driven “search” text-input surface to validate `md.comp.search-bar.*`
+    plumbing before implementing higher-level “search view” policies.
+  - Subtasks:
+    - Import `md.comp.search-bar.*` / `md.comp.search-view.*` scalars/colors via `material3_token_import`.
+    - Wire v30 token injection for search scalars, colors, and text styles.
+    - Implement `SearchBar` container + input + leading/trailing icons with hover/pressed state layer,
+      bounded ripple, and focus-visible ring.
+    - Headless suites: add `material3-search-bar.*.json` into `goldens/material3-headless/v1/`.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_bar_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-search-bar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-bar.scss`
+      and `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-view.scss`.
+    - Compose baseline: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt`.
+
+- [x] SearchView (overlay) policy surface.
+  - Goal: implement the expanded “search view” overlay surface on top of `SearchBar`, using
+    `md.comp.search-view.*` tokens for outcome alignment.
+  - Notes:
+    - MVP: keep focus on the underlay text input while the overlay is open (Compose-like), and use a
+      dismissible popover for outside-press dismissal without requiring a new mechanism surface.
+    - Prefer reusing the existing overlay + placement + motion infrastructure hardened for Select / Autocomplete.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_view.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/search_view.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_view_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-search-view.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+
+- [x] Carousel item (MVP) surface.
+  - Goal: add a low-coupling `CarouselItem` primitive aligned with Material Web v30
+    `md.comp.carousel-item.*` tokens.
+  - Notes:
+    - Scope (v1): the item surface only (container + outline + state layer + ripple + focus ring).
+    - Out of scope (v1): a full carousel layout policy (snap points, pager-like behavior, or auto
+      sizing). Consumers can build higher-level carousels using horizontal scrolling until we have
+      a concrete product need for snap behavior.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_carousel_item_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-carousel-item.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-carousel-item.scss`
+
+- [x] Autocomplete (outlined + filled) MVP surface.
+  - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
+    aligned with Compose exposed dropdown menus at the outcome level.
+  - Subtasks:
+    - [x] Import `md.comp.{outlined,filled}-autocomplete.*` scalars/colors via `material3_token_import`.
+      - Evidence:
+        - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`
+        - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+        - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
+    - [x] Support `aria-controls` on `TextInput` (declarative element IDs), so combobox-style
+          relationships do not require extra wrapper semantics nodes.
+      - Evidence:
+        - `crates/fret-ui/src/element.rs`
+        - `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+    - [x] Implement `Autocomplete` component in `ecosystem/fret-ui-material3` (visual + interaction).
+      - Evidence:
+        - `ecosystem/fret-ui-material3/src/autocomplete.rs`
+        - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextFieldTokenNamespace::Autocomplete` + combobox semantics knobs)
+        - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_autocomplete_semantics_v1`)
+      - Requirements (v1):
+        - [x] Outlined + filled variants (token-driven defaults only; no non-Material fallbacks).
+        - [x] Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
+        - [x] A11y: `ComboBox` input + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
+        - [x] Keyboard: ArrowDown/ArrowUp open + active item, Enter selects, Escape dismisses.
+        - [x] Filtering: typing filters options by label/value; options expose stable `test_id` for automation.
+          - Evidence:
+            - `ecosystem/fret-ui-material3/src/autocomplete.rs` (`filter_items`, option `PressableA11y::test_id`)
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_autocomplete_filters_items_by_query_v1`)
+            - `tools/diag-scripts/ui-gallery-material3-autocomplete-filtering.json`
+        - [x] Gallery page + dialog-embedded probe (avoid clipping regressions).
+          - Evidence:
+            - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_AUTOCOMPLETE`)
+            - `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_autocomplete`)
+            - `tools/diag-scripts/ui-gallery-material3-autocomplete-dialog-screenshots.json`
+        - [x] Headless golden suites (visual regression gates across schemes/scales).
+          - Evidence:
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_autocomplete_suite_goldens_v1`)
+            - `goldens/material3-headless/v1/material3-autocomplete.scale1_0.light.tonal_spot.json` (representative; full matrix is generated).
+      - Follow-ups (v2):
+        - [x] Split query vs committed selection:
+          - `Autocomplete::new(query: Model<String>)` remains the editable input model.
+          - `Autocomplete::selected_value(Model<Option<Arc<str>>>)` tracks the committed option `value`.
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `apps/fret-ui-gallery/src/ui.rs`.
+        - [x] A11y: `ListBoxOption.selected` reflects the committed selection (not the active descendant).
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
+        - [x] Hook: optional `on_select` callback with a selection method enum for downstream effects.
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/src/lib.rs`.
+        - [x] Add a Compose-style composition surface (`ExposedDropdown`) for searchable select policy.
+          - Evidence: `ecosystem/fret-ui-material3/src/exposed_dropdown.rs`, `apps/fret-ui-gallery/src/ui.rs`.
+        - [x] Exposed dropdown: trailing icon toggles the overlay (click-through safe).
+          - Notes:
+            - `DismissiblePopover` treats the trigger element as an implicit dismissable branch in
+              click-through mode. Exposed dropdowns have a wider interactive trigger surface than
+              the text input node alone (e.g. the trailing dropdown icon), so `Autocomplete` wires
+              the full field container as an additional dismissable branch to avoid the
+              "dismiss then immediately re-open" toggle race.
+            - The trailing chevron rotation is animated using the dropdown menu motion tokens
+              (`open_duration_ms` / `close_duration_ms` + `easing`) so the icon aligns with overlay
+              open/close motion.
+            - The trailing icon press target paints an icon-button-like state layer + bounded ripple,
+              without becoming a separate focus stop.
+          - Evidence:
+            - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
+            - `ecosystem/fret-ui-material3/src/autocomplete.rs` (popover request `dismissable_branches`)
+            - `ecosystem/fret-ui-material3/src/exposed_dropdown.rs` (`Autocomplete::trailing_dropdown_icon(true)`)
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+              (`material3_exposed_dropdown_trailing_icon_toggles_overlay_v1`)
+            - `tools/diag-scripts/ui-gallery-material3-exposed-dropdown-filtering.json`
+              (run with `FRET_UI_GALLERY_START_PAGE=material3_autocomplete` when launching the gallery)
+  - References:
+    - Material Web tokens:
+      `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,
+      `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-filled-autocomplete.scss`.
+    - Compose exposed dropdown menus:
+      `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`.
+
 - [x] Badge (navigation bar/rail/drawer integration points).
   - Subtasks:
     - Import `md.comp.badge.*` scalars/colors via `material3_token_import`.
@@ -329,6 +476,23 @@ Non-goals:
     - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePicker.kt`
     - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePickerDialog.kt`
 
+- [x] Tooltip token alignment: prefer component typography keys over direct sys typescale reads.
+  - Notes:
+    - Material Web v30 exposes tooltip typography as discrete properties plus `*.type` mixins; in
+      Fret we model these as a single `TextStyle` token per text role.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_tooltip_text_styles`)
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (uses `md.comp.plain-tooltip.supporting-text`)
+
+- [x] Rich tooltip (non-interactive) MVP surface.
+  - Notes:
+    - In Fret, `OverlayKind::Tooltip` is click-through (`layer.hit_testable=false`), so rich
+      tooltip actions are out-of-scope until we have a concrete consumer that requires an
+      interactive outcome (mechanism follow-up candidate).
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (`RichTooltip`)
+    - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs` (rich tooltip token mapping)
+
 ## Mechanism follow-ups (only if required)
 
 - [x] Semantics role coverage: add `SemanticsRole::Toolbar` (and validate with a concrete consumer).
@@ -337,5 +501,15 @@ Non-goals:
     - `crates/fret-a11y-accesskit/src/lib.rs` (`map_role` → `Role::Toolbar`)
     - `ecosystem/fret-ui-material3/src/top_app_bar.rs` (`SemanticsRole::Toolbar`)
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`top_app_bar_exposes_toolbar_semantics_role`)
+- [x] Declarative invalidation: treat `ContainerProps` border/padding changes as layout-affecting.
+  - Why: `ContainerProps.border` participates in layout sizing/insets (border-box), so border animations
+    must invalidate layout to keep child bounds consistent with the painted border.
+  - Evidence:
+    - `crates/fret-ui/src/declarative/mount.rs` (`declarative_instance_change_mask` container diff)
+    - `crates/fret-ui/src/declarative/tests/layout.rs` (`container_border_change_invalidates_child_layout`)
+    - `crates/fret-ui/src/element.rs` (`ShadowStyle` / `RingStyle` derive `PartialEq`)
+    - `ecosystem/fret-ui-material3/src/text_field.rs` (Filled hover state-layer overlay kept mounted; ADR 0181)
+    - `ecosystem/fret-ui-material3/tests/text_field_hover.rs` (`filled_text_field_hover_overlay_survives_focus_transition`)
+    - `goldens/material3-headless/v1/material3-text-field.*.json` (regenerated after the fix)
 - [ ] Hoisted interaction sources: keep deferred; revisit only when we need deterministic “preview”
   APIs that cannot be expressed via scripted tests.

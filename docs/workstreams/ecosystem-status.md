@@ -60,6 +60,8 @@ Current ecosystem surfaces:
 
 - Typed UI → app routing for dynamic per-item actions: `fret-kit::mvu::MessageRouter<M>` (avoids
   `"prefix.{id}"` command parsing in demos/templates).
+- Typed UI → app routing for dynamic actions inside `view_cache(...)` subtrees: `fret-kit::mvu::KeyedMessageRouter<K, M>`
+  (stable per key; persistent lookup table so cached subtrees can keep routing without relying on per-frame rebuild).
 - Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
   adapted to ADR 0190 and `Dispatcher.exec_capabilities()`).
 - Derived state (selectors/computed): `ecosystem/fret-selector` (memoized derived values with explicit

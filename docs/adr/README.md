@@ -8,22 +8,6 @@ Notes:
 - Cross-references in `docs/architecture.md` should remain valid even as the code evolves.
 - Implementation audit tracking: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 
-### ADR Number Collisions (Legacy)
-
-Some historical ADR IDs have collisions (multiple files sharing the same numeric prefix). When
-referencing ADRs, treat the **full filename** as the canonical identifier, not just the number.
-
-Known collisions (as of 2026-01-28):
-
-- `0190-execution-and-concurrency-surface-v1.md` vs `0190-prepaint-windowed-virtual-surfaces.md`
-- `0193-code-editor-ecosystem-v1.md` vs `0193-ephemeral-prepaint-items-v1.md`
-
-Policy going forward:
-
-- Prefer allocating a new, unused numeric ID for new ADRs.
-- If we need to “supersede” an existing ADR, add a new ADR that references the old filename(s)
-  rather than renaming historical files.
-
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 
 Non-normative code references:
@@ -68,7 +52,7 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Update: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
-  - Implement: `crates/fret-render/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
+  - Implement: `crates/fret-render-wgpu/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
 
 - **Docking keep-alive + early submission + programmatic close without flicker**
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
@@ -165,7 +149,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
-- Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer/mod.rs`
+- Renderer (quads/SDF/text hooks): `crates/fret-render-wgpu/src/renderer/mod.rs`
 - Demo (end-to-end wiring): `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/docking_demo.rs`
 
 ## Current Focus (“Decide Early”)
@@ -249,7 +233,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0137-canvas-widgets-and-interactive-surfaces.md`
-- `docs/adr/0167-kurbo-geometry-backend-for-canvas-hit-testing.md`
+- `docs/adr/0201-kurbo-geometry-backend-for-canvas-hit-testing.md`
 - `docs/adr/0150-node-graph-canvas-middleware.md`
 - `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -331,7 +315,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 ## Cross-Cutting
 
 - `docs/adr/0008-threading-logging-errors.md`
-- `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- `docs/adr/0199-execution-and-concurrency-surface-v1.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0097-plot-widgets-and-crate-placement.md`
@@ -373,3 +357,6 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+
+
+

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_icons::IconId;
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
@@ -250,10 +250,7 @@ impl InlineCitation {
                 .size(ButtonSize::IconSm)
                 .disabled(prev_disabled)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(
-                    cx,
-                    IconId::new_static("lucide.chevron-left"),
-                )])
+                .children([decl_icon::icon(cx, ids::ui::CHEVRON_LEFT)])
                 .on_activate(on_prev);
             if let Some(id) = prev_test_id.clone() {
                 btn = btn.test_id(id);
@@ -267,10 +264,7 @@ impl InlineCitation {
                 .size(ButtonSize::IconSm)
                 .disabled(next_disabled)
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(
-                    cx,
-                    IconId::new_static("lucide.chevron-right"),
-                )])
+                .children([decl_icon::icon(cx, ids::ui::CHEVRON_RIGHT)])
                 .on_activate(on_next);
             if let Some(id) = next_test_id.clone() {
                 btn = btn.test_id(id);

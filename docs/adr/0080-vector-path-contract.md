@@ -9,7 +9,7 @@ Fret exposes a prepared vector path API:
 - `fret-core::vector_path` (`PathCommand`, `PathStyle`, `PathService`)
 - `SceneOp::Path` (render a prepared `PathId` at an origin)
 
-The implementation exists today (`crates/fret-render/src/renderer/mod.rs` tessellates paths via `lyon`),
+The implementation exists today (`crates/fret-render-wgpu/src/renderer/mod.rs` tessellates paths via `lyon`),
 but the contract has not been explicitly locked. If left implicit, component and renderer work will
 drift quickly (stroke joins/caps, AA expectations, transform interaction, clip composition, and cache keys).
 

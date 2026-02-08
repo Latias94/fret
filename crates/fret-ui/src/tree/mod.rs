@@ -10,19 +10,20 @@ use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextConstraints,
-    Transform2D, UiServices, ViewId,
+    TimerToken, Transform2D, UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
     ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities, TickId,
 };
-use slotmap::{Key, SlotMap};
+use slotmap::{Key, SecondaryMap, SlotMap};
 use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
 use std::slice;
 use std::sync::Arc;
 
+mod bounds_tree;
 mod commands;
 mod dispatch;
 mod hit_test;
@@ -132,6 +133,7 @@ struct Node<H: UiHost> {
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
+    paint_invalidated_by_hit_test_only: bool,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
     prepaint_outputs: PrepaintOutputs,
@@ -213,6 +215,7 @@ impl<H: UiHost> Node<H> {
                 paint: true,
                 hit_test: true,
             },
+            paint_invalidated_by_hit_test_only: false,
             paint_cache: None,
             interaction_cache: None,
             prepaint_outputs: PrepaintOutputs::default(),
@@ -235,7 +238,129 @@ impl<H: UiHost> Node<H> {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
+    /// Approximate capacity retained by per-frame scratch (“frame arena”) containers.
+    ///
+    /// This is a coarse signal intended for diagnostics/triage: it tracks reserved capacity
+    /// (not current length) and intentionally underestimates hash table overhead.
+    pub frame_arena_capacity_estimate_bytes: u64,
+    /// Number of scratch containers that grew their capacity during the current frame.
+    ///
+    /// This is a proxy for allocator churn in hot paths that should ideally stabilize after
+    /// warmup.
+    pub frame_arena_grow_events: u32,
+    /// Number of child-element vectors reused from the per-window pool during element build.
+    ///
+    /// This is a proxy for “element tree arena” progress: higher reuse implies less allocator churn
+    /// while building the ephemeral declarative element tree.
+    pub element_children_vec_pool_reuses: u32,
+    /// Number of child-element vectors that had to be newly allocated during element build.
+    pub element_children_vec_pool_misses: u32,
+    /// Total time spent in event dispatch during the current frame.
+    ///
+    /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
+    /// not include layout/prepaint/paint, which are tracked separately.
+    pub dispatch_time: Duration,
+    /// Number of pointer/drag events dispatched during the current frame.
+    pub dispatch_pointer_events: u32,
+    /// Total wall time spent dispatching pointer/drag events during the current frame.
+    pub dispatch_pointer_event_time: Duration,
+    /// Number of timer events dispatched during the current frame.
+    pub dispatch_timer_events: u32,
+    /// Total wall time spent dispatching timer events during the current frame.
+    pub dispatch_timer_event_time: Duration,
+    /// Number of timer events that resolved to an explicit element target.
+    pub dispatch_timer_targeted_events: u32,
+    /// Wall time spent dispatching explicitly targeted timer events.
+    pub dispatch_timer_targeted_time: Duration,
+    /// Number of timer events that fell back to broadcast delivery (no element target).
+    pub dispatch_timer_broadcast_events: u32,
+    /// Wall time spent in broadcast timer delivery (including layer scanning + dispatch).
+    pub dispatch_timer_broadcast_time: Duration,
+    /// Total number of layers visited during broadcast timer delivery.
+    pub dispatch_timer_broadcast_layers_visited: u32,
+    /// Time spent rebuilding the visible-layers scratch list for broadcast timer delivery.
+    pub dispatch_timer_broadcast_rebuild_visible_layers_time: Duration,
+    /// Time spent iterating candidate layers and dispatching broadcast timers.
+    pub dispatch_timer_broadcast_loop_time: Duration,
+    /// Slowest single timer event routing time observed in the current frame.
+    pub dispatch_timer_slowest_event_time: Duration,
+    /// Token of the slowest timer event observed in the current frame (if any).
+    pub dispatch_timer_slowest_token: Option<TimerToken>,
+    /// Whether the slowest timer event used the broadcast fallback.
+    pub dispatch_timer_slowest_was_broadcast: bool,
+    /// Number of non-pointer, non-timer events dispatched during the current frame.
+    pub dispatch_other_events: u32,
+    /// Total wall time spent dispatching non-pointer, non-timer events during the current frame.
+    pub dispatch_other_event_time: Duration,
+    /// Time spent inside hit-testing during the current frame (subset of `dispatch_time`).
+    pub hit_test_time: Duration,
+    /// Number of events dispatched during the current frame.
+    pub dispatch_events: u32,
+    /// Number of hit-test queries executed during the current frame.
+    pub hit_test_queries: u32,
+    /// Count of bounds-tree queries attempted during hit testing.
+    pub hit_test_bounds_tree_queries: u32,
+    /// Bounds-tree queries that were disabled (e.g. env-gated, layer not indexed, or unsupported transforms).
+    pub hit_test_bounds_tree_disabled: u32,
+    /// Bounds-tree queries that missed (no containing leaf).
+    pub hit_test_bounds_tree_misses: u32,
+    /// Bounds-tree queries that returned a candidate leaf.
+    pub hit_test_bounds_tree_hits: u32,
+    /// Bounds-tree candidates rejected by `hit_test_node_self_only`, forcing a fallback traversal.
+    pub hit_test_bounds_tree_candidate_rejected: u32,
+    /// Total bounds-tree nodes visited across all queries in the current frame.
+    pub hit_test_bounds_tree_nodes_visited: u32,
+    /// Total bounds-tree nodes pushed to the search stack across all queries in the current frame.
+    pub hit_test_bounds_tree_nodes_pushed: u32,
+    /// Number of hit-test queries that reused the cached path (no bounds-tree query needed).
+    pub hit_test_path_cache_hits: u32,
+    /// Number of hit-test queries that fell back to bounds-tree or full traversal (cache miss).
+    pub hit_test_path_cache_misses: u32,
+    /// Total wall time spent attempting the cached-path hit-test fast path in the current frame.
+    pub hit_test_cached_path_time: Duration,
+    /// Total wall time spent querying the bounds-tree index in the current frame.
+    pub hit_test_bounds_tree_query_time: Duration,
+    /// Total wall time spent validating bounds-tree candidates (`hit_test_node_self_only`) in the current frame.
+    pub hit_test_candidate_self_only_time: Duration,
+    /// Total wall time spent in full traversal fallback hit-testing in the current frame.
+    pub hit_test_fallback_traversal_time: Duration,
+    /// Total wall time spent updating hover state from pointer hit-testing in the current frame.
+    pub dispatch_hover_update_time: Duration,
+    /// Total wall time spent applying scroll-handle binding invalidations during event dispatch.
+    pub dispatch_scroll_handle_invalidation_time: Duration,
+    /// Total wall time spent computing active input layers and enforcing modal barrier scope.
+    pub dispatch_active_layers_time: Duration,
+    /// Total wall time spent constructing and publishing the window input context snapshot.
+    pub dispatch_input_context_time: Duration,
+    /// Total wall time spent building the event chain during dispatch.
+    pub dispatch_event_chain_build_time: Duration,
+    /// Total wall time spent delivering capture-phase widget events during dispatch.
+    pub dispatch_widget_capture_time: Duration,
+    /// Total wall time spent delivering bubble-phase widget events during dispatch.
+    pub dispatch_widget_bubble_time: Duration,
+    /// Total wall time spent computing the cursor icon from the pointer hit during dispatch.
+    pub dispatch_cursor_query_time: Duration,
+    /// Total wall time spent dispatching pointer-move layer observers (both post-dispatch and when
+    /// pointer dispatch is suppressed).
+    pub dispatch_pointer_move_layer_observers_time: Duration,
+    /// Total wall time spent dispatching the synthetic hover-move observer chain when the pointer crosses targets.
+    pub dispatch_synth_hover_observer_time: Duration,
+    /// Total wall time spent pushing cursor-icon effects during dispatch.
+    pub dispatch_cursor_effect_time: Duration,
+    /// Total wall time spent publishing post-dispatch window integration snapshots (input context,
+    /// command availability) during dispatch.
+    pub dispatch_post_dispatch_snapshot_time: Duration,
     pub layout_time: Duration,
+    pub layout_collect_roots_time: Duration,
+    pub layout_invalidate_scroll_handle_bindings_time: Duration,
+    pub layout_expand_view_cache_invalidations_time: Duration,
+    pub layout_request_build_roots_time: Duration,
+    pub layout_pending_barrier_relayouts_time: Duration,
+    pub layout_repair_view_cache_bounds_time: Duration,
+    pub layout_contained_view_cache_roots_time: Duration,
+    pub layout_collapse_layout_observations_time: Duration,
+    pub layout_prepaint_after_layout_time: Duration,
+    pub layout_skipped_engine_frame: bool,
     pub layout_roots_time: Duration,
     pub layout_barrier_relayouts_time: Duration,
     pub layout_view_cache_time: Duration,
@@ -244,6 +369,55 @@ pub struct UiDebugFrameStats {
     pub layout_deferred_cleanup_time: Duration,
     pub prepaint_time: Duration,
     pub paint_time: Duration,
+    pub paint_record_visual_bounds_time: Duration,
+    pub paint_record_visual_bounds_calls: u32,
+    /// Total wall time spent computing paint-cache keys and paint-cache enablement checks.
+    pub paint_cache_key_time: Duration,
+    /// Total wall time spent checking paint-cache hit eligibility (excluding replay itself).
+    pub paint_cache_hit_check_time: Duration,
+    /// Total wall time spent executing `Widget::paint()` (including push/pop transforms).
+    pub paint_widget_time: Duration,
+    /// Total wall time spent recording paint observations (`observed_in_paint` + globals).
+    pub paint_observation_record_time: Duration,
+    /// Total wall time spent iterating element-runtime observed models inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_models_time: Duration,
+    /// Total observed-model edges iterated inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_models_items: u32,
+    /// Total wall time spent iterating element-runtime observed globals inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_globals_time: Duration,
+    /// Total observed-global edges iterated inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_globals_items: u32,
+    /// Total wall time spent resolving the element instance (`ElementInstance`) inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_instance_lookup_time: Duration,
+    /// Number of `ElementInstance` lookups performed inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_instance_lookup_calls: u32,
+    /// Total wall time spent preparing text blobs (`TextSystem::prepare`) during `Widget::paint`.
+    pub paint_text_prepare_time: Duration,
+    /// Number of text blob preparations performed during `Widget::paint`.
+    pub paint_text_prepare_calls: u32,
+    /// Count of text prepares where the cached blob was missing.
+    pub paint_text_prepare_reason_blob_missing: u32,
+    /// Count of text prepares triggered by a scale factor change.
+    pub paint_text_prepare_reason_scale_changed: u32,
+    /// Count of text prepares triggered by a plain-text change.
+    pub paint_text_prepare_reason_text_changed: u32,
+    /// Count of text prepares triggered by an attributed-text change.
+    pub paint_text_prepare_reason_rich_changed: u32,
+    /// Count of text prepares triggered by a text-style change.
+    pub paint_text_prepare_reason_style_changed: u32,
+    /// Count of text prepares triggered by a wrap-mode change.
+    pub paint_text_prepare_reason_wrap_changed: u32,
+    /// Count of text prepares triggered by an overflow-mode change.
+    pub paint_text_prepare_reason_overflow_changed: u32,
+    /// Count of text prepares triggered by a max-width change.
+    pub paint_text_prepare_reason_width_changed: u32,
+    /// Count of text prepares triggered by a font-stack-key change.
+    pub paint_text_prepare_reason_font_stack_changed: u32,
+    pub paint_input_context_time: Duration,
+    pub paint_scroll_handle_invalidation_time: Duration,
+    pub paint_collect_roots_time: Duration,
+    pub paint_publish_text_input_snapshot_time: Duration,
+    pub paint_collapse_observations_time: Duration,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     pub prepaint_nodes_visited: u32,
@@ -252,6 +426,14 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    /// Paint-cache replay attempts that were allowed specifically by the
+    /// `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` gate.
+    pub paint_cache_hit_test_only_replay_allowed: u32,
+    /// Hit-test-only replay attempts rejected because the previous cache key did not match.
+    pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
+    pub paint_cache_replay_time: Duration,
+    pub paint_cache_bounds_translate_time: Duration,
+    pub paint_cache_bounds_translated_nodes: u32,
     pub interaction_cache_hits: u32,
     pub interaction_cache_misses: u32,
     pub interaction_cache_replayed_records: u32,
@@ -260,6 +442,10 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solves: u64,
     /// Total time spent in layout engine solves during the current frame.
     pub layout_engine_solve_time: Duration,
+    /// Total number of `layout_engine_child_local_rect` queries performed during the current frame.
+    pub layout_engine_child_rect_queries: u64,
+    /// Total wall time spent inside layout engine child-rect queries during the current frame.
+    pub layout_engine_child_rect_time: Duration,
     /// Number of "widget-local" layout engine solves triggered as a fallback when a widget cannot
     /// consume already-solved engine child rects.
     ///
@@ -328,6 +514,27 @@ pub struct UiDebugFrameStats {
     pub view_cache_invalidation_truncations: u32,
     /// How many "contained" view-cache roots were re-laid out during the final pass.
     pub view_cache_contained_relayouts: u32,
+    /// How many view-cache roots were observed during the current frame.
+    pub view_cache_roots_total: u32,
+    /// How many view-cache roots were reused during the current frame.
+    pub view_cache_roots_reused: u32,
+    /// View-cache roots that were not reused because they were mounted for the first time.
+    pub view_cache_roots_first_mount: u32,
+    /// View-cache roots that were not reused because their backing `NodeId` was recreated.
+    pub view_cache_roots_node_recreated: u32,
+    /// View-cache roots that were not reused because the declarative cache key did not match.
+    pub view_cache_roots_cache_key_mismatch: u32,
+    /// View-cache roots that were not reused because they were not marked as reuse roots.
+    ///
+    /// This is an authoring-level signal: either view-cache was not enabled, or reuse was gated off
+    /// by local state (e.g. `view_cache_needs_rerender` / layout invalidation) upstream.
+    pub view_cache_roots_not_marked_reuse_root: u32,
+    /// View-cache roots that were not reused because `view_cache_needs_rerender` was set.
+    pub view_cache_roots_needs_rerender: u32,
+    /// View-cache roots that were not reused because they had a layout invalidation.
+    pub view_cache_roots_layout_invalidated: u32,
+    /// View-cache roots recorded from retained/manual cache roots (non-declarative).
+    pub view_cache_roots_manual: u32,
     /// How many times `set_children_barrier` was applied (structural changes without forcing
     /// ancestor relayout).
     pub set_children_barrier_writes: u32,
@@ -417,6 +624,7 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
     ScrollHandleWindowUpdate,
+    ScrollDeferredProbe,
     ScrollHandleScrollToItemWindowUpdate,
     ScrollHandleViewportResizeWindowUpdate,
     ScrollHandleItemsRevisionWindowUpdate,
@@ -449,6 +657,7 @@ impl UiDebugInvalidationDetail {
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),
             Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
+            Self::ScrollDeferredProbe => Some("scroll_deferred_probe"),
             Self::ScrollHandleScrollToItemWindowUpdate => {
                 Some("scroll_handle_scroll_to_item_window_update")
             }
@@ -665,6 +874,8 @@ pub enum UiDebugPrepaintActionKind {
     RequestRedraw,
     RequestAnimationFrame,
     VirtualListWindowShift,
+    ChartSamplingWindowShift,
+    NodeGraphCullWindowShift,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -676,6 +887,8 @@ pub struct UiDebugPrepaintAction {
     pub element: Option<GlobalElementId>,
     pub virtual_list_window_shift_kind: Option<UiDebugVirtualListWindowShiftKind>,
     pub virtual_list_window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
+    pub chart_sampling_window_key: Option<u64>,
+    pub node_graph_cull_window_key: Option<u64>,
     pub frame_id: FrameId,
 }
 
@@ -698,6 +911,38 @@ pub struct UiDebugVirtualListWindowShiftSample {
 pub enum UiDebugScrollHandleChangeKind {
     Layout,
     HitTestOnly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollAxis {
+    X,
+    Y,
+    Both,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollNodeTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollbarTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub scroll_target: Option<GlobalElementId>,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+    pub track: Rect,
+    pub thumb: Option<Rect>,
+    pub hovered: bool,
+    pub dragging: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -897,6 +1142,8 @@ pub struct UiDebugLayoutEngineSolve {
 pub struct UiDebugLayoutHotspot {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
     pub widget_type: &'static str,
     pub inclusive_time: Duration,
     pub exclusive_time: Duration,
@@ -911,6 +1158,30 @@ pub struct UiDebugWidgetMeasureHotspot {
     pub exclusive_time: Duration,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugPaintWidgetHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
+    pub element_path: Option<String>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+    pub inclusive_scene_ops_delta: u32,
+    pub exclusive_scene_ops_delta: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugPaintTextPrepareHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: &'static str,
+    pub text_len: u32,
+    pub constraints: TextConstraints,
+    pub reasons_mask: u16,
+    pub prepare_time: Duration,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct DebugLayoutStackFrame {
     child_inclusive_time: Duration,
@@ -921,6 +1192,12 @@ struct DebugWidgetMeasureStackFrame {
     child_inclusive_time: Duration,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DebugPaintStackFrame {
+    child_inclusive_time: Duration,
+    child_inclusive_scene_ops_delta: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugCacheRootReuseReason {
     FirstMount,
@@ -928,6 +1205,8 @@ pub enum UiDebugCacheRootReuseReason {
     MarkedReuseRoot,
     NotMarkedReuseRoot,
     CacheKeyMismatch,
+    NeedsRerender,
+    LayoutInvalidated,
     ManualCacheRoot,
 }
 
@@ -939,6 +1218,8 @@ impl UiDebugCacheRootReuseReason {
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
             Self::CacheKeyMismatch => "cache_key_mismatch",
+            Self::NeedsRerender => "needs_rerender",
+            Self::LayoutInvalidated => "layout_invalidated",
             Self::ManualCacheRoot => "manual_cache_root",
         }
     }
@@ -1196,6 +1477,77 @@ impl GlobalObservationIndex {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct PropagationDepthCacheEntry {
+    generation: u32,
+    depth: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct InvalidationDedupEntry {
+    generation: u32,
+    mask: u8,
+}
+
+#[derive(Debug, Default)]
+struct InvalidationDedupTable {
+    generation: u32,
+    entries: SecondaryMap<NodeId, InvalidationDedupEntry>,
+}
+
+impl InvalidationDedupTable {
+    fn begin(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        if self.generation == 0 {
+            self.generation = 1;
+            self.entries.clear();
+        }
+    }
+
+    fn get(&self, node: NodeId) -> u8 {
+        self.entries
+            .get(node)
+            .filter(|e| e.generation == self.generation)
+            .map(|e| e.mask)
+            .unwrap_or_default()
+    }
+
+    fn insert(&mut self, node: NodeId, mask: u8) {
+        self.entries.insert(
+            node,
+            InvalidationDedupEntry {
+                generation: self.generation,
+                mask,
+            },
+        );
+    }
+}
+
+trait InvalidationVisited {
+    fn mask(&self, node: NodeId) -> u8;
+    fn set_mask(&mut self, node: NodeId, mask: u8);
+}
+
+impl InvalidationVisited for HashMap<NodeId, u8> {
+    fn mask(&self, node: NodeId) -> u8 {
+        self.get(&node).copied().unwrap_or_default()
+    }
+
+    fn set_mask(&mut self, node: NodeId, mask: u8) {
+        self.insert(node, mask);
+    }
+}
+
+impl InvalidationVisited for InvalidationDedupTable {
+    fn mask(&self, node: NodeId) -> u8 {
+        self.get(node)
+    }
+
+    fn set_mask(&mut self, node: NodeId, mask: u8) {
+        self.insert(node, mask);
+    }
+}
+
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
@@ -1207,6 +1559,7 @@ pub struct UiTree<H: UiHost> {
     last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
     touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
     hit_test_path_cache: Option<HitTestPathCache>,
+    hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -1214,12 +1567,18 @@ pub struct UiTree<H: UiHost> {
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
     replaying_pending_shortcut: bool,
+    alt_menu_bar_arm_key: Option<KeyCode>,
+    alt_menu_bar_canceled: bool,
     observed_in_layout: ObservationIndex,
     observed_in_paint: ObservationIndex,
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
     measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
+    frame_arena: FrameArenaScratch,
+    scratch_pending_invalidations: HashMap<NodeId, u8>,
+    scratch_node_stack: Vec<NodeId>,
+    scratch_visible_layers: Vec<UiLayerId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,
@@ -1233,11 +1592,16 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
     debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
+    debug_paint_widget_exclusive_started: Option<Instant>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_inclusive_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_stack: Vec<DebugLayoutStackFrame>,
     debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
     debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
+    debug_paint_widget_hotspots: Vec<UiDebugPaintWidgetHotspot>,
+    debug_paint_text_prepare_hotspots: Vec<UiDebugPaintTextPrepareHotspot>,
+    debug_paint_stack: Vec<DebugPaintStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
@@ -1254,6 +1618,8 @@ pub struct UiTree<H: UiHost> {
     debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
+    debug_scroll_nodes: Vec<UiDebugScrollNodeTelemetry>,
+    debug_scrollbars: Vec<UiDebugScrollbarTelemetry>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
@@ -1285,10 +1651,14 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, (UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
     last_redraw_request_tick: Option<TickId>,
 
-    propagation_depth_cache: HashMap<NodeId, u32>,
+    propagation_depth_generation: u32,
+    propagation_depth_cache: SecondaryMap<NodeId, PropagationDepthCacheEntry>,
     propagation_chain: Vec<NodeId>,
     propagation_entries: Vec<(u8, u32, u64, NodeId, Invalidation)>,
-    propagation_visited: HashMap<NodeId, u8>,
+    invalidation_dedup: InvalidationDedupTable,
+    invalidated_layout_nodes: u32,
+    invalidated_paint_nodes: u32,
+    invalidated_hit_test_nodes: u32,
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
@@ -1325,8 +1695,7 @@ impl LayoutNodeProfileConfig {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(16)
-            .max(1)
-            .min(128);
+            .clamp(1, 128);
 
         let min_us = std::env::var("FRET_LAYOUT_NODE_PROFILE_MIN_US")
             .ok()
@@ -1459,8 +1828,7 @@ impl MeasureNodeProfileConfig {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(16)
-            .max(1)
-            .min(128);
+            .clamp(1, 128);
 
         let min_us = std::env::var("FRET_MEASURE_NODE_PROFILE_MIN_US")
             .ok()
@@ -1571,6 +1939,50 @@ struct TouchPointerDownOutsideCandidate {
     moved: bool,
 }
 
+#[derive(Default)]
+struct FrameArenaScratch {
+    gc_reachable_from_layers: HashSet<NodeId>,
+    gc_reachable_from_view_cache_roots: HashSet<NodeId>,
+    gc_stack: Vec<NodeId>,
+    semantics_visited: HashSet<NodeId>,
+    semantics_stack: Vec<(NodeId, Transform2D)>,
+
+    gc_reachable_from_layers_cap_on_take: usize,
+    gc_reachable_from_view_cache_roots_cap_on_take: usize,
+    gc_stack_cap_on_take: usize,
+    semantics_visited_cap_on_take: usize,
+    semantics_stack_cap_on_take: usize,
+}
+
+impl FrameArenaScratch {
+    fn capacity_estimate_bytes(&self) -> u64 {
+        let mut bytes: u128 = 0;
+        bytes = bytes.saturating_add(
+            (self.gc_stack.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.semantics_stack.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<(NodeId, Transform2D)>() as u128),
+        );
+        // HashSet capacity is the number of elements it can hold without reallocating. We treat
+        // it as `capacity * size_of::<NodeId>` as a lower bound.
+        bytes = bytes.saturating_add(
+            (self.gc_reachable_from_layers.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.gc_reachable_from_view_cache_roots.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.semantics_visited.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes.min(u64::MAX as u128) as u64
+    }
+}
+
 impl<H: UiHost> Default for UiTree<H> {
     fn default() -> Self {
         Self {
@@ -1584,6 +1996,7 @@ impl<H: UiHost> Default for UiTree<H> {
             last_pointer_move_hit: HashMap::new(),
             touch_pointer_down_outside_candidates: HashMap::new(),
             hit_test_path_cache: None,
+            hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees::default(),
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,
@@ -1591,12 +2004,18 @@ impl<H: UiHost> Default for UiTree<H> {
             suppress_text_input_until_key_up: None,
             pending_shortcut: PendingShortcut::default(),
             replaying_pending_shortcut: false,
+            alt_menu_bar_arm_key: None,
+            alt_menu_bar_canceled: false,
             observed_in_layout: ObservationIndex::default(),
             observed_in_paint: ObservationIndex::default(),
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
             measure_cache_this_frame: HashMap::new(),
+            frame_arena: FrameArenaScratch::default(),
+            scratch_pending_invalidations: HashMap::new(),
+            scratch_node_stack: Vec::new(),
+            scratch_visible_layers: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,
@@ -1609,11 +2028,16 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_roots: Vec::new(),
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
+            debug_paint_widget_exclusive_started: None,
             debug_layout_engine_solves: Vec::new(),
             debug_layout_hotspots: Vec::new(),
+            debug_layout_inclusive_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
+            debug_paint_widget_hotspots: Vec::new(),
+            debug_paint_text_prepare_hotspots: Vec::new(),
+            debug_paint_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
@@ -1629,6 +2053,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
+            debug_scroll_nodes: Vec::new(),
+            debug_scrollbars: Vec::new(),
             debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
@@ -1656,10 +2082,14 @@ impl<H: UiHost> Default for UiTree<H> {
             dirty_cache_roots: HashSet::new(),
             dirty_cache_root_reasons: HashMap::new(),
             last_redraw_request_tick: None,
-            propagation_depth_cache: HashMap::new(),
+            propagation_depth_generation: 0,
+            propagation_depth_cache: SecondaryMap::new(),
             propagation_chain: Vec::new(),
             propagation_entries: Vec::new(),
-            propagation_visited: HashMap::new(),
+            invalidation_dedup: InvalidationDedupTable::default(),
+            invalidated_layout_nodes: 0,
+            invalidated_paint_nodes: 0,
+            invalidated_hit_test_nodes: 0,
             semantics: None,
             semantics_requested: false,
             layout_node_profile: None,
@@ -1713,6 +2143,60 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
+        match inv {
+            Invalidation::HitTestOnly => {
+                if !node.invalidation.paint {
+                    node.paint_invalidated_by_hit_test_only = true;
+                }
+            }
+            Invalidation::Paint | Invalidation::Layout | Invalidation::HitTest => {
+                node.paint_invalidated_by_hit_test_only = false;
+            }
+        }
+        node.invalidation.mark(inv);
+    }
+
+    fn update_invalidation_counters(&mut self, prev: InvalidationFlags, next: InvalidationFlags) {
+        if prev.layout != next.layout {
+            if next.layout {
+                self.invalidated_layout_nodes = self.invalidated_layout_nodes.saturating_add(1);
+            } else {
+                self.invalidated_layout_nodes = self.invalidated_layout_nodes.saturating_sub(1);
+            }
+        }
+        if prev.paint != next.paint {
+            if next.paint {
+                self.invalidated_paint_nodes = self.invalidated_paint_nodes.saturating_add(1);
+            } else {
+                self.invalidated_paint_nodes = self.invalidated_paint_nodes.saturating_sub(1);
+            }
+        }
+        if prev.hit_test != next.hit_test {
+            if next.hit_test {
+                self.invalidated_hit_test_nodes = self.invalidated_hit_test_nodes.saturating_add(1);
+            } else {
+                self.invalidated_hit_test_nodes = self.invalidated_hit_test_nodes.saturating_sub(1);
+            }
+        }
+    }
+
+    fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        let prev = n.invalidation;
+        let layout_before = n.invalidation.layout;
+        Self::mark_node_invalidation_state(n, inv);
+        let next = n.invalidation;
+        record_layout_invalidation_transition(
+            &mut self.layout_invalidations_count,
+            layout_before,
+            n.invalidation.layout,
+        );
+        self.update_invalidation_counters(prev, next);
+    }
+
     fn begin_prepaint_outputs_for_node(&mut self, node: NodeId, key: PaintCacheKey) {
         let Some(n) = self.nodes.get_mut(node) else {
             return;
@@ -1800,6 +2284,57 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.frame_arena_capacity_estimate_bytes =
+            self.frame_arena.capacity_estimate_bytes();
+        self.debug_stats.frame_arena_grow_events = 0;
+        self.debug_stats.element_children_vec_pool_reuses = 0;
+        self.debug_stats.element_children_vec_pool_misses = 0;
+        self.debug_stats.dispatch_time = Duration::default();
+        self.debug_stats.dispatch_pointer_events = u32::default();
+        self.debug_stats.dispatch_pointer_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_events = u32::default();
+        self.debug_stats.dispatch_timer_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_targeted_events = u32::default();
+        self.debug_stats.dispatch_timer_targeted_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_events = u32::default();
+        self.debug_stats.dispatch_timer_broadcast_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_layers_visited = u32::default();
+        self.debug_stats
+            .dispatch_timer_broadcast_rebuild_visible_layers_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_loop_time = Duration::default();
+        self.debug_stats.dispatch_timer_slowest_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_slowest_token = None;
+        self.debug_stats.dispatch_timer_slowest_was_broadcast = bool::default();
+        self.debug_stats.dispatch_other_events = u32::default();
+        self.debug_stats.dispatch_other_event_time = Duration::default();
+        self.debug_stats.hit_test_time = Duration::default();
+        self.debug_stats.dispatch_events = 0;
+        self.debug_stats.hit_test_queries = 0;
+        self.debug_stats.hit_test_bounds_tree_queries = 0;
+        self.debug_stats.hit_test_bounds_tree_disabled = 0;
+        self.debug_stats.hit_test_bounds_tree_misses = 0;
+        self.debug_stats.hit_test_bounds_tree_hits = 0;
+        self.debug_stats.hit_test_bounds_tree_candidate_rejected = 0;
+        self.debug_stats.hit_test_bounds_tree_nodes_visited = 0;
+        self.debug_stats.hit_test_bounds_tree_nodes_pushed = 0;
+        self.debug_stats.hit_test_path_cache_hits = 0;
+        self.debug_stats.hit_test_path_cache_misses = 0;
+        self.debug_stats.hit_test_cached_path_time = Duration::default();
+        self.debug_stats.hit_test_bounds_tree_query_time = Duration::default();
+        self.debug_stats.hit_test_candidate_self_only_time = Duration::default();
+        self.debug_stats.hit_test_fallback_traversal_time = Duration::default();
+        self.debug_stats.dispatch_hover_update_time = Duration::default();
+        self.debug_stats.dispatch_scroll_handle_invalidation_time = Duration::default();
+        self.debug_stats.dispatch_active_layers_time = Duration::default();
+        self.debug_stats.dispatch_input_context_time = Duration::default();
+        self.debug_stats.dispatch_event_chain_build_time = Duration::default();
+        self.debug_stats.dispatch_widget_capture_time = Duration::default();
+        self.debug_stats.dispatch_widget_bubble_time = Duration::default();
+        self.debug_stats.dispatch_cursor_query_time = Duration::default();
+        self.debug_stats.dispatch_pointer_move_layer_observers_time = Duration::default();
+        self.debug_stats.dispatch_synth_hover_observer_time = Duration::default();
+        self.debug_stats.dispatch_cursor_effect_time = Duration::default();
+        self.debug_stats.dispatch_post_dispatch_snapshot_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();
@@ -1835,6 +2370,15 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
+        self.debug_stats.view_cache_roots_total = 0;
+        self.debug_stats.view_cache_roots_reused = 0;
+        self.debug_stats.view_cache_roots_first_mount = 0;
+        self.debug_stats.view_cache_roots_node_recreated = 0;
+        self.debug_stats.view_cache_roots_cache_key_mismatch = 0;
+        self.debug_stats.view_cache_roots_not_marked_reuse_root = 0;
+        self.debug_stats.view_cache_roots_needs_rerender = 0;
+        self.debug_stats.view_cache_roots_layout_invalidated = 0;
+        self.debug_stats.view_cache_roots_manual = 0;
         self.debug_stats.set_children_barrier_writes = 0;
         self.debug_stats.barrier_relayouts_scheduled = 0;
         self.debug_stats.barrier_relayouts_performed = 0;
@@ -1851,6 +2395,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_layout_hotspots.clear();
+        self.debug_layout_inclusive_hotspots.clear();
         self.debug_layout_stack.clear();
         self.debug_widget_measure_hotspots.clear();
         self.debug_widget_measure_stack.clear();
@@ -1869,6 +2414,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
+        self.debug_scroll_nodes.clear();
+        self.debug_scrollbars.clear();
         self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
@@ -1883,6 +2430,9 @@ impl<H: UiHost> UiTree<H> {
         self.debug_remove_subtree_frame_context.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
+        self.debug_paint_widget_hotspots.clear();
+        self.debug_paint_text_prepare_hotspots.clear();
+        self.debug_paint_stack.clear();
         #[cfg(feature = "diagnostics")]
         {
             self.debug_reachable_from_layer_roots = None;
@@ -1907,6 +2457,199 @@ impl<H: UiHost> UiTree<H> {
                 source,
                 detail,
             });
+        }
+    }
+
+    pub(crate) fn debug_paint_widget_exclusive_resume(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        if self.debug_paint_widget_exclusive_started.is_some() {
+            return;
+        }
+        self.debug_paint_widget_exclusive_started = Some(Instant::now());
+    }
+
+    pub(crate) fn debug_paint_widget_exclusive_pause(&mut self) -> bool {
+        if !self.debug_enabled {
+            return false;
+        }
+        let Some(started) = self.debug_paint_widget_exclusive_started.take() else {
+            return false;
+        };
+        self.debug_stats.paint_widget_time = self
+            .debug_stats
+            .paint_widget_time
+            .saturating_add(started.elapsed());
+        true
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_observed_models(
+        &mut self,
+        elapsed: Duration,
+        items: usize,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_observed_models_time = self
+            .debug_stats
+            .paint_host_widget_observed_models_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_observed_models_items = self
+            .debug_stats
+            .paint_host_widget_observed_models_items
+            .saturating_add(items.min(u32::MAX as usize) as u32);
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_observed_globals(
+        &mut self,
+        elapsed: Duration,
+        items: usize,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_observed_globals_time = self
+            .debug_stats
+            .paint_host_widget_observed_globals_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_observed_globals_items = self
+            .debug_stats
+            .paint_host_widget_observed_globals_items
+            .saturating_add(items.min(u32::MAX as usize) as u32);
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_instance_lookup(&mut self, elapsed: Duration) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_instance_lookup_time = self
+            .debug_stats
+            .paint_host_widget_instance_lookup_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_instance_lookup_calls = self
+            .debug_stats
+            .paint_host_widget_instance_lookup_calls
+            .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare(&mut self, elapsed: Duration) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_text_prepare_time = self
+            .debug_stats
+            .paint_text_prepare_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_text_prepare_calls =
+            self.debug_stats.paint_text_prepare_calls.saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare_hotspot(
+        &mut self,
+        node: NodeId,
+        element: Option<GlobalElementId>,
+        element_kind: &'static str,
+        text_len: u32,
+        constraints: TextConstraints,
+        reasons_mask: u16,
+        prepare_time: Duration,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_PREPARE_HOTSPOTS: usize = 16;
+        let record = UiDebugPaintTextPrepareHotspot {
+            node,
+            element,
+            element_kind,
+            text_len,
+            constraints,
+            reasons_mask,
+            prepare_time,
+        };
+        let idx = self
+            .debug_paint_text_prepare_hotspots
+            .iter()
+            .position(|h| h.prepare_time < record.prepare_time)
+            .unwrap_or(self.debug_paint_text_prepare_hotspots.len());
+        self.debug_paint_text_prepare_hotspots.insert(idx, record);
+        if self.debug_paint_text_prepare_hotspots.len() > MAX_PREPARE_HOTSPOTS {
+            self.debug_paint_text_prepare_hotspots
+                .truncate(MAX_PREPARE_HOTSPOTS);
+        }
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare_reasons(
+        &mut self,
+        blob_missing: bool,
+        scale_changed: bool,
+        text_changed: bool,
+        rich_changed: bool,
+        style_changed: bool,
+        wrap_changed: bool,
+        overflow_changed: bool,
+        width_changed: bool,
+        font_stack_changed: bool,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        if blob_missing {
+            self.debug_stats.paint_text_prepare_reason_blob_missing = self
+                .debug_stats
+                .paint_text_prepare_reason_blob_missing
+                .saturating_add(1);
+        }
+        if scale_changed {
+            self.debug_stats.paint_text_prepare_reason_scale_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_scale_changed
+                .saturating_add(1);
+        }
+        if text_changed {
+            self.debug_stats.paint_text_prepare_reason_text_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_text_changed
+                .saturating_add(1);
+        }
+        if rich_changed {
+            self.debug_stats.paint_text_prepare_reason_rich_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_rich_changed
+                .saturating_add(1);
+        }
+        if style_changed {
+            self.debug_stats.paint_text_prepare_reason_style_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_style_changed
+                .saturating_add(1);
+        }
+        if wrap_changed {
+            self.debug_stats.paint_text_prepare_reason_wrap_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_wrap_changed
+                .saturating_add(1);
+        }
+        if overflow_changed {
+            self.debug_stats.paint_text_prepare_reason_overflow_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_overflow_changed
+                .saturating_add(1);
+        }
+        if width_changed {
+            self.debug_stats.paint_text_prepare_reason_width_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_width_changed
+                .saturating_add(1);
+        }
+        if font_stack_changed {
+            self.debug_stats
+                .paint_text_prepare_reason_font_stack_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_font_stack_changed
+                .saturating_add(1);
         }
     }
 
@@ -2049,6 +2792,55 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
+        self.debug_stats.view_cache_roots_total =
+            self.debug_stats.view_cache_roots_total.saturating_add(1);
+        if reused {
+            self.debug_stats.view_cache_roots_reused =
+                self.debug_stats.view_cache_roots_reused.saturating_add(1);
+        }
+        match reuse_reason {
+            UiDebugCacheRootReuseReason::FirstMount => {
+                self.debug_stats.view_cache_roots_first_mount = self
+                    .debug_stats
+                    .view_cache_roots_first_mount
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NodeRecreated => {
+                self.debug_stats.view_cache_roots_node_recreated = self
+                    .debug_stats
+                    .view_cache_roots_node_recreated
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::CacheKeyMismatch => {
+                self.debug_stats.view_cache_roots_cache_key_mismatch = self
+                    .debug_stats
+                    .view_cache_roots_cache_key_mismatch
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NotMarkedReuseRoot => {
+                self.debug_stats.view_cache_roots_not_marked_reuse_root = self
+                    .debug_stats
+                    .view_cache_roots_not_marked_reuse_root
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NeedsRerender => {
+                self.debug_stats.view_cache_roots_needs_rerender = self
+                    .debug_stats
+                    .view_cache_roots_needs_rerender
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::LayoutInvalidated => {
+                self.debug_stats.view_cache_roots_layout_invalidated = self
+                    .debug_stats
+                    .view_cache_roots_layout_invalidated
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::ManualCacheRoot => {
+                self.debug_stats.view_cache_roots_manual =
+                    self.debug_stats.view_cache_roots_manual.saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::MarkedReuseRoot => {}
+        }
         self.debug_view_cache_roots.push(DebugViewCacheRootRecord {
             root,
             reused,
@@ -2108,6 +2900,33 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_virtual_list_windows.push(record);
+    }
+
+    pub(crate) fn debug_record_scroll_node_telemetry(
+        &mut self,
+        record: UiDebugScrollNodeTelemetry,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scroll containers.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scroll_nodes.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scroll_nodes.push(record);
+    }
+
+    pub(crate) fn debug_record_scrollbar_telemetry(&mut self, record: UiDebugScrollbarTelemetry) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scrollbars.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scrollbars.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scrollbars.push(record);
     }
 
     pub(crate) fn debug_record_retained_virtual_list_reconcile(
@@ -2286,6 +3105,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub fn debug_record_overlay_policy_decision(
         &mut self,
         frame_id: FrameId,
@@ -2365,11 +3185,32 @@ impl<H: UiHost> UiTree<H> {
         self.debug_layout_hotspots.as_slice()
     }
 
+    pub fn debug_layout_inclusive_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_inclusive_hotspots.as_slice()
+    }
+
     pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
         if !self.debug_enabled {
             return &[];
         }
         self.debug_widget_measure_hotspots.as_slice()
+    }
+
+    pub fn debug_paint_widget_hotspots(&self) -> &[UiDebugPaintWidgetHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_paint_widget_hotspots.as_slice()
+    }
+
+    pub fn debug_paint_text_prepare_hotspots(&self) -> &[UiDebugPaintTextPrepareHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_paint_text_prepare_hotspots.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -2431,6 +3272,12 @@ impl<H: UiHost> UiTree<H> {
         // View-cache reuse is an authoring-level "skip re-render" decision, not a "skip repaint"
         // decision: paint invalidations (e.g. hover/focus) should not force a child render pass.
         !n.invalidation.layout
+    }
+
+    pub(crate) fn view_cache_node_needs_rerender(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .is_some_and(|n| n.view_cache_needs_rerender)
     }
 
     /// Configure view-cache behavior for a specific node.
@@ -2603,6 +3450,100 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.contains_key(node)
     }
 
+    pub(crate) fn take_scratch_pending_invalidations(&mut self) -> HashMap<NodeId, u8> {
+        std::mem::take(&mut self.scratch_pending_invalidations)
+    }
+
+    pub(crate) fn restore_scratch_pending_invalidations(&mut self, scratch: HashMap<NodeId, u8>) {
+        self.scratch_pending_invalidations = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_reachable_from_layers(&mut self) -> HashSet<NodeId> {
+        self.frame_arena.gc_reachable_from_layers_cap_on_take =
+            self.frame_arena.gc_reachable_from_layers.capacity();
+        std::mem::take(&mut self.frame_arena.gc_reachable_from_layers)
+    }
+
+    pub(crate) fn restore_scratch_gc_reachable_from_layers(&mut self, scratch: HashSet<NodeId>) {
+        if scratch.capacity() > self.frame_arena.gc_reachable_from_layers_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_reachable_from_layers = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_reachable_from_view_cache_roots(&mut self) -> HashSet<NodeId> {
+        self.frame_arena
+            .gc_reachable_from_view_cache_roots_cap_on_take = self
+            .frame_arena
+            .gc_reachable_from_view_cache_roots
+            .capacity();
+        std::mem::take(&mut self.frame_arena.gc_reachable_from_view_cache_roots)
+    }
+
+    pub(crate) fn restore_scratch_gc_reachable_from_view_cache_roots(
+        &mut self,
+        scratch: HashSet<NodeId>,
+    ) {
+        if scratch.capacity()
+            > self
+                .frame_arena
+                .gc_reachable_from_view_cache_roots_cap_on_take
+        {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_reachable_from_view_cache_roots = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_stack(&mut self) -> Vec<NodeId> {
+        self.frame_arena.gc_stack_cap_on_take = self.frame_arena.gc_stack.capacity();
+        std::mem::take(&mut self.frame_arena.gc_stack)
+    }
+
+    pub(crate) fn restore_scratch_gc_stack(&mut self, scratch: Vec<NodeId>) {
+        if scratch.capacity() > self.frame_arena.gc_stack_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_stack = scratch;
+    }
+
+    pub(crate) fn take_scratch_semantics_visited(&mut self) -> HashSet<NodeId> {
+        self.frame_arena.semantics_visited_cap_on_take =
+            self.frame_arena.semantics_visited.capacity();
+        std::mem::take(&mut self.frame_arena.semantics_visited)
+    }
+
+    pub(crate) fn restore_scratch_semantics_visited(&mut self, scratch: HashSet<NodeId>) {
+        if scratch.capacity() > self.frame_arena.semantics_visited_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.semantics_visited = scratch;
+    }
+
+    pub(crate) fn take_scratch_semantics_stack(&mut self) -> Vec<(NodeId, Transform2D)> {
+        self.frame_arena.semantics_stack_cap_on_take = self.frame_arena.semantics_stack.capacity();
+        std::mem::take(&mut self.frame_arena.semantics_stack)
+    }
+
+    pub(crate) fn restore_scratch_semantics_stack(&mut self, scratch: Vec<(NodeId, Transform2D)>) {
+        if scratch.capacity() > self.frame_arena.semantics_stack_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.semantics_stack = scratch;
+    }
+
+    pub(crate) fn take_scratch_node_stack(&mut self) -> Vec<NodeId> {
+        std::mem::take(&mut self.scratch_node_stack)
+    }
+
+    pub(crate) fn restore_scratch_node_stack(&mut self, scratch: Vec<NodeId>) {
+        self.scratch_node_stack = scratch;
+    }
+
     pub(crate) fn flush_deferred_cleanup(&mut self, services: &mut dyn UiServices) {
         for mut widget in self.deferred_cleanup.drain(..) {
             widget.cleanup_resources(services);
@@ -2630,6 +3571,14 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub(crate) fn debug_set_element_children_vec_pool_stats(&mut self, reuses: u32, misses: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.element_children_vec_pool_reuses = reuses;
+        self.debug_stats.element_children_vec_pool_misses = misses;
     }
 
     #[cfg(test)]
@@ -2730,6 +3679,20 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_scroll_handle_changes.as_slice()
+    }
+
+    pub fn debug_scroll_nodes(&self) -> &[UiDebugScrollNodeTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scroll_nodes.as_slice()
+    }
+
+    pub fn debug_scrollbars(&self) -> &[UiDebugScrollbarTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scrollbars.as_slice()
     }
 
     pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {
@@ -2931,19 +3894,26 @@ impl<H: UiHost> UiTree<H> {
     fn mark_view_cache_layout_dirty_subtree(&mut self, root: NodeId) {
         let mut stack: Vec<NodeId> = vec![root];
         while let Some(id) = stack.pop() {
-            let Some(n) = self.nodes.get_mut(id) else {
-                continue;
+            let (prev, next, layout_before, layout_after) = {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    continue;
+                };
+                let prev = n.invalidation;
+                let layout_before = n.invalidation.layout;
+                n.invalidation.mark(Invalidation::Layout);
+                let next = n.invalidation;
+                let layout_after = n.invalidation.layout;
+                for &child in &n.children {
+                    stack.push(child);
+                }
+                (prev, next, layout_before, layout_after)
             };
-            let layout_before = n.invalidation.layout;
-            n.invalidation.mark(Invalidation::Layout);
             record_layout_invalidation_transition(
                 &mut self.layout_invalidations_count,
                 layout_before,
-                n.invalidation.layout,
+                layout_after,
             );
-            for &child in &n.children {
-                stack.push(child);
-            }
+            self.update_invalidation_counters(prev, next);
         }
     }
 
@@ -3183,6 +4153,25 @@ impl<H: UiHost> UiTree<H> {
             .child_layout_rect_if_solved(parent, child)
     }
 
+    pub(crate) fn layout_engine_child_local_rect_profiled(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> Option<Rect> {
+        let started = self.debug_enabled.then(Instant::now);
+        let rect = self
+            .layout_engine
+            .child_layout_rect_if_solved(parent, child);
+        if let Some(started) = started {
+            self.debug_stats.layout_engine_child_rect_queries = self
+                .debug_stats
+                .layout_engine_child_rect_queries
+                .saturating_add(1);
+            self.debug_stats.layout_engine_child_rect_time += started.elapsed();
+        }
+        rect
+    }
+
     #[allow(dead_code)]
     pub(crate) fn flow_subtree_is_engine_backed(&self, root: NodeId) -> bool {
         let Some(&child) = self.children(root).first() else {
@@ -3281,8 +4270,13 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
-        let id = self.nodes.insert(Node::new(widget));
-        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        let node = Node::new(widget);
+        let inv = node.invalidation;
+        let id = self.nodes.insert(node);
+        self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 
@@ -3292,8 +4286,13 @@ impl<H: UiHost> UiTree<H> {
         element: GlobalElementId,
         widget: impl Widget<H> + 'static,
     ) -> NodeId {
-        let id = self.nodes.insert(Node::new_for_element(element, widget));
-        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        let node = Node::new_for_element(element, widget);
+        let inv = node.invalidation;
+        let id = self.nodes.insert(node);
+        self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 
@@ -3304,6 +4303,7 @@ impl<H: UiHost> UiTree<H> {
         };
         let layout_before = n.invalidation.layout;
         n.invalidation.clear();
+        n.paint_invalidated_by_hit_test_only = false;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
@@ -3345,6 +4345,7 @@ impl<H: UiHost> UiTree<H> {
             node.invalidation.layout = true;
             node.invalidation.paint = true;
         }
+        self.mark_invalidation_local(parent, Invalidation::HitTest);
     }
 
     #[track_caller]
@@ -3435,15 +4436,22 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut propagate = false;
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            if !n.invalidation.layout {
-                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
-            }
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            let layout_before = n.invalidation.layout;
+            n.invalidation.mark(Invalidation::HitTest);
+            record_layout_invalidation_transition(
+                &mut self.layout_invalidations_count,
+                layout_before,
+                n.invalidation.layout,
+            );
+            counter_update = Some((prev, n.invalidation));
             propagate = true;
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         if propagate {
@@ -3549,15 +4557,22 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut propagate = false;
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            if !n.invalidation.layout {
-                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
-            }
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            let layout_before = n.invalidation.layout;
+            n.invalidation.mark(Invalidation::HitTest);
+            record_layout_invalidation_transition(
+                &mut self.layout_invalidations_count,
+                layout_before,
+                n.invalidation.layout,
+            );
+            counter_update = Some((prev, n.invalidation));
             propagate = true;
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         if propagate {
@@ -3681,14 +4696,21 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            if !n.invalidation.layout {
-                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
-            }
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            let layout_before = n.invalidation.layout;
+            n.invalidation.mark(Invalidation::HitTest);
+            record_layout_invalidation_transition(
+                &mut self.layout_invalidations_count,
+                layout_before,
+                n.invalidation.layout,
+            );
+            counter_update = Some((prev, n.invalidation));
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
@@ -4128,6 +5150,9 @@ impl<H: UiHost> UiTree<H> {
             self.captured.retain(|_, n| *n != node);
 
             self.cleanup_node_resources(services, node);
+            if let Some(n) = self.nodes.get(node) {
+                self.update_invalidation_counters(n.invalidation, InvalidationFlags::default());
+            }
             if layout_invalidated {
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,
@@ -4149,6 +5174,13 @@ impl<H: UiHost> UiTree<H> {
             .get(parent)
             .map(|n| n.children.clone())
             .unwrap_or_default()
+    }
+
+    pub(crate) fn children_ref(&self, parent: NodeId) -> &[NodeId] {
+        self.nodes
+            .get(parent)
+            .map(|n| n.children.as_slice())
+            .unwrap_or(&[])
     }
 
     /// Best-effort repair pass for parent pointers based on child edges from layer roots.
@@ -4183,11 +5215,11 @@ impl<H: UiHost> UiTree<H> {
                 None => continue,
             };
 
-            if current_parent != expected_parent {
-                if let Some(n) = self.nodes.get_mut(node) {
-                    n.parent = expected_parent;
-                    repaired = repaired.saturating_add(1);
-                }
+            if current_parent != expected_parent
+                && let Some(n) = self.nodes.get_mut(node)
+            {
+                n.parent = expected_parent;
+                repaired = repaired.saturating_add(1);
             }
 
             for child in children {
@@ -4404,7 +5436,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
@@ -5118,14 +6150,19 @@ impl<H: UiHost> UiTree<H> {
             let mut next_parent: Option<NodeId> = None;
             let mut did_stop = false;
             let mut mark_dirty = false;
-            if let Some(n) = self.nodes.get_mut(id) {
+            let (prev, next) = {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    break;
+                };
+                let prev = n.invalidation;
                 let layout_before = n.invalidation.layout;
-                n.invalidation.mark(inv);
+                Self::mark_node_invalidation_state(n, inv);
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,
                     layout_before,
                     n.invalidation.layout,
                 );
+                let next = n.invalidation;
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
@@ -5155,9 +6192,9 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     next_parent = n.parent;
                 }
-            } else {
-                break;
-            }
+                (prev, next)
+            };
+            self.update_invalidation_counters(prev, next);
 
             if did_stop {
                 if mark_dirty {
@@ -5188,20 +6225,26 @@ impl<H: UiHost> UiTree<H> {
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
                 let mut mark_dirty = false;
+                let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 if let Some(n) = self.nodes.get_mut(id)
                     && n.view_cache.enabled
                 {
+                    let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
                         n.invalidation.layout,
                     );
+                    counter_update = Some((prev, n.invalidation));
                     if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
+                }
+                if let Some((prev, next)) = counter_update {
+                    self.update_invalidation_counters(prev, next);
                 }
                 if mark_dirty {
                     self.mark_cache_root_dirty(id, source, detail);
@@ -5223,32 +6266,28 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn mark_invalidation_dedup_with_source(
+    fn mark_invalidation_dedup_with_source<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut V,
         source: UiDebugInvalidationSource,
     ) {
         let detail = UiDebugInvalidationDetail::from_source(source);
         self.mark_invalidation_dedup_with_detail(node, inv, visited, source, detail);
     }
 
-    fn mark_invalidation_dedup_with_detail(
+    fn mark_invalidation_dedup_with_detail<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut V,
         source: UiDebugInvalidationSource,
         detail: UiDebugInvalidationDetail,
     ) {
         let stop_at_view_cache = self.view_cache_active();
         let needed = Self::invalidation_mask(inv);
-        if source != UiDebugInvalidationSource::Notify
-            && visited
-                .get(&node)
-                .is_some_and(|already| (*already & needed) == needed)
-        {
+        if source != UiDebugInvalidationSource::Notify && (visited.mask(node) & needed) == needed {
             return;
         }
         self.record_invalidation_walk_call(source);
@@ -5258,7 +6297,7 @@ impl<H: UiHost> UiTree<H> {
         let root_element = self.nodes.get(node).and_then(|n| n.element);
         let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
-            let already = visited.get(&id).copied().unwrap_or_default();
+            let already = visited.mask(id);
             if source != UiDebugInvalidationSource::Notify
                 && (already & needed) == needed
                 && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, inv, detail))
@@ -5274,15 +6313,18 @@ impl<H: UiHost> UiTree<H> {
             let mut did_stop = false;
             let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
+                let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
+                    let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
                         n.invalidation.layout,
                     );
-                    visited.insert(id, already | needed);
+                    visited.set_mask(id, already | needed);
+                    counter_update = Some((prev, n.invalidation));
                 }
 
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
@@ -5307,6 +6349,9 @@ impl<H: UiHost> UiTree<H> {
                     did_stop = true;
                 } else {
                     next_parent = n.parent;
+                }
+                if let Some((prev, next)) = counter_update {
+                    self.update_invalidation_counters(prev, next);
                 }
             } else {
                 break;
@@ -5340,28 +6385,34 @@ impl<H: UiHost> UiTree<H> {
             let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
-                let already = visited.get(&id).copied().unwrap_or_default();
+                let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
+                    let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                     if let Some(n) = self.nodes.get_mut(id) {
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }
                         if (already & needed) != needed {
+                            let prev = n.invalidation;
                             let layout_before = n.invalidation.layout;
-                            n.invalidation.mark(inv);
+                            Self::mark_node_invalidation_state(n, inv);
                             record_layout_invalidation_transition(
                                 &mut self.layout_invalidations_count,
                                 layout_before,
                                 n.invalidation.layout,
                             );
+                            counter_update = Some((prev, n.invalidation));
                         }
+                    }
+                    if let Some((prev, next)) = counter_update {
+                        self.update_invalidation_counters(prev, next);
                     }
                     if mark_dirty {
                         self.mark_cache_root_dirty(id, source, detail);
                     }
-                    visited.insert(id, already | needed);
+                    visited.set_mask(id, already | needed);
                 }
                 parent = next_parent;
             }
@@ -5402,24 +6453,35 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
-        if let Some(depth) = self.propagation_depth_cache.get(&start) {
-            return *depth;
+        let generation = self.propagation_depth_generation;
+        if let Some(entry) = self.propagation_depth_cache.get(start)
+            && entry.generation == generation
+        {
+            return entry.depth;
         }
 
         self.propagation_chain.clear();
 
         let mut current = Some(start);
         while let Some(node) = current {
-            if let Some(depth) = self.propagation_depth_cache.get(&node) {
-                let mut d = *depth;
+            if let Some(entry) = self.propagation_depth_cache.get(node)
+                && entry.generation == generation
+            {
+                let mut d = entry.depth;
                 for id in self.propagation_chain.drain(..).rev() {
                     d = d.saturating_add(1);
-                    self.propagation_depth_cache.insert(id, d);
+                    self.propagation_depth_cache.insert(
+                        id,
+                        PropagationDepthCacheEntry {
+                            generation,
+                            depth: d,
+                        },
+                    );
                 }
                 return self
                     .propagation_depth_cache
-                    .get(&start)
-                    .copied()
+                    .get(start)
+                    .and_then(|e| (e.generation == generation).then_some(e.depth))
                     .unwrap_or_default();
             }
 
@@ -5429,13 +6491,19 @@ impl<H: UiHost> UiTree<H> {
 
         let mut d = 0u32;
         for id in self.propagation_chain.drain(..).rev() {
-            self.propagation_depth_cache.insert(id, d);
+            self.propagation_depth_cache.insert(
+                id,
+                PropagationDepthCacheEntry {
+                    generation,
+                    depth: d,
+                },
+            );
             d = d.saturating_add(1);
         }
 
         self.propagation_depth_cache
-            .get(&start)
-            .copied()
+            .get(start)
+            .and_then(|e| (e.generation == generation).then_some(e.depth))
             .unwrap_or_default()
     }
 
@@ -5445,7 +6513,11 @@ impl<H: UiHost> UiTree<H> {
         masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
         source: UiDebugInvalidationSource,
     ) -> bool {
-        self.propagation_depth_cache.clear();
+        self.propagation_depth_generation = self.propagation_depth_generation.wrapping_add(1);
+        if self.propagation_depth_generation == 0 {
+            self.propagation_depth_generation = 1;
+            self.propagation_depth_cache.clear();
+        }
         self.propagation_chain.clear();
         self.propagation_entries.clear();
 
@@ -5483,15 +6555,15 @@ impl<H: UiHost> UiTree<H> {
                 .then(a.2.cmp(&b.2))
         });
 
-        self.propagation_visited.clear();
         let mut did_invalidate = false;
-        let mut visited = std::mem::take(&mut self.propagation_visited);
+        let mut visited = std::mem::take(&mut self.invalidation_dedup);
+        visited.begin();
         let mut entries = std::mem::take(&mut self.propagation_entries);
         for (_, _, _, node, inv) in entries.drain(..) {
             self.mark_invalidation_dedup_with_source(node, inv, &mut visited, source);
             did_invalidate = true;
         }
-        self.propagation_visited = visited;
+        self.invalidation_dedup = visited;
         self.propagation_entries = entries;
 
         if did_invalidate {
@@ -5698,11 +6770,8 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by(|a, b| a.model.data().as_ffi().cmp(&b.model.data().as_ffi()));
             self.debug_model_change_unobserved.truncate(5);
         }
-        did_invalidate |= self.propagate_observation_masks(
-            app,
-            combined.into_iter(),
-            UiDebugInvalidationSource::ModelChange,
-        );
+        did_invalidate |=
+            self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::ModelChange);
         did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
         did_invalidate
     }
@@ -5806,7 +6875,7 @@ impl<H: UiHost> UiTree<H> {
         }
         did_invalidate |= self.propagate_observation_masks(
             app,
-            combined.into_iter(),
+            combined,
             UiDebugInvalidationSource::GlobalChange,
         );
         did_invalidate |= self.propagate_global_changes_from_elements(app, changed);
@@ -5853,14 +6922,14 @@ impl<H: UiHost> UiTree<H> {
         // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
         // traversal should treat the union as the effective child list (mirrors GC reachability
         // bookkeeping). Only pay the cost when view-cache reuse can occur.
-        let window_frame_children: HashMap<NodeId, Arc<[NodeId]>> = {
+        let window_frame_children: slotmap::SecondaryMap<NodeId, Arc<[NodeId]>> = {
             let started = profile_semantics.then(Instant::now);
             let out = if self.view_cache_active() {
                 crate::declarative::with_window_frame(app, window, |window_frame| {
                     window_frame.map(|w| w.children.clone()).unwrap_or_default()
                 })
             } else {
-                HashMap::new()
+                slotmap::SecondaryMap::new()
             };
             if let Some(started) = started {
                 t_window_frame_children = Some(started.elapsed());
@@ -5904,10 +6973,13 @@ impl<H: UiHost> UiTree<H> {
 
         let traversal_started = profile_semantics.then(Instant::now);
         for root in roots.iter().map(|r| r.root) {
-            let mut visited: HashSet<NodeId> = HashSet::new();
+            let mut visited = self.take_scratch_semantics_visited();
+            visited.clear();
             // Stack entries carry the transform that maps this node's local bounds into
             // screen-space (excluding this node's own `render_transform`).
-            let mut stack: Vec<(NodeId, Transform2D)> = vec![(root, Transform2D::IDENTITY)];
+            let mut stack = self.take_scratch_semantics_stack();
+            stack.clear();
+            stack.push((root, Transform2D::IDENTITY));
             while let Some((id, before)) = stack.pop() {
                 if !visited.insert(id) {
                     if cfg!(debug_assertions) {
@@ -5980,7 +7052,7 @@ impl<H: UiHost> UiTree<H> {
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
                     let ui_children = node.children.clone();
-                    let children = match window_frame_children.get(&id) {
+                    let children = match window_frame_children.get(id) {
                         None => ui_children,
                         Some(frame_children) if ui_children.is_empty() => {
                             frame_children.as_ref().to_vec()
@@ -6125,6 +7197,11 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
+
+            visited.clear();
+            stack.clear();
+            self.restore_scratch_semantics_visited(visited);
+            self.restore_scratch_semantics_stack(stack);
         }
         if let Some(started) = traversal_started {
             t_traversal = Some(started.elapsed());
@@ -6268,6 +7345,17 @@ fn event_position(event: &Event) -> Option<Point> {
         Event::InternalDrag(e) => Some(e.position),
         _ => None,
     }
+}
+
+fn event_allows_hit_test_path_cache_reuse(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Pointer(PointerEvent::Move { .. })
+            | Event::Pointer(PointerEvent::Wheel { .. })
+            | Event::Pointer(PointerEvent::PinchGesture { .. })
+            | Event::ExternalDrag(_)
+            | Event::InternalDrag(_)
+    )
 }
 
 fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {

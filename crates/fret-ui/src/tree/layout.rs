@@ -75,6 +75,8 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
+        consume_deferred_scroll_to_item: bool,
+        commit_scroll_handle_baselines: bool,
     ) {
         if pass_kind != LayoutPassKind::Final {
             return;
@@ -83,7 +85,13 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let changed = crate::declarative::frame::take_changed_scroll_handle_keys(app, window);
+        let consume_deferred_scroll_to_item =
+            consume_deferred_scroll_to_item && commit_scroll_handle_baselines;
+        let changed = if commit_scroll_handle_baselines {
+            crate::declarative::frame::take_changed_scroll_handle_keys(app, window)
+        } else {
+            crate::declarative::frame::peek_changed_scroll_handle_keys(app, window)
+        };
         if changed.is_empty() {
             return;
         }
@@ -112,10 +120,12 @@ impl<H: UiHost> UiTree<H> {
 
             // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
             // when offset/viewport/content are unchanged, which makes the change appear as
-            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
-            // request up-front (using cached metrics + viewport) and convert it into a simple
-            // offset update, avoiding a layout-driven consumption path.
-            if change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout {
+            // "layout-affecting". Consume the deferred request up-front (using cached metrics +
+            // viewport) and convert it into a simple offset update, avoiding a layout-driven
+            // consumption path in the common case.
+            if consume_deferred_scroll_to_item
+                && change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout
+            {
                 let mut consumed_scroll_to_item = false;
                 for element in &bound {
                     if consumed_scroll_to_item {
@@ -163,9 +173,6 @@ impl<H: UiHost> UiTree<H> {
                     else {
                         continue;
                     };
-                    if vlist_measure_mode != crate::element::VirtualListMeasureMode::Fixed {
-                        continue;
-                    }
                     let Some((index, strategy)) = vlist_scroll_handle.deferred_scroll_to_item()
                     else {
                         continue;
@@ -184,6 +191,7 @@ impl<H: UiHost> UiTree<H> {
                                 vlist_gap,
                                 vlist_scroll_margin,
                             );
+                            state.metrics.sync_keys(&state.keys, vlist_items_revision);
                             state.items_revision = vlist_items_revision;
 
                             let viewport_size = vlist_scroll_handle.viewport_size();
@@ -226,7 +234,7 @@ impl<H: UiHost> UiTree<H> {
                             vlist_scroll_handle.set_offset(fret_core::Point::new(applied, prev.y));
                         }
                     }
-                    vlist_scroll_handle.clear_deferred_scroll_to_item();
+                    vlist_scroll_handle.clear_deferred_scroll_to_item(app.frame_id());
 
                     consumed_scroll_to_item = true;
                     change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
@@ -525,7 +533,20 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed = 0;
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
+            self.debug_stats.layout_engine_child_rect_queries = 0;
+            self.debug_stats.layout_engine_child_rect_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
+            self.debug_stats.layout_collect_roots_time = Duration::default();
+            self.debug_stats
+                .layout_invalidate_scroll_handle_bindings_time = Duration::default();
+            self.debug_stats.layout_expand_view_cache_invalidations_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_time = Duration::default();
+            self.debug_stats.layout_pending_barrier_relayouts_time = Duration::default();
+            self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
+            self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
+            self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
+            self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
+            self.debug_stats.layout_skipped_engine_frame = false;
             self.debug_stats.layout_fast_path_taken = false;
             self.debug_stats.layout_invalidations_count = self.layout_invalidations_count;
             self.debug_stats.view_cache_active = self.view_cache_active();
@@ -533,15 +554,101 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
 
+        let roots_started = self.debug_enabled.then(Instant::now);
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+        if let Some(roots_started) = roots_started {
+            self.debug_stats.layout_collect_roots_time += roots_started.elapsed();
+        }
 
+        let mut viewport_cursor: usize = 0;
+
+        let scroll_started = self.debug_enabled.then(Instant::now);
         let started_phase = profile_layout_all.then(Instant::now);
-        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
+        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind, true, true);
         if let Some(started) = started_phase {
             t_invalidate_scroll_handle_bindings = Some(started.elapsed());
+        }
+        if let Some(scroll_started) = scroll_started {
+            self.debug_stats
+                .layout_invalidate_scroll_handle_bindings_time += scroll_started.elapsed();
+        }
+
+        let any_root_needs_layout_or_bounds = roots.iter().any(|&root| {
+            self.nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout || node.bounds != bounds)
+        });
+        let any_pending_barrier_needs_layout = self.pending_barrier_relayouts.iter().any(|&root| {
+            self.nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout)
+        });
+        let any_view_cache_root_needs_layout = self.view_cache_active()
+            && self
+                .nodes
+                .iter()
+                .any(|(_, node)| node.view_cache.enabled && node.invalidation.layout);
+
+        if pass_kind == LayoutPassKind::Final
+            && !any_root_needs_layout_or_bounds
+            && !any_view_cache_root_needs_layout
+            && !any_pending_barrier_needs_layout
+            && self.invalidated_paint_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
+        {
+            self.pending_barrier_relayouts.retain(|&root| {
+                self.nodes
+                    .get(root)
+                    .is_some_and(|node| node.invalidation.layout)
+            });
+            if self.semantics_requested {
+                let semantics_started = self.debug_enabled.then(Instant::now);
+                self.semantics_requested = false;
+                self.refresh_semantics_snapshot(app);
+                if let Some(semantics_started) = semantics_started {
+                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
+                }
+            }
+            let prepaint_started = self.debug_enabled.then(Instant::now);
+            self.prepaint_after_layout_stable_frame(app);
+            if let Some(prepaint_started) = prepaint_started {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
+            }
+            self.debug_stats.layout_skipped_engine_frame = true;
+
+            let focus_started = self.debug_enabled.then(Instant::now);
+            self.repair_focus_node_from_focused_element_if_needed(app);
+            if let Some(focus_started) = focus_started {
+                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            }
+
+            let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
+            self.flush_deferred_cleanup(services);
+            if let Some(deferred_cleanup_started) = deferred_cleanup_started {
+                self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
+            }
+            if let Some(started) = started {
+                self.debug_stats.layout_time = started
+                    .elapsed()
+                    .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
+            }
+            return;
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            let expand_started = self.debug_enabled.then(Instant::now);
+            let started_phase = profile_layout_all.then(Instant::now);
+            self.expand_view_cache_layout_invalidations_if_needed();
+            if let Some(started) = started_phase {
+                t_expand_view_cache_invalidations = Some(started.elapsed());
+            }
+            if let Some(expand_started) = expand_started {
+                self.debug_stats.layout_expand_view_cache_invalidations_time +=
+                    expand_started.elapsed();
+            }
         }
 
         // Fast path (ADR 0190): if nothing requires layout this frame, skip the layout engine and
@@ -583,16 +690,8 @@ impl<H: UiHost> UiTree<H> {
             }
         };
 
-        let mut viewport_cursor: usize = 0;
-        if pass_kind == LayoutPassKind::Final {
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.expand_view_cache_layout_invalidations_if_needed();
-            if let Some(started) = started_phase {
-                t_expand_view_cache_invalidations = Some(started.elapsed());
-            }
-        }
-
         let started_phase = profile_layout_all.then(Instant::now);
+        let request_build_started = self.debug_enabled.then(Instant::now);
         self.request_build_window_roots_if_final(
             app,
             services,
@@ -603,6 +702,9 @@ impl<H: UiHost> UiTree<H> {
         );
         if let Some(started) = started_phase {
             t_request_build_roots = Some(started.elapsed());
+        }
+        if let Some(request_build_started) = request_build_started {
+            self.debug_stats.layout_request_build_roots_time += request_build_started.elapsed();
         }
 
         let started_phase = profile_layout_all.then(Instant::now);
@@ -640,7 +742,9 @@ impl<H: UiHost> UiTree<H> {
                 t_pending_barriers = Some(started.elapsed());
             }
             if let Some(barrier_started) = barrier_started {
-                self.debug_stats.layout_barrier_relayouts_time += barrier_started.elapsed();
+                let elapsed = barrier_started.elapsed();
+                self.debug_stats.layout_barrier_relayouts_time += elapsed;
+                self.debug_stats.layout_pending_barrier_relayouts_time += elapsed;
             }
         }
 
@@ -648,12 +752,17 @@ impl<H: UiHost> UiTree<H> {
             let view_cache_started = self.debug_enabled.then(Instant::now);
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let repair_started = self.debug_enabled.then(Instant::now);
             self.repair_view_cache_root_bounds_from_engine_if_needed(app);
             if let Some(started) = started_phase {
                 t_repair_view_cache_bounds = Some(started.elapsed());
             }
+            if let Some(repair_started) = repair_started {
+                self.debug_stats.layout_repair_view_cache_bounds_time += repair_started.elapsed();
+            }
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let contained_started = self.debug_enabled.then(Instant::now);
             self.layout_contained_view_cache_roots_if_needed(
                 app,
                 services,
@@ -664,23 +773,24 @@ impl<H: UiHost> UiTree<H> {
             if let Some(started) = started_phase {
                 t_layout_contained_view_cache_roots = Some(started.elapsed());
             }
+            if let Some(contained_started) = contained_started {
+                self.debug_stats.layout_contained_view_cache_roots_time +=
+                    contained_started.elapsed();
+            }
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let collapse_started = self.debug_enabled.then(Instant::now);
             self.collapse_layout_observations_to_view_cache_roots_if_needed();
             if let Some(started) = started_phase {
                 t_collapse_layout_observations = Some(started.elapsed());
             }
+            if let Some(collapse_started) = collapse_started {
+                self.debug_stats.layout_collapse_layout_observations_time +=
+                    collapse_started.elapsed();
+            }
 
             if let Some(view_cache_started) = view_cache_started {
                 self.debug_stats.layout_view_cache_time += view_cache_started.elapsed();
-            }
-        }
-
-        if pass_kind == LayoutPassKind::Final {
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.prepaint_after_layout(app, scale_factor);
-            if let Some(started) = started_phase {
-                t_prepaint_after_layout = Some(started.elapsed());
             }
         }
 
@@ -696,7 +806,17 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
             }
         }
-
+        if pass_kind == LayoutPassKind::Final {
+            let prepaint_started = self.debug_enabled.then(Instant::now);
+            let started_phase = profile_layout_all.then(Instant::now);
+            self.prepaint_after_layout(app, scale_factor);
+            if let Some(started) = started_phase {
+                t_prepaint_after_layout = Some(started.elapsed());
+            }
+            if let Some(prepaint_started) = prepaint_started {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
+            }
+        }
         let started_phase = profile_layout_all.then(Instant::now);
         if pass_kind == LayoutPassKind::Final {
             let focus_started = self.debug_enabled.then(Instant::now);
@@ -715,7 +835,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(started) = started {
-            self.debug_stats.layout_time = started.elapsed();
+            self.debug_stats.layout_time = started
+                .elapsed()
+                .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
         }
 
         if pass_kind == LayoutPassKind::Final {
@@ -964,8 +1086,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled {
                 continue;
@@ -1118,6 +1239,17 @@ impl<H: UiHost> UiTree<H> {
             available,
         );
 
+        if self.invalidated_layout_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
+            && let Some(n) = self.nodes.get(root)
+            && !n.invalidation.layout
+            && !n.invalidation.hit_test
+            && n.bounds == bounds
+            && n.measured_size != Size::default()
+        {
+            return n.measured_size;
+        }
+
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
         self.request_build_window_roots_if_final(
@@ -1163,6 +1295,17 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
+        if self.invalidated_layout_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
+            && let Some(n) = self.nodes.get(root)
+            && !n.invalidation.layout
+            && !n.invalidation.hit_test
+            && n.bounds == bounds
+            && n.measured_size != Size::default()
+        {
+            return n.measured_size;
+        }
+
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
         self.request_build_window_roots_if_final(
@@ -1260,8 +1403,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut targets: Vec<(NodeId, Rect)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
@@ -1352,10 +1494,10 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT") {
-            if !format!("{root:?}").contains(&filter) {
-                return;
-            }
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT")
+            && !format!("{root:?}").contains(&filter)
+        {
+            return;
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
@@ -1432,9 +1574,8 @@ impl<H: UiHost> UiTree<H> {
 
         let result = std::fs::create_dir_all(&out_dir)
             .and_then(|_| {
-                serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-                    std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-                })
+                serde_json::to_vec_pretty(&wrapped)
+                    .map_err(|e| std::io::Error::other(format!("serialize: {e}")))
             })
             .and_then(|bytes| {
                 std::fs::write(std::path::Path::new(&out_dir).join(&filename), bytes)
@@ -1465,6 +1606,7 @@ impl<H: UiHost> UiTree<H> {
     /// This is a debug-only escape hatch intended for diagnosing layout regressions and scroll /
     /// clipping issues. The output is JSON and is written to `out_dir`.
     #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::too_many_arguments)]
     pub fn debug_write_taffy_subtree_json(
         &self,
         app: &mut H,
@@ -1554,9 +1696,8 @@ impl<H: UiHost> UiTree<H> {
         let out_dir = out_dir.as_ref();
         std::fs::create_dir_all(out_dir)?;
         let path = out_dir.join(filename);
-        let bytes = serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-        })?;
+        let bytes = serde_json::to_vec_pretty(&wrapped)
+            .map_err(|e| std::io::Error::other(format!("serialize: {e}")))?;
         std::fs::write(&path, bytes)?;
         Ok(path)
     }
@@ -1594,10 +1735,10 @@ impl<H: UiHost> UiTree<H> {
         let phase1_started = profile_layout.then(Instant::now);
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            if !self
+            if self
                 .nodes
                 .get(root)
-                .is_some_and(|node| node.element.is_some())
+                .is_none_or(|node| node.element.is_none())
             {
                 continue;
             }
@@ -1765,10 +1906,10 @@ impl<H: UiHost> UiTree<H> {
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
                 for item in &batch {
-                    if !self
+                    if self
                         .nodes
                         .get(item.root)
-                        .is_some_and(|node| node.element.is_some())
+                        .is_none_or(|node| node.element.is_none())
                     {
                         continue;
                     }
@@ -2039,8 +2180,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut batch: Vec<(NodeId, Rect)> = Vec::new();
-        batch.reserve(roots.len());
+        let mut batch: Vec<(NodeId, Rect)> = Vec::with_capacity(roots.len());
         for &(root, root_bounds) in roots {
             let Some(node) = self.nodes.get(root) else {
                 continue;
@@ -2277,9 +2417,33 @@ impl<H: UiHost> UiTree<H> {
                 parent.child_inclusive_time += inclusive_time;
             }
             let element = self.nodes.get(node).and_then(|n| n.element);
+            let element_kind = self.window.and_then(|window| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| record.instance.kind_name())
+            });
+            let element_path = if self.debug_enabled {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window.and_then(|window| {
+                        element.and_then(|element| {
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.debug_path_for_element(element)
+                            })
+                        })
+                    })
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
             let record = super::UiDebugLayoutHotspot {
                 node,
                 element,
+                element_kind,
+                element_path,
                 widget_type,
                 inclusive_time,
                 exclusive_time,
@@ -2289,9 +2453,20 @@ impl<H: UiHost> UiTree<H> {
                 .iter()
                 .position(|h| h.exclusive_time < record.exclusive_time)
                 .unwrap_or(self.debug_layout_hotspots.len());
-            self.debug_layout_hotspots.insert(idx, record);
+            self.debug_layout_hotspots.insert(idx, record.clone());
             if self.debug_layout_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
                 self.debug_layout_hotspots.truncate(MAX_LAYOUT_HOTSPOTS);
+            }
+
+            let idx = self
+                .debug_layout_inclusive_hotspots
+                .iter()
+                .position(|h| h.inclusive_time < record.inclusive_time)
+                .unwrap_or(self.debug_layout_inclusive_hotspots.len());
+            self.debug_layout_inclusive_hotspots.insert(idx, record);
+            if self.debug_layout_inclusive_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
+                self.debug_layout_inclusive_hotspots
+                    .truncate(MAX_LAYOUT_HOTSPOTS);
             }
         }
 
@@ -2300,14 +2475,18 @@ impl<H: UiHost> UiTree<H> {
                 .record(node, observations.as_slice());
             self.observed_globals_in_layout
                 .record(node, global_observations.as_slice());
-            if let Some(n) = self.nodes.get_mut(node) {
+            if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
+                let prev = n.invalidation;
                 if n.invalidation.layout {
                     debug_assert!(self.layout_invalidations_count > 0);
                     self.layout_invalidations_count =
                         self.layout_invalidations_count.saturating_sub(1);
                 }
                 n.invalidation.layout = false;
+                (prev, n.invalidation)
+            }) {
+                self.update_invalidation_counters(prev, next);
             }
         }
 

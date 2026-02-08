@@ -1,0 +1,191 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "render_fallback",
+  "data": [
+    {
+      "id": 1
+    },
+    {
+      "id": 2,
+      "value": null
+    },
+    {
+      "id": 3,
+      "value": 0
+    },
+    {
+      "id": 4,
+      "value": ""
+    },
+    {
+      "id": 5,
+      "value": false
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "render_fallback_baseline",
+      "options": {
+        "renderFallbackValue": "N/A"
+      },
+      "state": {},
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "render_fallback": [
+          {
+            "row_id": "1",
+            "column_id": "value",
+            "value": {
+              "__fret": "undefined"
+            },
+            "render_value": "N/A"
+          },
+          {
+            "row_id": "2",
+            "column_id": "value",
+            "value": null,
+            "render_value": "N/A"
+          },
+          {
+            "row_id": "3",
+            "column_id": "value",
+            "value": 0,
+            "render_value": 0
+          },
+          {
+            "row_id": "4",
+            "column_id": "value",
+            "value": "",
+            "render_value": ""
+          },
+          {
+            "row_id": "5",
+            "column_id": "value",
+            "value": false,
+            "render_value": false
+          }
+        ]
+      }
+    }
+  ]
+}

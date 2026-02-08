@@ -527,25 +527,37 @@ pub(crate) struct PendingPaste {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) struct GeometryCacheKey {
+pub(crate) struct DrawOrderFingerprint {
+    pub(crate) lo: u64,
+    pub(crate) hi: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct DerivedBaseKey {
     pub(crate) graph_rev: u64,
     pub(crate) zoom_bits: u32,
     pub(crate) node_origin_x_bits: u32,
     pub(crate) node_origin_y_bits: u32,
-    pub(crate) draw_order_hash: u64,
+    pub(crate) draw_order: DrawOrderFingerprint,
     pub(crate) presenter_rev: u64,
     pub(crate) edge_types_rev: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct GeometryCacheKey {
+    pub(crate) base: DerivedBaseKey,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct SpatialIndexCacheKey {
+    pub(crate) geom: GeometryCacheKey,
+    pub(crate) cell_size_screen_bits: u32,
+    pub(crate) min_cell_size_screen_bits: u32,
+    pub(crate) edge_aabb_pad_screen_bits: u32,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct InternalsCacheKey {
-    pub(crate) graph_rev: u64,
-    pub(crate) zoom_bits: u32,
-    pub(crate) node_origin_x_bits: u32,
-    pub(crate) node_origin_y_bits: u32,
-    pub(crate) draw_order_hash: u64,
-    pub(crate) presenter_rev: u64,
-    pub(crate) edge_types_rev: u64,
+pub(crate) struct InternalsViewKey {
     pub(crate) pan_x_bits: u32,
     pub(crate) pan_y_bits: u32,
     pub(crate) bounds_x_bits: u32,
@@ -554,12 +566,103 @@ pub(crate) struct InternalsCacheKey {
     pub(crate) bounds_h_bits: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct InternalsCacheKey {
+    pub(crate) base: DerivedBaseKey,
+    pub(crate) view: InternalsViewKey,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DerivedBuildCounters {
+    pub(crate) geom_rebuilds: u64,
+    pub(crate) index_rebuilds: u64,
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct GeometryCache {
-    pub(crate) key: Option<GeometryCacheKey>,
+    pub(crate) geom_key: Option<GeometryCacheKey>,
+    pub(crate) index_key: Option<SpatialIndexCacheKey>,
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
-    pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) index: Arc<super::spatial::CanvasSpatialDerived>,
     pub(crate) drag_preview: Option<DragPreviewCache>,
+    pub(crate) counters: DerivedBuildCounters,
+}
+
+impl GeometryCache {
+    pub(crate) fn clear_drag_preview(&mut self) {
+        self.drag_preview = None;
+    }
+
+    /// Ensures the cache is keyed for the given geometry base.
+    ///
+    /// Returns `true` when the key changed and callers should rebuild geometry-dependent caches.
+    pub(crate) fn ensure_geom_key(&mut self, geom_key: GeometryCacheKey) -> bool {
+        if self.geom_key == Some(geom_key) {
+            return false;
+        }
+        self.geom_key = Some(geom_key);
+        self.index_key = None;
+        self.clear_drag_preview();
+        self.counters.geom_rebuilds = self.counters.geom_rebuilds.saturating_add(1);
+        true
+    }
+
+    /// Ensures the cache is keyed for the given spatial index configuration.
+    ///
+    /// Returns `true` when the key changed and callers should rebuild the spatial index.
+    pub(crate) fn ensure_index_key(&mut self, index_key: SpatialIndexCacheKey) -> bool {
+        if self.index_key == Some(index_key) {
+            return false;
+        }
+        self.index_key = Some(index_key);
+        self.clear_drag_preview();
+        self.counters.index_rebuilds = self.counters.index_rebuilds.saturating_add(1);
+        true
+    }
+
+    pub(crate) fn drag_preview_rebuild_needed(
+        &self,
+        kind: DragPreviewKind,
+        base_index_key: SpatialIndexCacheKey,
+    ) -> bool {
+        self.drag_preview
+            .as_ref()
+            .is_none_or(|cache| cache.kind != kind || cache.base_index_key != base_index_key)
+    }
+
+    pub(crate) fn set_drag_preview(&mut self, cache: DragPreviewCache) {
+        self.drag_preview = Some(cache);
+    }
+
+    pub(crate) fn drag_preview_outputs_for_rev(
+        &mut self,
+        preview_rev: u64,
+        update: impl FnOnce(
+            &mut DragPreviewCacheMetaMut<'_>,
+            &mut super::geometry::CanvasGeometry,
+            &mut super::spatial::CanvasSpatialDerived,
+        ),
+    ) -> Option<(
+        Arc<super::geometry::CanvasGeometry>,
+        Arc<super::spatial::CanvasSpatialDerived>,
+    )> {
+        let cache = self.drag_preview.as_mut()?;
+        if cache.preview_rev != preview_rev {
+            let node_positions = &mut cache.node_positions;
+            let node_rects = &mut cache.node_rects;
+            let node_ports = &cache.node_ports;
+            let geom_mut = Arc::make_mut(&mut cache.geom);
+            let index_mut = Arc::make_mut(&mut cache.index);
+            let mut meta = DragPreviewCacheMetaMut {
+                node_positions,
+                node_rects,
+                node_ports,
+            };
+            update(&mut meta, geom_mut, index_mut);
+            cache.preview_rev = preview_rev;
+        }
+        Some((cache.geom.clone(), cache.index.clone()))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -572,13 +675,19 @@ pub(crate) enum DragPreviewKind {
 #[derive(Debug, Clone)]
 pub(crate) struct DragPreviewCache {
     pub(crate) kind: DragPreviewKind,
-    pub(crate) base_key: GeometryCacheKey,
+    pub(crate) base_index_key: SpatialIndexCacheKey,
     pub(crate) preview_rev: u64,
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
-    pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) index: Arc<super::spatial::CanvasSpatialDerived>,
     pub(crate) node_positions: HashMap<GraphNodeId, CanvasPoint>,
     pub(crate) node_rects: HashMap<GraphNodeId, Rect>,
     pub(crate) node_ports: HashMap<GraphNodeId, Vec<PortId>>,
+}
+
+pub(crate) struct DragPreviewCacheMetaMut<'a> {
+    pub(crate) node_positions: &'a mut HashMap<GraphNodeId, CanvasPoint>,
+    pub(crate) node_rects: &'a mut HashMap<GraphNodeId, Rect>,
+    pub(crate) node_ports: &'a HashMap<GraphNodeId, Vec<PortId>>,
 }
 
 #[derive(Debug, Clone)]

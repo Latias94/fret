@@ -1,5 +1,7 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
+use std::ops::Range;
+
 use super::*;
 use fret_core::TextMetrics;
 
@@ -19,8 +21,7 @@ pub(super) fn paint_row(
 ) {
     st.last_bounds = Some(painter.bounds());
 
-    let row_range = st.display_map.display_row_byte_range(&st.buffer, row);
-    let line = cached_row_text(st, row, text_cache_max_entries);
+    let (row_range, line) = cached_row_text_with_range(st, row, text_cache_max_entries);
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
@@ -37,22 +38,47 @@ pub(super) fn paint_row(
     // font's actual line height. Measure a representative line to compute a stable baseline and
     // vertically center the glyph box within the row.
     let scale_factor = painter.scale_factor();
-    let (services, _) = painter.services_and_scene();
-    let measure_constraints = fret_core::TextConstraints {
-        max_width: Some(rect.size.width),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        scale_factor,
-    };
-    let metrics = services
-        .text()
-        .measure_str(" ", text_style, measure_constraints);
-    let measured_h = if metrics.size.height.0 > 0.01 {
-        metrics.size.height
+    let scale_bits = scale_factor.to_bits();
+    let max_width = rect.size.width;
+    let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
+        cache.max_width == max_width
+            && cache.row_h == row_h
+            && cache.scale_bits == scale_bits
+            && &cache.text_style == text_style
+    });
+    let (metrics, measured_h) = if cached {
+        let cache = st
+            .baseline_measure_cache
+            .as_ref()
+            .expect("checked cache presence");
+        (cache.metrics, cache.measured_h)
     } else {
-        // Defensive fallback: keep a stable non-zero box even if the text backend returns an
-        // empty metrics set (should be rare for a single space).
-        Px(row_h.0.max(16.0))
+        let (services, _) = painter.services_and_scene();
+        let measure_constraints = fret_core::TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let metrics = services
+            .text()
+            .measure_str(" ", text_style, measure_constraints);
+        let measured_h = if metrics.size.height.0 > 0.01 {
+            metrics.size.height
+        } else {
+            // Defensive fallback: keep a stable non-zero box even if the text backend returns an
+            // empty metrics set (should be rare for a single space).
+            Px(row_h.0.max(16.0))
+        };
+        st.baseline_measure_cache = Some(BaselineMeasureCache {
+            max_width,
+            row_h,
+            scale_bits,
+            text_style: text_style.clone(),
+            metrics,
+            measured_h,
+        });
+        (metrics, measured_h)
     };
     let text_y_pad = Px(((row_h.0 - measured_h.0).max(0.0)) / 2.0);
     let origin = fret_core::Point::new(
@@ -145,9 +171,10 @@ pub(super) fn paint_row(
                         merged.push(span);
                     }
 
-                    let theme = painter.theme().clone();
-                    let rich =
-                        materialize_row_rich_text(&theme, Arc::clone(&line), merged.as_ref());
+                    let rich = {
+                        let theme = painter.theme();
+                        materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
+                    };
                     let (blob, metrics) = painter.rich_text_with_blob(
                         key,
                         DrawOrder(2),
@@ -181,33 +208,60 @@ pub(super) fn paint_row(
         row_blob_metrics = Some(metrics);
     }
 
-    let mut caret_stops: Vec<(usize, Px)> = Vec::new();
+    let mut fresh_geom = None::<RowGeom>;
+    let mut caret_stops = &[][..];
     let mut caret_rect_top = None::<Px>;
     let mut caret_rect_height = None::<Px>;
     if let (Some(blob), Some(blob_metrics)) = (row_blob, row_blob_metrics.as_ref()) {
-        let (services, _) = painter.services_and_scene();
-        services.text().caret_stops(blob, &mut caret_stops);
+        let cached = st.row_geom_cache.get(&row).is_some_and(|(geom, _)| {
+            geom.blob == blob && geom.row_range == row_range && geom.preedit == row_preedit
+        });
+        if cached {
+            let geom = &st
+                .row_geom_cache
+                .get(&row)
+                .expect("checked cache presence")
+                .0;
+            caret_stops = geom.caret_stops.as_slice();
+            caret_rect_top = geom.caret_rect_top;
+            caret_rect_height = geom.caret_rect_height;
+        } else {
+            let mut stops: Vec<(usize, Px)> = Vec::new();
+            let (services, _) = painter.services_and_scene();
+            services.text().caret_stops(blob, &mut stops);
+            let caret_rect = services
+                .text()
+                .caret_rect(blob, 0, CaretAffinity::Downstream);
 
-        let caret_rect = services
-            .text()
-            .caret_rect(blob, 0, CaretAffinity::Downstream);
-        if caret_rect.size.height.0 > 0.0 {
             // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
             // Convert it into row-local coordinates by anchoring the box using the *actual* blob
             // baseline, not the placeholder measurement baseline.
             let text_box_top_in_row = Px(origin.y.0 - blob_metrics.baseline.0 - rect.origin.y.0);
-            caret_rect_top = Some(Px(text_box_top_in_row.0 + caret_rect.origin.y.0));
-            caret_rect_height = Some(caret_rect.size.height);
+            if caret_rect.size.height.0 > 0.0 {
+                caret_rect_top = Some(Px(text_box_top_in_row.0 + caret_rect.origin.y.0));
+                caret_rect_height = Some(caret_rect.size.height);
+            } else if blob_metrics.size.height.0 > 0.0 {
+                // Some backends may not provide a caret rect yet. Fall back to the blob's box so
+                // the caret doesn't appear "floating" at the row top.
+                caret_rect_top = Some(text_box_top_in_row);
+                caret_rect_height = Some(blob_metrics.size.height);
+            }
+
+            fresh_geom = Some(RowGeom {
+                row_range: row_range.clone(),
+                blob,
+                caret_stops: stops,
+                caret_rect_top,
+                caret_rect_height,
+                preedit: row_preedit,
+            });
+            caret_stops = fresh_geom
+                .as_ref()
+                .expect("fresh geom present")
+                .caret_stops
+                .as_slice();
         }
     }
-
-    let row_geom = RowGeom {
-        row_range: row_range.clone(),
-        caret_stops,
-        caret_rect_top,
-        caret_rect_height,
-        preedit: row_preedit,
-    };
 
     let sel = st.selection.normalized();
     let mut drew_selection = false;
@@ -255,7 +309,7 @@ pub(super) fn paint_row(
         }
     }
 
-    if !row_geom.caret_stops.is_empty() {
+    if !caret_stops.is_empty() {
         // Draw selection using caret stops so that selection geometry matches hit-testing.
         if !drew_selection && !sel.is_empty() {
             let global_start = sel.start.max(row_range.start).min(row_range.end);
@@ -264,7 +318,7 @@ pub(super) fn paint_row(
                 let local_start = global_start.saturating_sub(row_range.start);
                 let local_end = global_end.saturating_sub(row_range.start);
                 let mut ranges: Vec<(usize, usize)> = Vec::new();
-                if let Some(preedit) = row_geom.preedit {
+                if let Some(preedit) = row_preedit {
                     if local_end <= preedit.insert_at {
                         ranges.push((local_start, local_end));
                     } else if local_start >= preedit.insert_at {
@@ -287,8 +341,8 @@ pub(super) fn paint_row(
                     if a >= b {
                         continue;
                     }
-                    let x0 = caret_x_for_index(&row_geom.caret_stops, a);
-                    let x1 = caret_x_for_index(&row_geom.caret_stops, b);
+                    let x0 = caret_x_for_index(caret_stops, a);
+                    let x1 = caret_x_for_index(caret_stops, b);
                     if x0.0 == x1.0 {
                         continue;
                     }
@@ -315,13 +369,13 @@ pub(super) fn paint_row(
             if caret_pt.row == row {
                 let mut local = caret.saturating_sub(row_range.start);
                 if let Some(preedit) = &st.preedit
-                    && row_geom.preedit.is_some()
+                    && row_preedit.is_some()
                 {
                     local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
                 }
-                let x0 = caret_x_for_index(&row_geom.caret_stops, local);
+                let x0 = caret_x_for_index(caret_stops, local);
                 let (caret_top, caret_h) = if let (Some(top), Some(h)) =
-                    (row_geom.caret_rect_top, row_geom.caret_rect_height)
+                    (caret_rect_top, caret_rect_height)
                     && h.0 > 0.0
                 {
                     (top, Px(h.0.min(row_h.0)))
@@ -415,27 +469,44 @@ pub(super) fn paint_row(
 
     st.row_geom_cache_tick = st.row_geom_cache_tick.saturating_add(1);
     let tick = st.row_geom_cache_tick;
-    st.row_geom_cache.insert(row, (row_geom, tick));
-    st.row_geom_cache_queue.push_back((row, tick));
-    while st.row_geom_cache.len() > text_cache_max_entries {
-        let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
-            break;
-        };
-        let remove = st
-            .row_geom_cache
-            .get(&victim)
-            .is_some_and(|(_, last_used)| *last_used == victim_tick);
-        if remove {
-            st.row_geom_cache.remove(&victim);
+    let has_row_geom = fresh_geom.is_some() || st.row_geom_cache.contains_key(&row);
+    if has_row_geom {
+        if let Some(geom) = fresh_geom {
+            st.row_geom_cache.insert(row, (geom, tick));
+        } else if let Some((_, last_used)) = st.row_geom_cache.get_mut(&row) {
+            *last_used = tick;
+        }
+
+        st.row_geom_cache_queue.push_back((row, tick));
+        while st.row_geom_cache.len() > text_cache_max_entries {
+            let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
+                break;
+            };
+            let remove = st
+                .row_geom_cache
+                .get(&victim)
+                .is_some_and(|(_, last_used)| *last_used == victim_tick);
+            if remove {
+                st.row_geom_cache.remove(&victim);
+            }
         }
     }
 }
 
+#[cfg(test)]
 pub(super) fn cached_row_text(
     st: &mut CodeEditorState,
     row: usize,
     max_entries: usize,
 ) -> Arc<str> {
+    cached_row_text_with_range(st, row, max_entries).1
+}
+
+pub(super) fn cached_row_text_with_range(
+    st: &mut CodeEditorState,
+    row: usize,
+    max_entries: usize,
+) -> (Range<usize>, Arc<str>) {
     st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
@@ -455,13 +526,27 @@ pub(super) fn cached_row_text(
         *last_used = tick;
         st.row_text_cache_queue.push_back((row, tick));
         st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
-        return Arc::clone(text);
+        return (text.range.clone(), Arc::clone(&text.text));
     }
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
     let range = st.display_map.display_row_byte_range(&st.buffer, row);
-    let text: Arc<str> = st.buffer.slice_to_string(range).unwrap_or_default().into();
-    st.row_text_cache.insert(row, (Arc::clone(&text), tick));
+    let range_for_return = range.clone();
+    let text: Arc<str> = st
+        .buffer
+        .slice_to_string(range.clone())
+        .unwrap_or_default()
+        .into();
+    st.row_text_cache.insert(
+        row,
+        (
+            RowTextCacheEntry {
+                text: Arc::clone(&text),
+                range,
+            },
+            tick,
+        ),
+    );
     st.row_text_cache_queue.push_back((row, tick));
 
     while st.row_text_cache.len() > max_entries {
@@ -478,7 +563,7 @@ pub(super) fn cached_row_text(
         }
     }
 
-    text
+    (range_for_return, text)
 }
 
 pub(super) fn materialize_preedit_rich_text(
@@ -589,35 +674,69 @@ pub(super) fn invalidate_syntax_row_cache_for_delta(
         return;
     }
 
-    let start = delta.lines.start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
-    let line_count = st.buffer.line_count();
-    let before_len = st.syntax_row_cache.len();
+    let line_count = st.buffer.line_count().max(1);
+    let max_line = line_count.saturating_sub(1);
 
-    if delta.lines.old_count != delta.lines.new_count {
-        // Line count changed: row indices at/after the edit point may have shifted.
-        // Keep only entries that are strictly before the invalidation start.
-        st.syntax_row_cache.retain(|row, _| *row < start);
-    } else {
-        let affected_end = delta
-            .lines
-            .start
-            .saturating_add(delta.lines.new_count.saturating_sub(1));
-        let end = affected_end
-            .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
-            .min(line_count.saturating_sub(1));
-        st.syntax_row_cache
-            .retain(|row, _| *row < start || *row > end);
+    let old_edit_start = delta.lines.start;
+    let new_edit_start = delta.lines.start.min(max_line);
+    let old_count = delta.lines.old_count.max(1);
+    let new_count = delta.lines.new_count.max(1);
+    let old_end_excl = old_edit_start.saturating_add(old_count);
+
+    let invalidation_start = new_edit_start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let new_span_end = new_edit_start
+        .saturating_add(new_count.saturating_sub(1))
+        .min(max_line);
+    let invalidation_end = new_span_end
+        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+        .min(max_line);
+
+    let shift: isize = new_count as isize - old_count as isize;
+    let shift_row = |row: usize| -> usize {
+        if shift >= 0 {
+            row.saturating_add(shift as usize)
+        } else {
+            row.saturating_sub(shift.unsigned_abs())
+        }
+    };
+
+    let before_len = st.syntax_row_cache.len();
+    let prev = std::mem::take(&mut st.syntax_row_cache);
+    let mut next = HashMap::with_capacity(prev.len());
+
+    for (row, (spans, tick)) in prev {
+        // Always invalidate the edited line span in the old coordinate space.
+        if row >= old_edit_start && row < old_end_excl {
+            continue;
+        }
+
+        let mapped = if row >= old_end_excl {
+            shift_row(row)
+        } else {
+            row
+        };
+        if mapped >= line_count {
+            continue;
+        }
+
+        // Invalidate a bounded lookback/lookahead window in the new coordinate space.
+        if mapped >= invalidation_start && mapped <= invalidation_end {
+            continue;
+        }
+
+        next.insert(mapped, (spans, tick));
     }
 
+    st.syntax_row_cache = next;
     let after_len = st.syntax_row_cache.len();
-    if after_len != before_len {
-        let removed = before_len.saturating_sub(after_len);
+    let removed = before_len.saturating_sub(after_len);
+    if removed > 0 {
         st.cache_stats.syntax_evictions = st
             .cache_stats
             .syntax_evictions
             .saturating_add(removed as u64);
-        rebuild_syntax_row_cache_queue(st);
     }
+    rebuild_syntax_row_cache_queue(st);
 }
 
 #[cfg(feature = "syntax")]

@@ -1,0 +1,67 @@
+﻿{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "dialog" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-dialog" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-dialog" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-custom-close-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-custom-close-content" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-custom-close-footer" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-custom-close-content" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-no-close-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-no-close-content" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-no-close-content" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-dialog-docs-order-smoke" }
+  ]
+}

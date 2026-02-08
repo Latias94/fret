@@ -60,26 +60,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let pan_x = self.cached_pan.x;
-        let pan_y = self.cached_pan.y;
-
-        // `position` is in the widget's local (canvas) coordinates.
-        // Compute the pivot in screen coordinates (relative to bounds origin) to keep the
-        // graph point under the cursor stable.
-        let pivot_screen_x = (position.x.0 + pan_x) * zoom;
-        let pivot_screen_y = (position.y.0 + pan_y) * zoom;
-
-        let g0_x = pivot_screen_x / zoom - pan_x;
-        let g0_y = pivot_screen_y / zoom - pan_y;
-
-        let new_pan_x = pivot_screen_x / new_zoom - g0_x;
-        let new_pan_y = pivot_screen_y / new_zoom - g0_y;
-
-        self.cached_pan = CanvasPoint {
-            x: new_pan_x,
-            y: new_pan_y,
+        let mut view = PanZoom2D {
+            pan: Point::new(
+                fret_core::Px(self.cached_pan.x),
+                fret_core::Px(self.cached_pan.y),
+            ),
+            zoom,
         };
-        self.cached_zoom = new_zoom;
+        view.zoom_about_canvas_point(position, new_zoom);
+        self.cached_pan = CanvasPoint {
+            x: view.pan.x.0,
+            y: view.pan.y.0,
+        };
+        self.cached_zoom = view.zoom;
     }
 }
 
@@ -130,10 +123,8 @@ pub(super) fn begin_panning<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let zoom = snapshot.zoom;
     let pan = snapshot.pan;
-    let screen_pos = Point::new(
-        fret_core::Px(cx.bounds.origin.x.0 + (start_pos.x.0 + pan.x) * zoom),
-        fret_core::Px(cx.bounds.origin.y.0 + (start_pos.y.0 + pan.y) * zoom),
-    );
+    let viewport = NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds, pan, zoom);
+    let screen_pos = viewport.canvas_to_screen(start_pos);
     canvas.interaction.pan_last_screen_pos = Some(screen_pos);
     canvas.interaction.pan_last_sample_at = Some(Instant::now());
     canvas.interaction.pan_velocity = CanvasPoint::default();
@@ -166,10 +157,8 @@ pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     // `position` is in the node's local coordinate space (canvas coords) because `NodeGraphCanvas`
     // provides a `render_transform` for pan/zoom. Convert back to screen space so the delta is
     // stable even while pan changes (otherwise panning feeds back into the next pointer sample).
-    let screen_pos = Point::new(
-        fret_core::Px(cx.bounds.origin.x.0 + (position.x.0 + snapshot.pan.x) * zoom),
-        fret_core::Px(cx.bounds.origin.y.0 + (position.y.0 + snapshot.pan.y) * zoom),
-    );
+    let viewport = NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds, snapshot.pan, zoom);
+    let screen_pos = viewport.canvas_to_screen(position);
 
     let last = canvas
         .interaction
@@ -178,10 +167,9 @@ pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let delta_screen = Point::new(screen_pos.x - last.x, screen_pos.y - last.y);
     *last = screen_pos;
 
-    let inv_zoom = 1.0 / zoom;
     let delta_canvas = crate::core::CanvasPoint {
-        x: delta_screen.x.0 * inv_zoom,
-        y: delta_screen.y.0 * inv_zoom,
+        x: fret_canvas::scale::canvas_units_from_screen_px(delta_screen.x.0, zoom),
+        y: fret_canvas::scale::canvas_units_from_screen_px(delta_screen.y.0, zoom),
     };
 
     let now = Instant::now();

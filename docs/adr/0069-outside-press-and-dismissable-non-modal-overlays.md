@@ -171,6 +171,22 @@ outside pointer interactions (menu-like `modal=true` outcomes), treating the tri
 branch can prevent trigger presses from dismissing the overlay, because the trigger itself may be
 pointer-occluded. In that case, policy may choose to *not* treat the trigger as a branch.
 
+#### Compound trigger surfaces (multiple interactive roots)
+
+Some overlays have a *compound* trigger surface composed of multiple interactive elements that
+are not descendants of the trigger root (e.g. an editable text field plus a trailing dropdown icon
+that toggles the same `open` model).
+
+If only the primary trigger element is treated as a branch, clicks on secondary trigger elements
+can reproduce the same close→reopen race:
+
+- the outside-press observer dismisses the overlay first, then
+- the secondary trigger toggles the open model and immediately re-opens it.
+
+For those designs, component policy should add the full compound surface (typically the field
+container root) as an explicit dismissable branch, so all trigger-adjacent clicks are treated as
+"inside" for dismissal purposes.
+
 ### Presence and close transitions (click-through correctness)
 
 Non-modal overlays commonly animate out (opacity / scale / slide) while remaining mounted.

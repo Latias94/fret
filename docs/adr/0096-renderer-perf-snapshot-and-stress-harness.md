@@ -18,7 +18,7 @@ We already have a dedicated scene encoding layer and an internal ordered draw st
 atlas stress app that prints perf snapshots and fragmentation/fill metrics:
 
 - Stress harness: `apps/fret-svg-atlas-stress/src/main.rs`
-- SVG perf snapshot: `crates/fret-render/src/renderer/config.rs` (`SvgPerfSnapshot`)
+- SVG perf snapshot: `crates/fret-render-wgpu/src/renderer/config.rs` (`SvgPerfSnapshot`)
 
 But we do not yet have a unified, renderer-wide perf snapshot surface that covers draw calls, binds, and upload bytes
 across all pipelines. Without stable metrics, “performance work” is easy to regress and hard to validate.

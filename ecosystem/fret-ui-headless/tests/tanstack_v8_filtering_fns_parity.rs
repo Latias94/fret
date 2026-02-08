@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    BuiltInFilterFn, ColumnDef, FilteringFnSpec, RowKey, Table, TanStackTableOptions,
+    BuiltInFilterFn, ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TanStackTableOptions,
     TanStackTableState, TanStackValue, set_column_filter_value_tanstack,
 };
 use serde::Deserialize;
@@ -23,12 +24,31 @@ struct RowModelSnapshot {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct FilteringHelpersSnapshot {
+    columns: BTreeMap<String, FilteringHelpersColumnSnapshot>,
+    #[serde(default)]
+    global_filter: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FilteringHelpersColumnSnapshot {
+    can_filter: bool,
+    #[serde(default)]
+    filter_value: Option<serde_json::Value>,
+    is_filtered: bool,
+    filter_index: i32,
+    can_global_filter: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     core: RowModelSnapshot,
     filtered: RowModelSnapshot,
     sorted: RowModelSnapshot,
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
+    #[serde(default)]
+    filtering_helpers: Option<FilteringHelpersSnapshot>,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
 }
@@ -41,6 +61,8 @@ enum FixtureAction {
         column_id: String,
         value: serde_json::Value,
     },
+    #[serde(rename = "setGlobalFilterValue")]
+    SetGlobalFilterValue { value: serde_json::Value },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -153,9 +175,21 @@ fn tanstack_v8_filtering_fns_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         if !snap.actions.is_empty() {
+            let on_column_filters_change_mode = snap
+                .options
+                .get("__onColumnFiltersChange")
+                .and_then(|v| v.as_str());
+            let on_global_filter_change_mode = snap
+                .options
+                .get("__onGlobalFilterChange")
+                .and_then(|v| v.as_str());
+
             for action in &snap.actions {
                 match action {
                     FixtureAction::SetColumnFilterValue { column_id, value } => {
+                        if on_column_filters_change_mode == Some("noop") {
+                            continue;
+                        }
                         let Some(column) = column_by_id.get(column_id.as_str()).copied() else {
                             panic!("unknown action column_id: {}", column_id);
                         };
@@ -166,6 +200,12 @@ fn tanstack_v8_filtering_fns_parity() {
                             &filter_fns,
                             value.clone(),
                         );
+                    }
+                    FixtureAction::SetGlobalFilterValue { value } => {
+                        if on_global_filter_change_mode == Some("noop") {
+                            continue;
+                        }
+                        state.global_filter = Some(value.clone());
                     }
                 }
             }
@@ -181,6 +221,11 @@ fn tanstack_v8_filtering_fns_parity() {
                     "snapshot {} next_state.column_filters mismatch",
                     snap.id
                 );
+                assert_eq!(
+                    state.global_filter, expected_state.global_filter,
+                    "snapshot {} next_state.global_filter mismatch",
+                    snap.id
+                );
             }
         }
 
@@ -189,6 +234,7 @@ fn tanstack_v8_filtering_fns_parity() {
             .filter_fn_builtin("custom_text", BuiltInFilterFn::IncludesStringSensitive)
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();
@@ -249,5 +295,52 @@ fn tanstack_v8_filtering_fns_parity() {
             "snapshot {} paginated flat mismatch",
             snap.id
         );
+
+        if let Some(expected_helpers) = snap.expect.filtering_helpers.as_ref() {
+            for (column_id, expected) in &expected_helpers.columns {
+                assert_eq!(
+                    table.column_can_filter(column_id.as_str()),
+                    Some(expected.can_filter),
+                    "snapshot {} column_can_filter({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_filter_value(column_id.as_str()),
+                    expected.filter_value.as_ref(),
+                    "snapshot {} column_filter_value({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_is_filtered(column_id.as_str()),
+                    Some(expected.is_filtered),
+                    "snapshot {} column_is_filtered({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_filter_index(column_id.as_str()),
+                    Some(expected.filter_index),
+                    "snapshot {} column_filter_index({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+                assert_eq!(
+                    table.column_can_global_filter(column_id.as_str()),
+                    Some(expected.can_global_filter),
+                    "snapshot {} column_can_global_filter({}) mismatch",
+                    snap.id,
+                    column_id
+                );
+            }
+
+            assert_eq!(
+                table.state().global_filter,
+                expected_helpers.global_filter.clone(),
+                "snapshot {} global_filter mismatch",
+                snap.id
+            );
+        }
     }
 }

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::Color;
 use fret_core::{SemanticsRole, TextOverflow, TextWrap};
-use fret_icons::IconId;
+use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -57,13 +57,13 @@ impl ToolStatus {
 
     pub fn icon_id(self) -> IconId {
         match self {
-            Self::ApprovalRequested => IconId::new_static("lucide.clock"),
-            Self::ApprovalResponded => IconId::new_static("lucide.check-circle"),
-            Self::InputAvailable => IconId::new_static("lucide.clock"),
-            Self::InputStreaming => IconId::new_static("lucide.circle"),
-            Self::OutputAvailable => IconId::new_static("lucide.check-circle"),
-            Self::OutputDenied => IconId::new_static("lucide.x-circle"),
-            Self::OutputError => IconId::new_static("lucide.x-circle"),
+            Self::ApprovalRequested => ids::ui::STATUS_PENDING,
+            Self::ApprovalResponded => ids::ui::STATUS_PENDING,
+            Self::InputAvailable => ids::ui::STATUS_RUNNING,
+            Self::InputStreaming => ids::ui::STATUS_PENDING,
+            Self::OutputAvailable => ids::ui::STATUS_SUCCEEDED,
+            Self::OutputDenied => ids::ui::STATUS_FAILED,
+            Self::OutputError => ids::ui::STATUS_FAILED,
         }
     }
 
@@ -179,7 +179,7 @@ impl ToolHeader {
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
                 vec![
-                    decl_icon::icon(cx, IconId::new_static("lucide.wrench")),
+                    decl_icon::icon(cx, ids::ui::TOOL),
                     cx.text(label.clone()),
                     badge,
                 ]
@@ -189,9 +189,9 @@ impl ToolHeader {
         let chevron = decl_icon::icon(
             cx,
             if is_open {
-                IconId::new_static("lucide.chevron-up")
+                ids::ui::CHEVRON_UP
             } else {
-                IconId::new_static("lucide.chevron-down")
+                ids::ui::CHEVRON_DOWN
             },
         );
 

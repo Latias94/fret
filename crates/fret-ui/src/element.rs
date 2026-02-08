@@ -644,7 +644,7 @@ impl Default for EffectLayerProps {
 ///
 /// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
 /// without committing to a stable authoring API.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ViewCacheProps {
     pub layout: LayoutStyle,
     /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
@@ -654,16 +654,6 @@ pub struct ViewCacheProps {
     /// The runtime will reuse cached output for this view-cache root only when the computed key is
     /// unchanged. This mirrors GPUI's `ViewCacheKey` gating behavior.
     pub cache_key: u64,
-}
-
-impl Default for ViewCacheProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            contained_layout: false,
-            cache_key: 0,
-        }
-    }
 }
 
 /// Paint-only transform wrapper for declarative element subtrees.
@@ -769,7 +759,7 @@ impl Default for AnchoredProps {
 ///
 /// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
 /// alpha falloff (ADR 0060) until we have a true blur pipeline.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
@@ -784,7 +774,7 @@ pub struct ShadowLayerStyle {
 ///
 /// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
 /// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowStyle {
     pub primary: ShadowLayerStyle,
     pub secondary: Option<ShadowLayerStyle>,
@@ -932,7 +922,7 @@ pub enum RingPlacement {
 ///
 /// This is intentionally small and renderer-friendly: it maps to one or two `SceneOp::Quad`
 /// operations.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RingStyle {
     pub placement: RingPlacement,
     pub width: Px,
@@ -1094,6 +1084,12 @@ pub struct TextInputProps {
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which this text input controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
@@ -1113,6 +1109,7 @@ impl TextInputProps {
             test_id: None,
             placeholder: None,
             active_descendant: None,
+            controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
@@ -1136,6 +1133,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)

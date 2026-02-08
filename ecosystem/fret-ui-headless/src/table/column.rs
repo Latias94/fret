@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use super::Aggregation;
+use super::{Aggregation, AggregationFnSpec, BuiltInAggregationFn};
 
 pub type ColumnId = Arc<str>;
 
@@ -11,6 +11,7 @@ pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
 pub type SortIsUndefinedFn<TData> = Arc<dyn Fn(&TData) -> bool>;
 pub type SortValueFn<TData> = Arc<dyn Fn(&TData) -> TanStackValue>;
 pub type FilterFn<TData> = Arc<dyn Fn(&TData, &Value) -> bool>;
+pub type FilterFnWithMeta<TData> = Arc<dyn Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool>;
 pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
 pub type FacetStrFn<TData> = Arc<dyn for<'r> Fn(&'r TData) -> &'r str>;
 pub type ValueU64Fn<TData> = Arc<dyn Fn(&TData) -> u64>;
@@ -32,7 +33,7 @@ pub enum TanStackValue {
     DateTime(f64),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInSortingFn {
     Alphanumeric,
     AlphanumericCaseSensitive,
@@ -42,7 +43,7 @@ pub enum BuiltInSortingFn {
     Basic,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SortingFnSpec {
     /// TanStack `sortingFn: 'auto'`.
     Auto,
@@ -52,7 +53,7 @@ pub enum SortingFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInFilterFn {
     IncludesString,
     IncludesStringSensitive,
@@ -65,7 +66,7 @@ pub enum BuiltInFilterFn {
     InNumberRange,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FilteringFnSpec {
     /// TanStack `filterFn: 'auto'`.
     Auto,
@@ -75,7 +76,7 @@ pub enum FilteringFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SortUndefined {
     /// TanStack `sortUndefined: false` (disable the pre-pass undefined ordering).
     Disabled,
@@ -98,6 +99,7 @@ pub struct ColumnDef<TData> {
     pub sort_is_undefined: Option<SortIsUndefinedFn<TData>>,
     pub filtering_fn: Option<FilteringFnSpec>,
     pub filter_fn: Option<FilterFn<TData>>,
+    pub filter_fn_with_meta: Option<FilterFnWithMeta<TData>>,
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
     pub value_u64_fn: Option<ValueU64Fn<TData>>,
@@ -108,6 +110,7 @@ pub struct ColumnDef<TData> {
     pub enable_column_filter: bool,
     pub enable_global_filter: bool,
     pub aggregation: Aggregation,
+    pub aggregation_fn: AggregationFnSpec,
     pub enable_hiding: bool,
     pub enable_ordering: bool,
     pub enable_pinning: bool,
@@ -130,6 +133,7 @@ impl<TData> Clone for ColumnDef<TData> {
             sort_is_undefined: self.sort_is_undefined.clone(),
             filtering_fn: self.filtering_fn.clone(),
             filter_fn: self.filter_fn.clone(),
+            filter_fn_with_meta: self.filter_fn_with_meta.clone(),
             facet_key_fn: self.facet_key_fn.clone(),
             facet_str_fn: self.facet_str_fn.clone(),
             value_u64_fn: self.value_u64_fn.clone(),
@@ -140,6 +144,7 @@ impl<TData> Clone for ColumnDef<TData> {
             enable_column_filter: self.enable_column_filter,
             enable_global_filter: self.enable_global_filter,
             aggregation: self.aggregation,
+            aggregation_fn: self.aggregation_fn.clone(),
             enable_hiding: self.enable_hiding,
             enable_ordering: self.enable_ordering,
             enable_pinning: self.enable_pinning,
@@ -172,6 +177,7 @@ impl<TData> ColumnDef<TData> {
             sort_is_undefined: None,
             filtering_fn: None,
             filter_fn: None,
+            filter_fn_with_meta: None,
             facet_key_fn: None,
             facet_str_fn: None,
             value_u64_fn: None,
@@ -182,6 +188,7 @@ impl<TData> ColumnDef<TData> {
             enable_column_filter: true,
             enable_global_filter: true,
             aggregation: Aggregation::None,
+            aggregation_fn: AggregationFnSpec::Auto,
             enable_hiding: true,
             enable_ordering: true,
             enable_pinning: true,
@@ -207,6 +214,30 @@ impl<TData> ColumnDef<TData> {
     /// Provide a TanStack-like `getValue(columnId)` accessor for built-in sortingFn behaviors.
     pub fn sort_value_by(mut self, get_value: impl Fn(&TData) -> TanStackValue + 'static) -> Self {
         self.sort_value = Some(Arc::new(get_value));
+        self
+    }
+
+    /// TanStack-aligned: configure `aggregationFn: 'auto'`.
+    pub fn aggregation_fn_auto(mut self) -> Self {
+        self.aggregation_fn = AggregationFnSpec::Auto;
+        self
+    }
+
+    /// TanStack-aligned: configure a built-in aggregation function key.
+    pub fn aggregation_fn_builtin(mut self, agg: BuiltInAggregationFn) -> Self {
+        self.aggregation_fn = AggregationFnSpec::BuiltIn(agg);
+        self
+    }
+
+    /// TanStack-aligned: configure `aggregationFn: <string>` resolved via `options.aggregationFns`.
+    pub fn aggregation_fn_named(mut self, key: impl Into<Arc<str>>) -> Self {
+        self.aggregation_fn = AggregationFnSpec::Named(key.into());
+        self
+    }
+
+    /// Disable aggregation for this column.
+    pub fn aggregation_fn_none(mut self) -> Self {
+        self.aggregation_fn = AggregationFnSpec::None;
         self
     }
 
@@ -312,12 +343,23 @@ impl<TData> ColumnDef<TData> {
 
     pub fn filter_by(mut self, f: impl Fn(&TData, &str) -> bool + 'static) -> Self {
         let f = Arc::new(f);
+        self.filter_fn_with_meta = None;
         self.filter_fn = Some(Arc::new(move |row, value| {
             let Some(s) = value.as_str() else {
                 return false;
             };
             f(row, s)
         }));
+        self
+    }
+
+    /// Configure a custom filterFn with TanStack-like `addMeta` support.
+    pub fn filter_by_with_meta(
+        mut self,
+        f: impl Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool + 'static,
+    ) -> Self {
+        self.filter_fn = None;
+        self.filter_fn_with_meta = Some(Arc::new(f));
         self
     }
 

@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnId, ColumnSizingRegion, RowKey, Table, TableState, TanStackTableOptions,
-    TanStackTableState, begin_column_resize, drag_column_resize, end_column_resize,
-    resolved_column_size,
+    ColumnDef, ColumnId, ColumnSizingRegion, RowId, RowKey, Table, TableState,
+    TanStackTableOptions, TanStackTableState, begin_column_resize, drag_column_resize,
+    end_column_resize, resolved_column_size,
 };
 use serde::Deserialize;
 
@@ -61,6 +61,12 @@ struct ColumnAfterExpect {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct HeaderSizingExpect {
+    size: HashMap<String, f32>,
+    start: HashMap<String, f32>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct FixtureExpect {
     core: RowModelSnapshot,
@@ -74,6 +80,8 @@ struct FixtureExpect {
     starts: ColumnStartExpect,
     #[serde(rename = "column_after")]
     after: ColumnAfterExpect,
+    #[serde(default, rename = "header_sizing")]
+    header_sizing: Option<HeaderSizingExpect>,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
 }
@@ -269,6 +277,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                     let table = Table::builder(&data)
                         .columns(columns.clone())
                         .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                         .state(state.clone())
                         .options(options)
                         .build();
@@ -464,6 +473,7 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .build();
 
@@ -608,6 +618,25 @@ fn tanstack_v8_column_resizing_group_headers_parity() {
                     actual,
                     *expected,
                     &format!("snapshot {} column_after(right,{col_id})", snap.id),
+                );
+            }
+        }
+
+        if let Some(expected) = snap.expect.header_sizing.as_ref() {
+            for (header_id, expected_size) in &expected.size {
+                let actual = table.header_size(header_id.as_str()).unwrap_or(-1.0);
+                assert_f32_eq(
+                    actual,
+                    *expected_size,
+                    &format!("snapshot {} header_size({header_id})", snap.id),
+                );
+            }
+            for (header_id, expected_start) in &expected.start {
+                let actual = table.header_start(header_id.as_str()).unwrap_or(-1.0);
+                assert_f32_eq(
+                    actual,
+                    *expected_start,
+                    &format!("snapshot {} header_start({header_id})", snap.id),
                 );
             }
         }

@@ -53,6 +53,14 @@ fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
+fn quantize_logical_px(value: f32) -> f32 {
+    if !value.is_finite() || value <= 0.0 {
+        return 0.0;
+    }
+    let quantum = 64.0f32;
+    (value * quantum).round() / quantum
+}
+
 struct HitchLogWriter {
     file: std::io::BufWriter<std::fs::File>,
 }
@@ -612,29 +620,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::SurfaceResized(size) => {
-                self.resize_surface(app_window, size.width, size.height);
-                // Keep delivering size/scale events for consistency with the existing runner
-                // behavior, but generate them via the backend mapping where possible.
-                let (mapped, scale_factor) = {
-                    let Some(state) = self.windows.get_mut(app_window) else {
-                        return;
-                    };
-                    let mut mapped = Vec::new();
-                    state.platform.handle_window_event(
-                        state.window.scale_factor(),
-                        &WindowEvent::SurfaceResized(size),
-                        &mut mapped,
-                    );
-                    (mapped, state.window.scale_factor() as f32)
-                };
-
-                for evt in mapped {
-                    self.deliver_window_event_now(app_window, &evt);
+                if let Some(state) = self.windows.get_mut(app_window) {
+                    state.pending_surface_resize = Some(size);
                 }
-                self.deliver_window_event_now(
-                    app_window,
-                    &Event::WindowScaleFactorChanged(scale_factor),
-                );
                 self.app.request_redraw(app_window);
             }
             ref ev @ WindowEvent::PointerMoved { .. } => {
@@ -802,6 +790,45 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     diag.poll();
                 }
 
+                if let Some(size) = self
+                    .windows
+                    .get_mut(app_window)
+                    .and_then(|state| state.pending_surface_resize.take())
+                {
+                    self.resize_surface(app_window, size.width, size.height);
+
+                    // Keep delivering size/scale events for consistency with the existing runner
+                    // behavior, but apply them once per frame so interactive resizes don't spam
+                    // surface reconfigures and relayouts.
+                    let (mapped, scale_factor) = {
+                        let Some(state) = self.windows.get_mut(app_window) else {
+                            return;
+                        };
+                        let mut mapped = Vec::new();
+                        state.platform.handle_window_event(
+                            state.window.scale_factor(),
+                            &WindowEvent::SurfaceResized(size),
+                            &mut mapped,
+                        );
+                        (mapped, state.window.scale_factor() as f32)
+                    };
+
+                    for evt in mapped {
+                        self.deliver_window_event_now(app_window, &evt);
+                    }
+                    let should_deliver_scale_factor = self
+                        .app
+                        .global::<fret_core::WindowMetricsService>()
+                        .and_then(|svc| svc.scale_factor(app_window))
+                        .is_none_or(|prev| prev.to_bits() != scale_factor.to_bits());
+                    if should_deliver_scale_factor {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::WindowScaleFactorChanged(scale_factor),
+                        );
+                    }
+                }
+
                 {
                     let (Some(context), Some(renderer)) =
                         (self.context.as_ref(), self.renderer.as_mut())
@@ -828,10 +855,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let physical = state.window.surface_size();
                     let logical: winit::dpi::LogicalSize<f32> =
                         physical.to_logical(state.window.scale_factor());
+                    let logical_width = quantize_logical_px(logical.width);
+                    let logical_height = quantize_logical_px(logical.height);
 
                     let bounds = Rect::new(
                         Point::new(Px(0.0), Px(0.0)),
-                        Size::new(Px(logical.width), Px(logical.height)),
+                        Size::new(Px(logical_width), Px(logical_height)),
                     );
 
                     self.driver.gpu_frame_prepare(
@@ -853,6 +882,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         scale_factor = scale_factor,
                     );
                     let _render_guard = render_span.enter();
+                    let render_text_diag_enabled = std::env::var_os("FRET_DIAG_DIR")
+                        .is_some_and(|v| !v.is_empty())
+                        || std::env::var_os("FRET_RENDER_TEXT_DEBUG")
+                            .is_some_and(|v| !v.is_empty());
+                    if render_text_diag_enabled {
+                        renderer.begin_text_diagnostics_frame();
+                    }
                     self.driver.render(WinitRenderContext {
                         app: &mut self.app,
                         services: renderer as &mut dyn fret_core::UiServices,
@@ -984,6 +1020,25 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 viewport_size: state.surface.size(),
                             },
                         );
+                        if render_text_diag_enabled {
+                            self.app
+                                .set_global(renderer.text_diagnostics_snapshot(self.frame_id));
+                        }
+
+                        let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
+                            .is_some_and(|v| !v.is_empty());
+                        if diag_renderer_perf {
+                            if let Some(perf) = renderer.take_last_frame_perf_snapshot() {
+                                let tick_id = self.tick_id.0;
+                                let frame_id = self.frame_id.0;
+                                self.app.with_global_mut_untracked(
+                                    fret_render::RendererPerfFrameStore::default,
+                                    |store, _app| {
+                                        store.record(app_window, tick_id, frame_id, perf);
+                                    },
+                                );
+                            }
+                        }
 
                         let mut cmd_buffers = engine_frame.command_buffers;
                         cmd_buffers.push(ui_cmd);

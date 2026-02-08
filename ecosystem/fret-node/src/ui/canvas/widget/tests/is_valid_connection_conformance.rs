@@ -1,13 +1,15 @@
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind};
-use crate::io::NodeGraphViewState;
+
+use super::prelude::wire_drag;
 use crate::ui::NodeGraphCanvas;
 
-use super::super::super::state::{WireDrag, WireDragKind};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
+use crate::ui::canvas::state::{WireDrag, WireDragKind};
 
 #[test]
 fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
@@ -43,7 +45,7 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
@@ -72,7 +74,7 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -112,7 +114,7 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
@@ -141,7 +143,7 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -177,7 +179,7 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
@@ -206,7 +208,7 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,

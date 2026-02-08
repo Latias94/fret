@@ -237,6 +237,84 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
 }
 
 #[test]
+fn declarative_pointer_region_pointer_down_runs_when_descendant_pressable_stops_bubble() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let counter = app.models_mut().insert(0u32);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pointer-region-down-with-pressable-child",
+        |cx| {
+            let counter = counter.clone();
+            let on_down = Arc::new(
+                move |host: &mut dyn crate::action::UiPointerActionHost,
+                      cx: crate::action::ActionCx,
+                      down: crate::action::PointerDownCx| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&counter, |v: &mut u32| *v = v.saturating_add(1));
+                    host.request_redraw(cx.window);
+                    false
+                },
+            );
+
+            let mut region_props = crate::element::PointerRegionProps::default();
+            region_props.layout.size.width = Length::Fill;
+            region_props.layout.size.height = Length::Fill;
+
+            let mut pressable_props = crate::element::PressableProps::default();
+            pressable_props.layout.size.width = Length::Fill;
+            pressable_props.layout.size.height = Length::Fill;
+
+            vec![cx.pointer_region(region_props, move |cx| {
+                cx.pointer_region_on_pointer_down(on_down);
+                vec![cx.pressable(pressable_props, |cx, _st| vec![cx.text("child")])]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region = ui.children(root)[0];
+    let region_bounds = ui.debug_node_bounds(region).expect("pointer region bounds");
+    let inside = Point::new(
+        Px(region_bounds.origin.x.0 + 5.0),
+        Px(region_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&counter), Some(1));
+}
+
+#[test]
 fn declarative_pointer_region_can_handle_pointer_cancel() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1100,6 +1178,130 @@ fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_
 }
 
 #[test]
+fn selectable_text_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let rich = attributed_plain("can't");
+        let text_len = rich.text.len();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "selectable-text-ctrl-arrow-boundary-mode",
+            |cx| vec![cx.selectable_text(rich.clone())],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let selectable_node = ui.children(root)[0];
+        ui.set_focus(Some(selectable_node));
+
+        let record =
+            crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+                .expect("selectable record");
+        let element = record.element;
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| {
+                state.selection_anchor = 0;
+                state.caret = 0;
+            },
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let caret_right = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| state.caret,
+        );
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| {
+                state.selection_anchor = text_len;
+                state.caret = text_len;
+            },
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let caret_left = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| state.caret,
+        );
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
 fn selectable_text_pointer_down_requests_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1848,6 +2050,72 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_key_hooks_can_intercept_navigation_keys() {
+    use fret_core::{Event, KeyCode, Modifiers};
+
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+    let opened = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let opened_for_hook = opened.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-key-hooks-intercept",
+        move |cx| {
+            vec![cx.text_input_with_id_props(|cx, id| {
+                let opened = opened_for_hook.clone();
+                cx.key_add_on_key_down_for(
+                    id,
+                    Arc::new(move |host, action_cx, down| {
+                        if down.key != KeyCode::ArrowDown {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&opened, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+                crate::element::TextInputProps::new(model.clone())
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        app.models().get_copied(&opened).unwrap_or(false),
+        "expected key hook to run for focused text input"
+    );
+}
+
+#[test]
 fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
@@ -2379,6 +2647,706 @@ fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offse
 }
 
 #[test]
+fn text_input_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-input-ctrl-arrow-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextInputProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.text_input(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let input_node = ui.children(root)[0];
+        ui.set_focus(Some(input_node));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let move_home = CommandId::from("text.move_home");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_home),
+            "expected text.move_home to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_right = focus_u16;
+
+        let move_end = CommandId::from("text.move_end");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_end),
+            "expected text.move_end to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_left = focus_u16;
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
+fn text_input_ctrl_backspace_delete_word_respects_window_text_boundary_mode() {
+    fn text_after_key(
+        mode: fret_runtime::TextBoundaryMode,
+        prep_command: &'static str,
+        key: fret_core::KeyCode,
+    ) -> String {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(220.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-input-ctrl-word-delete-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextInputProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.text_input(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let input_node = ui.children(root)[0];
+        ui.set_focus(Some(input_node));
+
+        let prep_command = CommandId::from(prep_command);
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &prep_command),
+            "expected {prep_command:?} to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        app.models()
+            .get_cloned(&model)
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            "text.move_end",
+            fret_core::KeyCode::Backspace,
+        ),
+        "",
+        "UnicodeWord should delete the whole word on Ctrl+Backspace"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::Identifier,
+            "text.move_end",
+            fret_core::KeyCode::Backspace,
+        ),
+        "can'",
+        "Identifier should delete only the last identifier segment on Ctrl+Backspace"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            "text.move_home",
+            fret_core::KeyCode::Delete,
+        ),
+        "",
+        "UnicodeWord should delete the whole word on Ctrl+Delete"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::Identifier,
+            "text.move_home",
+            fret_core::KeyCode::Delete,
+        ),
+        "'t",
+        "Identifier should delete only the first identifier segment on Ctrl+Delete"
+    );
+}
+
+#[test]
+fn text_input_double_click_cancels_ime_preedit() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let base_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-double-click-cancels-ime-preedit",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(160.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "X".to_string(),
+            cursor: Some((0, 1)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert!(snapshot.marked_utf16.is_some());
+    assert_eq!(
+        snapshot.text_len_utf16,
+        base_len_utf16 + 1,
+        "expected composed text length to include the preedit"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after double click");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, base_len_utf16);
+}
+
+#[test]
+fn text_input_triple_click_selects_logical_line_under_render_transform() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let text_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let transform = Transform2D::translation(Point::new(Px(40.0), Px(10.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-triple-click-select-line-transform",
+        |cx| {
+            vec![cx.render_transform(transform, |cx| {
+                let mut props = crate::element::TextInputProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.text_input(props)]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let transform_node = ui.children(root)[0];
+    let input_node = ui.children(transform_node)[0];
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(input_node),
+        "expected the translated hit-test position to target the text input"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((0, text_len_utf16)),
+        "triple click should select the logical line"
+    );
+}
+
+#[test]
+fn text_input_triple_click_selects_logical_line_under_scroll_offset() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let text_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-triple-click-select-line-scroll",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            for _ in 0..40 {
+                                let mut row_layout = crate::element::LayoutStyle::default();
+                                row_layout.size.height = Length::Px(Px(18.0));
+                                out.push(cx.container(
+                                    crate::element::ContainerProps {
+                                        layout: row_layout,
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("filler")],
+                                ));
+                            }
+
+                            let mut props = crate::element::TextInputProps::new(model.clone());
+                            props.layout.size.width = Length::Px(Px(120.0));
+                            props.layout.size.height = Length::Px(Px(32.0));
+                            out.push(cx.text_input(props));
+
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let input_node = *ui
+        .children(column_node)
+        .last()
+        .expect("expected input as last child");
+    let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+
+    scroll_handle.set_offset(Point::new(Px(0.0), input_bounds.origin.y));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds after scroll");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(input_node),
+        "expected the scrolled hit-test position to target the text input"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((0, text_len_utf16)),
+        "triple click should select the logical line"
+    );
+}
+
+#[test]
+fn text_input_triple_click_cancels_ime_preedit() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let base_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-triple-click-cancels-ime-preedit",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(160.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "X".to_string(),
+            cursor: Some((0, 1)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert!(snapshot.marked_utf16.is_some());
+    assert_eq!(
+        snapshot.text_len_utf16,
+        base_len_utf16 + 1,
+        "expected composed text length to include the preedit"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after triple click");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, base_len_utf16);
+    assert_eq!(snapshot.selection_utf16, Some((0, base_len_utf16)));
+}
+
+#[test]
 fn text_area_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
         let mut app = TestHost::new();
@@ -2488,6 +3456,325 @@ fn text_area_double_click_respects_window_text_boundary_mode_under_render_transf
         Some((0, 3)),
         "Identifier should stop at the apostrophe"
     );
+}
+
+#[test]
+fn text_area_triple_click_selects_logical_line_including_newline_under_render_transform() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("abc\ndef".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let transform = Transform2D::translation(Point::new(Px(30.0), Px(10.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-triple-click-select-line-transform",
+        |cx| {
+            vec![cx.render_transform(transform, |cx| {
+                let mut props = crate::element::TextAreaProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(80.0));
+                vec![cx.text_area(props)]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let transform_node = ui.children(root)[0];
+    let area_node = ui.children(transform_node)[0];
+    let area_bounds = ui.debug_node_visual_bounds(area_node).expect("area bounds");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(area_node),
+        "expected the translated hit-test position to target the text area"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((0, 4)),
+        "triple click should select first line (including trailing newline)"
+    );
+}
+
+#[test]
+fn text_area_double_click_cancels_ime_preedit() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let base_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-double-click-cancels-ime-preedit",
+        |cx| {
+            let mut props = crate::element::TextAreaProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(80.0));
+            vec![cx.text_area(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    let area_bounds = ui.debug_node_visual_bounds(area_node).expect("area bounds");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "X".to_string(),
+            cursor: Some((0, 1)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert!(snapshot.marked_utf16.is_some());
+    assert_eq!(
+        snapshot.text_len_utf16,
+        base_len_utf16 + 1,
+        "expected composed text length to include the preedit"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after double click");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, base_len_utf16);
+}
+
+#[test]
+fn text_area_triple_click_cancels_ime_preedit() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let text = "hello world".to_string();
+    let base_len_utf16: u32 = text.encode_utf16().count().try_into().unwrap();
+    let model = app.models_mut().insert(text);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-triple-click-cancels-ime-preedit",
+        |cx| {
+            let mut props = crate::element::TextAreaProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(80.0));
+            vec![cx.text_area(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    let area_bounds = ui.debug_node_visual_bounds(area_node).expect("area bounds");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "X".to_string(),
+            cursor: Some((0, 1)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert!(snapshot.marked_utf16.is_some());
+    assert_eq!(
+        snapshot.text_len_utf16,
+        base_len_utf16 + 1,
+        "expected composed text length to include the preedit"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot after triple click");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, base_len_utf16);
+    assert_eq!(snapshot.selection_utf16, Some((0, base_len_utf16)));
 }
 
 #[test]
@@ -2644,6 +3931,386 @@ fn text_area_double_click_respects_window_text_boundary_mode_under_scroll_offset
         selection_utf16,
         Some((0, 3)),
         "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-word-nav-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextAreaProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(200.0));
+                props.layout.size.height = Length::Px(Px(80.0));
+                vec![cx.text_area(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let area_node = ui.children(root)[0];
+        ui.set_focus(Some(area_node));
+
+        // Ensure the underlying text blob exists so line-based commands (`move_home` / `move_end`)
+        // can use text geometry queries.
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let move_home = CommandId::from("text.move_home");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_home),
+            "expected text.move_home to be handled by text area"
+        );
+        let move_word_right = CommandId::from("text.move_word_right");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_word_right),
+            "expected text.move_word_right to be handled by text area"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_right = focus_u16;
+
+        let select_all = CommandId::from("text.select_all");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &select_all),
+            "expected text.select_all to be handled by text area"
+        );
+        let move_right = CommandId::from("text.move_right");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_right),
+            "expected text.move_right to be handled by text area"
+        );
+        let move_word_left = CommandId::from("text.move_word_left");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_word_left),
+            "expected text.move_word_left to be handled by text area"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_left = focus_u16;
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_delete_word_respects_window_text_boundary_mode() {
+    fn text_after_commands(
+        mode: fret_runtime::TextBoundaryMode,
+        commands: &[&'static str],
+    ) -> String {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-delete-word-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextAreaProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(200.0));
+                props.layout.size.height = Length::Px(Px(80.0));
+                vec![cx.text_area(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let area_node = ui.children(root)[0];
+        ui.set_focus(Some(area_node));
+
+        for command in commands {
+            let command_id = CommandId::from(*command);
+            assert!(
+                ui.dispatch_command(&mut app, &mut services, &command_id),
+                "expected {command_id:?} to be handled by text area"
+            );
+        }
+
+        app.models().get_cloned(&model).unwrap_or_default()
+    }
+
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            &[
+                "text.select_all",
+                "text.move_right",
+                "text.delete_word_backward"
+            ],
+        ),
+        "",
+        "UnicodeWord should delete the whole word on delete_word_backward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::Identifier,
+            &[
+                "text.select_all",
+                "text.move_right",
+                "text.delete_word_backward"
+            ],
+        ),
+        "can'",
+        "Identifier should delete only the last identifier segment on delete_word_backward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            &[
+                "text.select_all",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.delete_word_forward",
+            ],
+        ),
+        "",
+        "UnicodeWord should delete the whole word on delete_word_forward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::Identifier,
+            &[
+                "text.select_all",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.delete_word_forward",
+            ],
+        ),
+        "'t",
+        "Identifier should delete only the first identifier segment on delete_word_forward"
+    );
+}
+
+#[test]
+fn text_area_triple_click_selects_logical_line_including_newline_under_scroll_offset() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("abc\ndef".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-triple-click-select-line-scroll",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            for _ in 0..40 {
+                                let mut row_layout = crate::element::LayoutStyle::default();
+                                row_layout.size.height = Length::Px(Px(18.0));
+                                out.push(cx.container(
+                                    crate::element::ContainerProps {
+                                        layout: row_layout,
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("filler")],
+                                ));
+                            }
+
+                            let mut props = crate::element::TextAreaProps::new(model.clone());
+                            props.layout.size.width = Length::Px(Px(160.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            out.push(cx.text_area(props));
+
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let area_node = *ui
+        .children(column_node)
+        .last()
+        .expect("expected area as last child");
+    let area_bounds = ui.debug_node_bounds(area_node).expect("area bounds");
+
+    scroll_handle.set_offset(Point::new(Px(0.0), area_bounds.origin.y));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let area_bounds = ui
+        .debug_node_visual_bounds(area_node)
+        .expect("area bounds after scroll");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(area_node),
+        "expected the scrolled hit-test position to target the text area"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 3,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((0, 4)),
+        "triple click should select first line (including trailing newline)"
     );
 }
 
@@ -2933,7 +4600,6 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
     );
 }
 
-#[cfg(feature = "layout-engine-v2")]
 #[test]
 fn resizable_panel_group_registers_viewport_roots_for_panels() {
     let mut app = TestHost::new();
@@ -4195,4 +5861,72 @@ fn pressable_semantics_checked_is_exposed() {
 
     assert_eq!(node.flags.checked, Some(true));
     assert!(node.actions.invoke, "expected checkbox to be invokable");
+}
+
+#[test]
+fn text_input_semantics_controls_element_is_exposed() {
+    use std::cell::Cell;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-controls",
+        |cx| {
+            let listbox_id_out: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
+            let listbox = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ListBox,
+                    test_id: Some(Arc::from("listbox")),
+                    ..Default::default()
+                },
+                |_cx, id| {
+                    listbox_id_out.set(Some(id));
+                    Vec::new()
+                },
+            );
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.test_id = Some(Arc::from("combo"));
+            props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
+            props.controls_element = listbox_id_out.get().map(|id| id.0);
+
+            vec![cx.text_input(props), listbox]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let combo = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("combo"))
+        .expect("expected combobox semantics node");
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("listbox"))
+        .expect("expected listbox semantics node");
+
+    assert!(
+        combo.controls.contains(&listbox.id),
+        "expected combobox to control the listbox"
+    );
 }

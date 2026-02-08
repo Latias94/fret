@@ -1,11 +1,11 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
+
 use crate::ui::NodeGraphViewQueue;
 
-use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::prelude::NodeGraphCanvas;
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn frame_nodes_via_view_queue_matches_direct_framing() {
@@ -20,7 +20,7 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     // Expected viewport by direct framing (immediate).
     let mut host_expected = TestUiHostImpl::default();
     let graph_expected = host_expected.models.insert(graph_value.clone());
-    let view_expected = host_expected.models.insert(NodeGraphViewState::default());
+    let view_expected = insert_view(&mut host_expected);
     let _ = view_expected.update(&mut host_expected, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
     });
@@ -31,7 +31,7 @@ fn frame_nodes_via_view_queue_matches_direct_framing() {
     // Same action via view queue (framing specific nodes).
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
     });

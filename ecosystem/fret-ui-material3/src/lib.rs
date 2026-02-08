@@ -5,10 +5,12 @@
 
 #![forbid(unsafe_code)]
 
+pub mod autocomplete;
 pub mod badge;
 pub mod bottom_sheet;
 pub mod button;
 pub mod card;
+pub mod carousel_item;
 pub mod checkbox;
 pub mod chip;
 pub mod chip_set;
@@ -16,6 +18,7 @@ pub mod date_picker;
 pub mod dialog;
 pub mod divider;
 pub mod dropdown_menu;
+pub mod exposed_dropdown;
 pub mod fab;
 pub mod filter_chip;
 mod foundation;
@@ -31,6 +34,8 @@ pub mod navigation_drawer;
 pub mod navigation_rail;
 pub mod progress_indicator;
 pub mod radio;
+pub mod search_bar;
+pub mod search_view;
 pub mod segmented_button;
 pub mod select;
 pub mod slider;
@@ -45,10 +50,15 @@ pub mod tokens;
 pub mod tooltip;
 pub mod top_app_bar;
 
+pub use autocomplete::{
+    Autocomplete, AutocompleteItem, AutocompleteSelectCx, AutocompleteSelectMethod,
+    AutocompleteVariant, OnAutocompleteSelect,
+};
 pub use badge::{Badge, BadgePlacement, BadgeValue};
 pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
 pub use button::{Button, ButtonStyle, ButtonVariant};
 pub use card::{Card, CardStyle, CardVariant};
+pub use carousel_item::{CarouselItem, CarouselItemStyle, CarouselItemVariant};
 pub use checkbox::{Checkbox, CheckboxStyle};
 pub use chip::{AssistChip, AssistChipStyle, AssistChipVariant};
 pub use chip_set::{ChipSet, ChipSetItem};
@@ -57,6 +67,7 @@ pub use date_picker::{DatePickerDialog, DatePickerVariant, DockedDatePicker};
 pub use dialog::{Dialog, DialogAction, DialogStyle};
 pub use divider::Divider;
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
+pub use exposed_dropdown::ExposedDropdown;
 pub use fab::{Fab, FabSize, FabStyle, FabVariant};
 pub use filter_chip::{FilterChip, FilterChipStyle, FilterChipVariant};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant};
@@ -69,6 +80,8 @@ pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDr
 pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use progress_indicator::{CircularProgressIndicator, LinearProgressIndicator};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
+pub use search_bar::SearchBar;
+pub use search_view::SearchView;
 pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use slider::{RangeSlider, Slider, SliderStyle};
@@ -80,7 +93,7 @@ pub use text_field::{TextField, TextFieldStyle, TextFieldVariant};
 pub use time_picker::{
     DockedTimePicker, TimePickerDialog, TimePickerDisplayMode, TimePickerVariant,
 };
-pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
+pub use tooltip::{PlainTooltip, RichTooltip, TooltipAlign, TooltipProvider, TooltipSide};
 pub use top_app_bar::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
 
 pub mod context {
@@ -149,6 +162,7 @@ mod tests {
             include_str!("badge.rs"),
             include_str!("bottom_sheet.rs"),
             include_str!("card.rs"),
+            include_str!("carousel_item.rs"),
             include_str!("checkbox.rs"),
             include_str!("chip.rs"),
             include_str!("date_picker.rs"),
@@ -166,6 +180,8 @@ mod tests {
             include_str!("navigation_rail.rs"),
             include_str!("progress_indicator.rs"),
             include_str!("radio.rs"),
+            include_str!("search_bar.rs"),
+            include_str!("search_view.rs"),
             include_str!("segmented_button.rs"),
             include_str!("slider.rs"),
             include_str!("select.rs"),
@@ -202,6 +218,8 @@ mod tests {
             include_str!("tokens/dropdown_menu.rs"),
             include_str!("tokens/segmented_button.rs"),
             include_str!("tokens/sheet_bottom.rs"),
+            include_str!("tokens/search_bar.rs"),
+            include_str!("tokens/search_view.rs"),
             include_str!("tokens/tooltip.rs"),
             include_str!("tokens/slider.rs"),
             include_str!("tokens/top_app_bar.rs"),
@@ -279,6 +297,8 @@ mod tests {
             include_str!("navigation_rail.rs"),
             include_str!("slider.rs"),
             include_str!("radio.rs"),
+            include_str!("search_bar.rs"),
+            include_str!("search_view.rs"),
             include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
@@ -306,6 +326,8 @@ mod tests {
             include_str!("tokens/list.rs"),
             include_str!("tokens/dropdown_menu.rs"),
             include_str!("tokens/select.rs"),
+            include_str!("tokens/search_bar.rs"),
+            include_str!("tokens/search_view.rs"),
             include_str!("tokens/tooltip.rs"),
             include_str!("tokens/slider.rs"),
         ];

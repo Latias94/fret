@@ -17,7 +17,7 @@ imui = ["ui", "dep:fret-authoring"]
 
 syntax-rust = ["fret-code-view/syntax-rust"]
 syntax-all = ["fret-code-view/syntax-all"]
-mathjax-svg = ["dep:mathjax_svg"]
+mathjax-svg = ["dep:mathjax_svg", "dep:fret-query", "fret-query/ui"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
@@ -26,7 +26,7 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-authoring = { path = "../fret-authoring", optional = true }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-view = { path = "../fret-code-view", default-features = false }
-fret-executor = { path = "../fret-executor" }
+fret-query = { path = "../fret-query", optional = true }
 pulldown-cmark.workspace = true
 mdstream = { workspace = true, features = ["pulldown"] }
 mathjax_svg = { workspace = true, optional = true }

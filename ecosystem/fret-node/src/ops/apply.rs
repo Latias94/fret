@@ -1,4 +1,4 @@
-use crate::core::{Edge, EdgeId, Graph, GroupId, NodeId, PortId, StickyNoteId, SymbolId};
+use crate::core::{Edge, EdgeId, Graph, GraphId, GroupId, NodeId, PortId, StickyNoteId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
 
 #[derive(Debug, thiserror::Error)]
@@ -33,6 +33,10 @@ pub enum ApplyError {
     NodePortsUnknownPort { node: NodeId, port: PortId },
     #[error("edge references missing port: edge={edge:?} port={port:?}")]
     EdgeMissingPort { edge: EdgeId, port: PortId },
+    #[error("import already exists: {id}")]
+    ImportAlreadyExists { id: GraphId },
+    #[error("missing import: {id}")]
+    MissingImport { id: GraphId },
     #[error("remove node op did not match current node: {id:?}")]
     RemoveNodeMismatch { id: NodeId },
     #[error("remove port op did not match current port: {id:?}")]
@@ -110,6 +114,30 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             node.kind_version = *to;
         }
+        GraphOp::SetNodeSelectable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.selectable = *to;
+        }
+        GraphOp::SetNodeDraggable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.draggable = *to;
+        }
+        GraphOp::SetNodeConnectable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.connectable = *to;
+        }
+        GraphOp::SetNodeDeletable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.deletable = *to;
+        }
         GraphOp::SetNodeParent { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
                 return Err(ApplyError::MissingNode { id: *id });
@@ -124,11 +152,29 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             node.parent = *to;
         }
+        GraphOp::SetNodeExtent { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.extent = *to;
+        }
+        GraphOp::SetNodeExpandParent { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.expand_parent = *to;
+        }
         GraphOp::SetNodeSize { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
                 return Err(ApplyError::MissingNode { id: *id });
             };
             node.size = *to;
+        }
+        GraphOp::SetNodeHidden { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.hidden = *to;
         }
         GraphOp::SetNodeCollapsed { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
@@ -186,6 +232,36 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
                 node.ports.retain(|p| p != id);
             }
         }
+        GraphOp::SetPortConnectable { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable = *to;
+        }
+        GraphOp::SetPortConnectableStart { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable_start = *to;
+        }
+        GraphOp::SetPortConnectableEnd { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable_end = *to;
+        }
+        GraphOp::SetPortType { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.ty = to.clone();
+        }
+        GraphOp::SetPortData { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.data = to.clone();
+        }
         GraphOp::AddEdge { id, edge } => {
             if graph.edges.contains_key(id) {
                 return Err(ApplyError::EdgeAlreadyExists { id: *id });
@@ -213,6 +289,24 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             edge.kind = *to;
         }
+        GraphOp::SetEdgeSelectable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.selectable = *to;
+        }
+        GraphOp::SetEdgeDeletable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.deletable = *to;
+        }
+        GraphOp::SetEdgeReconnectable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.reconnectable = *to;
+        }
         GraphOp::SetEdgeEndpoints { id, to, .. } => {
             let Some(edge) = graph.edges.get_mut(id) else {
                 return Err(ApplyError::MissingEdge { id: *id });
@@ -232,6 +326,24 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             edge.from = to.from;
             edge.to = to.to;
         }
+        GraphOp::AddImport { id, import } => {
+            if graph.imports.contains_key(id) {
+                return Err(ApplyError::ImportAlreadyExists { id: *id });
+            }
+            graph.imports.insert(*id, import.clone());
+        }
+        GraphOp::RemoveImport { id, .. } => {
+            if !graph.imports.contains_key(id) {
+                return Err(ApplyError::MissingImport { id: *id });
+            }
+            graph.imports.remove(id);
+        }
+        GraphOp::SetImportAlias { id, to, .. } => {
+            let Some(import) = graph.imports.get_mut(id) else {
+                return Err(ApplyError::MissingImport { id: *id });
+            };
+            import.alias = to.clone();
+        }
         GraphOp::AddSymbol { id, symbol } => {
             if graph.symbols.contains_key(id) {
                 return Err(ApplyError::SymbolAlreadyExists { id: *id });
@@ -242,10 +354,32 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.symbols.get(id) else {
                 return Err(ApplyError::MissingSymbol { id: *id });
             };
-            if current.name != symbol.name {
+            if current.name != symbol.name
+                || current.ty != symbol.ty
+                || current.default_value != symbol.default_value
+                || current.meta != symbol.meta
+            {
                 return Err(ApplyError::RemoveSymbolMismatch { id: *id });
             }
             graph.symbols.remove(id);
+        }
+        GraphOp::SetSymbolName { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.name = to.clone();
+        }
+        GraphOp::SetSymbolType { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.ty = to.clone();
+        }
+        GraphOp::SetSymbolDefaultValue { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.default_value = to.clone();
         }
         GraphOp::SetSymbolMeta { id, to, .. } => {
             let Some(symbol) = graph.symbols.get_mut(id) else {
@@ -267,7 +401,10 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.groups.get(id) else {
                 return Err(ApplyError::MissingGroup { id: *id });
             };
-            if current.title != group.title {
+            if current.title != group.title
+                || current.rect != group.rect
+                || current.color != group.color
+            {
                 return Err(ApplyError::RemoveGroupMismatch { id: *id });
             }
 
@@ -299,6 +436,12 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             group.title = to.clone();
         }
+        GraphOp::SetGroupColor { id, to, .. } => {
+            let Some(group) = graph.groups.get_mut(id) else {
+                return Err(ApplyError::MissingGroup { id: *id });
+            };
+            group.color = to.clone();
+        }
         GraphOp::AddStickyNote { id, note } => {
             if graph.sticky_notes.contains_key(id) {
                 return Err(ApplyError::StickyNoteAlreadyExists { id: *id });
@@ -309,10 +452,29 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             let Some(current) = graph.sticky_notes.get(id) else {
                 return Err(ApplyError::MissingStickyNote { id: *id });
             };
-            if current.text != note.text {
+            if current.text != note.text || current.rect != note.rect || current.color != note.color
+            {
                 return Err(ApplyError::RemoveStickyNoteMismatch { id: *id });
             }
             graph.sticky_notes.remove(id);
+        }
+        GraphOp::SetStickyNoteText { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.text = to.clone();
+        }
+        GraphOp::SetStickyNoteRect { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.rect = *to;
+        }
+        GraphOp::SetStickyNoteColor { id, to, .. } => {
+            let Some(note) = graph.sticky_notes.get_mut(id) else {
+                return Err(ApplyError::MissingStickyNote { id: *id });
+            };
+            note.color = to.clone();
         }
     }
     Ok(())

@@ -78,8 +78,10 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
 - `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.
 - `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
-- `crates/fret-runner-web`: compatibility shim re-exporting `fret-platform-web` (dedicated DOM adapter TBD).
-- `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
+- `crates/fret-runner-web`: browser DOM adapter (event translation, RAF scheduling, canvas wiring).
+- `crates/fret-render-core`: portable render-facing contract types.
+- `crates/fret-render-wgpu`: wgpu renderer implementation (device/bootstrap + pipelines + text/svg).
+- `crates/fret-render`: compatibility facade for the default renderer backend.
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
 - `crates/fret-launch`: integration glue (desktop now; web/mobile later) that owns presentation/effect draining and drives the frame loop.
 - `ecosystem/fret-ui-kit`: component infrastructure (policies, style composition, overlay managers) built on `fret-ui`.
@@ -111,7 +113,7 @@ Backend split direction (planned):
 
 Current workspace note:
 
-- Today these backends live as `crates/fret-platform-native` / `crates/fret-platform-web` and `crates/fret-render` (wgpu).
+- Today the renderer implementation lives in `crates/fret-render-wgpu`, and `crates/fret-render` is a facade.
 
 See `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
@@ -235,7 +237,7 @@ References: `docs/adr/0006-text-system.md`, `docs/adr/0012-keyboard-ime-and-text
 - Default scheduling is event-driven (idle when nothing is dirty), with explicit continuous mode when requested.
 - Side effects are drained centrally in a bounded loop to keep multi-window behavior deterministic.
 
-References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0190-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0199-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Settings & Configuration (settings-ui-inspired)
 

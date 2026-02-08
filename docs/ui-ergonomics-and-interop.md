@@ -17,7 +17,7 @@ Fret is intentionally main-thread oriented for UI/runtime mutation. The scalable
 - results return as **data-only** messages,
 - the runner is woken to the next driver boundary where inboxes are drained and redraw is scheduled.
 
-This surface is locked in `docs/adr/0190-execution-and-concurrency-surface-v1.md` and aligns with the golden-path guidance in `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`.
+This surface is locked in `docs/adr/0199-execution-and-concurrency-surface-v1.md` and aligns with the golden-path guidance in `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`.
 
 ### Heavy app recipe: Tokio thread + inbox + wake
 
@@ -135,3 +135,4 @@ If we want to evaluate ergonomics concretely, measure:
 
 The current `apps/fret-examples/src/todo_demo.rs` is a good baseline because it already exercises:
 input, buttons, tabs, list rendering, and style tokens.
+

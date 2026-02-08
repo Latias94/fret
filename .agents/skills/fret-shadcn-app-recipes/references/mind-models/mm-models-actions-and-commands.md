@@ -11,10 +11,27 @@ Goal: structure app state and interactions so UI remains declarative and debugga
 
 Prefer `CommandId`-based wiring for app-level actions:
 
+- Use typed messages as the mutation boundary.
+- Reserve literal `CommandId` strings for globally addressable keymap/menu actions.
+
+For dynamic actions:
+
+- `MessageRouter<M>` for per-frame dynamic routes.
+- `KeyedMessageRouter<K, M>` when commands are emitted inside view-cached subtrees.
+
 - Enables command gating (disabled states) consistently.
 - Keeps UI and app logic loosely coupled.
 - Improves automation: scripts can click by `test_id` and you can also assert command gating traces in bundles.
 
+## Split state by responsibility
+
+Use a three-layer model instead of one large mutable blob:
+
+- Local mutable state: `Model<T>` and element-local state helpers.
+- Derived state: `fret-selector` (`Selector`, `use_selector`) for memoized read-only projections.
+- Async resource state: `fret-query` (`QueryClient`, `use_query*`) for loading/error/cache lifecycle.
+
+This split keeps UI code predictable and avoids ad-hoc refresh counters or one-off async caches.
 ## Use action hooks for component policy
 
 For cross-cutting policies (dismiss on escape/outside press, focus restore, toggle behaviors):
@@ -36,3 +53,4 @@ When adding a new interactive surface:
 - `fret-commands-and-keymap` (command registry, keymap.json, `when` gating)
 - `fret-action-hooks` (component-owned interaction policy)
 - `fret-diag-workflow` (scripted repro + packaging)
+- `fret-app-architecture-and-effects` (typed routing + selector/query + dispatcher/inbox patterns)

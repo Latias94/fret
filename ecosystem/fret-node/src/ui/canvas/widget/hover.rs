@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 use crate::core::EdgeId;
 use crate::rules::EdgeEndpoint;
 
-use super::super::state::ViewSnapshot;
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -39,18 +39,12 @@ pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 let index = index.clone();
                 this.graph
                     .read_ref(cx.app, |graph| {
-                        let mut scratch: Vec<EdgeId> = Vec::new();
-                        this.hit_edge_focus_anchor(
-                            graph,
-                            snapshot,
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch,
-                        )
-                        .filter(|(id, ..)| *id == edge_id)
-                        .map(|(id, endpoint, _fixed)| (id, endpoint))
+                        let mut scratch = HitTestScratch::default();
+                        let mut ctx =
+                            HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                        this.hit_edge_focus_anchor(graph, snapshot, &mut ctx, position)
+                            .filter(|(id, ..)| *id == edge_id)
+                            .map(|(id, endpoint, _fixed)| (id, endpoint))
                     })
                     .ok()
                     .flatten()
@@ -67,16 +61,9 @@ pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let index = index.clone();
         this.graph
             .read_ref(cx.app, |graph| {
-                let mut scratch: Vec<EdgeId> = Vec::new();
-                this.hit_edge(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch,
-                )
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                this.hit_edge(graph, snapshot, &mut ctx, position)
             })
             .ok()
             .flatten()

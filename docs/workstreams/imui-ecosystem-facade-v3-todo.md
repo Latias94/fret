@@ -1,0 +1,137 @@
+# imui Ecosystem Facade v3 - TODO Tracker
+
+Status: In progress (M0+ pending)
+Last updated: 2026-02-07
+
+This tracker covers:
+
+- `docs/workstreams/imui-ecosystem-facade-v3.md`
+
+Related:
+
+- `docs/workstreams/imui-ecosystem-facade-v2.md` (baseline)
+- `docs/workstreams/docking-multiwindow-imgui-parity.md` (OS-window tear-off parity)
+- `docs/workstreams/code-editor-ecosystem-v1.md` (text/editor ecosystem)
+
+Legend:
+
+- [ ] open
+- [~] in progress
+- [x] done
+- [!] blocked / needs decision
+
+Tracking format:
+
+- ID: `IMUIECO3-{area}-{nnn}`
+- Areas:
+  - `scope` (contracts and boundaries)
+  - `float` (floating windows / z-order / focus)
+  - `dock` (docking handshake touchpoints)
+  - `adapter` (ecosystem ABI and seam evolution)
+  - `resp` (response signal graduation decisions)
+  - `text` (text/editor integration hooks)
+  - `perf` (allocation/perf gates)
+  - `test` (nextest/diag/compile gates)
+  - `docs` (guides/migration)
+
+---
+
+## M0 - Scope lock + admission checklist
+
+Exit criteria:
+
+- v3 boundaries relative to docking and text ecosystems are explicit.
+- breaking-change criteria for floating flags/behavior are documented.
+
+- [~] IMUIECO3-scope-000 Lock v3 scope boundaries and explicit deferrals.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M0 contract notes: activation + breaking criteria).
+- [~] IMUIECO3-docs-001 Add floating/z-order/focus admission checklist items.
+  - Admission checklist (v3 floating):
+    - Any change to activation / bring-to-front / focus choreography requires: at least 1 nextest +
+      at least 1 diag script evidence path.
+    - Any new `FloatingWindowOptions` field must document: default, breaking criteria, and
+      interaction with overlays (dismiss/focus restore) when applicable.
+    - Any behavior-changing default must update: this tracker + migration notes in the v3 note.
+    - Any perf-sensitive wrapper change must add (or update) a cheap regression gate test.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M0 contract notes: activation + `no_inputs` semantics).
+
+---
+
+## M1 - Floating window primitives (ImGui-aligned, in-window)
+
+Exit criteria:
+
+- `window(...)`/floating surface has an explicit options/flags API (subset).
+- bring-to-front + focus restore are deterministic and gated.
+- at least one diag script covers floating + popup coexistence under the new rules.
+
+- [~] IMUIECO3-float-010 Add `WindowFlags`/options surface for in-window floating windows.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions`, `window_ex`, `window_open_ex`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`activate_on_click`, `inputs_enabled` behavior).
+- [x] IMUIECO3-float-011 Add deterministic bring-to-front + focus choreography for floatings.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs` (capture-phase `PointerRegion` down hooks).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (content-click activation requests focus).
+  - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`.
+- [x] IMUIECO3-float-012 Add minimal in-window z-order model that composes with overlay arbitration.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_layer`, `FloatWindowLayerZOrder`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_layer_menu_outside_press_dismisses_without_activating_underlay`,
+    `floating_layer_popover_outside_press_allows_underlay_activation_when_click_through`).
+- [~] IMUIECO3-test-013 Add nextest gates for window flag semantics (close/collapse/resize/move).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (tests covering `activate_on_click`, `inputs_enabled`, `closable`, `movable`, `resizable`, `collapsible`).
+- [x] IMUIECO3-test-014 Add/extend `fretboard diag` script(s) for floating + popup + drag/resize.
+  - Evidence: `tools/diag-scripts/imui-float-window-activate-on-content-bring-to-front.json`
+  - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
+  - Evidence: `crates/fret-ui/src/declarative/host_widget.rs`
+
+---
+
+## M2 - Docking/multi-window handshake (tracked, docking-owned)
+
+Exit criteria:
+
+- imui facade touchpoints needed for docking parity are listed and linked to docking workstreams.
+
+- [x] IMUIECO3-dock-020 Document docking handshake touchpoints and required signals/metadata.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M2 touchpoints).
+  - Evidence: `ecosystem/fret-docking/src/imui.rs`, `ecosystem/fret-docking/src/facade.rs`.
+
+---
+
+## M3 - Ecosystem extension ABI v1
+
+Exit criteria:
+
+- adapter seam template remains stable and is proven by a non-shadcn example.
+- any metadata evolution is justified with duplication-reduction evidence.
+
+- [x] IMUIECO3-adapter-030 Audit adapter seam v2 and list v3 ABI changes (if any).
+  - Result: no v3 ABI changes required; v2 seam is the baseline.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M3 contract notes).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/adapters.rs`.
+- [x] IMUIECO3-adapter-031 Add one \"external widget crate\" style example (in-tree scaffold is OK).
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_external_adapter_example.rs`.
+
+---
+
+## M4 - Text/editor bridge
+
+Exit criteria:
+
+- text/editor integration is explicit and delegated to the code-editor ecosystem (no fork).
+
+- [ ] IMUIECO3-text-040 Define adapter hooks for editor-grade text surfaces.
+- [ ] IMUIECO3-docs-041 Publish \"do not fork text engine\" integration guidance.
+
+---
+
+## M5 - Perf + regression gate upgrade
+
+Exit criteria:
+
+- perf gates are cheap, repeatable, and cover at least one floating hot path.
+
+- [x] IMUIECO3-perf-050 Expand perf guard tests beyond the v2 smoke baseline (target floating hot paths).
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` (`floating_layer_z_order_does_not_clone_vec_each_frame`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatWindowLayerZOrderSnapshot`).
+- [x] IMUIECO3-test-051 Add a small CI-friendly gate matrix (contracts + perf + diag scripts).
+  - Evidence: `tools/diag_gate_imui_v3.ps1`.

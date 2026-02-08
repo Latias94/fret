@@ -1,12 +1,11 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::{
     NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest, NodeGraphViewportHelper,
 };
 
-use super::TestUiHostImpl;
+use super::{TestUiHostImpl, insert_view};
 
 #[test]
 fn viewport_helper_set_center_uses_current_zoom_when_omitted() {
@@ -16,7 +15,7 @@ fn viewport_helper_set_center_uses_current_zoom_when_omitted() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let _ = view.update(&mut host, |s, _cx| {
@@ -57,7 +56,7 @@ fn viewport_helper_set_center_honors_explicit_zoom_override() {
     );
 
     let mut host = TestUiHostImpl::default();
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let helper = NodeGraphViewportHelper::new(view, queue.clone());

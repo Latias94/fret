@@ -1,7 +1,17 @@
+//! Portable, backend-agnostic core vocabulary for the Fret workspace.
+//!
+//! This crate is intentionally dependency-light. It must remain usable by:
+//!
+//! - core/runtime crates (`fret-runtime`, `fret-ui`),
+//! - ecosystem crates (policy/component layers),
+//! - and backends/runners (native + web),
+//!
+//! without pulling in backend bindings (`winit`, `wgpu`, `web-sys`) or forcing an async runtime.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-core/README.md`.
+
 pub mod cursor;
 pub mod dock;
-pub mod dock_layout;
-pub mod dock_op;
 pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
@@ -9,6 +19,7 @@ pub mod image;
 pub mod input;
 pub mod layout_direction;
 pub mod panels;
+pub mod render_text;
 pub mod scene;
 pub mod semantics;
 pub mod services;
@@ -21,16 +32,19 @@ pub mod vector_path;
 pub mod viewport;
 pub mod window;
 
+// -----------------------------------------------------------------------------
+// Stable re-exports (core vocabulary surface)
+// -----------------------------------------------------------------------------
 pub use cursor::CursorIcon;
-pub use dock::{
-    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
-};
-pub use dock_layout::{
+pub use dock::layout::{
     DOCK_LAYOUT_VERSION, DockLayout, DockLayoutBuilder, DockLayoutFloatingWindow, DockLayoutNode,
     DockLayoutValidationError, DockLayoutValidationErrorKind, DockLayoutWindow, DockRect,
     DockWindowPlacement, EditorDockLayoutSpec,
 };
-pub use dock_op::{DockOp, SplitFractionsUpdate};
+pub use dock::op::{DockOp, SplitFractionsUpdate};
+pub use dock::{
+    Axis, DockFloatingWindow, DockGraph, DockNode, DockOpApplyError, DockOpApplyErrorKind, DropZone,
+};
 pub use file_dialog::{
     FileDialogDataEvent, FileDialogFilter, FileDialogOptions, FileDialogSelection,
 };
@@ -54,6 +68,7 @@ pub use input::{
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
 pub use panels::{PanelKey, PanelKind};
+pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
 pub use scene::{
     Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,
     SceneOp, SceneRecording, SceneValidationError, SceneValidationErrorKind, UvRect,

@@ -7,8 +7,6 @@ use fret_ui::Theme;
 
 use crate::foundation::token_resolver::MaterialTokenResolver;
 
-pub(crate) const COMPONENT_PREFIX: &str = "md.comp.badge";
-
 pub(crate) fn dot_size(theme: &Theme) -> Px {
     theme.metric_by_key("md.comp.badge.size").unwrap_or(Px(6.0))
 }

@@ -47,10 +47,9 @@ use std::time::Duration;
 
 use fret_app::config_files::LayeredConfigPaths;
 use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
+use fret_i18n::{I18nLookup, I18nService, LocaleId};
+use fret_i18n_fluent::{FluentCatalog, FluentLookup};
 use fret_icons::IconRegistry;
-
-#[cfg(feature = "preload-icon-svgs")]
-mod icon_preload;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BootstrapError {
@@ -73,10 +72,81 @@ pub fn apply_settings(
     config: &mut fret_launch::WinitRunnerConfig,
     settings: &SettingsFileV1,
 ) {
-    app.set_global(settings.clone());
-    app.set_global(settings.docking_interaction_settings());
+    install_default_i18n_backend(app);
+    fret_app::settings::apply_settings_globals(app, settings);
     config.text_font_families = settings.fonts.clone();
 }
+
+/// Installs a default i18n backend if the app hasn't provided one yet.
+///
+/// Notes:
+/// - This is an ecosystem-level “golden path” convenience, not a portable kernel contract.
+/// - Callers can override this by installing their own backend before bootstrapping.
+pub fn install_default_i18n_backend(app: &mut App) {
+    let mut service = app
+        .global::<I18nService>()
+        .cloned()
+        .unwrap_or_else(I18nService::default);
+    if service.lookup().is_some() {
+        return;
+    }
+
+    service.set_lookup(Some(default_i18n_lookup()));
+    app.set_global(service);
+}
+
+fn default_i18n_lookup() -> Arc<dyn I18nLookup + 'static> {
+    let mut catalog = FluentCatalog::new();
+    catalog
+        .add_locale_ftl(
+            LocaleId::parse("en-US").expect("hardcoded locale en-US must parse"),
+            DEFAULT_I18N_FTL_EN_US,
+        )
+        .expect("en-US i18n resource must load");
+    catalog
+        .add_locale_ftl(
+            LocaleId::parse("zh-CN").expect("hardcoded locale zh-CN must parse"),
+            DEFAULT_I18N_FTL_ZH_CN,
+        )
+        .expect("zh-CN i18n resource must load");
+
+    let lookup = FluentLookup::new(Arc::new(catalog));
+    Arc::new(lookup)
+}
+
+const DEFAULT_I18N_FTL_EN_US: &str = r#"
+core-command-category-app = App
+workspace-menu-file = File
+workspace-menu-edit = Edit
+workspace-menu-view = View
+workspace-menu-window = Window
+
+core-command-title-app-command-palette = Command Palette
+core-command-title-app-about = About
+core-command-title-app-preferences = Preferences...
+core-command-title-app-locale-switch-next = Switch Language
+core-command-title-app-hide = Hide
+core-command-title-app-hide-others = Hide Others
+core-command-title-app-show-all = Show All
+core-command-title-app-quit = Quit
+"#;
+
+const DEFAULT_I18N_FTL_ZH_CN: &str = r#"
+core-command-category-app = 应用
+workspace-menu-file = 文件
+workspace-menu-edit = 编辑
+workspace-menu-view = 视图
+workspace-menu-window = 窗口
+
+core-command-title-app-command-palette = 命令面板
+core-command-title-app-about = 关于
+core-command-title-app-preferences = 偏好设置...
+core-command-title-app-locale-switch-next = 切换语言
+core-command-title-app-hide = 隐藏
+core-command-title-app-hide-others = 隐藏其他应用
+core-command-title-app-show-all = 显示全部
+core-command-title-app-quit = 退出
+"#;
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
 #[cfg(not(target_arch = "wasm32"))]
@@ -108,8 +178,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         });
 
         self.inner = self.inner.init_app(move |app| {
-            app.set_global(settings.clone());
-            app.set_global(settings.docking_interaction_settings());
+            install_default_i18n_backend(app);
+            fret_app::settings::apply_settings_globals(app, &settings);
             fret_app::sync_os_menu_bar(app);
         });
 
@@ -133,8 +203,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         });
 
         self.inner = self.inner.init_app(move |app| {
-            app.set_global(settings.clone());
-            app.set_global(settings.docking_interaction_settings());
+            install_default_i18n_backend(app);
+            fret_app::settings::apply_settings_globals(app, &settings);
             fret_app::sync_os_menu_bar(app);
         });
 
@@ -349,8 +419,11 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
     /// Register an icon pack (e.g. `fret_icons_lucide::register_icons`) into the global `IconRegistry`.
     pub fn register_icon_pack(mut self, register: fn(&mut IconRegistry)) -> Self {
         self.inner = self.inner.init_app(move |app| {
-            app.with_global_mut(IconRegistry::default, |icons, _app| {
+            app.with_global_mut(IconRegistry::default, |icons, app| {
                 register(icons);
+                let frozen =
+                    icons.freeze_or_default_with_context("fret_bootstrap.register_icon_pack");
+                app.set_global(frozen);
             });
         });
         self
@@ -378,7 +451,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.on_gpu_ready_hooks
             .push(Box::new(|app, _context, renderer| {
                 let services = renderer as &mut dyn fret_core::UiServices;
-                icon_preload::preload_icon_svgs(app, services);
+                fret_ui_kit::declarative::icon::preload_icon_svgs(app, services);
             }));
         self
     }
@@ -507,11 +580,7 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
 
-#[cfg(all(
-    not(target_arch = "wasm32"),
-    feature = "ui-app-driver",
-    feature = "diagnostics"
-))]
+#[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]

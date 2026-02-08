@@ -1,0 +1,28 @@
+[package]
+name = "fret-router"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+web-history = ["dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
+hash-routing = ["dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
+query-integration = ["dep:fret-query"]
+
+[dependencies]
+fret-query = { path = "../fret-query", optional = true }
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Location", "History", "Event", "EventTarget"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"

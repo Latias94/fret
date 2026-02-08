@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
 This is the checkbox tracker companion to:
 
@@ -9,7 +9,7 @@ This is the checkbox tracker companion to:
 
 Normative contracts:
 
-- `docs/adr/0193-code-editor-ecosystem-v1.md`
+- `docs/adr/0200-code-editor-ecosystem-v1.md`
 - `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
 - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
 
@@ -31,7 +31,7 @@ Legend:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation,
   - proxy mode (no full document mirroring).
-- [~] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
+- [x] Add 1–3 evidence anchors per ADR (file paths / tests) in ADR 0193/0194/0195.
 
 ---
 
@@ -93,16 +93,19 @@ Legend:
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
 - [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
-- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added).
+- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added for TextInput/TextArea double/triple-click cancel; CodeEditor click selection cancel).
 
 ### Tests
 
 - [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
 - [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
 - Note: expanded coverage in `crates/fret-ui/src/text_edit.rs` (mixed Latin/CJK/emoji; identifier punctuation).
-- [~] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
+- [x] Word navigation + deletion respect the active boundary mode across `SelectableText` / `TextInput` / `TextArea` (Ctrl/Alt+Arrow, Ctrl/Alt+Backspace/Delete; command path parity).
+- [x] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
   - Done: selectable text double-click respects `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
   - Done: text input + text area double-click respect `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
+  - Done: text input triple-click selects logical line under `render_transform` and `Scroll` offset.
+  - Done: text area triple-click selects logical line (including trailing newline) under `render_transform` and `Scroll` offset.
 
 Evidence anchors:
 
@@ -114,8 +117,9 @@ Evidence anchors:
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
 - `crates/fret-ui/src/declarative/host_widget.rs` / `crates/fret-ui/src/text_input/bound.rs` / `crates/fret-ui/src/text_area/bound.rs` (platform text input delegation for declarative widgets)
-- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection coverage for TextInput/TextArea)
+- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection; double-click cancels IME preedit for TextInput/TextArea)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (double/triple click selection; a11y preedit window)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ---
@@ -155,14 +159,21 @@ Evidence anchors:
 - [x] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
 - [x] Fix the “no stale lines” torture failure (scroll-driven window changes must not show stale row text).
   - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
+  - Surface glue: `windowed_rows_surface_with_pointer_region` also sets `scroll.windowed_paint = true` (the code editor uses the pointer-region variant).
   - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
+  - Diagnostics gate: `tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json` + `--check-windowed-rows-offset-changes-min 1` (with UI Gallery view-cache enabled).
+- [x] Add a soft-wrap + editing baseline gate (ui-gallery torture).
+  - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json`
+  - Gates: `--check-windowed-rows-offset-changes-min 1` + `--check-pixels-changed ui-gallery-code-editor-torture-root`
+- [x] Clamp windowed row hit-testing during drags (keeps selection updates continuous when the pointer leaves bounds).
+- [x] Drag-to-select edge autoscroll (Zed-style scaling), including a timer-driven path so it continues while the pointer is stationary at the viewport edge.
 
 Evidence anchors:
 
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row painting + selection/caret + IME)
 - `crates/fret-ui/src/element.rs` (`TextInputRegionProps`, `ElementKind::TextInputRegion`)
 - `crates/fret-ui/src/declarative/host_widget/event/text_input_region.rs` (IME/TextInput forwarding)
-- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`on_pointer_up`/`on_pointer_cancel`)
+- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`row_index_for_pointer` clamp, `on_timer` wiring)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
@@ -191,7 +202,7 @@ Evidence anchors:
 ## M5 — Syntax Highlighting (incremental + visible-window materialization)
 
 - [x] Define semantic token schema (highlight ids independent of theme colors).
-- [~] Incremental update strategy (best-effort; visible window prioritized) (partial: line-based cache invalidation via `BufferDelta`).
+- [~] Incremental update strategy (best-effort; visible window prioritized) (implemented: bounded line-window invalidation via `BufferDelta`, and far-row cache key shifting when line count changes; see `invalidate_syntax_row_cache_for_delta` + `syntax_cache_invalidation_*` tests under `syntax-rust`).
 - [x] Materialize spans only for visible rows.
 - [x] Expose a UI Gallery toggle for manual validation.
 - [x] Theme changes update paint-only styles without reshaping.
@@ -203,6 +214,11 @@ Evidence anchors:
 - [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
 - [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value; code editor handles `SetTextSelection` best-effort within its windowed value).
 - [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (documented in workstream; v1 chooses stub/viewport semantics).
+  - [x] Add regression gates for selection/composition invariants (including wrap and drag-selection cases):
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-drag-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (a11y selection/composition checkers + evidence JSON)
 
 ---
 
@@ -213,14 +229,20 @@ Evidence anchors:
   - editor-local cache hits/misses (row text + syntax).
 - [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
 - [x] Export editor/IME harness state into diagnostics snapshots (ui-gallery app snapshot + web IME bridge snapshot; enables “single artifact” repros).
-- [ ] Add renderer-level churn counters (next):
-  - text blob churn and glyph atlas pressure (likely from renderer/canvas caches).
+- [x] Add renderer-level churn counters:
+  - Text blob churn + glyph atlas pressure are captured by the runner as a per-frame app global (`fret_core::RendererTextPerfSnapshot`) and exported into UI diagnostics bundles.
+  - Evidence: `crates/fret-core/src/render_text.rs`, `crates/fret-render-wgpu/src/text.rs`, `crates/fret-launch/src/runner/desktop/app_handler.rs`, `crates/fret-launch/src/runner/web.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
 
 ---
 
 ## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
 
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based baseline; pixel-accurate caret/selection/hit-test is migrating to renderer caret stops).
+  - [x] Add wrap-boundary semantics regression gates (UI Gallery harness + fretboard diag):
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json`
+    - `apps/fret-ui-gallery/src/ui.rs` (wrap gate viewports + preedit inject/clear buttons)
+    - `crates/fret-diag/src/stats.rs` (wrap gate checkers + evidence JSON)
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 

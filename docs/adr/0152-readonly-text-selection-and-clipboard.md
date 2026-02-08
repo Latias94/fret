@@ -72,7 +72,7 @@ This builds on existing text services:
 - `hit_test_point`
 - `selection_rects`
 
-implemented by the renderer-backed text system (`crates/fret-render/src/text.rs`).
+implemented by the renderer-backed text system (`crates/fret-render-wgpu/src/text.rs`).
 
 ## Consequences
 

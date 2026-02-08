@@ -1313,6 +1313,12 @@ fn ui_app_handle_command<S>(
                 return;
             }
         }
+        fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
+            if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
+                app.request_redraw(window);
+                return;
+            }
+        }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;

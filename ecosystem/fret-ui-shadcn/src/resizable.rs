@@ -66,23 +66,36 @@ impl ResizablePanel {
 #[derive(Clone)]
 pub struct ResizableHandle {
     disabled: bool,
+    with_handle: bool,
 }
 
 impl std::fmt::Debug for ResizableHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResizableHandle")
             .field("disabled", &self.disabled)
+            .field("with_handle", &self.with_handle)
             .finish()
     }
 }
 
 impl ResizableHandle {
     pub fn new() -> Self {
-        Self { disabled: false }
+        Self {
+            disabled: false,
+            with_handle: false,
+        }
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Show a more prominent handle bar.
+    ///
+    /// Note: the handle is still runtime-owned; this hints the chrome used to paint it.
+    pub fn with_handle(mut self, with_handle: bool) -> Self {
+        self.with_handle = with_handle;
         self
     }
 }
@@ -188,16 +201,18 @@ fn resizable_panel_group_with_entries<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let style =
+    let mut style =
         style.unwrap_or_else(|| resizable_recipe::default_resizable_panel_group_style(&theme));
 
     let mut panels: Vec<ResizablePanel> = Vec::new();
     let mut saw_handles = false;
+    let mut with_handle = false;
     for e in entries {
         match e {
             ResizableEntry::Panel(p) => panels.push(p),
             ResizableEntry::Handle(h) => {
                 saw_handles = true;
+                with_handle |= h.with_handle;
                 if h.disabled {
                     // Per-handle disabling is not supported yet; treat as a no-op marker.
                 }
@@ -207,6 +222,12 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     if saw_handles && panels.len() >= 2 {
         // We currently don't render per-handle elements; handles are painted by the runtime group.
         // This keeps the shadcn taxonomy surface while preserving a runtime-owned drag contract.
+    }
+
+    if with_handle {
+        // shadcn/ui's `withHandle` adds a visible grip. Fret currently paints a uniform handle,
+        // so we approximate by making it thicker.
+        style.paint_device_px = style.paint_device_px.max(4.0);
     }
 
     let min_px: Vec<Px> = panels.iter().map(|p| p.min_px).collect();

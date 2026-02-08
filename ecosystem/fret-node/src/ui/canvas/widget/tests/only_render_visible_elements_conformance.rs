@@ -6,11 +6,11 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Graph, PortId};
-use crate::io::NodeGraphViewState;
+
 use crate::ui::NodeGraphCanvas;
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 struct CountingPresenter {
     node_title_calls: Arc<AtomicUsize>,
@@ -75,7 +75,7 @@ fn only_render_visible_elements_controls_render_culling_work() {
     let titles_culled = {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value.clone());
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
@@ -99,7 +99,7 @@ fn only_render_visible_elements_controls_render_culling_work() {
     let titles_full = {
         let mut host = TestUiHostImpl::default();
         let graph = host.models.insert(graph_value);
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;

@@ -706,13 +706,13 @@ fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
 fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
 
-    let base_root = ui.create_node(TestStack::default());
-    let base_leaf = ui.create_node(TestStack::default());
+    let base_root = ui.create_node(TestStack);
+    let base_leaf = ui.create_node(TestStack);
     ui.set_root(base_root);
     ui.set_children(base_root, vec![base_leaf]);
 
-    let overlay_root = ui.create_node(TestStack::default());
-    let overlay_leaf = ui.create_node(TestStack::default());
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_leaf = ui.create_node(TestStack);
     ui.set_children(overlay_root, vec![overlay_leaf]);
 
     let base_bounds = Rect::new(
@@ -837,10 +837,16 @@ fn hit_test_works_with_view_cache_root_and_prepaint_reuse_under_render_transform
 
     // Frame 1: reuse the cached interaction range for the overlay cache root.
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay.
+    //
+    // The layout engine can legitimately skip work on a completely stable frame, which would
+    // bypass prepaint recording/replay and make `interaction_cache_hits` remain 0.
+    ui.invalidate(underlay, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let stats = ui.debug_stats();
     assert!(
-        ui.debug_stats().interaction_cache_hits >= 1,
-        "expected prepaint interaction cache to hit for clean view-cache roots"
+        stats.interaction_cache_hits >= 1,
+        "expected prepaint interaction cache to hit for clean view-cache roots (stats={stats:?})"
     );
 
     // This window-space point maps to local (6, 5) inside the overlay leaf after rotation+translation.

@@ -60,6 +60,7 @@ pub(super) struct InteractionCacheState {
     generation: u64,
     pub(super) prev_records: Vec<InteractionRecord>,
     pub(super) records: Vec<InteractionRecord>,
+    replay_scratch: Vec<InteractionRecord>,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
     pub(super) hits: u32,
@@ -86,6 +87,7 @@ impl InteractionCacheState {
     pub(super) fn invalidate_recording(&mut self) {
         self.prev_records.clear();
         self.records.clear();
+        self.replay_scratch.clear();
         self.generation = self.generation.saturating_add(1);
     }
 }
@@ -139,7 +141,10 @@ impl<H: UiHost> UiTree<H> {
             fret_core::Axis::Vertical => offset_point.y,
             fret_core::Axis::Horizontal => offset_point.x,
         };
-        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some();
+        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some()
+            || inputs
+                .scroll_handle
+                .scroll_to_item_consumed_in_frame(app.frame_id());
         let retained_host = crate::elements::with_window_state(&mut *app, window, |window_state| {
             window_state.has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
                 inputs.element,
@@ -223,6 +228,7 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 let mut window_shift_kind = crate::tree::UiDebugVirtualListWindowShiftKind::None;
+                let allow_preemptive_prefetch = retained_host || !view_cache_active;
                 let window_range = if window_mismatch {
                     window_shift_kind = crate::tree::UiDebugVirtualListWindowShiftKind::Escape;
                     if retained_host {
@@ -287,6 +293,12 @@ impl<H: UiHost> UiTree<H> {
 
                             if let Some(prefetch) = forced_prefetch {
                                 Some(prefetch)
+                            } else if !allow_preemptive_prefetch {
+                                // For non-retained + view-cache hosts, prefetch shifts translate
+                                // directly into cache-root rerenders. Keep the current rendered
+                                // window while it still covers the visible range, and rely on
+                                // escape-driven shifts when we truly leave overscan.
+                                ideal_window_range
                             } else {
                                 let prefetch_margin = (inputs.overscan / 6).max(1);
                                 // Shift by a slightly larger step than the “near-edge” margin so we
@@ -480,6 +492,8 @@ impl<H: UiHost> UiTree<H> {
                     element: Some(inputs.element),
                     virtual_list_window_shift_kind: Some(update.window_shift_kind),
                     virtual_list_window_shift_reason: window_shift_reason,
+                    chart_sampling_window_key: None,
+                    node_graph_cull_window_key: None,
                     frame_id: app.frame_id(),
                 });
             }
@@ -563,24 +577,85 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn apply_interaction_record(&mut self, record: &InteractionRecord) {
-        let Some(n) = self.nodes.get_mut(record.node) else {
-            return;
+        let (prev, next) = {
+            let Some(n) = self.nodes.get_mut(record.node) else {
+                return;
+            };
+            let prev = n.invalidation;
+            n.prepaint_hit_test = Some(super::PrepaintHitTestCache {
+                render_transform_inv: record.render_transform_inv,
+                children_render_transform_inv: record.children_render_transform_inv,
+                clips_hit_test: record.clips_hit_test,
+                clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
+                is_focusable: record.is_focusable,
+                focus_traversal_children: record.focus_traversal_children,
+                can_scroll_descendant_into_view: record.can_scroll_descendant_into_view,
+            });
+            n.invalidation.hit_test = false;
+            (prev, n.invalidation)
         };
-        n.prepaint_hit_test = Some(super::PrepaintHitTestCache {
-            render_transform_inv: record.render_transform_inv,
-            children_render_transform_inv: record.children_render_transform_inv,
-            clips_hit_test: record.clips_hit_test,
-            clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
-            is_focusable: record.is_focusable,
-            focus_traversal_children: record.focus_traversal_children,
-            can_scroll_descendant_into_view: record.can_scroll_descendant_into_view,
-        });
-        n.invalidation.hit_test = false;
+        self.update_invalidation_counters(prev, next);
     }
 
     pub(super) fn prepaint_after_layout(&mut self, app: &mut H, scale_factor: f32) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
+            self.hit_test_bounds_trees.clear();
+            return;
+        }
+
+        let started = self.debug_enabled.then(Instant::now);
+        if self.debug_enabled {
+            self.begin_debug_frame_if_needed(app.frame_id());
+            self.debug_stats.prepaint_time = Duration::default();
+            self.debug_stats.prepaint_nodes_visited = 0;
+            // Stable-frame prepaint reuses the previously recorded interaction stream without
+            // rebuilding it. Surface reuse explicitly so tests and perf tooling can still observe
+            // that hit-test relevant metadata remains cached.
+            self.debug_stats.interaction_cache_hits = self.interaction_cache.records.len() as u32;
+            self.debug_stats.interaction_cache_misses = 0;
+            self.debug_stats.interaction_cache_replayed_records = 0;
+            self.debug_stats.interaction_records = self.interaction_cache.records.len() as u32;
+        }
+
+        self.interaction_cache.begin_frame();
+        self.hit_test_bounds_trees.begin_frame(app.frame_id());
+
+        let theme_revision = Theme::global(&*app).revision();
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers {
+            let root = self.layers[layer_id].root;
+            let hit_testable = self.layers[layer_id].hit_testable;
+
+            let start = self.interaction_cache.records.len();
+            self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
+            let end = self.interaction_cache.records.len();
+
+            if hit_testable {
+                let records = &self.interaction_cache.records[start..end];
+                let nodes = &self.nodes;
+                self.hit_test_bounds_trees
+                    .rebuild_for_layer_from_records(root, records, nodes);
+            }
+        }
+
+        self.interaction_cache.finish_frame();
+        if self.debug_enabled {
+            self.debug_stats.interaction_cache_hits = self.interaction_cache.hits;
+            self.debug_stats.interaction_cache_misses = self.interaction_cache.misses;
+            self.debug_stats.interaction_cache_replayed_records =
+                self.interaction_cache.replayed_records;
+            self.debug_stats.interaction_records = self.interaction_cache.records.len() as u32;
+        }
+        if let Some(started) = started {
+            self.debug_stats.prepaint_time = started.elapsed();
+        }
+    }
+
+    pub(super) fn prepaint_after_layout_stable_frame(&mut self, app: &mut H) {
+        if self.inspection_active {
+            self.interaction_cache.invalidate_recording();
+            self.hit_test_bounds_trees.clear();
             return;
         }
 
@@ -595,25 +670,17 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.interaction_records = 0;
         }
 
-        self.interaction_cache.begin_frame();
+        self.hit_test_bounds_trees.begin_frame(app.frame_id());
 
-        let theme_revision = Theme::global(&*app).revision();
-        let roots: Vec<NodeId> = self
-            .visible_layers_in_paint_order()
-            .map(|layer| self.layers[layer].root)
-            .collect();
-        for root in roots {
-            self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers {
+            let root = self.layers[layer_id].root;
+            let hit_testable = self.layers[layer_id].hit_testable;
+            if hit_testable {
+                self.hit_test_bounds_trees.reuse_for_layer(root);
+            }
         }
 
-        self.interaction_cache.finish_frame();
-        if self.debug_enabled {
-            self.debug_stats.interaction_cache_hits = self.interaction_cache.hits;
-            self.debug_stats.interaction_cache_misses = self.interaction_cache.misses;
-            self.debug_stats.interaction_cache_replayed_records =
-                self.interaction_cache.replayed_records;
-            self.debug_stats.interaction_records = self.interaction_cache.records.len() as u32;
-        }
         if let Some(started) = started {
             self.debug_stats.prepaint_time = started.elapsed();
         }
@@ -689,9 +756,12 @@ impl<H: UiHost> UiTree<H> {
             let range = prev.start as usize..prev.end as usize;
             if range.start <= range.end && range.end <= self.interaction_cache.prev_records.len() {
                 let start = self.interaction_cache.records.len();
-                let replay: Vec<InteractionRecord> =
-                    self.interaction_cache.prev_records[range].to_vec();
-                for mut record in replay {
+                self.interaction_cache.replay_scratch.clear();
+                self.interaction_cache
+                    .replay_scratch
+                    .extend_from_slice(&self.interaction_cache.prev_records[range]);
+                for i in 0..self.interaction_cache.replay_scratch.len() {
+                    let mut record = self.interaction_cache.replay_scratch[i];
                     // View-cache reuse can legitimately skip rerender/layout for the subtree, but
                     // hit-test-only invalidations (e.g. scroll handle offset changes) still need
                     // up-to-date interaction transforms so pointer routing stays correct.
@@ -710,28 +780,20 @@ impl<H: UiHost> UiTree<H> {
                             .map(|n| (n.bounds, n.widget.as_ref()))
                             .unwrap_or((record.bounds, None));
 
-                        let (
-                            render_transform_inv,
-                            children_render_transform_inv,
-                            clips_hit_test,
-                            corner_radii,
-                        ) = match widget {
-                            Some(widget) => (
-                                widget.render_transform(bounds).and_then(|t| t.inverse()),
-                                widget
-                                    .children_render_transform(bounds)
-                                    .and_then(|t| t.inverse()),
-                                widget.clips_hit_test(bounds),
-                                widget.clip_hit_test_corner_radii(bounds),
-                            ),
-                            None => (None, None, true, None),
-                        };
+                        let (render_transform_inv, children_render_transform_inv, clips_hit_test, corner_radii) =
+                            match widget {
+                                Some(widget) => (
+                                    widget.render_transform(bounds).and_then(|t| t.inverse()),
+                                    widget
+                                        .children_render_transform(bounds)
+                                        .and_then(|t| t.inverse()),
+                                    widget.clips_hit_test(bounds),
+                                    widget.clip_hit_test_corner_radii(bounds),
+                                ),
+                                None => (None, None, true, None),
+                            };
 
-                        let (
-                            is_focusable,
-                            focus_traversal_children,
-                            can_scroll_descendant_into_view,
-                        ) = widget
+                        let (is_focusable, focus_traversal_children, can_scroll_descendant_into_view) = widget
                             .map(|w| {
                                 (
                                     w.is_focusable(),
@@ -750,7 +812,6 @@ impl<H: UiHost> UiTree<H> {
                         record.focus_traversal_children = focus_traversal_children;
                         record.can_scroll_descendant_into_view = can_scroll_descendant_into_view;
                     }
-
                     self.interaction_cache.records.push(record);
                     self.apply_interaction_record(&record);
                     self.prepaint_virtual_list_window_from_interaction_record(app, &record);
@@ -834,15 +895,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let end = self.interaction_cache.records.len();
-        if is_view_cache_root {
-            if let Some(n) = self.nodes.get_mut(node) {
-                n.interaction_cache = Some(InteractionCacheEntry {
-                    generation: self.interaction_cache.target_generation,
-                    key,
-                    start: start as u32,
-                    end: end as u32,
-                });
-            }
+        if is_view_cache_root && let Some(n) = self.nodes.get_mut(node) {
+            n.interaction_cache = Some(InteractionCacheEntry {
+                generation: self.interaction_cache.target_generation,
+                key,
+                start: start as u32,
+                end: end as u32,
+            });
         }
     }
 }

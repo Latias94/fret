@@ -6,12 +6,12 @@ use fret_ui::UiHost;
 
 use crate::core::NodeId as GraphNodeId;
 
-use super::super::state::{MarqueeDrag, PendingMarqueeDrag, ViewSnapshot};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{MarqueeDrag, PendingMarqueeDrag, ViewSnapshot};
 
 fn nodes_in_marquee(
     graph: &crate::core::Graph,
-    geom: &super::super::geometry::CanvasGeometry,
+    geom: &crate::ui::canvas::geometry::CanvasGeometry,
     a: Point,
     b: Point,
     mode: crate::io::NodeGraphSelectionMode,

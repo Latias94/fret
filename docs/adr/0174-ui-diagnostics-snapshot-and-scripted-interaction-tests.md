@@ -119,7 +119,23 @@ Minimum required fields (v1):
 - `layout_time_us: u64`, `paint_time_us: u64`
 - `layout_engine_solves: u64`, `layout_engine_solve_time_us: u64`
 - `paint_cache_hits: u32`, `paint_cache_misses: u32`, `paint_cache_replayed_ops: u32`
+- Optional (recommended): paint-phase text preparation attribution (to explain tail latency hitches):
+  - `paint_text_prepare_time_us: u64`, `paint_text_prepare_calls: u32`
+  - Per-reason counters (e.g. blob missing, width/style/wrap changes).
+  - `paint_text_prepare_hotspots: Vec<...>` (top-N per frame) including node/element ids and text constraints so
+    “first appearance” spikes can be distinguished from cross-frame cache churn.
 - `reason_hints: Vec<UiWorkReasonV1>` (model/global/timer/raf/input/engine)
+  - Optional (recommended): a coarse **layout phase breakdown** to make “layout time” actionable in perf bundles:
+    - `layout_collect_roots_time_us`
+    - `layout_invalidate_scroll_handle_bindings_time_us`
+    - `layout_expand_view_cache_invalidations_time_us`
+    - `layout_request_build_roots_time_us`
+    - `layout_pending_barrier_relayouts_time_us`
+    - `layout_repair_view_cache_bounds_time_us`
+    - `layout_contained_view_cache_roots_time_us`
+    - `layout_collapse_layout_observations_time_us`
+    - `layout_prepaint_after_layout_time_us`
+    - `layout_skipped_engine_frame`
 
 **Observation / invalidation linkage (critical for AI debugging)**
 
@@ -138,6 +154,28 @@ Privacy and portability rules:
 - Type identities MUST use stable, non-path strings (e.g. `std::any::type_name::<T>()`) and MUST NOT include machine-local
   paths.
 
+Implementation note (non-normative):
+
+ - The current bundle format exports renderer metrics as flat counters under
+  `.windows[].snapshots[].debug.stats.renderer_*` when enabled:
+  - timings: `renderer_encode_scene_us`, `renderer_prepare_text_us`, `renderer_prepare_svg_us`
+  - batching: `renderer_draw_calls`, `renderer_pipeline_switches`, `renderer_bind_group_switches`, `renderer_scissor_sets`
+  - churn (best-effort per-frame): `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`,
+    `renderer_intermediate_budget_bytes`, `renderer_intermediate_in_use_bytes`,
+    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_release_targets`,
+    `renderer_intermediate_pool_allocations`, `renderer_intermediate_pool_reuses`,
+    `renderer_intermediate_pool_releases`, `renderer_intermediate_pool_evictions`,
+    `renderer_intermediate_pool_free_bytes`, `renderer_intermediate_pool_free_textures`,
+    non-text upload bytes/counters (`renderer_svg_upload_bytes`, `renderer_svg_uploads`,
+    `renderer_image_upload_bytes`, `renderer_image_uploads`),
+    and SVG raster cache occupancy/churn (`renderer_svg_raster_budget_bytes`, `renderer_svg_rasters_live`,
+    `renderer_svg_mask_atlas_pages_live`, `renderer_svg_mask_atlas_bytes_live`,
+    `renderer_svg_mask_atlas_used_px`, `renderer_svg_mask_atlas_capacity_px`,
+    `renderer_svg_raster_cache_hits`, `renderer_svg_raster_cache_misses`,
+    `renderer_svg_raster_budget_evictions`, `renderer_svg_mask_atlas_page_evictions`,
+    `renderer_svg_mask_atlas_entries_evicted`)
+  - cache: `renderer_scene_encoding_cache_misses`
+
 ### 2) Provide per-window ring buffers and a “diagnostics bundle” export
 
 The runner MUST maintain per-window bounded ring buffers for:
@@ -146,14 +184,13 @@ The runner MUST maintain per-window bounded ring buffers for:
 - recent effects drained (including commands, docking ops, IME cursor-area updates),
 - recent `UiDiagnosticsSnapshotV1` samples (e.g. last ~300 frames).
 
-Export shape:
+Export shape (bundle directory):
 
 - a directory under `target/fret-diag/<timestamp>/` by default (or an OS temp dir on wasm),
 - with at least:
-  - `snapshot.json` (the most recent full snapshot),
-  - `ring.json` (bounded history),
-  - `trace.jsonl` (optional structured tracing export, if enabled),
-  - `notes.txt` (optional user-supplied reproduction notes).
+  - `bundle.json` (the exported diagnostics bundle; includes bounded per-window snapshot history),
+  - `latest.txt` pointer file in the parent output directory (best-effort),
+  - optional screenshot artifacts when enabled (tooling-driven; see `docs/ui-diagnostics-and-scripted-tests.md`).
 
 This “bundle” is the unit of sharing with other humans and with AI tools.
 

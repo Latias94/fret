@@ -14,12 +14,6 @@ use winit::event::{
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::Window;
 
-#[cfg(target_arch = "wasm32")]
-use std::rc::Rc;
-
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowExtWeb;
-
 pub mod accessibility;
 
 #[cfg(windows)]
@@ -101,144 +95,6 @@ impl WinitPlatform {
     pub fn prepare_frame(&mut self, window: &dyn Window) {
         self.window.prepare_frame(window);
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunnerError {
-    message: String,
-}
-
-impl RunnerError {
-    pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
-    }
-}
-
-impl std::fmt::Display for RunnerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for RunnerError {}
-
-#[cfg(target_arch = "wasm32")]
-pub fn canvas_by_id(id: &str) -> Result<web_sys::HtmlCanvasElement, RunnerError> {
-    use wasm_bindgen::JsCast as _;
-
-    let window = web_sys::window().ok_or_else(|| RunnerError::new("window is not available"))?;
-    let document = window
-        .document()
-        .ok_or_else(|| RunnerError::new("document is not available"))?;
-    let el = document
-        .get_element_by_id(id)
-        .ok_or_else(|| RunnerError::new("canvas element not found"))?;
-    el.dyn_into::<web_sys::HtmlCanvasElement>()
-        .map_err(|_| RunnerError::new("element is not a canvas"))
-}
-
-#[cfg(target_arch = "wasm32")]
-pub struct WebCursorListener {
-    canvas: web_sys::HtmlCanvasElement,
-    on_move: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
-    on_leave: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl Drop for WebCursorListener {
-    fn drop(&mut self) {
-        use wasm_bindgen::JsCast as _;
-
-        let _ = self.canvas.remove_event_listener_with_callback(
-            "pointermove",
-            self.on_move.as_ref().unchecked_ref(),
-        );
-        let _ = self.canvas.remove_event_listener_with_callback(
-            "pointerleave",
-            self.on_leave.as_ref().unchecked_ref(),
-        );
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-mod web_cursor {
-    use std::cell::Cell;
-
-    use wasm_bindgen::JsCast as _;
-    use wasm_bindgen::prelude::wasm_bindgen;
-
-    thread_local! {
-        static LAST_POS: Cell<Option<(f32, f32)>> = const { Cell::new(None) };
-    }
-
-    pub(super) fn set(pos: Option<(f32, f32)>) {
-        LAST_POS.with(|cell| cell.set(pos));
-    }
-
-    pub(super) fn get() -> Option<(f32, f32)> {
-        LAST_POS.with(|cell| cell.get())
-    }
-
-    pub(super) fn pointer_offset(event: &web_sys::PointerEvent) -> (f32, f32) {
-        #[wasm_bindgen]
-        extern "C" {
-            type PointerEventExt;
-
-            #[wasm_bindgen(method, getter, js_name = offsetX)]
-            fn offset_x(this: &PointerEventExt) -> f64;
-
-            #[wasm_bindgen(method, getter, js_name = offsetY)]
-            fn offset_y(this: &PointerEventExt) -> f64;
-        }
-
-        let event: &PointerEventExt = event.unchecked_ref();
-        (event.offset_x() as f32, event.offset_y() as f32)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn install_web_cursor_listener(
-    window: &dyn winit::window::Window,
-    wake: impl Fn() + 'static,
-) -> Result<WebCursorListener, RunnerError> {
-    use wasm_bindgen::JsCast as _;
-
-    let Some(canvas) = window.canvas() else {
-        return Err(RunnerError::new("winit window has no canvas"));
-    };
-    let canvas: web_sys::HtmlCanvasElement = canvas.clone();
-
-    let wake = Rc::new(wake);
-    let wake_move = wake.clone();
-    let on_move =
-        wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PointerEvent| {
-            let (x, y) = web_cursor::pointer_offset(&event);
-            web_cursor::set(Some((x, y)));
-            wake_move();
-        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
-
-    let wake_leave = wake.clone();
-    let on_leave =
-        wasm_bindgen::closure::Closure::wrap(Box::new(move |_event: web_sys::PointerEvent| {
-            web_cursor::set(None);
-            wake_leave();
-        }) as Box<dyn FnMut(web_sys::PointerEvent)>);
-
-    canvas
-        .add_event_listener_with_callback("pointermove", on_move.as_ref().unchecked_ref())
-        .map_err(|_| RunnerError::new("failed to add pointermove listener"))?;
-
-    canvas
-        .add_event_listener_with_callback("pointerleave", on_leave.as_ref().unchecked_ref())
-        .map_err(|_| RunnerError::new("failed to add pointerleave listener"))?;
-
-    Ok(WebCursorListener {
-        canvas,
-        on_move,
-        on_leave,
-    })
 }
 
 #[derive(Debug, Default, Clone)]
@@ -385,8 +241,37 @@ fn distance_px(a: Point, b: Point) -> f32 {
 pub struct WinitWindowState {
     ime_allowed: bool,
     ime_cursor_area: Option<Rect>,
+    ime_cursor_area_dispatched_px: Option<ImeCursorAreaPx>,
+    last_prepared_scale_factor: Option<f64>,
     cursor_icon: CursorIcon,
     pending: WinitWindowPendingState,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct ImeCursorAreaPx {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+}
+
+fn normalize_scale_factor(scale_factor: f64) -> f64 {
+    if scale_factor.is_finite() && scale_factor > 0.0 {
+        scale_factor
+    } else {
+        1.0
+    }
+}
+
+fn quantize_ime_cursor_area_px(rect: Rect, scale_factor: f64) -> ImeCursorAreaPx {
+    let scale = normalize_scale_factor(scale_factor);
+
+    ImeCursorAreaPx {
+        x: (rect.origin.x.0 as f64 * scale).round() as i32,
+        y: (rect.origin.y.0 as f64 * scale).round() as i32,
+        width: (rect.size.width.0 as f64 * scale).round().max(1.0) as i32,
+        height: (rect.size.height.0 as f64 * scale).round().max(1.0) as i32,
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -397,6 +282,37 @@ struct WinitWindowPendingState {
 }
 
 impl WinitWindowState {
+    fn should_dispatch_ime_cursor_area(&mut self, rect: Rect, scale_factor: f64) -> bool {
+        let quantized = quantize_ime_cursor_area_px(rect, scale_factor);
+        if self.ime_cursor_area_dispatched_px == Some(quantized) {
+            return false;
+        }
+        self.ime_cursor_area_dispatched_px = Some(quantized);
+        true
+    }
+
+    fn reset_ime_cursor_area_dispatch(&mut self) {
+        self.ime_cursor_area_dispatched_px = None;
+    }
+
+    fn begin_prepare_frame(&mut self, scale_factor: f64) -> f64 {
+        let scale_factor = normalize_scale_factor(scale_factor);
+        let scale_changed = self.last_prepared_scale_factor != Some(scale_factor);
+        self.last_prepared_scale_factor = Some(scale_factor);
+
+        if scale_changed {
+            self.reset_ime_cursor_area_dispatch();
+            if self.ime_allowed
+                && self.pending.ime_cursor_area.is_none()
+                && let Some(rect) = self.ime_cursor_area
+            {
+                self.pending.ime_cursor_area = Some(rect);
+            }
+        }
+
+        scale_factor
+    }
+
     pub fn set_ime_allowed(&mut self, enabled: bool) -> bool {
         if self.ime_allowed == enabled {
             return false;
@@ -429,8 +345,13 @@ impl WinitWindowState {
     }
 
     pub fn prepare_frame(&mut self, window: &dyn Window) {
+        let scale_factor = self.begin_prepare_frame(window.scale_factor());
+
         let pending_cursor_area = self.pending.ime_cursor_area.take();
-        if let Some(rect) = pending_cursor_area {
+        if let Some(rect) = pending_cursor_area
+            && self.ime_allowed
+            && self.should_dispatch_ime_cursor_area(rect, scale_factor)
+        {
             #[cfg(windows)]
             {
                 windows_ime::set_ime_cursor_area(window, rect);
@@ -440,7 +361,11 @@ impl WinitWindowState {
             {
                 let request_data = winit::window::ImeRequestData::default().with_cursor_area(
                     winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                    winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                    winit::dpi::LogicalSize::new(
+                        rect.size.width.0.max(1.0),
+                        rect.size.height.0.max(1.0),
+                    )
+                    .into(),
                 );
                 let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
             }
@@ -455,15 +380,22 @@ impl WinitWindowState {
 
                 let request_data = winit::window::ImeRequestData::default().with_cursor_area(
                     winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                    winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                    winit::dpi::LogicalSize::new(
+                        rect.size.width.0.max(1.0),
+                        rect.size.height.0.max(1.0),
+                    )
+                    .into(),
                 );
 
                 let caps = winit::window::ImeCapabilities::new().with_cursor_area();
                 if let Some(enable) = winit::window::ImeEnableRequest::new(caps, request_data) {
                     let _ = window.request_ime_update(winit::window::ImeRequest::Enable(enable));
+                    self.ime_cursor_area_dispatched_px =
+                        Some(quantize_ime_cursor_area_px(rect, scale_factor));
                 }
             } else {
                 let _ = window.request_ime_update(winit::window::ImeRequest::Disable);
+                self.reset_ime_cursor_area_dispatch();
             }
         }
 
@@ -741,8 +673,8 @@ impl WinitInputState {
             WindowEvent::SurfaceResized(size) => {
                 let logical: LogicalSize<f32> = size.to_logical(window_scale_factor);
                 out.push(Event::WindowResized {
-                    width: Px(logical.width),
-                    height: Px(logical.height),
+                    width: Px(quantize_logical_px(logical.width)),
+                    height: Px(quantize_logical_px(logical.height)),
                 });
             }
             WindowEvent::ScaleFactorChanged {
@@ -756,8 +688,13 @@ impl WinitInputState {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn poll_web_cursor_updates(&mut self, window_scale_factor: f64, out: &mut Vec<Event>) {
-        let Some((x, y)) = web_cursor::get() else {
+    pub fn poll_web_cursor_updates(
+        &mut self,
+        window_scale_factor: f64,
+        offset_px: Option<(f32, f32)>,
+        out: &mut Vec<Event>,
+    ) {
+        let Some((x, y)) = offset_px else {
             self.cursor_pos_physical = None;
             return;
         };
@@ -818,6 +755,14 @@ pub struct WheelConfig {
     pub pixel_delta_scale: f32,
 }
 
+fn quantize_logical_px(value: f32) -> f32 {
+    if !value.is_finite() || value <= 0.0 {
+        return 0.0;
+    }
+    let quantum = 64.0f32;
+    (value * quantum).round() / quantum
+}
+
 impl Default for WheelConfig {
     fn default() -> Self {
         Self {
@@ -834,6 +779,8 @@ pub fn map_cursor_icon(icon: fret_core::CursorIcon) -> winit::cursor::CursorIcon
         fret_core::CursorIcon::Text => winit::cursor::CursorIcon::Text,
         fret_core::CursorIcon::ColResize => winit::cursor::CursorIcon::ColResize,
         fret_core::CursorIcon::RowResize => winit::cursor::CursorIcon::RowResize,
+        fret_core::CursorIcon::NwseResize => winit::cursor::CursorIcon::NwseResize,
+        fret_core::CursorIcon::NeswResize => winit::cursor::CursorIcon::NeswResize,
     }
 }
 
@@ -982,9 +929,6 @@ pub fn map_pointer_kind(kind: PointerKind) -> PointerType {
     }
 }
 
-#[cfg(test)]
-mod click_tracker_tests;
-
 pub fn set_mouse_buttons(buttons: &mut MouseButtons, button: WinitMouseButton, pressed: bool) {
     match button {
         WinitMouseButton::Left => buttons.left = pressed,
@@ -1024,6 +968,7 @@ pub fn map_physical_key(key: winit::keyboard::PhysicalKey) -> KeyCode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::Size;
 
     #[test]
     fn physical_key_code_roundtrips() {
@@ -1043,6 +988,101 @@ mod tests {
             )),
             KeyCode::Unidentified
         );
+    }
+
+    #[test]
+    fn ime_cursor_area_quantization_clamps_min_size() {
+        let rect = Rect {
+            origin: Point::new(Px(10.25), Px(20.25)),
+            size: Size::new(Px(0.0), Px(0.4)),
+        };
+        let quantized = quantize_ime_cursor_area_px(rect, 1.5);
+        assert_eq!(
+            quantized,
+            ImeCursorAreaPx {
+                x: 15,
+                y: 30,
+                width: 1,
+                height: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn ime_cursor_area_dispatch_is_deduplicated_by_quantized_px() {
+        let mut state = WinitWindowState::default();
+        let a = Rect {
+            origin: Point::new(Px(10.10), Px(20.10)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+        let b = Rect {
+            origin: Point::new(Px(10.20), Px(20.20)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+
+        assert!(state.should_dispatch_ime_cursor_area(a, 2.0));
+        assert!(!state.should_dispatch_ime_cursor_area(b, 2.0));
+
+        let c = Rect {
+            origin: Point::new(Px(10.80), Px(20.80)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+        assert!(state.should_dispatch_ime_cursor_area(c, 2.0));
+    }
+
+    #[test]
+    fn ime_cursor_area_dispatch_reset_allows_same_rect_again() {
+        let mut state = WinitWindowState::default();
+        let rect = Rect {
+            origin: Point::new(Px(3.0), Px(4.0)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+
+        assert!(state.should_dispatch_ime_cursor_area(rect, 1.0));
+        assert!(!state.should_dispatch_ime_cursor_area(rect, 1.0));
+        state.reset_ime_cursor_area_dispatch();
+        assert!(state.should_dispatch_ime_cursor_area(rect, 1.0));
+    }
+
+    #[test]
+    fn begin_prepare_frame_requeues_cursor_area_after_scale_change() {
+        let mut state = WinitWindowState::default();
+        let rect = Rect {
+            origin: Point::new(Px(3.0), Px(4.0)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+
+        assert!(state.set_ime_allowed(true));
+        assert!(state.set_ime_cursor_area(rect));
+
+        let first_scale = state.begin_prepare_frame(1.0);
+        assert_eq!(first_scale, 1.0);
+        state.pending.ime_cursor_area = None;
+        assert!(state.should_dispatch_ime_cursor_area(rect, first_scale));
+        assert!(!state.should_dispatch_ime_cursor_area(rect, first_scale));
+
+        let second_scale = state.begin_prepare_frame(1.25);
+        assert_eq!(second_scale, 1.25);
+        assert_eq!(state.pending.ime_cursor_area, Some(rect));
+        assert!(state.should_dispatch_ime_cursor_area(rect, second_scale));
+    }
+
+    #[test]
+    fn begin_prepare_frame_skips_requeue_when_ime_disabled() {
+        let mut state = WinitWindowState::default();
+        let rect = Rect {
+            origin: Point::new(Px(8.0), Px(9.0)),
+            size: Size::new(Px(1.0), Px(1.0)),
+        };
+
+        assert!(state.set_ime_cursor_area(rect));
+        state.pending.ime_cursor_area = None;
+
+        let _ = state.begin_prepare_frame(1.0);
+        assert_eq!(state.pending.ime_cursor_area, None);
+
+        let _ = state.begin_prepare_frame(1.5);
+        assert_eq!(state.pending.ime_cursor_area, None);
     }
 
     #[test]

@@ -1,0 +1,285 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "sorting_manual",
+  "data": [
+    {
+      "id": 1,
+      "value": 30,
+      "label": "c"
+    },
+    {
+      "id": 2,
+      "value": 10,
+      "label": "a"
+    },
+    {
+      "id": 3,
+      "value": 20,
+      "label": "b"
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "sorting_manual_true_returns_pre_sorted",
+      "options": {
+        "manualSorting": true,
+        "manualFiltering": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "value",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sorting_override_pre_sorted_without_get_sorted_row_model",
+      "options": {
+        "manualSorting": false,
+        "manualFiltering": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "__getSortedRowModel": "pre_sorted"
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "value",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sorting_enabled_uses_sorted_row_model",
+      "options": {
+        "manualSorting": false,
+        "manualFiltering": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "value",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2",
+            "3",
+            "1"
+          ],
+          "flat": [
+            "2",
+            "3",
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2",
+            "3",
+            "1"
+          ],
+          "flat": [
+            "2",
+            "3",
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2",
+            "3",
+            "1"
+          ],
+          "flat": [
+            "2",
+            "3",
+            "1"
+          ]
+        }
+      }
+    }
+  ]
+}

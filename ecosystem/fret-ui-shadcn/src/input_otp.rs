@@ -1,5 +1,5 @@
 use fret_core::{Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
-use fret_icons::IconId;
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -367,7 +367,7 @@ impl InputOtp {
                             move |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
-                                    IconId::new_static("lucide.minus"),
+                                    ids::ui::MINUS,
                                     Some(Px(24.0)),
                                     Some(ColorRef::Color(separator_color)),
                                 )]

@@ -520,7 +520,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - [x] focus trap/restore (modal) (currently validated via modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
       `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
-      `ecosystem/fret-ui-primitives/src/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
+      `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
   - [x] scrim press dismisses without activating the underlay (modal)
     - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (scrim pressable + dismiss handler),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dialog_scrim_dismisses_without_activating_underlay`).
@@ -737,5 +737,5 @@ These files are primarily *shared policy primitives*, not one-off component layo
 
 ## Proposed ADRs (drafts)
 
-- `docs/adr/1158-theme-value-kinds-and-themeconfig-v2.md`
-- `docs/adr/1159-material3-state-layer-and-ripple-primitives.md`
+- `docs/adr/1167-theme-value-kinds-and-themeconfig-v2.md`
+- `docs/adr/1165-material3-state-layer-and-ripple-primitives.md`

@@ -22,11 +22,13 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
-    FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind, PaginationBounds,
-    PaginationState, Row, RowKey, SortSpec, Table, TableState, begin_column_resize, column_size,
+    FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
+    PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, SortToggleColumn, Table,
+    TableOptions, TableState, TanStackValue, begin_column_resize, column_size,
     compute_grouped_u64_aggregations, drag_column_resize, end_column_resize, is_column_visible,
-    is_row_expanded, is_row_selected, order_column_refs_for_grouping, order_columns,
-    pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
+    is_row_expanded, is_row_selected, is_some_rows_pinned, order_column_refs_for_grouping,
+    order_columns, pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
+    toggle_sorting_state_handler_tanstack,
 };
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
@@ -147,7 +149,7 @@ pub struct TableViewProps {
     /// When `None`, the default heuristic is `overscan * 2`.
     ///
     /// Larger values reduce remount/layout churn when the window oscillates across boundaries
-    /// (e.g. scroll “bounce” patterns), at the cost of retaining more offscreen subtrees.
+    /// (e.g. scroll 閳ユ競ounce閳?patterns), at the cost of retaining more offscreen subtrees.
     pub keep_alive: Option<usize>,
     pub default_column_width: Px,
     pub min_column_width: Px,
@@ -188,6 +190,12 @@ pub struct TableViewProps {
     /// - This may be replaced by a formal style option (e.g. `TableGridLines`) or removed entirely
     ///   once a better default grid strategy exists.
     pub optimize_grid_lines: bool,
+    /// Grouped-mode row pinning display policy.
+    ///
+    /// TanStack-style grouped tables keep pinned leaf rows in their group subtrees and do not
+    /// promote them into dedicated top/bottom visual bands. `PreserveHierarchy` matches that
+    /// behavior and is the default.
+    pub grouped_row_pinning_policy: GroupedRowPinningPolicy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -197,6 +205,15 @@ pub enum TableRowMeasureMode {
     Fixed,
     /// Variable-height body rows (measurement + write-back).
     Measured,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GroupedRowPinningPolicy {
+    /// Keep pinned leaf rows inside their grouped hierarchy (TanStack-style default behavior).
+    #[default]
+    PreserveHierarchy,
+    /// Promote pinned rows into top/bottom bands and remove duplicates from the paged center rows.
+    PromotePinnedRows,
 }
 
 impl Default for TableViewProps {
@@ -220,6 +237,7 @@ impl Default for TableViewProps {
             draw_frame: true,
             optimize_paint_order: false,
             optimize_grid_lines: false,
+            grouped_row_pinning_policy: GroupedRowPinningPolicy::PreserveHierarchy,
         }
     }
 }
@@ -305,6 +323,110 @@ mod tests {
             table_collect_leaf_keys_in_range(&meta, 99, 100),
             vec![RowKey(3)]
         );
+    }
+
+    #[test]
+    fn apply_row_pinning_to_paged_rows_surfaces_pinned_outside_page_and_dedupes() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows = vec![visible_all[1].clone(), visible_all[2].clone()];
+
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_row_pinning_to_paged_rows(&visible_all, &page_rows, &row_pinning);
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(1), RowKey(2), RowKey(3)]);
+    }
+
+    #[test]
+    fn grouped_row_pinning_policy_preserve_hierarchy_keeps_page_rows_center_unchanged() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows_center = vec![visible_all[1].clone(), visible_all[2].clone()];
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_grouped_row_pinning_policy(
+            &visible_all,
+            &page_rows_center,
+            &row_pinning,
+            GroupedRowPinningPolicy::PreserveHierarchy,
+        );
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(2), RowKey(3)]);
+    }
+
+    #[test]
+    fn grouped_row_pinning_policy_promote_pinned_rows_matches_legacy_behavior() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows_center = vec![visible_all[1].clone(), visible_all[2].clone()];
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_grouped_row_pinning_policy(
+            &visible_all,
+            &page_rows_center,
+            &row_pinning,
+            GroupedRowPinningPolicy::PromotePinnedRows,
+        );
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(1), RowKey(2), RowKey(3)]);
     }
 
     #[derive(Default)]
@@ -587,6 +709,307 @@ mod tests {
             cell_bounds.size.width.0
         );
     }
+
+    #[test]
+    fn table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut initial = TableState::default();
+        initial.pagination.page_size = 8;
+        initial.column_pinning.left = vec!["a".into()];
+        initial.column_pinning.right = vec!["d".into()];
+        let state = app.models_mut().insert(initial);
+
+        let data: Arc<[u32]> = Arc::from((0u32..32).collect::<Vec<_>>());
+        let mut col_a = ColumnDef::new("a");
+        col_a.size = 120.0;
+        let mut col_b = ColumnDef::new("b");
+        col_b.size = 280.0;
+        let mut col_c = ColumnDef::new("c");
+        col_c.size = 240.0;
+        let mut col_d = ColumnDef::new("d");
+        col_d.size = 140.0;
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![col_a, col_b, col_c, col_d]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let mut props = TableViewProps::default();
+                props.overscan = 4;
+                props.enable_column_grouping = false;
+
+                let table = table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props,
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                            cx.text(format!("{}-{row}", col.id.as_ref()))
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-retained-colpin-header-")),
+                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                );
+
+                vec![cx.semantics(
+                    SemanticsProps {
+                        test_id: Some(Arc::<str>::from("table-retained-colpin-root")),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![table],
+                )]
+            })
+        };
+
+        let pump = |ui: &mut UiTree<App>,
+                    app: &mut App,
+                    services: &mut FakeServices,
+                    root: &mut fret_core::NodeId| {
+            for _ in 0..2 {
+                *root = render(ui, app, services);
+                ui.set_root(*root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+                let mut scene = fret_core::Scene::default();
+                ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            }
+        };
+
+        let find_bounds = |snap: &fret_core::SemanticsSnapshot, id: &str| {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("expected semantics node `{id}`"))
+        };
+
+        let assert_aligned = |snap: &fret_core::SemanticsSnapshot, col: &str| {
+            let header_id = format!("table-retained-colpin-header-{col}");
+            let row_id = format!("table-retained-colpin-row-0-cell-{col}");
+            let header = find_bounds(snap, &header_id);
+            let body = find_bounds(snap, &row_id);
+            let dx = (header.origin.x.0 - body.origin.x.0).abs();
+            let dw = (header.size.width.0 - body.size.width.0).abs();
+            assert!(
+                dx <= 1.0,
+                "expected header/body x alignment for `{col}` (dx={dx:.2})"
+            );
+            assert!(
+                dw <= 1.0,
+                "expected header/body width alignment for `{col}` (dw={dw:.2})"
+            );
+        };
+
+        let mut root = fret_core::NodeId::default();
+        pump(&mut ui, &mut app, &mut services, &mut root);
+
+        let mut snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial render");
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+
+        let _ = app.models_mut().update(&state, |st| {
+            st.column_pinning.left = vec!["a".into()];
+            st.column_pinning.right = vec!["d".into()];
+            st.column_sizing.insert("b".into(), 320.0);
+            st.column_sizing.insert("c".into(), 260.0);
+        });
+        pump(&mut ui, &mut app, &mut services, &mut root);
+        snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after resize update");
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+
+        let root_bounds = find_bounds(&snap, "table-retained-colpin-root");
+        let center_bounds = find_bounds(&snap, "table-retained-colpin-header-c");
+        let root_right = root_bounds.origin.x.0 + root_bounds.size.width.0;
+        let center_right = center_bounds.origin.x.0 + center_bounds.size.width.0;
+        assert!(
+            center_right > root_right + 1.0,
+            "expected center region overflow to exist (root_right={root_right:.2}, center_right={center_right:.2})"
+        );
+
+        let _ = app.models_mut().update(&state, |st| {
+            st.column_pinning.left = vec!["a".into()];
+            st.column_pinning.right = vec!["c".into(), "d".into()];
+        });
+        pump(&mut ui, &mut app, &mut services, &mut root);
+        snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after pin/unpin update");
+
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+    }
+
+    #[test]
+    fn table_virtualized_retained_colpin_alignment_gate_measured_rows_do_not_shrink_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut initial = TableState::default();
+        initial.pagination.page_size = 8;
+        initial.column_pinning.left = vec!["a".into()];
+        initial.column_pinning.right = vec!["d".into()];
+        let state = app.models_mut().insert(initial);
+
+        let data: Arc<[u32]> = Arc::from((0u32..32).collect::<Vec<_>>());
+        let mut col_a = ColumnDef::new("a");
+        col_a.size = 120.0;
+        let mut col_b = ColumnDef::new("b");
+        col_b.size = 280.0;
+        let mut col_c = ColumnDef::new("c");
+        col_c.size = 240.0;
+        let mut col_d = ColumnDef::new("d");
+        col_d.size = 140.0;
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![col_a, col_b, col_c, col_d]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let mut props = TableViewProps::default();
+                props.overscan = 4;
+                props.enable_column_grouping = false;
+                props.row_height = Some(Px(28.0));
+                props.row_measure_mode = TableRowMeasureMode::Measured;
+
+                let table = table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props,
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                            if *row == 0 && col.id.as_ref() == "b" {
+                                stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N0),
+                                    |cx| vec![cx.text("b-0"), cx.text("extra line")],
+                                )
+                            } else {
+                                cx.text(format!("{}-{row}", col.id.as_ref()))
+                            }
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-retained-colpin-header-")),
+                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                );
+
+                vec![cx.semantics(
+                    SemanticsProps {
+                        test_id: Some(Arc::<str>::from("table-retained-colpin-root")),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![table],
+                )]
+            })
+        };
+
+        let pump = |ui: &mut UiTree<App>,
+                    app: &mut App,
+                    services: &mut FakeServices,
+                    root: &mut fret_core::NodeId| {
+            for _ in 0..2 {
+                *root = render(ui, app, services);
+                ui.set_root(*root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+                let mut scene = fret_core::Scene::default();
+                ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            }
+        };
+
+        let find_bounds = |snap: &fret_core::SemanticsSnapshot, id: &str| {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("expected semantics node `{id}`"))
+        };
+
+        let assert_aligned = |snap: &fret_core::SemanticsSnapshot, col: &str| {
+            let header_id = format!("table-retained-colpin-header-{col}");
+            let row_id = format!("table-retained-colpin-row-0-cell-{col}");
+            let header = find_bounds(snap, &header_id);
+            let body = find_bounds(snap, &row_id);
+            let dx = (header.origin.x.0 - body.origin.x.0).abs();
+            let dw = (header.size.width.0 - body.size.width.0).abs();
+            assert!(
+                dx <= 1.0,
+                "expected header/body x alignment for `{col}` (dx={dx:.2})"
+            );
+            assert!(
+                dw <= 1.0,
+                "expected header/body width alignment for `{col}` (dw={dw:.2})"
+            );
+        };
+
+        let mut root = fret_core::NodeId::default();
+        pump(&mut ui, &mut app, &mut services, &mut root);
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial render");
+
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -614,6 +1037,64 @@ impl DisplayRow {
     }
 }
 
+fn apply_row_pinning_to_paged_rows(
+    visible_all: &[DisplayRow],
+    page_rows: &[DisplayRow],
+    row_pinning: &crate::headless::table::RowPinningState,
+) -> Vec<DisplayRow> {
+    if row_pinning.top.is_empty() && row_pinning.bottom.is_empty() {
+        return page_rows.to_vec();
+    }
+
+    let mut pinned: std::collections::HashSet<RowKey> = Default::default();
+    pinned.extend(row_pinning.top.iter().copied());
+    pinned.extend(row_pinning.bottom.iter().copied());
+
+    let mut by_key: std::collections::HashMap<RowKey, DisplayRow> =
+        std::collections::HashMap::new();
+    for row in visible_all {
+        by_key.entry(row.row_key()).or_insert_with(|| row.clone());
+    }
+
+    let mut out: Vec<DisplayRow> =
+        Vec::with_capacity(row_pinning.top.len() + page_rows.len() + row_pinning.bottom.len());
+
+    for row_key in &row_pinning.top {
+        if let Some(row) = by_key.get(row_key) {
+            out.push(row.clone());
+        }
+    }
+
+    out.extend(
+        page_rows
+            .iter()
+            .filter(|row| !pinned.contains(&row.row_key()))
+            .cloned(),
+    );
+
+    for row_key in &row_pinning.bottom {
+        if let Some(row) = by_key.get(row_key) {
+            out.push(row.clone());
+        }
+    }
+
+    out
+}
+
+fn apply_grouped_row_pinning_policy(
+    visible_all: &[DisplayRow],
+    page_rows_center: &[DisplayRow],
+    row_pinning: &crate::headless::table::RowPinningState,
+    policy: GroupedRowPinningPolicy,
+) -> Vec<DisplayRow> {
+    match policy {
+        GroupedRowPinningPolicy::PreserveHierarchy => page_rows_center.to_vec(),
+        GroupedRowPinningPolicy::PromotePinnedRows => {
+            apply_row_pinning_to_paged_rows(visible_all, page_rows_center, row_pinning)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct GroupedBaseDeps {
     items_revision: u64,
@@ -629,6 +1110,8 @@ struct GroupedDisplayDeps {
     base: GroupedBaseDeps,
     sorting: crate::headless::table::SortingState,
     expanding: ExpandingState,
+    row_pinning: crate::headless::table::RowPinningState,
+    grouped_row_pinning_policy: GroupedRowPinningPolicy,
     page_index: usize,
     page_size: usize,
 }
@@ -640,6 +1123,7 @@ struct GroupedDisplayCache {
     row_index_by_key: std::collections::HashMap<RowKey, usize>,
     group_labels: std::collections::HashMap<RowKey, Arc<str>>,
     group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+    group_aggs_any: std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
     group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
 
     deps: Option<GroupedDisplayDeps>,
@@ -910,12 +1394,48 @@ where
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
 
-    let sorting = cx
-        .watch_model(&state)
-        .layout()
-        .read_ref(|s| s.sorting.clone())
-        .ok()
-        .unwrap_or_default();
+    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+    let sorting = state_value.sorting.clone();
+
+    let ordered_columns = order_columns(columns.as_ref(), &state_value.column_order);
+    let visible_columns: Arc<[ColumnDef<TData>]> = Arc::from(
+        ordered_columns
+            .into_iter()
+            .filter(|col| is_column_visible(&state_value.column_visibility, &col.id))
+            .cloned()
+            .collect::<Vec<_>>(),
+    );
+
+    let col_widths: Arc<[Px]> = Arc::from(
+        visible_columns
+            .iter()
+            .map(|col| resolve_column_width(col, &state_value, &props))
+            .collect::<Vec<_>>(),
+    );
+
+    let mut visible_column_index_by_id: std::collections::HashMap<ColumnId, usize> =
+        std::collections::HashMap::new();
+    for (idx, col) in visible_columns.iter().enumerate() {
+        visible_column_index_by_id.insert(col.id.clone(), idx);
+    }
+
+    let visible_refs: Vec<&ColumnDef<TData>> = visible_columns.iter().collect();
+    let (left_cols, center_cols, right_cols) =
+        split_pinned_columns(visible_refs.as_slice(), &state_value.column_pinning);
+
+    let to_indices = |cols: Vec<&ColumnDef<TData>>| -> Arc<[usize]> {
+        Arc::from(
+            cols.into_iter()
+                .filter_map(|col| visible_column_index_by_id.get(&col.id).copied())
+                .collect::<Vec<_>>(),
+        )
+    };
+
+    let left_col_indices = to_indices(left_cols);
+    let center_col_indices = to_indices(center_cols);
+    let right_col_indices = to_indices(right_cols);
+
+    let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 
     let entries = cx.with_state(RetainedTableRowsState::default, |st| {
         if st.last_items_revision != Some(items_revision) {
@@ -978,9 +1498,15 @@ where
 
     let header = {
         let state = state.clone();
-        let columns = columns.clone();
         let header_label = Arc::clone(&header_label);
         let debug_header_cell_test_id_prefix = debug_header_cell_test_id_prefix.clone();
+        let visible_columns = visible_columns.clone();
+        let col_widths = col_widths.clone();
+        let left_col_indices = left_col_indices.clone();
+        let center_col_indices = center_col_indices.clone();
+        let right_col_indices = right_col_indices.clone();
+        let scroll_x = scroll_x.clone();
+        let sorting = sorting.clone();
 
         cx.container(
             ContainerProps {
@@ -995,59 +1521,183 @@ where
                     top_right: radius,
                     ..Default::default()
                 },
-                padding: Edges::symmetric(cell_px, cell_py),
+                layout: LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(row_h),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             move |cx| {
+                let render_header_group =
+                    |cx: &mut ElementContext<'_, H>,
+                     col_indices: Arc<[usize]>,
+                     scroll_x_for_group: Option<ScrollHandle>| {
+                        let visible_columns = visible_columns.clone();
+                        let col_widths = col_widths.clone();
+                        let header_label = header_label.clone();
+                        let debug_header_cell_test_id_prefix =
+                            debug_header_cell_test_id_prefix.clone();
+                        let sorting = sorting.clone();
+                        let state = state.clone();
+
+                        let row = stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .gap_x(Space::N0)
+                                .justify(Justify::Start)
+                                .items(Items::Center),
+                            move |cx| {
+                                col_indices
+                                    .iter()
+                                    .map(|col_idx| {
+                                        let col = &visible_columns[*col_idx];
+                                        let col_w = col_widths[*col_idx];
+                                        let label = (header_label)(col);
+                                        let sort_state = sort_for_column(&sorting, &col.id);
+                                        let col_id = col.id.clone();
+                                        let state = state.clone();
+                                        let debug_test_id: Option<Arc<str>> =
+                                            debug_header_cell_test_id_prefix.as_ref().map(
+                                                |prefix| {
+                                                    Arc::<str>::from(format!(
+                                                        "{prefix}{id}",
+                                                        id = col_id.as_ref()
+                                                    ))
+                                                },
+                                            );
+
+                                        cx.container(
+                                            ContainerProps {
+                                                border: Edges {
+                                                    right: Px(1.0),
+                                                    ..Default::default()
+                                                },
+                                                border_color: Some(border),
+                                                layout: LayoutStyle {
+                                                    size: fret_ui::element::SizeStyle {
+                                                        width: Length::Px(col_w),
+                                                        min_width: Some(col_w),
+                                                        max_width: Some(col_w),
+                                                        height: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    flex: fret_ui::element::FlexItemStyle {
+                                                        shrink: 0.0,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![cx.pressable(
+                                                    PressableProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width = Length::Fill;
+                                                            layout.size.height = Length::Fill;
+                                                            layout
+                                                        },
+                                                        enabled: true,
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::Button),
+                                                            label: Some(label.clone()),
+                                                            test_id: debug_test_id.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    move |cx, _st| {
+                                                        cx.pressable_update_model(
+                                                            &state,
+                                                            move |st| {
+                                                                apply_single_sort_toggle(
+                                                                    st, &col_id,
+                                                                );
+                                                                st.pagination.page_index = 0;
+                                                            },
+                                                        );
+
+                                                        let indicator: Arc<str> = match sort_state {
+                                                            None => Arc::from(""),
+                                                            Some(false) => Arc::from(" ▲"),
+                                                            Some(true) => Arc::from(" ▼"),
+                                                        };
+
+                                                        vec![cx.container(
+                                                            ContainerProps {
+                                                                padding: Edges::symmetric(
+                                                                    cell_px, cell_py,
+                                                                ),
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width =
+                                                                        Length::Fill;
+                                                                    layout.size.height =
+                                                                        Length::Fill;
+                                                                    layout
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |_cx| {
+                                                                vec![_cx.text(format!(
+                                                                    "{}{}",
+                                                                    label, indicator
+                                                                ))]
+                                                            },
+                                                        )]
+                                                    },
+                                                )]
+                                            },
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            },
+                        );
+
+                        if let Some(scroll_x_for_group) = scroll_x_for_group {
+                            cx.scroll(
+                                ScrollProps {
+                                    axis: ScrollAxis::X,
+                                    scroll_handle: Some(scroll_x_for_group),
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Fill;
+                                        layout.flex.grow = 1.0;
+                                        layout.flex.shrink = 1.0;
+                                        layout.flex.basis = Length::Px(Px(0.0));
+                                        layout
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![row],
+                            )
+                        } else {
+                            row
+                        }
+                    };
+
                 vec![stack::hstack(
                     cx,
                     stack::HStackProps::default()
-                        .gap_x(Space::N2)
+                        .gap_x(Space::N0)
                         .justify(Justify::Start)
-                        .items(Items::Center),
-                    move |cx| {
-                        columns
-                            .iter()
-                            .map(|col| {
-                                let label = (header_label)(col);
-                                let sort_state = sort_for_column(&sorting, &col.id);
-                                let col_id = col.id.clone();
-                                let state = state.clone();
-                                let debug_test_id: Option<Arc<str>> =
-                                    debug_header_cell_test_id_prefix.as_ref().map(|prefix| {
-                                        Arc::<str>::from(format!(
-                                            "{prefix}{id}",
-                                            id = col_id.as_ref()
-                                        ))
-                                    });
-
-                                cx.pressable(
-                                    PressableProps {
-                                        enabled: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(label.clone()),
-                                            test_id: debug_test_id.clone(),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    move |cx, _st| {
-                                        cx.pressable_update_model(&state, move |st| {
-                                            apply_single_sort_toggle(st, &col_id);
-                                            st.pagination.page_index = 0;
-                                        });
-
-                                        let indicator: Arc<str> = match sort_state {
-                                            None => Arc::from(""),
-                                            Some(false) => Arc::from(" ▲"),
-                                            Some(true) => Arc::from(" ▼"),
-                                        };
-                                        vec![cx.text(format!("{}{}", label, indicator))]
-                                    },
-                                )
-                            })
-                            .collect::<Vec<_>>()
+                        .items(Items::Stretch),
+                    |cx| {
+                        let left = render_header_group(cx, left_col_indices.clone(), None);
+                        let center = render_header_group(
+                            cx,
+                            center_col_indices.clone(),
+                            Some(scroll_x.clone()),
+                        );
+                        let right = render_header_group(cx, right_col_indices.clone(), None);
+                        vec![left, center, right]
                     },
                 )]
             },
@@ -1135,9 +1785,14 @@ where
         let state = state.clone();
         let entries = entries.clone();
         let data = data.clone();
-        let columns = columns.clone();
+        let visible_columns = visible_columns.clone();
+        let col_widths = col_widths.clone();
         let cell_at = Arc::clone(&cell_at);
         let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
+        let left_col_indices = left_col_indices.clone();
+        let center_col_indices = center_col_indices.clone();
+        let right_col_indices = right_col_indices.clone();
+        let scroll_x = scroll_x.clone();
 
         move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
             Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
@@ -1158,10 +1813,16 @@ where
 
                 let state_model = state.clone();
                 let data_for_row = Arc::clone(&data);
-                let columns_for_row = Arc::clone(&columns);
+                let columns_for_row = Arc::clone(&visible_columns);
+                let col_widths_for_row = col_widths.clone();
                 let cell_at_for_row = Arc::clone(&cell_at);
                 let key_handler_for_row = key_handler.clone();
                 let focus_target_for_row = focus_target;
+                let row_cell_test_id_prefix = debug_row_test_id_prefix.clone();
+                let left_col_indices_for_row = left_col_indices.clone();
+                let center_col_indices_for_row = center_col_indices.clone();
+                let right_col_indices_for_row = right_col_indices.clone();
+                let scroll_x_for_row = scroll_x.clone();
 
                 cx.pressable(
                     PressableProps {
@@ -1185,7 +1846,6 @@ where
                             },
                         ));
 
-                        // Mirror list keyboard behavior when focus is inside a row (e.g. programmatic focus).
                         cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
                         let state = state_model.clone();
                         cx.pressable_update_model(&state, move |st| {
@@ -1205,25 +1865,146 @@ where
                         };
 
                         let original = &data_for_row[data_index];
-                        let cells = columns_for_row
-                            .iter()
-                            .map(|col| (cell_at_for_row)(cx, col, original))
-                            .collect::<Vec<_>>();
 
                         vec![cx.container(
                             ContainerProps {
                                 background: bg,
-                                padding: Edges::symmetric(cell_px, cell_py),
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    flex: fret_ui::element::FlexItemStyle {
+                                        grow: 1.0,
+                                        shrink: 1.0,
+                                        basis: Length::Px(Px(0.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             move |cx| {
                                 vec![stack::hstack(
                                     cx,
                                     stack::HStackProps::default()
-                                        .gap_x(Space::N2)
+                                        .gap_x(Space::N0)
                                         .justify(Justify::Start)
-                                        .items(Items::Center),
-                                    move |_cx| cells,
+                                        .items(Items::Stretch),
+                                    move |cx| {
+                                        let render_row_group =
+                                            |cx: &mut ElementContext<'_, H>,
+                                             col_indices: &[usize],
+                                             scroll_x_for_group: Option<ScrollHandle>| {
+                                                let row = stack::hstack(
+                                                    cx,
+                                                    stack::HStackProps::default()
+                                                        .gap_x(Space::N0)
+                                                        .justify(Justify::Start)
+                                                        .items(Items::Center),
+                                                    |cx| {
+                                                        col_indices
+                                                            .iter()
+                                                            .map(|col_idx| {
+                                                                let col = &columns_for_row[*col_idx];
+                                                                let col_w = col_widths_for_row[*col_idx];
+                                                                let cell =
+                                                                    (cell_at_for_row)(cx, col, original);
+
+                                                                let cell_test_id = row_cell_test_id_prefix
+                                                                    .as_ref()
+                                                                    .map(|prefix| {
+                                                                        Arc::<str>::from(format!(
+                                                                            "{prefix}{row}-cell-{col}",
+                                                                            row = row_key.0,
+                                                                            col = col.id.as_ref()
+                                                                        ))
+                                                                    });
+
+                                                                let cell = cx.container(
+                                                                    ContainerProps {
+                                                                        border: Edges {
+                                                                            right: Px(1.0),
+                                                                            ..Default::default()
+                                                                        },
+                                                                        border_color: Some(border),
+                                                                        padding: Edges::symmetric(
+                                                                            cell_px, cell_py,
+                                                                        ),
+                                                                        layout: LayoutStyle {
+                                                                            size: fret_ui::element::SizeStyle {
+                                                                                width: Length::Px(col_w),
+                                                                                min_width: Some(col_w),
+                                                                                max_width: Some(col_w),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                shrink: 0.0,
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    move |_cx| vec![cell],
+                                                                );
+
+                                                                if let Some(test_id) = cell_test_id {
+                                                                    cx.semantics(
+                                                                        SemanticsProps {
+                                                                            test_id: Some(test_id),
+                                                                            ..Default::default()
+                                                                        },
+                                                                        move |_cx| vec![cell],
+                                                                    )
+                                                                } else {
+                                                                    cell
+                                                                }
+                                                            })
+                                                            .collect::<Vec<_>>()
+                                                    },
+                                                );
+
+                                                if let Some(scroll_x_for_group) = scroll_x_for_group {
+                                                    cx.scroll(
+                                                        ScrollProps {
+                                                            axis: ScrollAxis::X,
+                                                            scroll_handle: Some(scroll_x_for_group),
+                                                            layout: {
+                                                                let mut layout = LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height = Length::Fill;
+                                                                layout.flex.grow = 1.0;
+                                                                layout.flex.shrink = 1.0;
+                                                                layout.flex.basis = Length::Px(Px(0.0));
+                                                                layout
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        |_| vec![row],
+                                                    )
+                                                } else {
+                                                    row
+                                                }
+                                            };
+
+                                        let left = render_row_group(
+                                            cx,
+                                            left_col_indices_for_row.as_ref(),
+                                            None,
+                                        );
+                                        let center = render_row_group(
+                                            cx,
+                                            center_col_indices_for_row.as_ref(),
+                                            Some(scroll_x_for_row.clone()),
+                                        );
+                                        let right = render_row_group(
+                                            cx,
+                                            right_col_indices_for_row.as_ref(),
+                                            None,
+                                        );
+                                        vec![left, center, right]
+                                    },
                                 )]
                             },
                         )]
@@ -1546,66 +2327,136 @@ where
         Vec::new()
     };
 
-    let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
-        let deps = FlatRowOrderDeps {
-            items_revision,
-            data_len: data.len(),
-            sorting: sorting_key.clone(),
-            column_filters: state_value.column_filters.clone(),
-            global_filter: state_value.global_filter.clone(),
-        };
+    let has_row_pinning =
+        grouping.is_empty() && is_some_rows_pinned(&state_value.row_pinning, None);
+    let row_order = if grouping.is_empty() && !has_row_pinning {
+        Some(cx.with_state(FlatRowOrderCache::default, |cache| {
+            let deps = FlatRowOrderDeps {
+                items_revision,
+                data_len: data.len(),
+                sorting: sorting_key.clone(),
+                column_filters: state_value.column_filters.clone(),
+                global_filter: state_value.global_filter.clone(),
+            };
 
-        let started = Instant::now();
-        let (order, recomputed) = cache.row_order(data, &columns, deps);
-        let elapsed = started.elapsed();
+            let started = Instant::now();
+            let (order, recomputed) = cache.row_order(data, &columns, deps);
+            let elapsed = started.elapsed();
 
-        if profile && recomputed {
-            tracing::info!(
-                "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
-                data.len(),
-                sorting_key.len(),
-                elapsed.as_secs_f64() * 1000.0
-            );
-        }
+            if profile && recomputed {
+                tracing::info!(
+                    "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
+                    data.len(),
+                    sorting_key.len(),
+                    elapsed.as_secs_f64() * 1000.0
+                );
+            }
 
-        order.clone()
-    });
+            order.clone()
+        }))
+    } else {
+        None
+    };
 
     let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
-        let total_rows = row_order.len();
-        let bounds = pagination_bounds(total_rows, state_value.pagination);
-        if bounds.page_index != state_value.pagination.page_index {
-            let _ = cx.app.models_mut().update(&state, |st| {
-                st.pagination.page_index = bounds.page_index;
-            });
-        }
-        if let Some(out) = output.clone() {
-            let next = TableViewOutput {
-                filtered_row_count: total_rows,
-                pagination: bounds,
-            };
-            let _ = cx.app.models_mut().update(&out, |v| {
-                if *v != next {
-                    *v = next;
-                }
-            });
-        }
+        if has_row_pinning {
+            let table_pre = Table::builder(data)
+                .columns(columns.to_vec())
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .get_row_key(|row, idx, _parent| row_key_at(row, idx))
+                .state(state_value.clone())
+                .options(TableOptions::default())
+                .build();
 
-        let page_rows: &[usize] = if bounds.page_count == 0 {
-            &[]
+            let total_rows = table_pre.pre_pagination_row_model().root_rows().len();
+            let bounds = pagination_bounds(total_rows, state_value.pagination);
+            if bounds.page_index != state_value.pagination.page_index {
+                let _ = cx.app.models_mut().update(&state, |st| {
+                    st.pagination.page_index = bounds.page_index;
+                });
+            }
+            if let Some(out) = output.clone() {
+                let next = TableViewOutput {
+                    filtered_row_count: total_rows,
+                    pagination: bounds,
+                };
+                let _ = cx.app.models_mut().update(&out, |v| {
+                    if *v != next {
+                        *v = next;
+                    }
+                });
+            }
+
+            let mut render_state = state_value.clone();
+            render_state.pagination.page_index = bounds.page_index;
+            let table = Table::builder(data)
+                .columns(columns.to_vec())
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .get_row_key(|row, idx, _parent| row_key_at(row, idx))
+                .state(render_state)
+                .options(TableOptions::default())
+                .build();
+
+            let core = table.core_row_model();
+            table
+                .top_row_keys()
+                .into_iter()
+                .chain(table.center_row_keys())
+                .chain(table.bottom_row_keys())
+                .filter_map(|row_key| {
+                    let row_index = core.row_by_key(row_key)?;
+                    let row = core.row(row_index)?;
+                    if row.parent.is_some() {
+                        return None;
+                    }
+                    let data_index = row.index;
+                    if data_index >= data.len() {
+                        return None;
+                    }
+                    Some(DisplayRow::Leaf {
+                        data_index,
+                        row_key,
+                        depth: row.depth as usize,
+                    })
+                })
+                .collect()
         } else {
-            row_order
-                .get(bounds.page_start..bounds.page_end)
-                .unwrap_or_default()
-        };
-        page_rows
-            .iter()
-            .map(|&data_index| DisplayRow::Leaf {
-                data_index,
-                row_key: row_key_at(&data[data_index], data_index),
-                depth: 0,
-            })
-            .collect()
+            let row_order = row_order.expect("row_order");
+            let total_rows = row_order.len();
+            let bounds = pagination_bounds(total_rows, state_value.pagination);
+            if bounds.page_index != state_value.pagination.page_index {
+                let _ = cx.app.models_mut().update(&state, |st| {
+                    st.pagination.page_index = bounds.page_index;
+                });
+            }
+            if let Some(out) = output.clone() {
+                let next = TableViewOutput {
+                    filtered_row_count: total_rows,
+                    pagination: bounds,
+                };
+                let _ = cx.app.models_mut().update(&out, |v| {
+                    if *v != next {
+                        *v = next;
+                    }
+                });
+            }
+
+            let page_rows: &[usize] = if bounds.page_count == 0 {
+                &[]
+            } else {
+                row_order
+                    .get(bounds.page_start..bounds.page_end)
+                    .unwrap_or_default()
+            };
+            page_rows
+                .iter()
+                .map(|&data_index| DisplayRow::Leaf {
+                    data_index,
+                    row_key: row_key_at(&data[data_index], data_index),
+                    depth: 0,
+                })
+                .collect()
+        }
     } else {
         let deps = GroupedDisplayDeps {
             base: GroupedBaseDeps {
@@ -1618,6 +2469,8 @@ where
             },
             sorting: state_value.sorting.clone(),
             expanding: state_value.expanding.clone(),
+            row_pinning: state_value.row_pinning.clone(),
+            grouped_row_pinning_policy: props.grouped_row_pinning_policy,
             page_index: state_value.pagination.page_index,
             page_size: state_value.pagination.page_size,
         };
@@ -1637,6 +2490,7 @@ where
                 let group_labels = &cache.group_labels;
                 let group_aggs_text = &cache.group_aggs_text;
                 let group_aggs_u64 = &cache.group_aggs_u64;
+                let group_aggs_any = &cache.group_aggs_any;
 
                 let mut visible: Vec<DisplayRow> = Vec::new();
                 let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
@@ -1649,6 +2503,7 @@ where
                     data,
                     row_index_by_key,
                     group_aggs_u64,
+                    group_aggs_any,
                 );
 
                 for root in roots {
@@ -1659,6 +2514,7 @@ where
                         group_labels,
                         group_aggs_text,
                         group_aggs_u64,
+                        group_aggs_any,
                         deps.sorting.as_slice(),
                         columns,
                         data,
@@ -1680,7 +2536,7 @@ where
                     pagination: bounds,
                 };
 
-                let page_rows: Vec<DisplayRow> = if bounds.page_count == 0 {
+                let page_rows_center: Vec<DisplayRow> = if bounds.page_count == 0 {
                     Vec::new()
                 } else {
                     visible
@@ -1688,6 +2544,13 @@ where
                         .unwrap_or_default()
                         .to_vec()
                 };
+
+                let page_rows = apply_grouped_row_pinning_policy(
+                    &visible,
+                    &page_rows_center,
+                    &deps.row_pinning,
+                    deps.grouped_row_pinning_policy,
+                );
 
                 cache.deps = Some(deps.clone());
                 cache.page_rows = page_rows.clone();
@@ -1738,25 +2601,34 @@ where
             ) -> (
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
             ) {
                 if agg_columns.is_empty() {
-                    return (Default::default(), Default::default());
+                    return (Default::default(), Default::default(), Default::default());
                 }
                 let out_u64 =
                     compute_grouped_u64_aggregations(model, data, row_index_by_key, agg_columns);
 
                 let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
                     Default::default();
+                let mut out_any: std::collections::HashMap<
+                    RowKey,
+                    Arc<[(ColumnId, TanStackValue)]>,
+                > = Default::default();
                 for (&row_key, entries) in &out_u64 {
                     let mut text_values: Vec<(ColumnId, Arc<str>)> =
                         Vec::with_capacity(entries.len());
+                    let mut any_values: Vec<(ColumnId, TanStackValue)> =
+                        Vec::with_capacity(entries.len());
                     for (col_id, v) in entries.iter() {
                         text_values.push((col_id.clone(), Arc::from(v.to_string())));
+                        any_values.push((col_id.clone(), TanStackValue::Number(*v as f64)));
                     }
                     out_text.insert(row_key, Arc::from(text_values.into_boxed_slice()));
+                    out_any.insert(row_key, Arc::from(any_values.into_boxed_slice()));
                 }
 
-                (out_u64, out_text)
+                (out_u64, out_text, out_any)
             }
 
             fn group_label_for_key<TData>(
@@ -1793,6 +2665,10 @@ where
                 group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
                 group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
                 group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                group_aggs_any: &std::collections::HashMap<
+                    RowKey,
+                    Arc<[(ColumnId, TanStackValue)]>,
+                >,
                 sorting: &[SortSpec],
                 columns: &[ColumnDef<TData>],
                 data: &[TData],
@@ -1839,6 +2715,7 @@ where
                                     data,
                                     row_index_by_key,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                 );
                                 children = Some(owned);
                             }
@@ -1859,6 +2736,7 @@ where
                                     group_labels,
                                     group_aggs_text,
                                     group_aggs_u64,
+                                    group_aggs_any,
                                     sorting,
                                     columns,
                                     data,
@@ -1881,8 +2759,9 @@ where
                 }
             }
 
-            let (group_aggs_u64, group_aggs_text) =
+            let (group_aggs_u64, group_aggs_text, group_aggs_any) =
                 compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
+            let group_aggs_any = table.grouped_aggregations_any().clone();
 
             let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
             for &node in grouped.flat_rows() {
@@ -1908,6 +2787,7 @@ where
                 data,
                 &row_index_by_key,
                 &group_aggs_u64,
+                &group_aggs_any,
             );
 
             for root in roots {
@@ -1918,6 +2798,7 @@ where
                     &group_labels,
                     &group_aggs_text,
                     &group_aggs_u64,
+                    &group_aggs_any,
                     deps.sorting.as_slice(),
                     columns,
                     data,
@@ -1934,7 +2815,7 @@ where
                 pagination: bounds,
             };
 
-            let page_rows: Vec<DisplayRow> = if bounds.page_count == 0 {
+            let page_rows_center: Vec<DisplayRow> = if bounds.page_count == 0 {
                 Vec::new()
             } else {
                 visible
@@ -1943,11 +2824,19 @@ where
                     .to_vec()
             };
 
+            let page_rows = apply_grouped_row_pinning_policy(
+                &visible,
+                &page_rows_center,
+                &deps.row_pinning,
+                deps.grouped_row_pinning_policy,
+            );
+
             cache.base_deps = Some(deps.base.clone());
             cache.grouped = grouped;
             cache.row_index_by_key = row_index_by_key;
             cache.group_labels = group_labels;
             cache.group_aggs_u64 = group_aggs_u64;
+            cache.group_aggs_any = group_aggs_any;
             cache.group_aggs_text = group_aggs_text;
             cache.deps = Some(deps.clone());
             cache.page_rows = page_rows.clone();
@@ -2552,10 +3441,46 @@ where
                                                                                 let mut pieces = Vec::new();
 
                                                                                 let enabled = props.enable_sorting
-                                                                                    && col.sort_cmp.is_some();
+                                                                                    && col.enable_sorting
+                                                                                    && (col.sort_cmp.is_some()
+                                                                                        || col.sort_value.is_some());
                                                                                 let col_id = col.id.clone();
                                                                                 let state_model =
                                                                                     state.clone();
+                                                                                let sort_options =
+                                                                                    TableOptions {
+                                                                                        enable_sorting: props
+                                                                                            .enable_sorting,
+                                                                                        ..TableOptions::default()
+                                                                                    };
+                                                                                let sort_toggle_column =
+                                                                                    SortToggleColumn {
+                                                                                        id: col_id.clone(),
+                                                                                        enable_sorting: col
+                                                                                            .enable_sorting,
+                                                                                        enable_multi_sort: col
+                                                                                            .enable_multi_sort,
+                                                                                        sort_desc_first: col
+                                                                                            .sort_desc_first,
+                                                                                        has_sort_value_source: col
+                                                                                            .sort_cmp
+                                                                                            .is_some()
+                                                                                            || col.sort_value.is_some(),
+                                                                                    };
+                                                                                let auto_sort_dir_desc = col
+                                                                                    .sort_value
+                                                                                    .as_ref()
+                                                                                    .and_then(|f| {
+                                                                                        data.first()
+                                                                                            .map(|r| f(r))
+                                                                                    })
+                                                                                    .map(|v| {
+                                                                                        !matches!(
+                                                                                            v,
+                                                                                            TanStackValue::String(_)
+                                                                                        )
+                                                                                    })
+                                                                                    .unwrap_or(false);
 
                                                                                 pieces.push(cx.pressable(
                                                                                     PressableProps {
@@ -2573,19 +3498,23 @@ where
                                                                                             role: Some(
                                                                                                 SemanticsRole::Button,
                                                                                             ),
-                                                                                            ..Default::default()
-                                                                                        },
                                                                                         ..Default::default()
                                                                                     },
+                                                                                    ..Default::default()
+                                                                                },
                                                                                     |cx, _| {
                                                                                         if enabled {
                                                                                             cx.pressable_update_model(
                                                                                                 &state_model,
                                                                                                 move |st| {
-                                                                                                    apply_single_sort_toggle(
-                                                                                                        st,
-                                                                                                        &col_id,
+                                                                                                    toggle_sorting_state_handler_tanstack(
+                                                                                                        &mut st.sorting,
+                                                                                                        &sort_toggle_column,
+                                                                                                        sort_options,
+                                                                                                        false,
+                                                                                                        auto_sort_dir_desc,
                                                                                                     );
+                                                                                                    st.pagination.page_index = 0;
                                                                                                 },
                                                                                             );
                                                                                         }
@@ -3521,6 +4450,7 @@ where
                                                 };
 
                                             let data_row = Row {
+                                                id: RowId::new(row_key.0.to_string()),
                                                 key: row_key,
                                                 original: &data[data_index],
                                                 index: data_index,
@@ -3627,6 +4557,7 @@ where
                                                                 },
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
+                                                                        width: Length::Fill,
                                                                         height: body_row_height,
                                                                         ..Default::default()
                                                                     },

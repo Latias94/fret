@@ -3,12 +3,11 @@ use std::sync::Arc;
 use fret_core::{MouseButton, Point};
 use fret_ui::UiHost;
 
-use crate::core::{EdgeId, PortId};
 use crate::ops::GraphOp;
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 
-use super::super::state::{ViewSnapshot, WireDragKind};
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{ViewSnapshot, WireDragKind};
 
 pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -40,14 +39,9 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     };
 
     let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
-    let mut scratch_ports: Vec<PortId> = Vec::new();
-    let hit_port = canvas.hit_port(
-        geom.as_ref(),
-        index.as_ref(),
-        position,
-        zoom,
-        &mut scratch_ports,
-    );
+    let mut scratch = HitTestScratch::default();
+    let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+    let hit_port = canvas.hit_port(&mut ctx, position);
 
     let target = hit_port.filter(|target| {
         canvas
@@ -134,16 +128,9 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
                 if on_node {
                     return (true, None);
                 }
-                let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                let hit_edge = this.hit_edge(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch_edges,
-                );
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                let hit_edge = this.hit_edge(graph, snapshot, &mut ctx, position);
                 (false, hit_edge)
             })
             .ok()

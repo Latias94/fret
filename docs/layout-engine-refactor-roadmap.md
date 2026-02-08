@@ -75,12 +75,10 @@ Acceptance:
 ## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
 
 Goal: introduce a per-window `TaffyLayoutEngine` and enforce the separation between "build/request"
-and "compute/apply" (layout engine v2 is enabled by default in-repo; the feature flag remains for
-downstream compatibility).
+and "compute/apply" (layout engine v2 is the default layout engine in `fret-ui`).
 
 Deliverables:
 
-- Feature flag: `fret-ui/layout-engine-v2` (default on in-repo; retained for compatibility).
 - One engine instance per window, persistent across frames.
 - Stable `NodeId -> LayoutId` mapping and incremental updates (`mark_dirty` on invalidation).
 - APIs:

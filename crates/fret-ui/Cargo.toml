@@ -10,8 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = ["layout-engine-v2"]
-layout-engine-v2 = []
+default = []
 compat-policy-shortcuts = []
 compat-retained-widgets = []
 unstable-retained-bridge = []
@@ -21,6 +20,7 @@ diagnostics = []
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 slotmap.workspace = true
+smallvec.workspace = true
 stacksafe.workspace = true
 tracing.workspace = true
 serde.workspace = true

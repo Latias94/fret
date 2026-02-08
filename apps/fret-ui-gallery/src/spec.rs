@@ -1,6 +1,11 @@
+use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
+use fret_runtime::CommandId;
+
+#[cfg(not(target_arch = "wasm32"))]
+use fret_kit::mvu::KeyedMessageRouter;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
@@ -54,47 +59,35 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
 
 #[cfg(target_arch = "wasm32")]
 fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    fn find_key_value(raw: &str, key: &str) -> Option<String> {
-        let raw = raw.trim();
-        if raw.is_empty() {
-            return None;
-        }
+    let location = fret_router::web::current_location()?;
 
-        for part in raw.split('&') {
-            let (k, v) = part.split_once('=').unwrap_or((part, ""));
-            if k.trim() == key {
-                let v = v.trim();
-                if v.is_empty() {
-                    return None;
-                }
-                return Some(v.to_string());
-            }
-        }
-        None
-    }
-
-    let window = web_sys::window()?;
-    let location = window.location();
-    let search = location.search().ok().unwrap_or_default();
-    let hash = location.hash().ok().unwrap_or_default();
-
-    let search = search.strip_prefix('?').unwrap_or(search.as_str());
-    let hash = hash.strip_prefix('#').unwrap_or(hash.as_str());
-
-    let id = find_key_value(search, "page")
-        .or_else(|| find_key_value(hash, "page"))
-        .or_else(|| find_key_value(search, "start_page"))
-        .or_else(|| find_key_value(hash, "start_page"))?;
+    let id = fret_router::first_query_value_from_search_or_hash(
+        &location.search,
+        &location.hash,
+        "page",
+    )
+    .or_else(|| {
+        fret_router::first_query_value_from_search_or_hash(
+            &location.search,
+            &location.hash,
+            "start_page",
+        )
+    })?;
 
     ui_gallery_start_page_from_id(&id)
 }
 
-pub(crate) const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
 pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
+pub(crate) const DATA_GRID_ROWS: usize = 200;
 
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
+pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
+pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
+pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
+pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
+pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
@@ -106,6 +99,7 @@ pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
+pub(crate) const PAGE_NODE_GRAPH_CULL_TORTURE: &str = "node_graph_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
@@ -193,6 +187,7 @@ pub(crate) const PAGE_MATERIAL3_TOP_APP_BAR: &str = "material3_top_app_bar";
 pub(crate) const PAGE_MATERIAL3_BOTTOM_SHEET: &str = "material3_bottom_sheet";
 pub(crate) const PAGE_MATERIAL3_DATE_PICKER: &str = "material3_date_picker";
 pub(crate) const PAGE_MATERIAL3_TIME_PICKER: &str = "material3_time_picker";
+pub(crate) const PAGE_MATERIAL3_AUTOCOMPLETE: &str = "material3_autocomplete";
 pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
@@ -211,6 +206,9 @@ pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
+pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
+pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
+    "ui_gallery.nav.select.hit_test_only_paint_cache_probe";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
@@ -223,6 +221,8 @@ pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.tex
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
+pub(crate) const CMD_NAV_NODE_GRAPH_CULL_TORTURE: &str =
+    "ui_gallery.nav.select.node_graph_cull_torture";
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
@@ -319,6 +319,8 @@ pub(crate) const CMD_NAV_MATERIAL3_DATE_PICKER: &str =
     "ui_gallery.nav.select.material3_date_picker";
 pub(crate) const CMD_NAV_MATERIAL3_TIME_PICKER: &str =
     "ui_gallery.nav.select.material3_time_picker";
+pub(crate) const CMD_NAV_MATERIAL3_AUTOCOMPLETE: &str =
+    "ui_gallery.nav.select.material3_autocomplete";
 pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
@@ -352,8 +354,6 @@ pub(crate) const CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM: &str =
     "ui_gallery.virtual_list_torture.scroll_bottom";
 pub(crate) const CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT: &str =
     "ui_gallery.virtual_list_torture.clear_edit";
-pub(crate) const CMD_VIRTUAL_LIST_TORTURE_ROW_EDIT_PREFIX: &str =
-    "ui_gallery.virtual_list_torture.row.edit.";
 
 pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
 pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
@@ -373,6 +373,22 @@ pub(crate) const CMD_APP_SETTINGS_APPLY: &str = "ui_gallery.app.settings.apply";
 pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings.write_project";
 pub(crate) const CMD_APP_TOGGLE_PREFERENCES_ENABLED: &str =
     "ui_gallery.app.preferences.toggle_enabled";
+
+pub(crate) const CMD_MENU_BAR_OS_AUTO: &str = "ui_gallery.menu_bar.os.auto";
+pub(crate) const CMD_MENU_BAR_OS_ON: &str = "ui_gallery.menu_bar.os.on";
+pub(crate) const CMD_MENU_BAR_OS_OFF: &str = "ui_gallery.menu_bar.os.off";
+
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_AUTO: &str = "ui_gallery.menu_bar.in_window.auto";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_ON: &str = "ui_gallery.menu_bar.in_window.on";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_OFF: &str = "ui_gallery.menu_bar.in_window.off";
+
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_ADD: &str = "ui_gallery.debug.recent.add";
+pub(crate) const CMD_GALLERY_DEBUG_RECENT_CLEAR: &str = "ui_gallery.debug.recent.clear";
+pub(crate) const CMD_GALLERY_DEBUG_WINDOW_OPEN: &str = "ui_gallery.debug.window.open";
+pub(crate) const CMD_GALLERY_RECENT_OPEN_PREFIX: &str = "ui_gallery.recent.open.";
+pub(crate) const CMD_GALLERY_WINDOW_ACTIVATE_PREFIX: &str = "ui_gallery.window.activate.";
+pub(crate) const CMD_GALLERY_PAGE_BACK: &str = "ui_gallery.page.back";
+pub(crate) const CMD_GALLERY_PAGE_FORWARD: &str = "ui_gallery.page.forward";
 
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
@@ -456,6 +472,32 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["cache", "performance", "gpui-parity"],
                 docs::DOC_VIEW_CACHE,
                 docs::USAGE_VIEW_CACHE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_TORTURE,
+                "Hit Test (Torture)",
+                "Hit Test / Spatial Index Harness",
+                "fret-ui (hit testing)",
+                CMD_NAV_HIT_TEST_TORTURE,
+                &["hit_test", "pointer", "dispatch", "performance", "harness"],
+                docs::DOC_HIT_TEST_TORTURE,
+                docs::USAGE_HIT_TEST_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                "HitTestOnly Paint-Cache Probe",
+                "Hit Test / Paint Cache Gate Probe",
+                "fret-ui (paint-cache diagnostics)",
+                CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                &[
+                    "hit_test",
+                    "paint_cache",
+                    "diagnostics",
+                    "performance",
+                    "harness",
+                ],
+                docs::DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                docs::USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,
@@ -601,6 +643,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CANVAS_CULL_TORTURE,
                 docs::USAGE_CANVAS_CULL_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_NODE_GRAPH_CULL_TORTURE,
+                "Node Graph Cull (Torture)",
+                "Node Graph / Pan-Zoom Culling Harness",
+                "fret-node (viewport culling candidate)",
+                CMD_NAV_NODE_GRAPH_CULL_TORTURE,
+                &[
+                    "node_graph",
+                    "canvas",
+                    "culling",
+                    "pan_zoom",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_NODE_GRAPH_CULL_TORTURE,
+                docs::USAGE_NODE_GRAPH_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CHROME_TORTURE,
@@ -1475,6 +1535,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_MATERIAL3_TIME_PICKER,
             ),
             PageSpec::new(
+                PAGE_MATERIAL3_AUTOCOMPLETE,
+                "Autocomplete",
+                "Material 3 Autocomplete (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_AUTOCOMPLETE,
+                &[
+                    "material3",
+                    "autocomplete",
+                    "combobox",
+                    "listbox",
+                    "overlay",
+                    "a11y",
+                ],
+                docs::DOC_MATERIAL3_AUTOCOMPLETE,
+                docs::USAGE_MATERIAL3_AUTOCOMPLETE,
+            ),
+            PageSpec::new(
                 PAGE_MATERIAL3_STATE_MATRIX,
                 "State Matrix",
                 "Material 3 State Matrix (manual regression harness)",
@@ -1748,6 +1825,59 @@ pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
         .iter()
         .flat_map(|group| group.items.iter())
         .find(|item| item.id == id)
+}
+
+pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
+    static BY_COMMAND: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
+    let by_command = BY_COMMAND.get_or_init(|| {
+        let mut map: HashMap<&'static str, &'static str> = HashMap::new();
+        for group in PAGE_GROUPS {
+            for page in group.items {
+                map.insert(page.command, page.id);
+            }
+        }
+        map
+    });
+
+    by_command.get(command).copied()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
+    let lock = ROUTER.get_or_init(|| {
+        Mutex::new(KeyedMessageRouter::new(
+            CMD_DATA_GRID_ROW_PREFIX.to_string(),
+        ))
+    });
+    let mut guard = lock
+        .lock()
+        .expect("ui-gallery data-grid row router lock poisoned");
+    f(&mut guard)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
+    let row = u64::try_from(row).ok()?;
+    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
+    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
+    let row = u64::try_from(row).ok()?;
+    Some(CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}")))
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
+    command
+        .strip_prefix(CMD_DATA_GRID_ROW_PREFIX)
+        .and_then(|suffix| suffix.parse::<u64>().ok())
 }
 
 pub(crate) fn page_meta(

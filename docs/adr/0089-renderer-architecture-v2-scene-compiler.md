@@ -62,16 +62,16 @@ into a single instanced Sprite2D path) may still be phased in as needed.
 ### Code map (as of current implementation)
 
 - Scene encoding (compiler):
-  - `crates/fret-render/src/renderer/render_scene/encode/mod.rs`
-  - `crates/fret-render/src/renderer/render_scene/encode/state.rs`
-  - `crates/fret-render/src/renderer/types.rs` (`SceneEncoding`, `OrderedDraw`)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/mod.rs`
+  - `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs`
+  - `crates/fret-render-wgpu/src/renderer/types.rs` (`SceneEncoding`, `OrderedDraw`)
 - Encoding cache key and reuse:
-  - `crates/fret-render/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey`)
-  - `crates/fret-render/src/renderer/mod.rs` (cache storage)
+  - `crates/fret-render-wgpu/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey`)
+  - `crates/fret-render-wgpu/src/renderer/mod.rs` (cache storage)
 - Frames-in-flight buffers (ring buffers):
-  - `crates/fret-render/src/renderer/resources.rs` (`FRAMES_IN_FLIGHT = 3`)
+  - `crates/fret-render-wgpu/src/renderer/resources.rs` (`FRAMES_IN_FLIGHT = 3`)
 - Atlas + budgets + perf snapshot (SVG path today):
-  - `crates/fret-render/src/renderer/config.rs` (`SvgPerfSnapshot`, budgets, clear-cache knobs)
+  - `crates/fret-render-wgpu/src/renderer/config.rs` (`SvgPerfSnapshot`, budgets, clear-cache knobs)
   - Stress harness: `apps/fret-svg-atlas-stress/src/main.rs`
 
 ## Reference Notes: How Godot Handles Editor UI Rendering

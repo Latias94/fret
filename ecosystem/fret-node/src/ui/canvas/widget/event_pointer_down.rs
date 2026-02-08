@@ -58,31 +58,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let is_background = self
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let mut scratch_ports: Vec<PortId> = Vec::new();
-                    let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
 
-                    if self
-                        .hit_port(
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_ports,
-                        )
-                        .is_some()
-                    {
+                    if self.hit_port(&mut ctx, position).is_some() {
                         return false;
                     }
                     if self
-                        .hit_edge_focus_anchor(
-                            graph,
-                            &snapshot,
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_edges,
-                        )
+                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
                         .is_some()
                     {
                         return false;
@@ -91,15 +75,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         return false;
                     }
                     if self
-                        .hit_edge(
-                            graph,
-                            &snapshot,
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_edges,
-                        )
+                        .hit_edge(graph, &snapshot, &mut ctx, position)
                         .is_some()
                     {
                         return false;
@@ -150,31 +126,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let hit: Option<EdgeId> = self
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let mut scratch_ports: Vec<PortId> = Vec::new();
-                    let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
 
-                    if self
-                        .hit_port(
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_ports,
-                        )
-                        .is_some()
-                    {
+                    if self.hit_port(&mut ctx, position).is_some() {
                         return None;
                     }
                     if self
-                        .hit_edge_focus_anchor(
-                            graph,
-                            &snapshot,
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_edges,
-                        )
+                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
                         .is_some()
                     {
                         return None;
@@ -188,15 +148,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }) {
                         return None;
                     }
-                    self.hit_edge(
-                        graph,
-                        &snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        position,
-                        zoom,
-                        &mut scratch_edges,
-                    )
+                    self.hit_edge(graph, &snapshot, &mut ctx, position)
                 })
                 .ok()
                 .flatten();
@@ -228,31 +180,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let hit: Option<EdgeId> = self
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let mut scratch_ports: Vec<PortId> = Vec::new();
-                    let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
 
-                    if self
-                        .hit_port(
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_ports,
-                        )
-                        .is_some()
-                    {
+                    if self.hit_port(&mut ctx, position).is_some() {
                         return None;
                     }
                     if self
-                        .hit_edge_focus_anchor(
-                            graph,
-                            &snapshot,
-                            geom.as_ref(),
-                            index.as_ref(),
-                            position,
-                            zoom,
-                            &mut scratch_edges,
-                        )
+                        .hit_edge_focus_anchor(graph, &snapshot, &mut ctx, position)
                         .is_some()
                     {
                         return None;
@@ -266,15 +202,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }) {
                         return None;
                     }
-                    self.hit_edge(
-                        graph,
-                        &snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        position,
-                        zoom,
-                        &mut scratch_edges,
-                    )
+                    self.hit_edge(graph, &snapshot, &mut ctx, position)
                 })
                 .ok()
                 .flatten();
@@ -342,7 +270,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cancel::cancel_active_gestures(self, cx);
             if snapshot.interaction.pan_on_drag.right {
                 self.interaction.pending_right_click =
-                    Some(super::super::state::PendingRightClick {
+                    Some(crate::ui::canvas::state::PendingRightClick {
                         start_pos: position,
                     });
                 cx.capture_pointer(cx.node);

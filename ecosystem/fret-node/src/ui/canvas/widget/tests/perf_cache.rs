@@ -18,8 +18,8 @@ use crate::core::{
 };
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
-use super::super::NodeGraphCanvas;
-use super::TestUiHostImpl;
+use super::prelude::NodeGraphCanvas;
+use super::{TestUiHostImpl, insert_graph_view, make_host_graph_view};
 
 #[derive(Default)]
 struct CountingServices {
@@ -613,9 +613,7 @@ fn layout_once(
 
 #[test]
 fn paint_reuses_cached_paths_and_text_between_frames() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_two_nodes_one_edge());
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_one_edge());
     let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(CacheTestPresenter);
 
     let bounds = Rect::new(
@@ -645,9 +643,7 @@ fn paint_reuses_cached_paths_and_text_between_frames() {
 
 #[test]
 fn paint_reuses_static_node_scene_cache_without_revisiting_presenter() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_two_nodes_one_edge());
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_one_edge());
 
     let presenter = CountingPresenter::default();
     let counts = presenter.counts.clone();
@@ -680,9 +676,7 @@ fn paint_reuses_static_node_scene_cache_without_revisiting_presenter() {
 
 #[test]
 fn paint_reuses_static_edge_scene_cache_without_revisiting_presenter() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_two_nodes_one_edge());
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_one_edge());
 
     let presenter = CountingPresenter::default();
     let counts = presenter.counts.clone();
@@ -719,10 +713,46 @@ fn paint_reuses_static_edge_scene_cache_without_revisiting_presenter() {
 }
 
 #[test]
+fn paint_invalidates_static_edge_scene_cache_when_edge_types_change() {
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_one_edge());
+
+    let presenter = CountingPresenter::default();
+    let counts = presenter.counts.clone();
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = CountingServices::default();
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let first_edge_hint = counts.edge_render_hint.load(Ordering::Relaxed);
+    assert!(first_edge_hint > 0);
+
+    // Mutate the edge type registry so `edge_types_rev` changes and static scene cache keys miss.
+    canvas.edge_types = Some(crate::ui::NodeGraphEdgeTypes::new().with_fallback_path(
+        |_g, _e, _style, _hint, input| {
+            Some(crate::ui::edge_types::EdgeCustomPath {
+                cache_key: 1,
+                commands: vec![fret_core::PathCommand::MoveTo(input.from)],
+            })
+        },
+    ));
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let second_edge_hint = counts.edge_render_hint.load(Ordering::Relaxed);
+    assert!(
+        second_edge_hint > first_edge_hint,
+        "expected edge_render_hint to be revisited after edge_types_rev changes; before={first_edge_hint}, after={second_edge_hint}"
+    );
+}
+
+#[test]
 fn paint_reuses_static_edge_scene_cache_when_panning_back_across_tiles() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_two_nodes_one_edge());
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_one_edge());
 
     let presenter = CountingPresenter::default();
     let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
@@ -790,9 +820,7 @@ fn paint_warms_edge_label_scene_cache_incrementally() {
         }
     }
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_two_nodes_many_edges(80));
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_two_nodes_many_edges(80));
     let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(UniqueEdgeLabelPresenter);
 
     let bounds = Rect::new(
@@ -858,11 +886,8 @@ fn paint_warms_edge_scene_cache_incrementally() {
         }
     }
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host
-        .models
-        .insert(make_graph_two_nodes_many_ports_and_edges(240));
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) =
+        make_host_graph_view(make_graph_two_nodes_many_ports_and_edges(240));
     let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(MarkerPresenter);
 
     let bounds = Rect::new(
@@ -922,9 +947,7 @@ fn paint_warms_edge_label_scene_cache_incrementally_for_large_viewport_tiles() {
         }
     }
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_chain_edges(150, 40.0));
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(make_graph_chain_edges(150, 40.0));
     let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(UniqueEdgeLabelPresenter);
 
     // Large enough to force multi-tile static edge cache path.
@@ -1024,8 +1047,7 @@ fn auto_measure_dedupes_text_measure_for_repeated_labels() {
         );
     }
 
-    let graph = host.models.insert(graph);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph);
     let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(CacheTestPresenter);
 
     let bounds = Rect::new(

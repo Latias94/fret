@@ -1,7 +1,8 @@
 Status: Active (workstream note; not a contract)
 
 This workstream targets **full capability parity** with **TanStack Table v8 `table-core`** (engine
-layer, not React integration):
+layer, not React integration). “Capability parity” means: for every upstream feature and public API
+surface that exists in `table-core`, Fret’s headless engine can express it without losing power.
 
 - Upstream reference (local checkout): `repo-ref/table/packages/table-core`
 - Fret implementation: `ecosystem/fret-ui-headless/src/table/`
@@ -19,6 +20,7 @@ captures the exact upstream version and commit:
 - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sort_undefined.json`
 - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json`
 - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
+- Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json`
 - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
 - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
 - Upstream: `@tanstack/table-core@8.21.3` (repo-ref commit `e172109fca4cc403a07236ed8fa103450ceba5e9`)
@@ -26,9 +28,13 @@ captures the exact upstream version and commit:
 “Parity” in this workstream means:
 
 1. **Feature coverage parity**: every `table-core` feature is represented and behaves equivalently.
-2. **Semantic parity**: default behaviors, edge-cases, and option interactions match upstream.
-3. **State-shape parity**: state can be round-tripped to/from a TanStack-equivalent JSON shape.
-4. **Performance parity (at the engine level)**: derived models are computed via dependency-driven
+2. **Compatibility by default**: for overlapping behaviors, the default configuration matches
+   upstream semantics (fixtures gate the observable outcomes).
+3. **Superset allowances**: behavior may differ *only* when it unlocks extra capabilities, and
+   should be opt-in and/or policy-configurable so consumers can still choose TanStack-compatible
+   outcomes.
+4. **State-shape parity**: state can be round-tripped to/from a TanStack-equivalent JSON shape.
+5. **Performance parity (at the engine level)**: derived models are computed via dependency-driven
    memoization (TanStack `memo(getDeps, fn)`-style), so large tables remain predictable.
 
 Non-goals:
@@ -49,6 +55,108 @@ Non-goals:
      facade. Do not compromise parity to simplify the public API.
 4. **Stable IDs first**
    - IDs (row/column/header) must be stable and deterministic; everything else depends on this.
+
+---
+
+## Capability Inventory (selected; expand over time)
+
+This is the “not weaker than TanStack” checklist. Each item should map to a concrete Rust surface
+and be covered by parity fixtures when behavior overlap exists.
+
+Detailed capability mapping lives in:
+
+- `docs/workstreams/headless-table-tanstack-parity-capability.md`
+
+### Instance-level surface (Table/Row/Column/Header/Cell)
+
+Upstream source of truth:
+
+- Table: `repo-ref/table/packages/table-core/src/core/table.ts` (`CoreInstance`)
+- Row: `repo-ref/table/packages/table-core/src/core/row.ts` (`CoreRow`)
+- Column: `repo-ref/table/packages/table-core/src/core/column.ts` (`CoreColumn`)
+- Header/Cell: `repo-ref/table/packages/table-core/src/core/headers.ts` and `core/cell.ts`
+- Feature methods: `repo-ref/table/packages/table-core/src/features/*.ts` (`createTable/createRow/createColumn`)
+
+Inventory scope (initial; expand as we hit consumers):
+
+- Table:
+  - Column trees: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`.
+  - Row models: `getCoreRowModel/getRowModel` + intermediate row model helpers (pre-pagination, etc).
+  - Identity/lookup: `getRow(rowId, searchAll?)` and `rowsById`-equivalent map.
+  - Header groups: `getHeaderGroups` + pin-family variants.
+- Row:
+  - Identity: `id` (string), parent/leaf relations, `getLeafRows/getParentRows`.
+  - Cells: `getAllCells/getVisibleCells` + pinned splits.
+  - Behaviors: selection/expanding/pinning helpers + “getXHandler” style updaters.
+- Column:
+  - Visibility/ordering/pinning/sizing/grouping/sorting/filtering helper methods + handler updaters.
+- Header/Cell:
+  - Stable IDs and the minimal accessors required by `DataTable` UI recipes (`getSize/getStart` for headers,
+    `getValue/renderValue` for cells, etc).
+
+Initial mapping snapshot (keep updated):
+
+| Upstream API | Fret surface (today) | Status | Notes |
+| --- | --- | --- | --- |
+| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` + grouped `RowId` fallback via `Table::row_key_for_id` | Partial | Lookup parity is fixture-gated for custom RowId + grouped ids via `tanstack_v8_row_id_lookup_parity.rs` (`row_id_lookup.json`) and grouped state-op fixtures; remaining gap is key-only row partition APIs (`top/center/bottom`) under grouped semantics. |
+| `row.id: string` | `Row::id: RowId` (`Arc<str>`) + `GroupedRow::id` | Partial | Leaf/grouped rows carry string ids, and id-keyed state import/export is parity-gated (`tanstack_v8_state_presence_rowid_parity.rs`, `state_presence_rowid.json`); remaining work is broader non-option API inventory parity. |
+| `RowModel.rowsById` | `RowModel::rows_by_id()` | Partial | Fixture-gated for core/pre-pagination/final models across custom RowId + grouped ids (`tanstack_v8_row_id_lookup_parity.rs`, `row_id_lookup.json`); remaining work is non-option capability inventory expansion. |
+| `table.getHeaderGroups()` (+ pinned variants) | `Table::header_groups/left_header_groups/center_header_groups/right_header_groups` | Aligned (core) | Fixture-gated via `headers_cells.json`. |
+| `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
+| `column.getSize()` / `column.getStart()` / `column.getAfter()` | `Table::column_size/column_start/column_after` | Aligned (core) | Fixture-gated via column sizing tests. |
+| `column.getIsPinned()` / `column.pin()` | `Table::column_pin_position` + `Table::toggled_column_pinning` | Aligned (core) | Column pinning fixtures gate state transitions + derived splits. |
+| `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_keys/center_row_keys/bottom_row_keys` (+ `*_row_ids`) | Partial | RowId-based partitions are now available (`top_row_ids/center_row_ids/bottom_row_ids`); remaining work is a capability-inventory pass for full Row-returning convenience surfaces. |
+
+### Row identity (`RowId`) and lookup
+
+Upstream:
+
+- `table.getRow(rowId, searchAll?)` (pre-pagination vs current model lookup)
+- `table.getCoreRowModel().rowsById` (stable lookup)
+- Grouped row ids (string ids like `role:1`) are first-class rows
+
+Fret status:
+
+- Leaf rows now carry a stable string `RowId` alongside the existing numeric `RowKey(u64)` fast path.
+- `RowModel` maintains both `rows_by_key` and `rows_by_id` for lookup, and `Table::row_by_id` mirrors
+  TanStack `getRow(id, searchAll?)` shape for leaf rows.
+- ID-keyed state surfaces now support string `RowId` with fixture gates:
+  - TanStack JSON -> `TableState` by-id resolution: `to_table_state_with_row_model`.
+  - `TableState` -> TanStack JSON by-id export (with row model):
+    `from_table_state_with_row_model` / `from_table_state_with_row_model_and_shape`.
+  - Presence semantics (omitted vs explicit empty/default) are gated by
+    `tanstack_v8_state_presence_rowid_parity.rs`.
+  - Remaining parity focus stays on non-option capability inventory (`HTP-base-004` + `HTP-cap-010`).
+
+Compatibility requirement:
+
+- Fret must be able to address rows by a stable string id without loss of capability (pin/select/expand/lookup),
+  even if a Rust-native `RowKey(u64)` is kept as an optimization.
+
+### Row pinning over grouped rows
+
+Upstream:
+
+- `row.pin(position, includeLeafRows?, includeParentRows?)` works for any `Row`
+- `getTopRows/getCenterRows/getBottomRows` operate on `table.getRowModel().rows`
+
+Fret status:
+
+- Row pinning behavior (including `keepPinnedRows` × filtering/sorting/pagination) is parity-gated.
+- Grouping × row pinning interactions are parity-gated for leaf row ids, including `keepPinnedRows`
+  semantics over grouped parents’ expansion state.
+- RowId-based addressing is supported (lookup + state import/export) so consumers are not forced to
+  depend on a numeric `RowKey` fast path.
+
+Remaining pinning-specific parity work (capability not weaker than TanStack):
+
+- Add dedicated parity fixtures for `row.pin(position, includeLeafRows, includeParentRows)` on
+  hierarchical/tree data (and grouped models), so the include-leaf/include-parent expansion rules are
+  locked down.
+- Pinning grouped rows by id (e.g. `role:1`) is parity-gated, including `getTop/getCenter/getBottom`
+  ordering outcomes under grouping + pagination.
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
 
 ---
 
@@ -78,12 +186,14 @@ Known “core engine” gaps (as of this workstream start):
 - TanStack core types (`headers`, `cells`, nested column trees / header groups) are not yet
   represented 1:1 in `fret-ui-headless`.
 - Filtering supports typed filter values (via `serde_json::Value`) and parity-gated built-in
-  `filterFns` + `resolveFilterValue` + `autoRemove`, but still lacks per-row filter meta, depth
-  controls, and a fully typed `globalFilter` surface.
+  `filterFns` + `resolveFilterValue` + `autoRemove`, plus `filterFromLeafRows` /
+  `maxLeafRowFilterDepth` depth controls and per-row pass/fail + filter meta maps (including
+  custom `addMeta`-like callbacks). Remaining gap: fully typed `globalFilter` surface.
 - Sorting lacks TanStack behaviors like sortingFn auto-selection, and the remaining
   `sortUndefined: false` semantics (see M3 / HTP-sort-010 + HTP-sort-040).
-- “Auto-reset” behaviors (e.g. page index reset on filter/sort changes) are not yet modeled as a
-  first-class engine concern.
+- “Auto-reset” behaviors are parity-gated, but we do not yet model TanStack’s instance-level
+  `_queue` mechanism as a first-class runtime concern. Current parity tests simulate the
+  “register first, reset later” semantics at the state-transition layer.
 
 ---
 
@@ -99,21 +209,21 @@ This matrix is the living checklist. When a row becomes “Aligned”, add at le
 
 | Upstream (`table-core`) | Fret module(s) | Status | Notes (non-exhaustive) |
 | --- | --- | --- | --- |
-| `ColumnFiltering.ts` | `filtering.rs` | Partial | Built-in filterFns + `resolveFilterValue` + `autoRemove` are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`). Remaining: `filterFromLeafRows`, `maxLeafRowFilterDepth`, per-row filter meta, and `getCanFilter` option-gates surfaces parity. |
+| `ColumnFiltering.ts` | `filtering.rs` | Partial | Built-in filterFns + `resolveFilterValue` + `autoRemove` are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`). `filterFromLeafRows` + `maxLeafRowFilterDepth` recursion semantics and per-row pass-map tracking are covered by unit gates in `ecosystem/fret-ui-headless/src/table/filtering.rs` (`root_filter_depth_zero_preserves_unfiltered_subtree`, `leaf_filter_depth_gate_controls_descendant_bubbling`, `evaluate_row_filter_state_tracks_per_row_pass_map`). Custom filter `addMeta`-like callback semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_meta_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_meta.json`). Remaining: `getCanFilter` option-gate surfaces. |
 | `GlobalFiltering.ts` | `filtering.rs` | Partial | Global filter row-model behavior (default `globalFilterFn: 'auto'` => includesString) and `getColumnCanGlobalFilter` eligibility semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`, snapshot: `filtering_fns_global_filter_default_excludes_bool`). Remaining: fully typed `globalFilter` value surface + controlled state hook parity (`onGlobalFilterChange`). |
-| `ColumnFaceting.ts` | `faceting.rs` | Partial | Faceting exists, but parity needs fixtures; numeric range faceting is currently u64-oriented. |
-| `GlobalFaceting.ts` | `faceting.rs` | Partial | Needs manualFiltering interaction parity and fixture gates. |
-| `RowSorting.ts` | `sorting.rs` | Partial | sortingFn resolution (`auto` + built-ins + named registry) is parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json`). Remaining: `getAutoSortDir` first-toggle inference; `invertSorting`, `sortDescFirst`, multi-sort gates/transitions, and `sortUndefined` semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` + `ecosystem/fret-ui-headless/tests/tanstack_v8_sort_undefined_parity.rs` (fixtures under `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/`). |
-| `RowPagination.ts` | `pagination.rs` | Partial | Missing autoResetPageIndex/pageCount/rowCount semantics parity. |
-| `RowSelection.ts` | `row_selection.rs` | Partial | Parity-gated selected row models + toggle semantics for flat rows: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json`). Remaining: nested sub-row selection defaults, per-row option functions, and controlled hook parity. |
-| `RowExpanding.ts` | `row_expanding.rs` | Partial | Parity-gated expanded row model + pagination interactions: `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`). Remaining: option gates, `autoResetExpanded`, and hook parity. |
-| `ColumnGrouping.ts` | `grouping.rs`, `grouped_sorting.rs`, `grouped_aggregation.rs` | Partial | Needs groupedColumnMode, aggregationFns registry, and placeholder/aggregated cell parity. |
-| `ColumnPinning.ts` | `column_pinning.rs` | Partial | Needs option gates + hook parity; offsets must align with sizing. |
-| `ColumnOrdering.ts` | `column_ordering.rs` | Partial | Needs onColumnOrderChange + groupedColumnMode interaction parity. |
-| `ColumnVisibility.ts` | `column_visibility.rs` | Partial | Needs enableHiding hook parity and fixture gates. |
-| `ColumnSizing.ts` | `column_sizing.rs`, `column_sizing_info.rs` | Partial | `getTotalSize` / pinned totals, start/after offsets, size clamp, and the LTR resize lifecycle (`columnResizeMode`: OnChange vs OnEnd + `columnSizingInfo` transitions) are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs` (fixtures under `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`). Remaining: RTL direction parity + header-group `columnSizingStart` fan-out. |
-| `RowPinning.ts` | `row_pinning.rs` | Partial | Needs keepPinnedRows semantics parity across filter/sort/pagination. |
-| `core/*` (columns/headers/rows/cells) | `headers.rs` + `cells.rs` + `core_model.rs` | Partial | Core model snapshot (column tree + leaf sets + header groups + row/cell ids) is parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`). Remaining: full column/header/cell inventories + deeper nesting + visibility edge cases. |
+| `ColumnFaceting.ts` | `faceting.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`). |
+| `GlobalFaceting.ts` | `faceting.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`). Note: built-in helpers produce empty/null global unique/minmax since `__global__` is not a real column (fixture captures upstream warning). |
+| `RowSorting.ts` | `sorting.rs` | Partial | sortingFn resolution (`auto` + built-ins + named registry) is parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json`). `manualSorting` + `getSortedRowModel` override semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_manual_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_manual.json`). `getAutoSortDir` first-toggle inference, `invertSorting`, `sortDescFirst`, multi-sort gates/transitions, and `sortUndefined` semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` + `ecosystem/fret-ui-headless/tests/tanstack_v8_sort_undefined_parity.rs` (fixtures under `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/`). Remaining: broaden edge-case coverage for mixed/nullish values and grouped sorting interactions. |
+| `RowPagination.ts` | `pagination.rs` | Partial | Pagination option gates + `pageCount`/`rowCount` + controlled-state hook parity is gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_pagination_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pagination.json`). `autoResetPageIndex` / `autoResetAll` semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json`). Remaining: expand the auto-reset harness to cover more triggers (e.g. columnFilters, data updates) and queue coalescing behavior. |
+| `RowSelection.ts` | `row_selection.rs` | Partial | Parity-gated selected row models + toggle semantics for flat rows: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json`). Nested sub-row selection + `isSomeSelected`/`isAllSubRowsSelected` semantics are gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json`). Remaining: per-row option functions parity. |
+| `RowExpanding.ts` | `row_expanding.rs` | Partial | Parity-gated expanded row model + pagination interactions (including `paginateExpandedRows` true/false, page bounds, and TanStack `flatRows` duplication): `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`). Remaining: deeper per-row option function parity + controlled hook coverage expansion. |
+| `ColumnGrouping.ts` | `grouping.rs`, `grouped_sorting.rs`, `grouped_aggregation.rs` | Partial | groupedColumnMode ordering parity is gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`, snapshots: `headers_cells_grouped_column_mode_*`). aggregationFns + renderFallbackValue parity is gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_aggregation_fns_parity.rs` + `ecosystem/fret-ui-headless/tests/tanstack_v8_render_fallback_parity.rs` (fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_aggregation_fns.json`, `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/render_fallback.json`). grouped multi-sort precedence + aggregation-any sort-key behavior are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_sorting_precedence_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_sorting_precedence.json`). grouped row-model pipeline composition (`pre_sorted` -> `sorted` -> `expanded`) is parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_row_model_pipeline_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_row_model_pipeline.json`). grouped/placeholder/aggregated cell inventory flags are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_cells_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_cells.json`). Remaining: broaden non-option API inventory coverage (`HTP-base-004`, `HTP-cap-010`). |
+| `ColumnPinning.ts` | `column_pinning.rs` | Aligned | Option gates + hook/state transition parity is gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`). Gate also asserts derived row models, selection/expanding flags, and column sizing totals + start/after offsets under pinning state. |
+| `ColumnOrdering.ts` | `column_ordering.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`). |
+| `ColumnVisibility.ts` | `column_visibility.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`). |
+| `ColumnSizing.ts` | `column_sizing.rs`, `column_sizing_info.rs` | Partial | Totals, pinned start/after offsets, size clamp, LTR/RTL resize lifecycle (`columnResizeMode`: OnChange vs OnEnd + `columnSizingInfo`) are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`). Group-header resize fan-out + `columnSizingStart` shape are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json`). Remaining: complete `columnSizingInfo` inventory + cross-feature interactions coverage. |
+| `RowPinning.ts` | `row_pinning.rs` | Aligned | keepPinnedRows + filter/sort/pagination interaction parity is gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs` + `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_tree_parity.rs` (fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`, `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_tree.json`). Gate also asserts derived row models (incl. `paginateExpandedRows` flattened `expanded.rows`), selection/expanding flags, and column sizing totals + start/after offsets. |
+| `core/*` (columns/headers/rows/cells) | `headers.rs` + `cells.rs` + `core_model.rs` | Partial | Core model snapshot (column tree + leaf sets + header groups + row/cell ids) is parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`). Deeper header nesting + hide-branch edge cases are additionally gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`). Remaining: full column/header/cell inventories in the core snapshot schema (beyond ids/structure). |
 
 ---
 
@@ -146,10 +256,15 @@ Goal: represent TanStack-equivalent state (and defaults) without losing informat
 
 Current status:
 
-- A round-trip parity gate exists for a growing subset of state keys (see `tanstack_v8_state_roundtrip_parity.rs`),
-  but lossless “presence” semantics (omitted vs explicit defaults) are not fully modeled yet.
+- A round-trip parity gate exists for a growing subset of state keys (`tanstack_v8_state_roundtrip_parity.rs`),
+  and now preserves presence semantics (omitted vs explicit defaults) for the covered surfaces,
+  including row-keyed maps (`rowSelection`/`expanded`/`rowPinning`) with string `RowId`.
 - A dedicated fixture (`ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`) covers
   grouping/expanded/rowPinning/globalFilter state shapes.
+- Reset semantics parity gates exist for pinning (`resetRowPinning` / `resetColumnPinning`), including
+  `initialState` vs `state` behavior (fixtures: `pinning.json`, `column_pinning.json`).
+- A dedicated reset semantics parity gate exists for the remaining table-level reset surfaces
+  (sorting/filtering/grouping/visibility/order/rowSelection): fixture `resets.json`.
 
 Definition of done:
 
@@ -232,6 +347,75 @@ Fixture schema (v0; evolving, but kept stable for tests):
     - `core` / `filtered` / `sorted` / `paginated` / `row_model`: row id lists (`root` + `flat`)
     - `next_state?`: expected post-action state subset (when `actions` is present)
 
+### TanStack-compatible state JSON schema (v0)
+
+This workstream treats TanStack Table v8 `getState()` as the reference “shape”. Fret supports a
+**TanStack-compatible subset** for import/export via `TanStackTableState`.
+
+Supported top-level keys (all optional):
+
+- `sorting`: `[{ id: string, desc: boolean }]`
+- `columnFilters`: `[{ id: string, value: any }]`
+- `globalFilter`: `any | null` (`null` is treated as unset)
+- `pagination`: `{ pageIndex: number, pageSize: number } | null`
+- `grouping`: `string[]`
+- `expanded`: `true | false | Record<string, boolean> | null`
+- `rowPinning`: `{ top: string[], bottom: string[] } | null`
+- `rowSelection`: `Record<string, boolean> | null`
+- `columnPinning`: `{ left: string[], right: string[] } | null`
+- `columnOrder`: `string[]`
+- `columnVisibility`: `Record<string, boolean> | null` (TanStack typically stores only `false` entries)
+- `columnSizing`: `Record<string, number>`
+- `columnSizingInfo`:
+
+  ```ts
+  type ColumnSizingInfo =
+    | null
+    | {
+        columnSizingStart: Array<[string, number]>
+        deltaOffset: number | null
+        deltaPercentage: number | null
+        isResizingColumn: false | null | string
+        startOffset: number | null
+        startSize: number | null
+      }
+  ```
+
+Row-id keyed maps (`expanded` map form, `rowSelection`, `rowPinning.top/bottom`) use TanStack row
+ids (string). If the ids are not numeric, use the row-model-aware conversions:
+
+- JSON → `TableState`: `TanStackTableState::to_table_state_with_row_models(..)`
+- `TableState` → JSON: `TanStackTableState::from_table_state_with_row_models_and_shape(..)`
+
+### Normalization vs lossless rules (state JSON)
+
+The engine supports two distinct goals:
+
+1. **Semantics parity**: `TableState` always has a complete Rust-native representation.
+2. **Shape parity**: when importing TanStack-shaped JSON and exporting it back, we avoid losing
+   “omitted vs explicit default” intent that can matter to controlled-state flows and persistence.
+
+Rules:
+
+- `TanStackTableState::from_json(..)` records **top-level key presence** (even if the value is
+  empty, `{}`, `[]`, or `null`).
+- `TanStackTableState::to_json()` emits a key when either:
+  - the key was present in the source JSON (presence hint), or
+  - the value is non-default / non-empty.
+- When a key is present but the parsed value is logically absent (`Option::None`), `to_json()`
+  emits `null` for that key (e.g. `globalFilter: null`, `pagination: null`).
+- To preserve explicit-default shapes across a `TableState` round-trip, export with a shape hint:
+  `TanStackTableState::from_table_state_with_shape(&state, &source)`.
+- Nested object field presence is **not** tracked; some nested shapes are canonicalized on export.
+  In particular, when `columnSizingInfo` is present, it is exported in a canonical “full key set”
+  shape.
+
+Gates:
+
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_roundtrip_parity.rs` (state semantics)
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_presence_rowid_parity.rs` (RowId + presence)
+- `ecosystem/fret-ui-headless/tests/tanstack_v8_state_json_semantics_parity.rs` (omitted vs explicit defaults)
+
 ---
 
 ## Next Actions
@@ -239,4 +423,4 @@ Fixture schema (v0; evolving, but kept stable for tests):
 - Use the TODO tracker: `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Start with M1/M2 (types + state), then lock parity by fixtures before large refactors.
 
-Current focus (2026-02-03): M4 — Column sizing/resizing parity (including pinned offsets).
+Current focus (2026-02-06): M8 — Auto-reset fixture gate (`autoResetPageIndex`/`autoResetAll`) + start M7 memoization plan.

@@ -1,15 +1,21 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use fret_ui_headless::table::{ColumnDef, RowKey, Table, TanStackTableOptions, TanStackTableState};
+use fret_ui_headless::table::{
+    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
     id: u64,
+    #[allow(dead_code)]
     name: String,
+    #[allow(dead_code)]
     status: String,
+    #[allow(dead_code)]
     cpu: u64,
+    #[allow(dead_code)]
     mem_mb: u64,
 }
 
@@ -33,6 +39,24 @@ struct HeaderGroupSnapshot {
     headers: Vec<HeaderSnapshot>,
 }
 
+fn header_to_jsonish(h: fret_ui_headless::table::HeaderSnapshot) -> HeaderSnapshot {
+    HeaderSnapshot {
+        id: h.id.as_ref().to_string(),
+        column_id: h.column_id.as_ref().to_string(),
+        depth: h.depth,
+        index: h.index,
+        is_placeholder: h.is_placeholder,
+        placeholder_id: h.placeholder_id.as_ref().map(|s| s.as_ref().to_string()),
+        col_span: h.col_span,
+        row_span: h.row_span,
+        sub_header_ids: h
+            .sub_header_ids
+            .into_iter()
+            .map(|s| s.as_ref().to_string())
+            .collect(),
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CellSnapshot {
     id: String,
@@ -51,9 +75,21 @@ struct RowCellsSnapshot {
 #[derive(Debug, Clone, Deserialize)]
 struct HeadersCellsExpect {
     header_groups: Vec<HeaderGroupSnapshot>,
+    footer_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
+    left_footer_groups: Vec<HeaderGroupSnapshot>,
     center_header_groups: Vec<HeaderGroupSnapshot>,
+    center_footer_groups: Vec<HeaderGroupSnapshot>,
     right_header_groups: Vec<HeaderGroupSnapshot>,
+    right_footer_groups: Vec<HeaderGroupSnapshot>,
+    flat_headers: Vec<HeaderSnapshot>,
+    left_flat_headers: Vec<HeaderSnapshot>,
+    center_flat_headers: Vec<HeaderSnapshot>,
+    right_flat_headers: Vec<HeaderSnapshot>,
+    leaf_headers: Vec<HeaderSnapshot>,
+    left_leaf_headers: Vec<HeaderSnapshot>,
+    center_leaf_headers: Vec<HeaderSnapshot>,
+    right_leaf_headers: Vec<HeaderSnapshot>,
     cells: BTreeMap<String, RowCellsSnapshot>,
 }
 
@@ -128,27 +164,15 @@ fn header_groups_to_jsonish(
         .map(|g| HeaderGroupSnapshot {
             id: g.id.as_ref().to_string(),
             depth: g.depth,
-            headers: g
-                .headers
-                .into_iter()
-                .map(|h| HeaderSnapshot {
-                    id: h.id.as_ref().to_string(),
-                    column_id: h.column_id.as_ref().to_string(),
-                    depth: h.depth,
-                    index: h.index,
-                    is_placeholder: h.is_placeholder,
-                    placeholder_id: h.placeholder_id.as_ref().map(|s| s.as_ref().to_string()),
-                    col_span: h.col_span,
-                    row_span: h.row_span,
-                    sub_header_ids: h
-                        .sub_header_ids
-                        .into_iter()
-                        .map(|s| s.as_ref().to_string())
-                        .collect(),
-                })
-                .collect(),
+            headers: g.headers.into_iter().map(header_to_jsonish).collect(),
         })
         .collect()
+}
+
+fn headers_to_jsonish(
+    headers: Vec<fret_ui_headless::table::HeaderSnapshot>,
+) -> Vec<HeaderSnapshot> {
+    headers.into_iter().map(header_to_jsonish).collect()
 }
 
 fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCellsSnapshot {
@@ -296,6 +320,7 @@ fn tanstack_v8_headers_cells_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();
@@ -307,9 +332,21 @@ fn tanstack_v8_headers_cells_parity() {
             snap.id
         );
         assert_eq!(
+            header_groups_to_jsonish(table.footer_groups()),
+            snap.expect.headers_cells.footer_groups,
+            "snapshot {} footer_groups mismatch",
+            snap.id
+        );
+        assert_eq!(
             header_groups_to_jsonish(table.left_header_groups()),
             snap.expect.headers_cells.left_header_groups,
             "snapshot {} left_header_groups mismatch",
+            snap.id
+        );
+        assert_eq!(
+            header_groups_to_jsonish(table.left_footer_groups()),
+            snap.expect.headers_cells.left_footer_groups,
+            "snapshot {} left_footer_groups mismatch",
             snap.id
         );
         assert_eq!(
@@ -319,9 +356,69 @@ fn tanstack_v8_headers_cells_parity() {
             snap.id
         );
         assert_eq!(
+            header_groups_to_jsonish(table.center_footer_groups()),
+            snap.expect.headers_cells.center_footer_groups,
+            "snapshot {} center_footer_groups mismatch",
+            snap.id
+        );
+        assert_eq!(
             header_groups_to_jsonish(table.right_header_groups()),
             snap.expect.headers_cells.right_header_groups,
             "snapshot {} right_header_groups mismatch",
+            snap.id
+        );
+        assert_eq!(
+            header_groups_to_jsonish(table.right_footer_groups()),
+            snap.expect.headers_cells.right_footer_groups,
+            "snapshot {} right_footer_groups mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.flat_headers()),
+            snap.expect.headers_cells.flat_headers,
+            "snapshot {} flat_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.left_flat_headers()),
+            snap.expect.headers_cells.left_flat_headers,
+            "snapshot {} left_flat_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.center_flat_headers()),
+            snap.expect.headers_cells.center_flat_headers,
+            "snapshot {} center_flat_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.right_flat_headers()),
+            snap.expect.headers_cells.right_flat_headers,
+            "snapshot {} right_flat_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.leaf_headers()),
+            snap.expect.headers_cells.leaf_headers,
+            "snapshot {} leaf_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.left_leaf_headers()),
+            snap.expect.headers_cells.left_leaf_headers,
+            "snapshot {} left_leaf_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.center_leaf_headers()),
+            snap.expect.headers_cells.center_leaf_headers,
+            "snapshot {} center_leaf_headers mismatch",
+            snap.id
+        );
+        assert_eq!(
+            headers_to_jsonish(table.right_leaf_headers()),
+            snap.expect.headers_cells.right_leaf_headers,
+            "snapshot {} right_leaf_headers mismatch",
             snap.id
         );
 

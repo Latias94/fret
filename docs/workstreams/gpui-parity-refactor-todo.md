@@ -41,23 +41,23 @@ Each TODO is labeled:
 
 ## Near-term Focus (keep tight)
 
-- **MVP2-cache-005**: done (keep overlay/scroll-refresh harnesses green while refactoring other areas).
-- **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
-- **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
+- **MVP5-virt-004**: decide whether Track B (“non-retained window shifts without rerender”) stays deferred; if revisited,
+  target making `ui-gallery-vlist-window-boundary` pass `--check-vlist-window-shifts-non-retained-max 0` via an explicit host
+  boundary (ADR 0192-style) rather than structural mutation in prepaint.
+- **Harness hygiene**: keep the guard-rail suites stable (node graph cull window, chart sampling window shifts, vlist small-scroll no-window-shifts).
 
 ## Near-term Plan (2026-02; make progress measurable)
 
-- **P1 — MVP5-virt-001 contract + explainability hardening**
-  - Deliverable: tighten ADR 0190/0193 wording for non-retained v2 (“what can change in prepaint” vs “must rerender”), and keep the `ui-gallery-vlist-window-boundary` suite green with `--check-vlist-window-shifts-explainable`.
-- **P2 — MVP5-perf-002 notify hotspots**
-  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` hotspots with *callsite attribution*, and add one budget gate that fails fast with evidence JSON.
-  - Checklist:
-    - Add `#[track_caller]` capture for `EventCx::notify()` / `ObserverCx::notify()` and propagate a single callsite per dispatch.
-    - Export bounded per-frame `debug.notify_requests` (file/line/col + caller node + target dirty view/cache root).
-    - Add a `fretboard diag stats` gate that can fail on a specific hotspot file (e.g. `pressable.rs`) and writes `check.notify_hotspots.json`.
-    - Wire the gate into at least one perf suite (warmup-ranked) so it is exercised in CI-style runs.
-- **P3 — MVP5-eco-003 code/text window pilot**
-  - Deliverable: migrate one concrete surface (code-view lines or markdown) onto the prepaint-windowed pattern and add a diag script + stale-paint gate.
+- **P1 — Keep the tracker honest (close “contract drift”)**
+  - Deliverable: ensure each `[~]` item has crisp “next action” bullets + at least one gate/harness link; split remaining work into small, gateable follow-ups.
+- **P2 — MVP5-eco-004 canvas/node graph: first migration target (done)**
+  - Deliverable: pick one concrete surface (prefer `ecosystem/fret-node`), add deterministic pan/zoom script, and gate that small pans stay paint/prepaint-only while culling changes remain explainable.
+- **P3 — MVP5-eco-005 chart/plot sampling: first migration target (done)**
+  - Deliverable: define a stable sampling-window key + explainability output (prepaint action + output key), and gate that small pans do not force cache-root rerenders under view-cache + shell.
+- **P4 — MVP5-eco-010 AI transcript surfaces: first windowed migration target (done)**
+  - Deliverable: migrate the transcript harness to prepaint-windowed rows + paint-only hover/selection chrome, with deterministic scripts + gates under view-cache + shell.
+- **P5 — MVP5-virt-004 non-retained: close the remaining gap (optional)**
+  - Deliverable: either keep the item deferred (with guard rails), or land a host boundary that enables window shifts without dirtying the parent cache root.
 
 ## Baseline (Verified Existing Building Blocks)
 
@@ -356,7 +356,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
 
-- [~] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
+- [x] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
   - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
   - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
   - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
@@ -417,22 +417,45 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     - [x] Move visible-range escape detection toward the runtime dispatch path (GPUI-style "range delta" gate), so scroll-handle changes can schedule a one-shot rerender even when the VirtualList widget does not handle the event directly.
     - [x] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
       - Evidence: in `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json` with `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, contained relayout is only observed on the two wheel frames where the mounted range escapes the overscan window (typical run: 2/18 snapshots; max 2 roots), e.g. `target/fret-diag-perf-vlist-smooth-cache-shell-r3/*-script-step-0023-wheel/bundle.json`.
-    - [~] Move `scroll_to_item` consumption earlier than layout where possible (fixed-mode early consumption; measured-mode still consumed during final layout).
+    - Follow-up: move remaining measured-mode `scroll_to_item` consumption earlier (tracked as `GPUI-MVP3-virt-003`).
     - [x] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change (see run dirs above).
   - Sketch (target shape):
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
     - Make “range delta” a prepaint-plan update whenever possible (offset/visible range), and keep layout limited to true geometry changes.
-- [~] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
+- [x] GPUI-MVP3-virt-003 VirtualList: consume `scroll_to_item` earlier than final layout (measured-mode).
+  - Goal: reduce “deferred scroll consumed during final layout” work and make `scroll_to_item` behavior less layout-sensitive.
+  - Notes:
+    - Fixed-mode already consumed earlier; measured-mode now consumes in the same prepass (probe layout remains non-consuming).
+    - Keep the behavior explainable in one bundle (`window_shift_reason=scroll_to_item`, corresponding dirty-view detail).
+  - Progress:
+    - Consume deferred `scroll_to_item` during the scroll-handle invalidation prepass for measured-mode (and keep probe layout non-consuming).
+    - Preserve explainability even when consumption happens before layout by attributing window shifts to `ScrollToItem` when the request was consumed earlier in the same frame.
+    - Avoid pre-render/probe consumption by separating preview vs commit invalidation reads for scroll handles.
+  - Evidence:
+    - `crates/fret-ui/src/tree/layout.rs` (`invalidate_scroll_handle_bindings_for_changed_handles`, prepass consumption + mode flags)
+    - `crates/fret-ui/src/declarative/frame.rs` (`peek_changed_scroll_handle_keys`)
+    - `crates/fret-ui/src/scroll.rs` (`VirtualListScrollHandleState::last_consumed_frame_id`, `scroll_to_item_consumed_in_frame`)
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout telemetry: `window_shift_reason=ScrollToItem` even after early consumption)
+    - `crates/fret-ui/src/tree/prepaint.rs` (prepaint telemetry: `window_shift_reason=ScrollToItem` even after early consumption)
+    - `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_measured_scroll_to_item_does_not_force_layout_invalidation_in_common_case`, probe regression)
+    - Re-verified (2026-02-04; view-cache + shell; `ui-gallery-virtual-list-torture.json`):
+      - `target/fret-diag/1770205897961-ui-gallery-virtual-list-edit-9000/bundle.json`
+      - `target/fret-diag/1770205898263-ui-gallery-virtual-list-bottom/bundle.json`
+  - Done when:
+    - Measured-mode `scroll_to_item` consumption no longer requires the final layout pass in the common case.
+    - `tools/diag-scripts/ui-gallery-virtual-list-torture.json` and `ui-gallery-virtual-list-edit-9000` remain correct under view-cache + shell.
+
+- [x] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
   - Progress: add hit-test path reuse (cached “interaction range”) as an incremental, semantics-preserving step toward replayable interaction output.
   - Progress: add a pure cursor request hook (`Widget::cursor_icon_at`) and route pointer-move cursor updates through it when present (cursor requests are now representable without relying on pointer-move side effects).
   - Progress: cache focus traversal gates in prepaint (focusable + traversal + scroll-ancestor) so command availability queries do not re-enter widget hit-test hooks for clean nodes.
   - Progress: export outside-press observer layer metadata (consume flag + branch list) so pointer-down-outside arbitration is explainable from bundles.
-  - Notes: reuse is currently enabled only for pointer-move dispatch; other pointer events rebuild the cache from a full hit-test pass.
+  - Notes: cached hit-test reuse is enabled for cursor-driven hot paths (pointer-move, wheel/pinch, drag-over); discrete click interactions still rebuild from a full hit-test pass.
   - Notes: reuse falls back to full hit-testing if the cached leaf can hit-test children (avoids stale routing when the pointer moves between descendants).
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs` (`hit_test_layers_cached`, `try_hit_test_along_cached_path`),
-    `crates/fret-ui/src/tree/dispatch.rs` (pointer-move-only reuse policy),
+    `crates/fret-ui/src/tree/dispatch.rs` (hit-test reuse policy),
     `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`),
     `crates/fret-ui/src/widget.rs` (`Widget::cursor_icon_at`),
     `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`,
@@ -440,6 +463,18 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     `crates/fret-ui/src/tree/tests/focus_traversal_prepaint_cache.rs`,
     `crates/fret-ui/src/tree/mod.rs` (`UiDebugLayerInfo` outside-press fields),
     `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiLayerInfoV1` export).
+- [x] GPUI-MVP3-rec-003 Expand interaction replay/reuse beyond pointer-move.
+  - Goal: reuse prepainted interaction output for at least one additional high-frequency path (e.g. pointer-down-outside arbitration, hover routing, or drag-over) without sacrificing correctness.
+  - Progress: extend cached hit-test path reuse to wheel/pinch and drag-over streams (internal/external drag) so repeated non-move events do not rebuild from a full hit-test pass.
+  - Evidence:
+    - `crates/fret-ui/src/tree/mod.rs` (`event_allows_hit_test_path_cache_reuse`)
+    - `crates/fret-ui/src/tree/dispatch.rs` (reuse policy for pointer hit-testing + wheel hover refresh)
+    - `crates/fret-ui/src/tree/tests/hit_test_cache_reuse_policy.rs`
+    - Perf capture (2026-02-04; view-cache + shell; `ui-gallery-file-tree-torture-scroll.json`): `target/fret-diag/1770212880301-script-step-0026-wheel/bundle.json`
+  - Done when:
+    - A regression harness proves correctness under view-cache + shell reuse (hit-test / outside-press / cursor updates stay correct).
+    - A perf bundle shows reduced hot-path work for the chosen event type, and the bundle remains explainable (falls back to full hit-test on dirty/inspection).
+
 - [x] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
   - Touches: `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/element.rs` (prepaint), `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_prepaint`)
@@ -466,12 +501,19 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
 - [x] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
   - Touches: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
-- [~] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
-  - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
-- [~] GPUI-MVP4-demo-003 VirtualList: move “visible range” derivation from declarative render into prepaint-driven state.
+- [x] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
+  - Motivation: ensure hover-driven chrome is structurally stable under view-cache reuse (ADR 0181).
+  - Touches: `apps/fret-ui-gallery/src/*`, `ecosystem/fret-code-view/src/code_block.rs`, `tools/diag-scripts/*`
+  - Progress: `CodeBlock` hover scrollbars no longer toggle the element tree or the max-height wrapper; hover only updates paint-only opacity.
+  - Evidence:
+    - Test: `ecosystem/fret-code-view/tests/hover_is_paint_only.rs`
+    - Script: `tools/diag-scripts/ui-gallery-code-view-hover-chrome.json`
+    - Perf capture (2026-02-04; view-cache + shell): `target/fret-diag/1770221009810-script-step-0011-move_pointer/bundle.json`
+- [x] GPUI-MVP4-demo-003 VirtualList: make scroll-driven window updates correct and explainable under view-cache reuse (no implicit `Pressable` notify).
   - Motivation: reduce cache-root rerenders and layout invalidations during scroll/hover by keeping the element tree more structurally stable.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `apps/fret-ui-gallery/src/*` (migration site), `crates/fret-ui/src/tree/*` (if new hooks needed)
+  - Note: full prepaint-driven window application for non-retained VirtualList is tracked under `GPUI-MVP5-virt-001` (Track A/Track B). This item focuses on correctness under view-cache reuse (`scroll_to_item`/wheel) and removing reliance on implicit `notify()`.
   - Plan (v1, Fret-compatible):
     - Ensure out-of-band `ScrollHandle` revision changes (e.g. `scroll_to_item`) are detected during event dispatch and schedule a redraw even when no
       `notify()` occurred, so view-cache roots cannot replay stale virtual-list output indefinitely.
@@ -634,7 +676,7 @@ topics (if/when we implement them):
       - Command:
         - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-demo-drag-indicators.json --warmup-frames 5 --check-prepaint-actions-min 1 --check-drag-cache-root-paint-only dock-demo-dock-space --check-stale-paint dock-demo-dock-space --env FRET_EXAMPLES_VIEW_CACHE=1 --launch -- cargo run -p fret-demo --bin docking_demo --release`
       - Evidence: `target/fret-diag/1769776050260-docking-demo-drag-indicators/bundle.json`
-- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+- [x] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
@@ -644,7 +686,7 @@ topics (if/when we implement them):
     - Remaining work (non-retained v2; keep small and gate-driven):
       - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
         This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
-      - [~] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+      - [x] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
         - [x] Make Track B scheduling responsibility explicit and prepaint-driven (avoid duplicated layout side effects).
           - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (“Scheduling responsibility” under Track B).
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (non-retained schedules one-shot rerender on `window_shift_kind!=none`),
@@ -689,7 +731,7 @@ topics (if/when we implement them):
     - Anchors:
       - `crates/fret-ui/src/tree/prepaint.rs` (non-retained prefetch; `window_shift_kind=prefetch`)
       - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
-      - `apps/fretboard/src/diag/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
+      - `crates/fret-diag/src/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
       - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
     - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
       - `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
@@ -730,6 +772,17 @@ topics (if/when we implement them):
         one-shot rerender to rebuild `visible_items` when the window actually changes.
       - If revisited, prefer implementing this as an explicit boundary/host (not structural mutation in prepaint) so the
         result remains diagnosable and compatible with view-cache reuse + GC invariants (ADR 0191/0193).
+      - Slice (guard rail; implemented): small scroll deltas should stay within the current window (no non-retained shifts).
+        - Script: `tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json`
+        - Suite: `fretboard diag suite ui-gallery-vlist-no-window-shifts-small-scroll` (defaults: view-cache + shell + minimal vlist + known heights; warmup=32)
+        - Gates (post-run):
+          - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
+          - `--check-vlist-window-shifts-non-retained-max 0`
+          - `--check-vlist-window-shifts-prefetch-max 0`
+          - `--check-vlist-window-shifts-escape-max 0`
+      - Slice (remaining gap): make `ui-gallery-vlist-window-boundary` pass `--check-vlist-window-shifts-non-retained-max 0`
+        by replacing the rerender-on-shift path with an explicit host boundary (ADR 0192-style), or by introducing a new boundary
+        dedicated to composable non-retained lists.
     - [x] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
       - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
       - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
@@ -1198,7 +1251,7 @@ topics (if/when we implement them):
       - Windowed (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=1`): `target/fret-diag/1769092702700-ui-gallery-code-view-scroll-refresh/bundle.json`
         - `diag stats` time sum (us): total=4976556 layout=4533404 paint=438751
       - Both pass stale-paint verification: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`
-- [~] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
+- [x] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-node/src/*` (node graph viewport culling, edges/handles).
     - `ecosystem/fret-canvas/src/*` (large canvas surfaces).
@@ -1217,7 +1270,24 @@ topics (if/when we implement them):
     - UI Gallery harness: `PAGE_CANVAS_CULL_TORTURE` with root test id `ui-gallery-canvas-cull-root` (pan/zoom canvas + viewport culling baseline).
     - Script: `tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json` (middle-drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-canvas-cull-torture/1769162100494-ui-gallery-canvas-cull-pan-zoom/bundle.json`
-- [~] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
+  - Progress (v2):
+    - UI Gallery harness: `PAGE_NODE_GRAPH_CULL_TORTURE` with root test id `ui-gallery-node-graph-cull-root` (retained `fret-node` stress scene).
+    - Script: `tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json` (middle-drag + wheel).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull` (defaults: view-cache + shell + screenshots).
+    - UI debug: add `node_graph_cull_window_shift` prepaint action + `node_graph_cull_window_key` payload, exported into diagnostics bundles.
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::NodeGraphCullWindowShift`)
+      - `crates/fret-ui/src/widget.rs` (`PrepaintCx::debug_record_node_graph_cull_window_shift`)
+      - `ecosystem/fret-node/src/ui/canvas/widget.rs` (`Widget::prepaint` records shifts when the window key changes)
+      - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::NodeGraphCullWindowShift`)
+    - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
+    - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-min <n>` (evidence: `check.node_graph_cull_window_shifts_min.json`).
+    - Window-shift torture script: `tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json` (large pan crosses window boundaries).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull-window-shifts` (defaults: view-cache + shell + screenshots; gate `--check-node-graph-cull-window-shifts-min 1`; warmup=5).
+    - No-shift small-pan torture script: `tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json` (small pans stay within a single window).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan` (defaults: view-cache + shell + screenshots; gate `--check-node-graph-cull-window-shifts-max 0`; warmup=5).
+    - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-max <n>` (evidence: `check.node_graph_cull_window_shifts_max.json`).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
+- [x] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
     - `ecosystem/fret-plot3d/src/*` (3D sampling + culling surfaces).
@@ -1236,9 +1306,18 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json` (drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-chart-torture/1769159171953-ui-gallery-chart-torture-pan-zoom/bundle.json`
     - Infrastructure: add `drag_pointer` to UI diagnostics steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`).
-- [~] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
+  - Progress (v2):
+    - UI debug: add `chart_sampling_window_shift` prepaint action + `chart_sampling_window_key` payload, exported into diagnostics bundles.
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::ChartSamplingWindowShift`)
+      - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::ChartSamplingWindowShift`)
+    - UI Gallery harness now hosts retained `fret_chart::ChartCanvas` and makes it a manual view-cache root so `Widget::prepaint` can emit sampling-window diagnostics.
+    - Gate: builtin suite `fretboard diag suite ui-gallery-chart-torture` defaults to `--check-chart-sampling-window-shifts-min 1` and `--warmup-frames 5`.
+    - Evidence bundle (cache+shell, local): `target/fret-diag-chart-torture-sampling5/1770266558145-ui-gallery-chart-torture-pan-zoom-after/bundle.json`
+      - Gate evidence: `target/fret-diag-chart-torture-sampling5/check.chart_sampling_window_shifts_min.json`
+- [x] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
+  - Status note: closure is satisfied by the harnesses below plus at least one real migration target (`GPUI-MVP5-eco-008` docking drag/drop indicators are paint-only under view-cache reuse).
   - Anchors:
     - `ecosystem/fret-code-view/tests/hover_is_paint_only.rs` (existing regression that hover does not force rerender).
   - Proposed harness plan (v1):
@@ -1413,7 +1492,7 @@ topics (if/when we implement them):
         - window-boundary: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json` (2201/1732/21/448)
         - sort+scroll: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json` (4413/3249/11/1153)
 
-- [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
+- [x] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
   - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness proves stable paint
     under view-cache reuse.
@@ -1421,9 +1500,23 @@ topics (if/when we implement them):
     - UI Gallery harness: `PAGE_AI_TRANSCRIPT_TORTURE` with root test id `ui-gallery-ai-transcript-root`.
       - Note: the harness uses a bounded viewport (`h_px(Px(460.0))`) so VirtualList window telemetry is meaningful.
     - Script: `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`.
-    - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-view-cache-reuse-min 10 --check-wheel-scroll ui-gallery-ai-transcript-row-0 --check-stale-paint ui-gallery-ai-transcript-row-0 ...`
-      - Defaults: enables view-cache + shell and sets `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`.
-    - Evidence bundle (cache+shell): `target/fret-diag/1769689580999-ui-gallery-ai-transcript-torture-scroll/bundle.json`.
+    - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --launch -- cargo run -p fret-ui-gallery`
+  - Progress (v2):
+    - Suite defaults now enable cache+shell and a variable-height dataset:
+      - `crates/fret-diag/src/lib.rs` (`ui-gallery-ai-transcript-retained` sets `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`, and defaults `--warmup-frames 5`)
+    - Script now includes an append step so “new messages arriving while scrolling” is exercised:
+      - `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-ai-transcript-append`)
+      - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (click append + idle tail)
+    - Gates enforced by the suite (defaults):
+      - view-cache reuse stability: `--check-view-cache-reuse-stable-min 10` (writes evidence JSON)
+      - retained VirtualList sanity: `--check-retained-vlist-reconcile-no-notify 1`, `--check-retained-vlist-attach-detach-max 256`
+      - retained-only enforcement: `--check-vlist-window-shifts-non-retained-max 0` (writes evidence JSON)
+      - hover chrome should not cause declarative layout invalidation: `--check-hover-layout-max 0`
+      - stale paint safety while scrolling: `--check-stale-paint ui-gallery-ai-transcript-row-0`
+    - Evidence (cache+shell, local):
+      - `target/fret-diag-ai-transcript5/1770275796596-ui-gallery-ai-transcript-torture-scroll/bundle.json`
+      - `target/fret-diag-ai-transcript5/check.view_cache_reuse_stable.json`
+      - `target/fret-diag-ai-transcript5/check.vlist_window_shifts_non_retained_max.json`
 - [x] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Instrumentation (v2): bundles now export bounded `debug.notify_requests` with `notify()` callsite attribution
@@ -1432,7 +1525,7 @@ topics (if/when we implement them):
       `crates/fret-ui/src/tree/dispatch.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
     - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` writes `check.notify_hotspots.json`
       next to the bundle (even on failure).
-      - Anchors: `apps/fretboard/src/diag/stats.rs`, `apps/fretboard/src/diag/mod.rs`.
+      - Anchors: `crates/fret-diag/src/stats.rs`, `crates/fret-diag/src/lib.rs`.
   - Baseline note (pre-v1): worst-tick bundles were layout-dominated and frequently attributed dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:*`.
   - Progress (v1):

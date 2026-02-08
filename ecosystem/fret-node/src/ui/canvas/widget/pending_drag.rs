@@ -3,9 +3,9 @@ use fret_ui::UiHost;
 
 use crate::core::NodeId as GraphNodeId;
 
-use super::super::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
 use super::threshold::exceeds_drag_threshold;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{NodeDrag, PendingNodeSelectAction, ViewSnapshot};
 
 pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

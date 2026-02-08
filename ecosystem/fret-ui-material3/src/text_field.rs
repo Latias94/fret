@@ -4,13 +4,21 @@
 //! - Token-driven chrome via `md.comp.(outlined|filled)-text-field.*`.
 //! - Hover/focus/error/disabled outcomes via theme tokens (best-effort).
 
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
+    TextWrap, Transform2D,
+};
+use fret_icons::IconId;
 use fret_runtime::Model;
+use fret_ui::action::{OnPressablePointerDown, PointerDownCx, PressablePointerDownResult};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, HoverRegionProps, Length, MainAlign, Overflow,
-    PointerRegionProps, TextInputProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, Length, MainAlign,
+    Overflow, PointerRegionProps, PressableA11y, PressableProps, SvgIconProps, TextInputProps,
+    TextProps, VisualTransformProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
@@ -20,8 +28,13 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::floating_label;
+use crate::foundation::icon::svg_source_for_icon;
+use crate::foundation::indication::{
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
+use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -29,6 +42,13 @@ pub enum TextFieldVariant {
     #[default]
     Outlined,
     Filled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum TextFieldTokenNamespace {
+    #[default]
+    TextField,
+    Autocomplete,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -180,10 +200,22 @@ pub struct TextField {
     placeholder: Option<Arc<str>>,
     supporting_text: Option<Arc<str>>,
     style: TextFieldStyle,
+    field_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    trailing_icon: Option<IconId>,
+    trailing_icon_a11y_label: Option<Arc<str>>,
+    trailing_icon_test_id: Option<Arc<str>>,
+    trailing_icon_rotation_progress: Option<f32>,
+    on_trailing_icon_pointer_down: Option<OnPressablePointerDown>,
     disabled: bool,
     error: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    a11y_role: Option<SemanticsRole>,
+    active_descendant: Option<NodeId>,
+    controls_element: Option<u64>,
+    expanded: Option<bool>,
+    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    token_namespace: TextFieldTokenNamespace,
 }
 
 impl std::fmt::Debug for TextField {
@@ -198,6 +230,8 @@ impl std::fmt::Debug for TextField {
             .field("error", &self.error)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
+            .field("a11y_role", &self.a11y_role)
+            .field("token_namespace", &self.token_namespace)
             .finish()
     }
 }
@@ -211,15 +245,32 @@ impl TextField {
             placeholder: None,
             supporting_text: None,
             style: TextFieldStyle::default(),
+            field_id_out: None,
+            trailing_icon: None,
+            trailing_icon_a11y_label: None,
+            trailing_icon_test_id: None,
+            trailing_icon_rotation_progress: None,
+            on_trailing_icon_pointer_down: None,
             disabled: false,
             error: false,
             a11y_label: None,
             test_id: None,
+            a11y_role: None,
+            active_descendant: None,
+            controls_element: None,
+            expanded: None,
+            input_id_out: None,
+            token_namespace: TextFieldTokenNamespace::TextField,
         }
     }
 
     pub fn variant(mut self, variant: TextFieldVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub(crate) fn token_namespace(mut self, namespace: TextFieldTokenNamespace) -> Self {
+        self.token_namespace = namespace;
         self
     }
 
@@ -243,6 +294,34 @@ impl TextField {
         self
     }
 
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
+        self
+    }
+
+    pub fn trailing_icon_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.trailing_icon_a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing_icon_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trailing_icon_test_id = Some(id.into());
+        self
+    }
+
+    pub fn trailing_icon_rotation_progress(mut self, progress: f32) -> Self {
+        self.trailing_icon_rotation_progress = Some(progress);
+        self
+    }
+
+    pub fn on_trailing_icon_pointer_down(
+        mut self,
+        on_pointer_down: OnPressablePointerDown,
+    ) -> Self {
+        self.on_trailing_icon_pointer_down = Some(on_pointer_down);
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -263,12 +342,50 @@ impl TextField {
         self
     }
 
+    pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
+        self.a11y_role = Some(role);
+        self
+    }
+
+    pub(crate) fn active_descendant(mut self, node: Option<NodeId>) -> Self {
+        self.active_descendant = node;
+        self
+    }
+
+    pub(crate) fn controls_element(mut self, element: Option<u64>) -> Self {
+        self.controls_element = element;
+        self
+    }
+
+    pub(crate) fn expanded(mut self, expanded: Option<bool>) -> Self {
+        self.expanded = expanded;
+        self
+    }
+
+    pub(crate) fn input_id_out(mut self, out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.input_id_out = Some(out);
+        self
+    }
+
+    pub(crate) fn field_id_out(mut self, out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.field_id_out = Some(out);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
             let variant = self.variant;
-            let height = text_field_tokens::container_height(&theme, variant);
+            let token_namespace = self.token_namespace;
+            let height = match token_namespace {
+                TextFieldTokenNamespace::TextField => {
+                    text_field_tokens::container_height(&theme, variant)
+                }
+                TextFieldTokenNamespace::Autocomplete => {
+                    autocomplete_tokens::text_field_container_height(&theme, variant)
+                }
+            };
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -285,12 +402,23 @@ impl TextField {
             let style_override = self.style;
             let disabled = self.disabled;
             let error = self.error;
+            let a11y_role = self.a11y_role;
+            let active_descendant = self.active_descendant;
+            let controls_element = self.controls_element;
+            let expanded = self.expanded;
             let a11y_label = self
                 .a11y_label
                 .clone()
                 .or_else(|| label.clone())
                 .or_else(|| placeholder.clone());
             let test_id = self.test_id.clone();
+            let trailing_icon = self.trailing_icon;
+            let trailing_icon_a11y_label = self.trailing_icon_a11y_label.clone();
+            let trailing_icon_test_id = self.trailing_icon_test_id.clone();
+            let trailing_icon_rotation_progress = self.trailing_icon_rotation_progress;
+            let on_trailing_icon_pointer_down = self.on_trailing_icon_pointer_down.clone();
+            let input_id_out = self.input_id_out.clone();
+            let field_id_out = self.field_id_out.clone();
 
             cx.hover_region(hover, move |cx, hovered| {
                 let theme = Theme::global(&*cx.app).clone();
@@ -353,20 +481,44 @@ impl TextField {
                                 focused = cx.is_focused_element(id);
                                 states = text_field_widget_states(cx, hovered, focused, disabled);
 
-                                let mut chrome = text_field_tokens::text_input_style(
-                                    &theme,
-                                    variant_for_children,
-                                    focused,
-                                    hovered,
-                                    disabled,
-                                    error,
-                                );
+                                let mut chrome = match token_namespace {
+                                    TextFieldTokenNamespace::TextField => {
+                                        text_field_tokens::text_input_style(
+                                            &theme,
+                                            variant_for_children,
+                                            focused,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                        )
+                                    }
+                                    TextFieldTokenNamespace::Autocomplete => {
+                                        autocomplete_tokens::text_input_style(
+                                            &theme,
+                                            variant_for_children,
+                                            focused,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                        )
+                                    }
+                                };
                                 apply_text_field_input_overrides(
                                     &theme,
                                     states,
                                     &style_override,
                                     &mut chrome,
                                 );
+
+                                let trailing_icon_hit_width = if trailing_icon.is_some() {
+                                    Px(48.0)
+                                } else {
+                                    Px(0.0)
+                                };
+                                if trailing_icon_hit_width.0 > 0.0 {
+                                    chrome.padding.right =
+                                        Px(chrome.padding.right.0.max(trailing_icon_hit_width.0));
+                                }
 
                                 let should_float = focused || populated;
                                 let input_phase = if focused {
@@ -544,9 +696,13 @@ impl TextField {
                                 props.layout.size.width = Length::Fill;
                                 props.layout.size.height = Length::Fill;
                                 props.a11y_label = a11y_label.clone();
-                                props.a11y_role = Some(SemanticsRole::TextField);
+                                props.a11y_role =
+                                    Some(a11y_role.unwrap_or(SemanticsRole::TextField));
                                 props.test_id = test_id.clone();
                                 props.placeholder = placeholder.clone();
+                                props.active_descendant = active_descendant;
+                                props.controls_element = controls_element;
+                                props.expanded = expanded;
                                 props.chrome = chrome;
                                 props.text_style =
                                     crate::foundation::context::inherited_text_style(cx)
@@ -558,8 +714,14 @@ impl TextField {
 
                                 props
                             });
+                            if let Some(out) = input_id_out.as_ref() {
+                                out.set(Some(input_id));
+                            }
 
-                            let overlay = state_layer.map(|background| {
+                            // Keep subtree shape stable across hover transitions (ADR 0181).
+                            // We always include the overlay node, but only paint when `state_layer`
+                            // is present.
+                            let overlay = {
                                 let mut overlay_layout = fret_ui::element::LayoutStyle::default();
                                 overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
                                 overlay_layout.inset.top = Some(Px(0.0));
@@ -569,17 +731,193 @@ impl TextField {
 
                                 let mut overlay = ContainerProps::default();
                                 overlay.layout = overlay_layout;
-                                overlay.background = Some(background);
+                                overlay.background = state_layer;
                                 overlay.corner_radii = container.corner_radii;
                                 cx.container(overlay, |_cx| Vec::new())
+                            };
+
+                            let trailing_icon_el = trailing_icon.map(|icon| {
+                                let size = match token_namespace {
+                                    TextFieldTokenNamespace::TextField => {
+                                        text_field_tokens::trailing_icon_size(
+                                            &theme,
+                                            variant_for_children,
+                                        )
+                                    }
+                                    TextFieldTokenNamespace::Autocomplete => {
+                                        autocomplete_tokens::trailing_icon_size(
+                                            &theme,
+                                            variant_for_children,
+                                        )
+                                    }
+                                };
+                                let (color, opacity) = match token_namespace {
+                                    TextFieldTokenNamespace::TextField => {
+                                        text_field_tokens::trailing_icon_color(
+                                            &theme,
+                                            variant_for_children,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                            focused,
+                                        )
+                                    }
+                                    TextFieldTokenNamespace::Autocomplete => {
+                                        autocomplete_tokens::trailing_icon_color(
+                                            &theme,
+                                            variant_for_children,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                            focused,
+                                        )
+                                    }
+                                };
+
+                                let svg = svg_source_for_icon(cx, &icon);
+                                let mut icon_props = SvgIconProps::new(svg);
+                                icon_props.fit = SvgFit::Contain;
+                                icon_props.color = color;
+                                icon_props.opacity = opacity;
+                                icon_props.layout.size.width = Length::Px(size);
+                                icon_props.layout.size.height = Length::Px(size);
+                                let icon_el = cx.svg_icon_props(icon_props);
+
+                                let icon_el =
+                                    if let Some(progress) = trailing_icon_rotation_progress {
+                                        let degrees = 180.0 * progress.clamp(0.0, 1.0);
+                                        let mut layout = fret_ui::element::LayoutStyle::default();
+                                        layout.size.width = Length::Px(size);
+                                        layout.size.height = Length::Px(size);
+                                        cx.visual_transform_props(
+                                            VisualTransformProps {
+                                                layout,
+                                                transform: Transform2D::rotation_about_degrees(
+                                                    degrees,
+                                                    Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5)),
+                                                ),
+                                            },
+                                            move |_cx| vec![icon_el],
+                                        )
+                                    } else {
+                                        icon_el
+                                    };
+
+                                let icon_test_id = trailing_icon_test_id.clone().or_else(|| {
+                                    test_id
+                                        .as_ref()
+                                        .map(|id| Arc::<str>::from(format!("{id}-trailing-icon")))
+                                });
+
+                                let icon_a11y_label = trailing_icon_a11y_label.clone();
+
+                                let input_id_for_focus = input_id;
+                                let handler = on_trailing_icon_pointer_down.clone();
+                                let enabled = !disabled;
+                                let hover_opacity = theme
+                                    .number_by_key("md.sys.state.hover.state-layer-opacity")
+                                    .unwrap_or(0.08);
+                                let pressed_opacity = theme
+                                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
+                                    .unwrap_or(0.1);
+                                let ripple_base_opacity = pressed_opacity;
+                                let config = material_pressable_indication_config(&theme, None);
+                                let corner_radii = Corners::all(Px(24.0));
+                                let state_layer_color = alpha_mul(color, opacity);
+
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout.inset.top = Some(Px(0.0));
+                                layout.inset.right = Some(Px(0.0));
+                                layout.inset.bottom = Some(Px(0.0));
+                                layout.size.width = Length::Px(Px(48.0));
+                                layout.size.height = Length::Fill;
+
+                                cx.pressable(
+                                    PressableProps {
+                                        layout,
+                                        enabled,
+                                        focusable: false,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: icon_a11y_label,
+                                            test_id: icon_test_id,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |cx, state| {
+                                        if enabled {
+                                            cx.pressable_on_pointer_down(Arc::new(
+                                                move |host, action_cx, down: PointerDownCx| {
+                                                    host.request_focus(input_id_for_focus);
+                                                    if let Some(h) = handler.clone() {
+                                                        return h(host, action_cx, down);
+                                                    }
+                                                    PressablePointerDownResult::Continue
+                                                },
+                                            ));
+                                        }
+
+                                        let pressable_id = cx.root_id();
+                                        let now_frame = cx.frame_id.0;
+
+                                        let mut props = PointerRegionProps::default();
+                                        props.enabled = enabled;
+                                        props.layout.size.width = Length::Fill;
+                                        props.layout.size.height = Length::Fill;
+
+                                        vec![cx.pointer_region(props, move |cx| {
+                                            cx.pointer_region_on_pointer_down(Arc::new(
+                                                |_host, _cx, _down| false,
+                                            ));
+
+                                            let pressed = enabled && state.pressed;
+                                            let hovered = enabled && state.hovered;
+                                            let state_layer_target = if pressed {
+                                                pressed_opacity
+                                            } else if hovered {
+                                                hover_opacity
+                                            } else {
+                                                0.0
+                                            };
+
+                                            let overlay = material_ink_layer_for_pressable(
+                                                cx,
+                                                pressable_id,
+                                                now_frame,
+                                                corner_radii,
+                                                RippleClip::Bounded,
+                                                state_layer_color,
+                                                pressed,
+                                                state_layer_target,
+                                                ripple_base_opacity,
+                                                config,
+                                                false,
+                                            );
+
+                                            let mut row = FlexProps::default();
+                                            row.direction = Axis::Horizontal;
+                                            row.justify = MainAlign::Center;
+                                            row.align = CrossAlign::Center;
+                                            row.layout.size.width = Length::Fill;
+                                            row.layout.size.height = Length::Fill;
+                                            vec![overlay, cx.flex(row, move |_cx| vec![icon_el])]
+                                        })]
+                                    },
+                                )
                             });
 
-                            match overlay {
-                                Some(overlay) => {
-                                    cx.container(container, move |_cx| vec![overlay, text_input])
+                            cx.container(container, move |cx| {
+                                if let Some(out) = field_id_out.as_ref() {
+                                    out.set(Some(cx.root_id()));
                                 }
-                                None => cx.container(container, move |_cx| vec![text_input]),
-                            }
+                                let mut out = vec![overlay, text_input];
+                                if let Some(icon) = trailing_icon_el {
+                                    out.push(icon);
+                                }
+                                out
+                            })
                         });
 
                         children.push(input);

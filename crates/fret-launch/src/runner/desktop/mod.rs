@@ -278,6 +278,11 @@ impl<D: WinitAppDriver> WinitAppDriver for HookedDriver<D> {
     }
 
     fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+        let diag_renderer_perf =
+            std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        if diag_renderer_perf {
+            renderer.set_perf_enabled(true);
+        }
         if let Some(hook) = self.on_gpu_ready.take() {
             hook(app, context, renderer);
         }
@@ -1116,6 +1121,12 @@ struct WindowRuntime<S> {
     surface: SurfaceState<'static>,
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
+    /// Coalesced resizes awaiting application at the next frame boundary.
+    ///
+    /// During interactive window resize, platforms may emit multiple size updates per vblank.
+    /// We keep only the latest physical size and apply it once per `RedrawRequested` to avoid
+    /// reconfiguring the surface and recomputing layout more often than we can present.
+    pending_surface_resize: Option<winit::dpi::PhysicalSize<u32>>,
     is_focused: bool,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
@@ -2903,6 +2914,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     },
                     ..Default::default()
                 },
+                pending_surface_resize: None,
                 is_focused: false,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
@@ -2942,12 +2954,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(windows)]
         if let Some(menu_bar) = self.menu_bar.as_ref()
             && let Some(state) = self.windows.get_mut(id)
-        {
-            if let Some(menu) =
+            && let Some(menu) =
                 windows_menu::set_window_menu_bar(&self.app, state.window.as_ref(), id, menu_bar)
-            {
-                state.os_menu = Some(menu);
-            }
+        {
+            state.os_menu = Some(menu);
         }
 
         // Ensure the window draws at least one frame after creation.
@@ -2971,6 +2981,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        let (cur_w, cur_h) = state.surface.size();
+        if cur_w == width.max(1) && cur_h == height.max(1) {
+            return;
+        }
         state.surface.resize(&context.device, width, height);
     }
 
@@ -3552,10 +3566,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     Effect::QuitApp => {
                         let prompt_window = self.main_window.or_else(|| self.windows.keys().next());
-                        if let Some(window) = prompt_window {
-                            if !self.driver.before_close_window(&mut self.app, window) {
-                                continue;
-                            }
+                        if let Some(window) = prompt_window
+                            && !self.driver.before_close_window(&mut self.app, window)
+                        {
+                            continue;
                         }
 
                         let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
@@ -4887,34 +4901,33 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
             && std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some()
+            && let Some(state) = self.windows.get(current)
         {
-            if let Some(state) = self.windows.get(current) {
-                let size_phys = state.window.surface_size();
-                let scale = state.window.scale_factor();
-                let size_logical: winit::dpi::LogicalSize<f32> = size_phys.to_logical(scale);
-                let margin = 32.0f32;
-                let oob = pos.x.0 < -margin
-                    || pos.y.0 < -margin
-                    || pos.x.0 > size_logical.width + margin
-                    || pos.y.0 > size_logical.height + margin;
-                if oob {
-                    let outer = state.window.outer_position().ok();
-                    let deco = state.window.surface_position();
-                    dock_tearoff_log(format_args!(
-                        "[cursor-oob] window={:?} screen=({:.1},{:.1}) local=({:.1},{:.1}) size=({:.1},{:.1}) scale={:.3} outer={:?} deco=({},{})",
-                        current,
-                        screen_pos.x,
-                        screen_pos.y,
-                        pos.x.0,
-                        pos.y.0,
-                        size_logical.width,
-                        size_logical.height,
-                        scale,
-                        outer,
-                        deco.x,
-                        deco.y,
-                    ));
-                }
+            let size_phys = state.window.surface_size();
+            let scale = state.window.scale_factor();
+            let size_logical: winit::dpi::LogicalSize<f32> = size_phys.to_logical(scale);
+            let margin = 32.0f32;
+            let oob = pos.x.0 < -margin
+                || pos.y.0 < -margin
+                || pos.x.0 > size_logical.width + margin
+                || pos.y.0 > size_logical.height + margin;
+            if oob {
+                let outer = state.window.outer_position().ok();
+                let deco = state.window.surface_position();
+                dock_tearoff_log(format_args!(
+                    "[cursor-oob] window={:?} screen=({:.1},{:.1}) local=({:.1},{:.1}) size=({:.1},{:.1}) scale={:.3} outer={:?} deco=({},{})",
+                    current,
+                    screen_pos.x,
+                    screen_pos.y,
+                    pos.x.0,
+                    pos.y.0,
+                    size_logical.width,
+                    size_logical.height,
+                    scale,
+                    outer,
+                    deco.x,
+                    deco.y,
+                ));
             }
         }
 
@@ -5263,6 +5276,7 @@ fn screen_pos_in_client(
     screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
 }
 
+#[cfg(target_os = "linux")]
 fn is_wayland_session(xdg_session_type: Option<&str>, wayland_display: Option<&str>) -> bool {
     if xdg_session_type.is_some_and(|v| v.eq_ignore_ascii_case("wayland")) {
         return true;
@@ -5341,17 +5355,20 @@ mod tests {
     use winit::dpi::{PhysicalPosition, PhysicalSize};
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn is_wayland_session_true_for_xdg_session_type_wayland() {
         assert!(is_wayland_session(Some("wayland"), None));
         assert!(is_wayland_session(Some("Wayland"), None));
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn is_wayland_session_true_for_wayland_display() {
         assert!(is_wayland_session(None, Some("wayland-0")));
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn is_wayland_session_false_for_x11_and_no_wayland_display() {
         assert!(!is_wayland_session(Some("x11"), None));
         assert!(!is_wayland_session(None, Some("")));

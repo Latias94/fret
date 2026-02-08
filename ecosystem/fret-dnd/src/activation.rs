@@ -2,18 +2,20 @@ use std::collections::HashMap;
 
 use fret_core::{Point, PointerId, Px};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum ActivationConstraint {
+    #[default]
     None,
-    Distance { px: f32 },
-    DelayTicks { ticks: u64 },
-    DelayAndDistance { ticks: u64, px: f32 },
-}
-
-impl Default for ActivationConstraint {
-    fn default() -> Self {
-        Self::None
-    }
+    Distance {
+        px: f32,
+    },
+    DelayTicks {
+        ticks: u64,
+    },
+    DelayAndDistance {
+        ticks: u64,
+        px: f32,
+    },
 }
 
 impl ActivationConstraint {

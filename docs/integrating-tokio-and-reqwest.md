@@ -11,6 +11,21 @@ Fret intentionally does **not** force a specific async runtime. Instead, async w
 `ecosystem/fret-query` supports this by exposing async variants of `use_query`, while keeping the
 apply boundary the same (`InboxDrainRegistry`).
 
+## 0) Lifecycle semantics (stale != polling)
+
+`QueryPolicy.stale_time` defines **freshness** only. A query becoming stale does not automatically
+refetch while it is continuously observed (for example, `use_query*` being called every frame
+because your UI rebuilds a declarative element tree).
+
+In v1, a refetch happens only when triggered by one of:
+
+- initial use (`QueryStatus::Idle`),
+- explicit invalidation/refetch,
+- retry policy after a transient failure,
+- remount + stale (the query becomes observed again after a >1 frame gap).
+
+If you want polling, drive it explicitly (e.g. a timer that calls `invalidate*` or `refetch*`).
+
 ## 1) Install a future spawner global
 
 Async query fetch requires a `FutureSpawnerHandle` global. This lets `fret-query` spawn futures
@@ -20,6 +35,7 @@ without taking a dependency on any particular runtime.
 
 Cargo features:
 
+- enable `fret-query/ui` (for `ElementContext` sugar),
 - enable `fret-query/tokio` (for `TokioSpawner`), and
 - add a direct `tokio` dependency in your app crate.
 
@@ -48,6 +64,7 @@ Notes:
 
 Cargo features:
 
+- enable `fret-query/ui` (for `ElementContext` sugar),
 - enable `fret-query/wasm` (for `WasmSpawner`).
 
 Install:
@@ -123,7 +140,30 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
 }
 ```
 
-## 3) Troubleshooting
+## 3) Mutations, invalidation, and explicit polling
+
+### Mutation -> invalidate namespace
+
+After a write (POST/PUT/DELETE), invalidate the affected keys so the next UI frame refetches.
+Prefer invalidating by namespace so you can evolve key shapes without missing dependent queries.
+
+```rust
+use fret_query::with_query_client;
+
+fn after_mutation_committed(app: &mut fret_app::App) {
+    let _ = with_query_client(app, |client, app| {
+        client.invalidate_namespace("my_app.http.user.v1");
+    });
+}
+```
+
+### Explicit polling (opt-in)
+
+If you want polling, schedule it explicitly and call `invalidate(...)` or `invalidate_namespace(...)`
+from your timer/tick handler. This keeps background I/O opt-in and makes “why did we refetch?”
+debuggable.
+
+## 4) Troubleshooting
 
 - If you see `QueryStatus::Error` with a message about a missing `FutureSpawnerHandle`, ensure you
   installed the global before calling `use_query_async` / `use_query_async_local`.

@@ -55,64 +55,64 @@ Component checklist (canonical order from `radix/meta.json`):
 
 - [~] accordion — examples mirrored; parity still under audit (`apps/fret-ui-gallery/src/ui.rs::preview_accordion`)
 - [ ] alert
-- [ ] alert-dialog
-- [ ] aspect-ratio
-- [ ] avatar
+- [~] alert-dialog - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs`)
+- [~] aspect-ratio - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs`)
+- [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
-- [ ] breadcrumb
-- [~] button (page examples re-ordered + expanded; still validating interactions)
+- [~] breadcrumb - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs`)
+- [x] button - examples aligned; interaction parity validated by button hover/active reset + web-golden smoke (`ecosystem/fret-ui-shadcn/src/button.rs::tests::button_clears_hover_and_active_visuals_after_click_and_pointer_leave`, `ecosystem/fret-ui-shadcn/tests/web_goldens_smoke.rs::web_golden_button_default_smoke`)
 - [x] button-group — examples mirrored (`apps/fret-ui-gallery/src/ui.rs::preview_button_group`)
 - [x] calendar — examples mirrored (Basic/Range/Month+Year selector/Presets/Date+Time/Booked/Custom Cell Size/Week Numbers/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`, `ecosystem/fret-ui-shadcn/src/calendar.rs`)
 - [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
-- [ ] carousel
-- [ ] chart
-- [ ] checkbox
-- [ ] collapsible
-- [ ] combobox
-- [ ] command
-- [ ] context-menu
-- [ ] data-table
-- [ ] date-picker
-- [ ] dialog
+- [~] carousel - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/carousel.rs`)
+- [~] chart - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/chart.rs`)
+- [~] checkbox - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/checkbox.rs`)
+- [~] collapsible - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/collapsible.rs`)
+- [~] combobox - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/combobox.rs`)
+- [~] command - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/command.rs`)
+- [~] context-menu - docs-order examples + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/context_menu.rs)
+- [~] data-table - docs-order sections + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/data_table.rs)
+- [~] date-picker - docs-order examples + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/date_picker.rs)
+- [~] dialog - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/dialog.rs`)
 - [ ] direction
-- [ ] drawer
-- [ ] dropdown-menu
-- [ ] empty
-- [ ] field
-- [ ] form
-- [ ] hover-card
-- [ ] input
-- [ ] input-group
-- [ ] input-otp
-- [ ] item
-- [ ] kbd
-- [ ] label
-- [ ] menubar
-- [ ] native-select
-- [ ] navigation-menu
-- [ ] pagination
-- [ ] popover
-- [ ] progress
-- [ ] radio-group
-- [ ] resizable
-- [ ] scroll-area
+- [~] drawer - docs-order examples + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/drawer.rs)
+- [~] dropdown-menu - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs`)
+- [~] empty - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/empty.rs`)
+- [~] field - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/field.rs`)
+- [~] form - gallery-hub examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/form.rs`)
+- [~] hover-card - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/hover_card.rs`)
+- [~] input - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input.rs`)
+- [~] input-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_group.rs`)
+- [~] input-otp - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_otp.rs`)
+- [~] item - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/item.rs`)
+- [~] kbd - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/kbd.rs`)
+- [~] label - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/label.rs`)
+- [~] menubar - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/menubar.rs`)
+- [~] native-select - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/native_select.rs`)
+- [~] navigation-menu - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs`)
+- [x] pagination — examples mirrored (Demo/Simple/Icons Only/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_pagination`, `ecosystem/fret-ui-shadcn/src/pagination.rs`)
+- [x] popover — examples mirrored (Demo/Basic/Align/With Form/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_popover`, `ecosystem/fret-ui-shadcn/src/popover.rs`)
+- [x] progress — examples mirrored (Demo/Label/Controlled/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_progress`, `ecosystem/fret-ui-shadcn/src/progress.rs`)
+- [x] radio-group — examples mirrored (Demo/Description/Choice Card/Fieldset/Disabled/Invalid/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_radio_group`, `ecosystem/fret-ui-shadcn/src/radio_group.rs`, `ecosystem/fret-ui-shadcn/src/radio_group.rs::tests::*radio_group_*`)
+- [x] resizable — examples mirrored (Demo/Vertical/Handle/RTL; `with_handle` approximates grip) (`apps/fret-ui-gallery/src/ui.rs::preview_resizable`, `ecosystem/fret-ui-shadcn/src/resizable.rs`)
+- [x] scroll-area — examples mirrored (Demo/Horizontal/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_scroll_area`)
 - [~] select (group semantics + default alignment audited; needs full docs example order)
-- [ ] separator
-- [ ] sheet
-- [ ] sidebar
-- [ ] skeleton
-- [ ] slider
-- [ ] sonner
-- [ ] spinner
-- [ ] switch
-- [ ] table
-- [ ] tabs
-- [ ] textarea
-- [ ] toast
-- [ ] toggle
-- [ ] toggle-group
-- [ ] tooltip
-- [ ] typography
+- [x] separator ? examples mirrored (Demo/Vertical/Menu/List/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_separator`)
+- [x] sheet ? examples mirrored (Demo/Side/No Close Button/RTL; `showCloseButton` behavior approximated by omitting explicit close actions) (`apps/fret-ui-gallery/src/ui.rs::preview_sheet`)
+- [x] sidebar ? examples mirrored (Demo/Controlled/RTL; aligned to docs `sidebar-demo` + controlled state pattern) (`apps/fret-ui-gallery/src/ui.rs::preview_sidebar`)
+- [x] skeleton ? examples mirrored (Demo/Avatar/Card/Text/Form/Table/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_skeleton`)
+- [x] slider — examples mirrored (Demo/Range/Multiple Thumbs/Vertical/Controlled/Disabled/RTL; extras: inverted) (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
+- [x] sonner — examples mirrored (Demo/Types/Description/Position, with runtime toaster position binding) (`apps/fret-ui-gallery/src/ui.rs::preview_sonner`, `apps/fret-ui-gallery/src/driver.rs`)
+- [x] spinner — examples mirrored (Demo/Customization/Size/Button/Badge/Input Group/Empty/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_spinner`)
+- [x] switch ? examples mirrored (Demo/Description/Choice Card/Disabled/Invalid/Size/RTL; size + invalid are style approximations in current API) (`apps/fret-ui-gallery/src/ui.rs::preview_switch`, `ecosystem/fret-ui-shadcn/src/switch.rs`)
+- [x] table ? examples mirrored (Demo/Footer/Actions/RTL; action trigger uses text icon approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_table`, `ecosystem/fret-ui-shadcn/src/table.rs`)
+- [x] tabs ? examples mirrored (Demo/Line/Vertical/Disabled/Icons/RTL; line variant uses style approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_tabs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`)
+- [x] textarea ? examples mirrored (Demo/Field/Disabled/Invalid/Button/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_textarea`, `ecosystem/fret-ui-shadcn/src/textarea.rs`)
+- [x] toast ? docs-aligned deprecation notice only (upstream points to Sonner) (`apps/fret-ui-gallery/src/ui.rs::preview_toast`, `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx`)
+- [~] toggle - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle.rs`)
+- [~] toggle-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`)
+- [~] tooltip - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/tooltip.rs`)
+- [~] typography - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/typography.rs`)
 
 ---
 

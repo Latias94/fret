@@ -1,4 +1,5 @@
 use fret_core::{Color, Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
@@ -6,8 +7,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
@@ -292,6 +296,9 @@ impl PaginationLink {
                         if let fret_ui::element::ElementKind::Text(ref mut p) = child.kind {
                             p.color = Some(fg);
                         }
+                        if let fret_ui::element::ElementKind::SvgIcon(ref mut p) = child.kind {
+                            p.color = fg;
+                        }
                         out.push(child);
                     }
                     out
@@ -331,6 +338,7 @@ impl PaginationLink {
 pub struct PaginationPrevious {
     command: Option<CommandId>,
     disabled: bool,
+    text: Option<Arc<str>>,
 }
 
 impl PaginationPrevious {
@@ -338,11 +346,17 @@ impl PaginationPrevious {
         Self {
             command: None,
             disabled: false,
+            text: None,
         }
     }
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.text = Some(text.into());
         self
     }
 
@@ -352,7 +366,22 @@ impl PaginationPrevious {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut link = PaginationLink::new(vec![cx.text("‹"), cx.text("Previous")])
+        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
+        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
+            "lucide.chevron-right"
+        } else {
+            "lucide.chevron-left"
+        };
+        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+
+        let children = if dir == direction_prim::LayoutDirection::Rtl {
+            vec![cx.text(text), icon]
+        } else {
+            vec![icon, cx.text(text)]
+        };
+
+        let mut link = PaginationLink::new(children)
             .size(PaginationLinkSize::Default)
             .disabled(self.disabled);
         if let Some(command) = self.command {
@@ -372,6 +401,7 @@ impl Default for PaginationPrevious {
 pub struct PaginationNext {
     command: Option<CommandId>,
     disabled: bool,
+    text: Option<Arc<str>>,
 }
 
 impl PaginationNext {
@@ -379,11 +409,17 @@ impl PaginationNext {
         Self {
             command: None,
             disabled: false,
+            text: None,
         }
     }
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.text = Some(text.into());
         self
     }
 
@@ -393,7 +429,22 @@ impl PaginationNext {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut link = PaginationLink::new(vec![cx.text("Next"), cx.text("›")])
+        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
+        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
+            "lucide.chevron-left"
+        } else {
+            "lucide.chevron-right"
+        };
+        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+
+        let children = if dir == direction_prim::LayoutDirection::Rtl {
+            vec![icon, cx.text(text)]
+        } else {
+            vec![cx.text(text), icon]
+        };
+
+        let mut link = PaginationLink::new(children)
             .size(PaginationLinkSize::Default)
             .disabled(self.disabled);
         if let Some(command) = self.command {

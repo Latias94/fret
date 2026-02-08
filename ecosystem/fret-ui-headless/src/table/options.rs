@@ -1,8 +1,10 @@
-use super::{ColumnResizeDirection, ColumnResizeMode};
+use super::{ColumnResizeDirection, ColumnResizeMode, GroupedColumnMode};
 
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TableOptions {
+    /// Enables/disables pinning features globally (TanStack `enablePinning`).
+    pub enable_pinning: bool,
     /// If enabled, filtering is assumed to be done externally (e.g. server-side).
     ///
     /// When `true`, `filtered_row_model()` returns `pre_filtered_row_model()`.
@@ -13,6 +15,10 @@ pub struct TableOptions {
     pub enable_column_filters: bool,
     /// Enables/disables global filtering (TanStack `enableGlobalFilter`).
     pub enable_global_filter: bool,
+    /// Filter children first and bubble matches to parents (TanStack `filterFromLeafRows`).
+    pub filter_from_leaf_rows: bool,
+    /// Maximum depth to apply leaf-row filtering recursion (TanStack `maxLeafRowFilterDepth`).
+    pub max_leaf_row_filter_depth: usize,
     /// If enabled, sorting is assumed to be done externally (e.g. server-side).
     ///
     /// When `true`, `sorted_row_model()` returns `pre_sorted_row_model()`.
@@ -21,10 +27,24 @@ pub struct TableOptions {
     ///
     /// When `true`, `row_model()` returns `pre_pagination_row_model()`.
     pub manual_pagination: bool,
+    /// TanStack-aligned: pagination auto reset gate (`autoResetPageIndex`).
+    pub auto_reset_page_index: Option<bool>,
+    /// TanStack-aligned: total page count hint (`pageCount`).
+    ///
+    /// When set to `-1`, the page count is treated as unknown.
+    pub page_count: Option<i32>,
+    /// TanStack-aligned: total row count hint (`rowCount`).
+    pub row_count: Option<usize>,
     /// If enabled, expanded row handling is assumed to be done externally.
     ///
     /// When `true`, `expanded_row_model()` returns `pre_expanded_row_model()`.
     pub manual_expanding: bool,
+    /// Enables/disables expanding for all rows (TanStack `enableExpanding`).
+    pub enable_expanding: bool,
+    /// TanStack-aligned: global auto reset gate (`autoResetAll`).
+    pub auto_reset_all: Option<bool>,
+    /// TanStack-aligned: expanded auto reset gate (`autoResetExpanded`).
+    pub auto_reset_expanded: Option<bool>,
     /// When true, pagination counts expanded rows (children) as part of the page.
     ///
     /// This mirrors TanStack's `paginateExpandedRows` behavior.
@@ -36,8 +56,11 @@ pub struct TableOptions {
     pub enable_hiding: bool,
     /// Whether to allow column ordering at the table level (TanStack `enableColumnOrdering`).
     pub enable_column_ordering: bool,
-    /// Whether to allow column pinning at the table level (TanStack `enablePinning`).
+    /// Whether to allow column pinning at the table level (TanStack `enableColumnPinning` with
+    /// `enablePinning` fallback).
     pub enable_column_pinning: bool,
+    /// Whether to allow row pinning at the table level (TanStack `enableRowPinning`).
+    pub enable_row_pinning: bool,
     /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
     pub enable_column_resizing: bool,
     /// Enables/disables grouping for the table (TanStack `enableGrouping`).
@@ -65,6 +88,9 @@ pub struct TableOptions {
     ///
     /// When `true`, `grouped_row_model()` returns `pre_grouped_row_model()`.
     pub manual_grouping: bool,
+    /// Determines how grouped columns are ordered in the leaf column list (TanStack
+    /// `groupedColumnMode`).
+    pub grouped_column_mode: GroupedColumnMode,
     /// Determines when `column_sizing` updates during a resize interaction (TanStack
     /// `columnResizeMode`).
     pub column_resize_mode: ColumnResizeMode,
@@ -75,18 +101,28 @@ pub struct TableOptions {
 impl Default for TableOptions {
     fn default() -> Self {
         Self {
+            enable_pinning: true,
             manual_filtering: false,
             enable_filters: true,
             enable_column_filters: true,
             enable_global_filter: true,
+            filter_from_leaf_rows: false,
+            max_leaf_row_filter_depth: 100,
             manual_sorting: false,
             manual_pagination: false,
+            auto_reset_page_index: None,
+            page_count: None,
+            row_count: None,
             manual_expanding: false,
+            enable_expanding: true,
+            auto_reset_all: None,
+            auto_reset_expanded: None,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
             enable_hiding: true,
             enable_column_ordering: true,
             enable_column_pinning: true,
+            enable_row_pinning: true,
             enable_column_resizing: true,
             enable_grouping: true,
             enable_sorting: true,
@@ -99,6 +135,7 @@ impl Default for TableOptions {
             enable_multi_row_selection: true,
             enable_sub_row_selection: true,
             manual_grouping: false,
+            grouped_column_mode: GroupedColumnMode::Reorder,
             column_resize_mode: ColumnResizeMode::OnEnd,
             column_resize_direction: ColumnResizeDirection::Ltr,
         }

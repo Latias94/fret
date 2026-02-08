@@ -76,6 +76,56 @@ let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_TORTURE: &str = r#"
+## Hit Test (torture harness)
+
+This page exists to stress the runtime's pointer hit-testing path under editor-grade UI workloads:
+
+- many hit-testable regions (pointer listeners),
+- stable layout (no relayout on pointer move),
+- pointer moves that change the hovered target every frame (to defeat path caching),
+- ability to A/B test spatial indices (e.g. bounds tree) against the fallback traversal.
+
+The goal is to make `top_hit_test_time_us` large enough to be a meaningful slice of the frame budget so
+we can validate improvements and gate regressions.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_TORTURE: &str = r#"
+```rust
+// Customize the stress level.
+// Defaults are chosen to create a large number of PointerRegion interaction records.
+//
+// - stripes: hit target changes frequently (defeats hit-test path cache).
+// - noise: many tiny pointer regions that should never be hit, but are expensive for fallback scans.
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES", "256");
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
+```
+"#;
+
+pub(crate) const DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+## Hit-test-only paint-cache probe
+
+This page is a focused probe for the `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment:
+
+- pointer moves intentionally trigger `Invalidation::HitTestOnly` on a cache-eligible subtree,
+- layout stays stable,
+- paint output stays stable.
+
+Goal: make the new diagnostics counters non-zero in a deterministic script so A/B results are
+causally attributable to the gate path.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+```rust
+// Recommended run flags for this probe:
+// - start directly on the probe page
+// - disable gallery view-cache wrappers to keep paint-cache gating simple
+std::env::set_var("FRET_UI_GALLERY_START_PAGE", "hit_test_only_paint_cache_probe");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE", "0");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "0");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 
@@ -320,6 +370,38 @@ use fret_canvas::ui::{PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_pa
 
 let props = PanZoomCanvasSurfacePanelProps::default();
 let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
+```
+"#;
+
+pub(crate) const DOC_NODE_GRAPH_CULL_TORTURE: &str = r#"
+## Node Graph Cull (torture harness)
+
+This page hosts a large `fret-node` canvas surface (nodes + edges) intended to stress:
+
+- viewport-driven culling,
+- pan/zoom interaction routing,
+- paint-cache reuse under view-cache + shell.
+
+It exists to support the GPUI parity workstream:
+
+- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0190),
+- validate “paint-only” interaction updates for small deltas,
+- provide deterministic script targets for perf investigations.
+"#;
+
+pub(crate) const USAGE_NODE_GRAPH_CULL_TORTURE: &str = r#"
+```rust
+use fret_node::{Graph, GraphId};
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::NodeGraphCanvas;
+use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt};
+
+let graph = models.insert(Graph::new(GraphId::from_u128(1)));
+let view = models.insert(NodeGraphViewState::default());
+
+let el = cx.retained_subtree(RetainedSubtreeProps::new(move |ui| {
+    ui.create_node_retained(NodeGraphCanvas::new(graph.clone(), view.clone()))
+}));
 ```
 "#;
 
@@ -955,6 +1037,49 @@ let select = m3::Select::new(model)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_AUTOCOMPLETE: &str = r#"
+## Material 3 Autocomplete (MVP)
+
+This page validates a Material 3 autocomplete surface:
+
+- token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
+- combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
+- non-modal popover menu that stays interactive while typing (click-through)
+- composition surface: `ExposedDropdown` (searchable select policy over `Autocomplete`)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let query = app.models_mut().insert(String::new());
+let selected_value = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::AutocompleteItem::new("alpha", "Alpha"),
+    m3::AutocompleteItem::new("beta", "Beta"),
+];
+
+let ac = m3::Autocomplete::new(query)
+    .selected_value(selected_value)
+    .label("Search")
+    .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+
+// Composition: searchable select.
+let committed = app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+let exposed_query = app.models_mut().insert(String::new());
+let exposed = m3::ExposedDropdown::new(committed)
+    .query(exposed_query)
+    .label("Searchable select")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
@@ -1222,11 +1347,16 @@ let _id = controller.show(host, acx.window, m3::Snackbar::new("Saved").action("U
 pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
 ## Material 3 Tooltip (MVP)
 
-This page validates a Material 3 plain tooltip surface:
+This page validates Material 3 tooltip surfaces (plain + rich):
 
 - Radix-aligned delay group + hover intent + safe-hover corridor (via `fret-ui-kit`)
-- deterministic open/close motion driven by `md.sys.motion.*` (duration + cubic-bezier)
-- token-driven container/text styling via `md.comp.plain-tooltip.*`
+- deterministic open/close motion driven by `md.sys.motion.spring.*` (fast spatial/effects springs)
+- token-driven container/text styling via `md.comp.{plain,rich}-tooltip.*`
+
+Notes:
+
+- In Fret, `OverlayKind::Tooltip` is click-through, so rich tooltip actions are currently out of
+  scope.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
@@ -1235,7 +1365,16 @@ use fret_ui_material3 as m3;
 
 m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+
+    let plain = m3::PlainTooltip::new(trigger, "Plain tooltip text").into_element(cx);
+    let rich = m3::RichTooltip::new(
+        m3::Button::new("Hover me (rich)").into_element(cx),
+        "Supporting text",
+    )
+    .title("Title")
+    .into_element(cx);
+
+    [plain, rich]
 })
 ```
 "#;
@@ -1335,6 +1474,13 @@ pub(crate) const DOC_RESIZABLE: &str = r#"
 
 Resizable panel groups are runtime-owned drag surfaces (splitter handles).
 
+Upstream shadcn/ui docs examples:
+
+- Demo (nested groups)
+- Vertical
+- Handle (`with_handle(true)` in Fret; approximated chrome)
+- RTL (via a direction provider)
+
 This page validates:
 
 - fraction model (`Model<Vec<f32>>`) persistence
@@ -1343,13 +1489,24 @@ This page validates:
 
 pub(crate) const USAGE_RESIZABLE: &str = r#"
 ```rust
-let fractions = app.models_mut().insert(vec![0.3, 0.7]);
+let h = app.models_mut().insert(vec![0.5, 0.5]);
+let v = app.models_mut().insert(vec![0.25, 0.75]);
 
-let group = shadcn::ResizablePanelGroup::new(fractions).entries(vec![
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-    shadcn::ResizableHandle::new().into(),
-    shadcn::ResizablePanel::new(vec![/* ... */]).into(),
-]);
+let nested = shadcn::ResizablePanelGroup::new(v)
+    .axis(fret_core::Axis::Vertical)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+    ]);
+
+let group = shadcn::ResizablePanelGroup::new(h)
+    .axis(fret_core::Axis::Horizontal)
+    .entries([
+        shadcn::ResizablePanel::new([/* ... */]).into(),
+        shadcn::ResizableHandle::new().with_handle(true).into(),
+        shadcn::ResizablePanel::new([nested]).into(),
+    ]);
 ```
 "#;
 
@@ -1628,21 +1785,39 @@ pub(crate) const DOC_SLIDER: &str = r#"
 Slider is a pointer-driven control with support for:
 
 - single value
-- multi-thumb range (`min_steps_between_thumbs`)
+- range / multiple thumbs (`step` + `min_steps_between_thumbs`)
 - `orientation` (horizontal / vertical)
 - direction-aware mapping (`dir` + `inverted`, Radix-aligned)
 - `on_value_commit` (Radix `onValueCommit`)
 
-This page uses `Slider::new_controllable` to keep demo state local to the subtree.
+Upstream shadcn/ui docs examples:
+
+- Range
+- Multiple Thumbs
+- Vertical
+- Controlled
+- Disabled
+- RTL
+
+This page demonstrates both uncontrolled (`Slider::new_controllable`) and controlled (`Slider::new(model)`) usage.
 "#;
 
 pub(crate) const USAGE_SLIDER: &str = r#"
 ```rust
-let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+// Uncontrolled (state in element subtree):
+let slider = shadcn::Slider::new_controllable(cx, None, || vec![33.0])
     .range(0.0, 100.0)
+    .step(1.0)
     .on_value_commit(|_host, _cx, _values| {
         // Called on pointer up and keyboard commits.
     })
+    .into_element(cx);
+
+// Controlled (state in the model store):
+let values = app.models_mut().insert(vec![0.3, 0.7]);
+let slider = shadcn::Slider::new(values)
+    .range(0.0, 1.0)
+    .step(0.1)
     .into_element(cx);
 ```
 "#;
