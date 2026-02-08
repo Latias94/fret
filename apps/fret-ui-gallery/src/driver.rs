@@ -17,10 +17,9 @@ use fret_launch::{
 };
 use fret_query::{QueryPolicy, with_query_client};
 use fret_router::{
-    MemoryHistory, NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks,
-    RouteLocation, RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate,
-    RouterUpdateWithPrefetchIntents, SearchValidationMode, collect_invalidated_namespaces,
-    prefetch_intent_query_key,
+    NamespaceInvalidationRule, NavigationAction, RouteChangePolicy, RouteHooks, RouteLocation,
+    RouteNode, RouteSearchTable, RouteTree, Router, RouterUpdate, RouterUpdateWithPrefetchIntents,
+    SearchValidationMode, collect_invalidated_namespaces, prefetch_intent_query_key,
 };
 use fret_runtime::{
     DefaultKeybinding, KeyChord, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
@@ -60,6 +59,12 @@ use crate::ui;
 const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
 const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
 
+#[cfg(target_arch = "wasm32")]
+type UiGalleryHistory = fret_router::WebHistoryAdapter;
+
+#[cfg(not(target_arch = "wasm32"))]
+type UiGalleryHistory = fret_router::MemoryHistory;
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum UiGalleryRouteId {
     Root,
@@ -71,10 +76,16 @@ struct UiGalleryPagePrefetchSeed {
     selected_page: Arc<str>,
 }
 
-fn route_location_for_page(page: &Arc<str>) -> RouteLocation {
-    RouteLocation::from_path("/gallery")
+fn route_location_for_page(from: &RouteLocation, page: &Arc<str>) -> RouteLocation {
+    let location = RouteLocation::from_path("/gallery")
         .with_query_value("page", Some(page.to_string()))
-        .with_query_value("source", Some("nav".to_string()))
+        .with_query_value("source", Some("nav".to_string()));
+
+    if let Some(demo) = from.query_value("demo") {
+        location.with_query_value("demo", Some(demo.to_string()))
+    } else {
+        location
+    }
 }
 
 fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
@@ -82,7 +93,7 @@ fn page_from_gallery_location(location: &RouteLocation) -> Option<Arc<str>> {
     page_spec(page).is_some().then_some(Arc::<str>::from(page))
 }
 
-fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, MemoryHistory> {
+fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, UiGalleryHistory> {
     let tree = Arc::new(RouteTree::new(
         RouteNode::new(UiGalleryRouteId::Root, "/")
             .expect("root route should build")
@@ -93,7 +104,13 @@ fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, MemoryHistory> {
     ));
 
     let search_table = Arc::new(RouteSearchTable::new());
-    let history = MemoryHistory::new(RouteLocation::parse("/"));
+
+    #[cfg(target_arch = "wasm32")]
+    let history = UiGalleryHistory::new().expect("web history adapter should resolve a location");
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let history = UiGalleryHistory::new(RouteLocation::parse("/"));
+
     let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
         .expect("ui gallery router should build");
 
@@ -120,17 +137,18 @@ fn apply_page_route_side_effects_via_router(
     window: AppWindowId,
     action: NavigationAction,
     current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, MemoryHistory>,
+    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
 ) {
-    let current_route = route_location_for_page(&current_page);
+    let current_route = route_location_for_page(&router.state().location, &current_page);
     let update = router.navigate_with_prefetch_intents(action, Some(current_route.canonicalized()));
     apply_page_router_update_side_effects(app, window, current_page, router, update);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn sync_gallery_page_history_command_enabled(
     app: &mut App,
     window: AppWindowId,
-    history: &MemoryHistory,
+    history: &UiGalleryHistory,
 ) {
     let can_back = history.can_back();
     let can_forward = history.can_forward();
@@ -153,11 +171,26 @@ fn sync_gallery_page_history_command_enabled(
     });
 }
 
+#[cfg(target_arch = "wasm32")]
+fn sync_gallery_page_history_command_enabled(
+    app: &mut App,
+    window: AppWindowId,
+    _history: &UiGalleryHistory,
+) {
+    let cmd_back = CommandId::new(CMD_GALLERY_PAGE_BACK);
+    let cmd_forward = CommandId::new(CMD_GALLERY_PAGE_FORWARD);
+
+    app.with_global_mut(WindowCommandEnabledService::default, |svc, _app| {
+        svc.clear_command(window, &cmd_back);
+        svc.clear_command(window, &cmd_forward);
+    });
+}
+
 fn apply_page_router_update_side_effects(
     app: &mut App,
     window: AppWindowId,
     current_page: Arc<str>,
-    router: &mut Router<UiGalleryRouteId, MemoryHistory>,
+    router: &mut Router<UiGalleryRouteId, UiGalleryHistory>,
     update: Result<
         RouterUpdateWithPrefetchIntents<UiGalleryRouteId>,
         fret_router::RouteSearchValidationFailure,
@@ -295,7 +328,7 @@ struct UiGalleryWindowState {
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
     pending_taffy_dump: Option<PendingTaffyDumpRequest>,
-    page_router: Router<UiGalleryRouteId, MemoryHistory>,
+    page_router: Router<UiGalleryRouteId, UiGalleryHistory>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
@@ -884,6 +917,8 @@ impl UiGalleryDriver {
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
+        let page_router = build_ui_gallery_page_router();
+
         let start_page = ui_gallery_start_page().unwrap_or_else(|| {
             if std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
                 || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty())
@@ -893,8 +928,12 @@ impl UiGalleryDriver {
                 Arc::<str>::from(PAGE_INTRO)
             }
         });
+
+        #[cfg(target_arch = "wasm32")]
+        let start_page = page_from_gallery_location(&page_router.state().location)
+            .unwrap_or_else(|| start_page.clone());
+
         let selected_page = app.models_mut().insert(start_page.clone());
-        let page_router = build_ui_gallery_page_router();
 
         let mut workspace_tabs_init = vec![
             Arc::<str>::from(PAGE_INTRO),
@@ -1209,6 +1248,59 @@ impl UiGalleryDriver {
         Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
         state
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn sync_page_router_from_external_history(
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut UiGalleryWindowState,
+    ) {
+        let Ok(update) = state.page_router.sync_with_prefetch_intents() else {
+            return;
+        };
+
+        if !update.update.changed() {
+            return;
+        }
+
+        let next_page = page_from_gallery_location(&state.page_router.state().location)
+            .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let next_page_for_selected = next_page.clone();
+        let next_page_for_tabs = next_page.clone();
+
+        let _ = app
+            .models_mut()
+            .update(&state.selected_page, |v| *v = next_page_for_selected);
+        let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+            if !tabs
+                .iter()
+                .any(|t| t.as_ref() == next_page_for_tabs.as_ref())
+            {
+                tabs.push(next_page_for_tabs.clone());
+            }
+        });
+
+        let cmd: Arc<str> = Arc::from(format!(
+            "{}{}",
+            CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+            next_page_for_tabs.as_ref()
+        ));
+        state
+            .workspace_tab_close_by_command
+            .insert(cmd, next_page_for_tabs);
+
+        apply_page_router_update_side_effects(
+            app,
+            window,
+            next_page.clone(),
+            &mut state.page_router,
+            Ok(update),
+        );
+
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from(format!("gallery.page_history.sync({})", next_page.as_ref()));
+        });
     }
 
     fn handle_nav_command(
@@ -1943,6 +2035,9 @@ impl UiGalleryDriver {
         let bisect = ui_gallery_bisect_flags();
 
         Self::sync_undo_availability(app, window, &state.undo_doc);
+
+        #[cfg(target_arch = "wasm32")]
+        Self::sync_page_router_from_external_history(app, window, state);
 
         let availability = app
             .global::<WindowCommandAvailabilityService>()
