@@ -12,11 +12,11 @@ use std::time::Duration;
 
 use fret_core::{MouseButton, Point, PointerId, PointerType, Px, Rect};
 use fret_runtime::{Effect, Model, ModelId, TimerToken};
+use fret_ui::UiHost;
 use fret_ui::action::{
     OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp, PointerCancelCx, PointerDownCx,
     PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::UiHost;
 
 use crate::primitives::popper;
 

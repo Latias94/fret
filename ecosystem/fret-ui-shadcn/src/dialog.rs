@@ -234,12 +234,11 @@ impl Dialog {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
-            let (open_change, open_change_complete) =
-                cx.with_state(DialogOpenChangeCallbackState::default, |state| {
+            let (open_change, open_change_complete) = cx
+                .with_state(DialogOpenChangeCallbackState::default, |state| {
                     dialog_open_change_events(state, is_open, motion.present, motion.animating)
                 });
-            if let (Some(open), Some(on_open_change)) =
-                (open_change, self.on_open_change.as_ref())
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
             {
                 on_open_change(open);
             }

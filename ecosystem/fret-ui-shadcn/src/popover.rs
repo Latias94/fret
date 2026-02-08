@@ -699,8 +699,7 @@ impl Popover {
                 cx.with_state(PopoverOpenChangeCallbackState::default, |state| {
                     popover_open_change_events(state, is_open, motion.present, motion.animating)
                 });
-            if let (Some(open), Some(on_open_change)) =
-                (open_change, self.on_open_change.as_ref())
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
             {
                 on_open_change(open);
             }

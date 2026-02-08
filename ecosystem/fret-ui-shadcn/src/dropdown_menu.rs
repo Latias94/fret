@@ -3436,13 +3436,11 @@ mod tests {
         assert_eq!(changed, None);
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            dropdown_menu_open_change_events(&mut state, true, true, true);
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, true);
         assert_eq!(changed, Some(true));
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            dropdown_menu_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, false);
         assert_eq!(changed, None);
         assert_eq!(completed, Some(true));
     }
@@ -3452,8 +3450,7 @@ mod tests {
         let mut state = DropdownMenuOpenChangeCallbackState::default();
 
         let _ = dropdown_menu_open_change_events(&mut state, false, false, false);
-        let (changed, completed) =
-            dropdown_menu_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, false);
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));

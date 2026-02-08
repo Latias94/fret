@@ -549,8 +549,7 @@ impl HoverCard {
                 cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
                     hover_card_open_change_events(state, opening, motion.present, motion.animating)
                 });
-            if let (Some(open), Some(on_open_change)) =
-                (open_change, self.on_open_change.as_ref())
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
             {
                 on_open_change(open);
             }

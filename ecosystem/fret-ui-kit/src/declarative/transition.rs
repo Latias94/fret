@@ -1,9 +1,9 @@
 use std::panic::Location;
 
-use fret_ui::elements::ContinuousFrames;
-use fret_ui::theme::CubicBezier;
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
+use fret_ui::elements::ContinuousFrames;
+use fret_ui::theme::CubicBezier;
 
 use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 
@@ -279,9 +279,11 @@ mod tests {
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(effects0
-            .iter()
-            .any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            effects0
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
     }
 
