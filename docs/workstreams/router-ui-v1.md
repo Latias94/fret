@@ -82,6 +82,7 @@ As an initial step, `fret-router-ui` can also expose a lightweight helper:
 - `router_outlet(cx, &Model<RouterUiSnapshot<R>>, |cx, snap| -> AnyElement { ... })`
   - reads the snapshot model with deterministic invalidation
   - delegates match-driven rendering to the caller
+  - optional diagnostics sugar: `router_outlet_with_test_id(...)`
 
 ### 3) Link-style navigation helpers (desktop)
 
@@ -112,6 +113,12 @@ Then `fret-router-ui` can wire this into a convenience helper:
 
 - `RouterUiStore::prefetch_link_on_hover_change(link)` -> `OnHoverChange` (updates the intents model)
 - `router_link(cx, &store, link, children)` -> `AnyElement` (pressable wrapper; no shadcn dependency)
+  - diagnostics sugar: `router_link_with_test_id(...)`
+  - route-based sugar: `router_link_to(...)` / `router_link_to_with_test_id(...)`
+
+Desktop apps may also want lightweight context menu descriptors (policy stays app-owned):
+
+- `RouterLink::default_context_menu_items()` -> `[copy link, open in new window]`
 
 ### 4) Command integration
 

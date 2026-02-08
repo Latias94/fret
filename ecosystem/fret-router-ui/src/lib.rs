@@ -51,6 +51,18 @@ where
     pub fn leaf_route(&self) -> Option<&R> {
         self.leaf_match().map(|m| &m.route)
     }
+
+    pub fn is_at_location(&self, location: &RouteLocation) -> bool {
+        self.location.canonicalized() == location.canonicalized()
+    }
+
+    pub fn is_at_href(&self, href: &str) -> bool {
+        self.location.to_url() == href.trim()
+    }
+
+    pub fn is_at_link(&self, link: &RouterLink) -> bool {
+        self.is_at_location(&link.to) || self.is_at_href(&link.href)
+    }
 }
 
 pub struct RouterUiStore<R, H>
