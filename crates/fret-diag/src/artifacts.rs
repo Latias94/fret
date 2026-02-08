@@ -18,6 +18,24 @@ pub struct MaterializedBundle {
 }
 
 /// Materializes an in-memory `bundle.json` payload into:
+/// `{export_root}/{exported_unix_ms}/bundle.json`
+pub fn materialize_bundle_json(
+    export_root: &Path,
+    exported_unix_ms: u64,
+    bundle_json: &str,
+) -> Result<PathBuf, String> {
+    std::fs::create_dir_all(export_root).map_err(|e| e.to_string())?;
+
+    let export_dir = export_root.join(exported_unix_ms.to_string());
+    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+
+    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    Ok(export_dir)
+}
+
+/// Materializes an in-memory `bundle.json` payload into:
 /// `{repo_root}/.fret/diag/exports/{exported_unix_ms}/bundle.json`
 pub fn materialize_bundle_json_to_exports(
     repo_root: &Path,
@@ -25,13 +43,7 @@ pub fn materialize_bundle_json_to_exports(
     bundle_json: &str,
 ) -> Result<MaterializedBundle, String> {
     let exports_root = diag_exports_root(repo_root);
-    std::fs::create_dir_all(&exports_root).map_err(|e| e.to_string())?;
-
-    let export_dir = exports_root.join(exported_unix_ms.to_string());
-    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
-
-    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
-        .map_err(|e| e.to_string())?;
+    let export_dir = materialize_bundle_json(&exports_root, exported_unix_ms, bundle_json)?;
 
     Ok(MaterializedBundle {
         exports_root,

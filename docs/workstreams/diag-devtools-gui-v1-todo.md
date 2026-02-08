@@ -121,7 +121,7 @@ Conventions:
 - [ ] Expose a minimal tool set (names TBD):
   - [x] `fret_diag_sessions_list` (list sessions),
   - [x] `fret_diag_sessions_select` (select a session),
-  - [ ] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
+  - [x] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
   - [x] `fret_diag_inspect_set` (on/off/toggle + consume_clicks),
   - [x] `fret_diag_pick` (arm + wait + return selector JSON),
   - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),

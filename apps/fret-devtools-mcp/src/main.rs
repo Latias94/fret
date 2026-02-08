@@ -5,8 +5,10 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use fret_diag::artifacts;
 use fret_diag::transport::{
-    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+    ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
+    ToolingDiagClient, WsDiagTransportConfig,
 };
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
@@ -20,6 +22,8 @@ use rmcp::{Json, ServerHandler, ServiceExt, tool, tool_handler, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 
 static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1000);
 
@@ -27,6 +31,21 @@ static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1000);
 struct WsState {
     ws_url: Arc<str>,
     token: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+struct ConnectConfig {
+    kind: DiagTransportKind,
+    ws_url: Option<String>,
+    token: Option<String>,
+    fs_out_dir: Option<String>,
+}
+
+#[derive(Debug)]
+enum ClientCommand {
+    Send(DiagTransportMessageV1),
+    Connect(ConnectConfig, oneshot::Sender<Result<(), String>>),
+    SetDefaultSessionId(Option<String>),
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -39,7 +58,8 @@ struct WsInfoV1 {
 #[derive(Clone)]
 struct FretDevtoolsMcp {
     ws: WsState,
-    client: ToolingDiagClient,
+    client_tx: mpsc::UnboundedSender<ClientCommand>,
+    client_kind: Arc<Mutex<DiagTransportKind>>,
     inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
     sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
     selected_session_id: Arc<Mutex<Option<String>>>,
@@ -50,14 +70,16 @@ struct FretDevtoolsMcp {
 impl FretDevtoolsMcp {
     fn new(
         ws: WsState,
-        client: ToolingDiagClient,
+        client_tx: mpsc::UnboundedSender<ClientCommand>,
+        client_kind: Arc<Mutex<DiagTransportKind>>,
         inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
         sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
         selected_session_id: Arc<Mutex<Option<String>>>,
     ) -> Self {
         Self {
             ws,
-            client,
+            client_tx,
+            client_kind,
             inbox,
             sessions,
             selected_session_id,
@@ -107,8 +129,78 @@ impl FretDevtoolsMcp {
         drop(sessions);
 
         *self.selected_session_id.lock().await = Some(session_id.clone());
-        self.client.set_default_session_id(Some(session_id));
+        let _ = self
+            .client_tx
+            .send(ClientCommand::SetDefaultSessionId(Some(session_id)));
         Ok("ok".to_string())
+    }
+
+    #[tool(description = "Connect (or switch) the diagnostics transport for subsequent commands.")]
+    async fn fret_diag_connect(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<ConnectRequestV1>,
+    ) -> Result<Json<ConnectResultV1>, String> {
+        let kind = match params.0.transport.trim().to_lowercase().as_str() {
+            "ws" | "websocket" => DiagTransportKind::WebSocket,
+            "fs" | "filesystem" => DiagTransportKind::FileSystem,
+            other => return Err(format!("unsupported transport: {other}")),
+        };
+
+        let resolved_ws_url = (kind == DiagTransportKind::WebSocket).then(|| {
+            params
+                .0
+                .ws_url
+                .as_deref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| self.ws.ws_url.to_string())
+        });
+        let resolved_fs_out_dir = (kind == DiagTransportKind::FileSystem).then(|| {
+            params
+                .0
+                .fs_out_dir
+                .as_deref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .or_else(|| std::env::var("FRET_DIAG_DIR").ok())
+                .unwrap_or_else(|| "target/fret-diag".to_string())
+        });
+
+        {
+            let mut inbox = self.inbox.lock().await;
+            inbox.clear();
+        }
+        *self.sessions.lock().await = Vec::new();
+        *self.selected_session_id.lock().await = None;
+
+        let (tx, rx) = oneshot::channel();
+        self.client_tx
+            .send(ClientCommand::Connect(
+                ConnectConfig {
+                    kind,
+                    ws_url: params.0.ws_url.clone(),
+                    token: params.0.token.clone(),
+                    fs_out_dir: params.0.fs_out_dir.clone(),
+                },
+                tx,
+            ))
+            .map_err(|_| "client task is not running".to_string())?;
+        rx.await
+            .map_err(|_| "client connect ack dropped".to_string())?
+            .map_err(|e| e.to_string())?;
+
+        *self.client_kind.lock().await = kind;
+
+        Ok(Json(ConnectResultV1 {
+            schema_version: 1,
+            transport: match kind {
+                DiagTransportKind::WebSocket => "ws".to_string(),
+                DiagTransportKind::FileSystem => "fs".to_string(),
+            },
+            ws_url: resolved_ws_url,
+            token: (kind == DiagTransportKind::WebSocket).then(|| "<redacted>".to_string()),
+            fs_out_dir: resolved_fs_out_dir,
+        }))
     }
 
     #[tool(description = "Set UI inspection mode (overlay on/off).")]
@@ -117,16 +209,18 @@ impl FretDevtoolsMcp {
         params: rmcp::handler::server::wrapper::Parameters<InspectSetRequestV1>,
     ) -> Result<String, String> {
         let session_id = self.resolve_session_id(params.0.session_id).await?;
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "inspect.set".to_string(),
-            session_id: Some(session_id),
-            request_id: None,
-            payload: serde_json::json!({
-                "enabled": params.0.enabled,
-                "consume_clicks": params.0.consume_clicks,
-            }),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "inspect.set".to_string(),
+                session_id: Some(session_id),
+                request_id: None,
+                payload: serde_json::json!({
+                    "enabled": params.0.enabled,
+                    "consume_clicks": params.0.consume_clicks,
+                }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
         Ok("ok".to_string())
     }
 
@@ -136,13 +230,15 @@ impl FretDevtoolsMcp {
         params: rmcp::handler::server::wrapper::Parameters<PickRequestV1>,
     ) -> Result<String, String> {
         let session_id = self.resolve_session_id(params.0.session_id).await?;
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "pick.arm".to_string(),
-            session_id: Some(session_id.clone()),
-            request_id: None,
-            payload: serde_json::json!({}),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "pick.arm".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: None,
+                payload: serde_json::json!({}),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
         let msg = self
             .wait_for_type_and_session("pick.result", &session_id, params.0.timeout_ms)
             .await
@@ -157,13 +253,15 @@ impl FretDevtoolsMcp {
     ) -> Result<String, String> {
         let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "bundle.dump".to_string(),
-            session_id: Some(session_id.clone()),
-            request_id: None,
-            payload: serde_json::json!({ "label": label }),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dump".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: None,
+                payload: serde_json::json!({ "label": label }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
         let msg = self
             .wait_for_type_and_session("bundle.dumped", &session_id, params.0.timeout_ms)
             .await
@@ -182,13 +280,15 @@ impl FretDevtoolsMcp {
         let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
         let include_all = params.0.include_all.unwrap_or(true);
 
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "bundle.dump".to_string(),
-            session_id: Some(session_id.clone()),
-            request_id: None,
-            payload: serde_json::json!({ "label": label }),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dump".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: None,
+                payload: serde_json::json!({ "label": label }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
 
         let dumped = self
             .wait_for_type_and_session("bundle.dumped", &session_id, params.0.timeout_ms)
@@ -275,21 +375,28 @@ impl FretDevtoolsMcp {
         &self,
         params: rmcp::handler::server::wrapper::Parameters<ScreenshotRequestToolV1>,
     ) -> Result<String, String> {
+        let kind = *self.client_kind.lock().await;
+        if kind != DiagTransportKind::WebSocket {
+            return Err("screenshot.request requires WebSocket transport".to_string());
+        }
+
         let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
         let timeout_frames = params.0.timeout_frames.unwrap_or(300);
 
         let request_id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed);
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "screenshot.request".to_string(),
-            session_id: Some(session_id.clone()),
-            request_id: Some(request_id),
-            payload: serde_json::json!({
-                "label": label,
-                "timeout_frames": timeout_frames,
-            }),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "screenshot.request".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: Some(request_id),
+                payload: serde_json::json!({
+                    "label": label,
+                    "timeout_frames": timeout_frames,
+                }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
 
         let msg = self
             .wait_for_type_session_request_id(
@@ -313,15 +420,17 @@ impl FretDevtoolsMcp {
         let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let script: serde_json::Value =
             serde_json::from_str(&params.0.script_json).map_err(|e| e.to_string())?;
-        self.client.send(DiagTransportMessageV1 {
-            schema_version: 1,
-            r#type: "script.run".to_string(),
-            session_id: Some(session_id.clone()),
-            request_id: None,
-            payload: serde_json::json!({
-                "script": script,
-            }),
-        });
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "script.run".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: None,
+                payload: serde_json::json!({
+                    "script": script,
+                }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
 
         let timeout_ms = params.0.timeout_ms;
         let start = tokio::time::Instant::now();
@@ -448,6 +557,33 @@ impl ServerHandler for FretDevtoolsMcp {
             ..Default::default()
         }
     }
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct ConnectRequestV1 {
+    /// Transport kind: "ws" | "fs"
+    transport: String,
+    /// Optional WS URL override (defaults to the locally hosted WS hub).
+    #[serde(default)]
+    ws_url: Option<String>,
+    /// Optional capability token override (defaults to the locally hosted WS hub token).
+    #[serde(default)]
+    token: Option<String>,
+    /// Filesystem out_dir used for file-trigger transport (defaults to `FRET_DIAG_DIR` or `target/fret-diag`).
+    #[serde(default)]
+    fs_out_dir: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct ConnectResultV1 {
+    schema_version: u32,
+    transport: String,
+    #[serde(default)]
+    ws_url: Option<String>,
+    #[serde(default)]
+    token: Option<String>,
+    #[serde(default)]
+    fs_out_dir: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -589,94 +725,28 @@ async fn main() -> anyhow::Result<()> {
     let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))
         .map_err(anyhow::Error::msg)?;
 
+    let client_kind = Arc::new(Mutex::new(DiagTransportKind::WebSocket));
     let inbox = Arc::new(Mutex::new(VecDeque::new()));
     let sessions = Arc::new(Mutex::new(Vec::<DevtoolsSessionDescriptorV1>::new()));
     let selected_session_id = Arc::new(Mutex::new(None::<String>));
-    tokio::spawn({
-        let client = client.clone();
-        let inbox = Arc::clone(&inbox);
-        let sessions = Arc::clone(&sessions);
-        let selected_session_id = Arc::clone(&selected_session_id);
-        async move {
-            loop {
-                let mut drained = false;
-                while let Some(msg) = client.try_recv() {
-                    drained = true;
 
-                    match msg.r#type.as_str() {
-                        "session.list" => {
-                            if let Ok(parsed) =
-                                serde_json::from_value::<DevtoolsSessionListV1>(msg.payload.clone())
-                            {
-                                *sessions.lock().await = parsed.sessions;
-                            }
-                        }
-                        "session.added" => {
-                            if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionAddedV1>(
-                                msg.payload.clone(),
-                            ) {
-                                let mut s = sessions.lock().await;
-                                if let Some(pos) = s
-                                    .iter()
-                                    .position(|x| x.session_id == parsed.session.session_id)
-                                {
-                                    s[pos] = parsed.session;
-                                } else {
-                                    s.push(parsed.session);
-                                }
-                            }
-                        }
-                        "session.removed" => {
-                            if let Ok(parsed) = serde_json::from_value::<DevtoolsSessionRemovedV1>(
-                                msg.payload.clone(),
-                            ) {
-                                let mut s = sessions.lock().await;
-                                s.retain(|x| x.session_id != parsed.session_id);
-                            }
-                        }
-                        _ => {}
-                    }
-
-                    {
-                        let (first, contains_selected) = {
-                            let s = sessions.lock().await;
-                            let first = s.first().map(|x| x.session_id.clone());
-                            let current = selected_session_id.lock().await.clone();
-                            let contains_selected = current
-                                .as_deref()
-                                .is_some_and(|sel| s.iter().any(|x| x.session_id == sel));
-                            (first, contains_selected)
-                        };
-
-                        let mut selected = selected_session_id.lock().await;
-                        if selected.is_none() {
-                            *selected = first.clone();
-                            client.set_default_session_id(first);
-                        } else if !contains_selected {
-                            *selected = first.clone();
-                            client.set_default_session_id(first);
-                        }
-                    }
-
-                    {
-                        let mut inbox = inbox.lock().await;
-                        inbox.push_back(msg);
-                        if inbox.len() > 2000 {
-                            let drain = inbox.len().saturating_sub(2000);
-                            inbox.drain(0..drain);
-                        }
-                    }
-                }
-                if !drained {
-                    tokio::time::sleep(Duration::from_millis(10)).await;
-                }
-            }
-        }
-    });
+    let (client_tx, client_rx) = mpsc::unbounded_channel::<ClientCommand>();
+    tokio::spawn(run_client_task(
+        client,
+        client_rx,
+        inbox.clone(),
+        sessions.clone(),
+        selected_session_id.clone(),
+        WsState {
+            ws_url: ws_url.clone(),
+            token: token.clone(),
+        },
+    ));
 
     let service = FretDevtoolsMcp::new(
         WsState { ws_url, token },
-        client,
+        client_tx,
+        client_kind,
         inbox,
         sessions,
         selected_session_id,
@@ -685,6 +755,148 @@ async fn main() -> anyhow::Result<()> {
     .await?;
     service.waiting().await?;
     Ok(())
+}
+
+async fn run_client_task(
+    mut client: ToolingDiagClient,
+    mut rx: mpsc::UnboundedReceiver<ClientCommand>,
+    inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
+    sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
+    selected_session_id: Arc<Mutex<Option<String>>>,
+    ws_defaults: WsState,
+) {
+    loop {
+        while let Ok(cmd) = rx.try_recv() {
+            match cmd {
+                ClientCommand::Send(msg) => {
+                    client.send(msg);
+                }
+                ClientCommand::SetDefaultSessionId(session_id) => {
+                    client.set_default_session_id(session_id);
+                }
+                ClientCommand::Connect(cfg, ack) => {
+                    let result = connect_client(&ws_defaults, cfg).and_then(|new_client| {
+                        client = new_client;
+                        Ok(())
+                    });
+                    let _ = ack.send(result);
+                }
+            }
+        }
+
+        let mut drained = false;
+        while let Some(msg) = client.try_recv() {
+            drained = true;
+
+            match msg.r#type.as_str() {
+                "session.list" => {
+                    if let Ok(parsed) =
+                        serde_json::from_value::<DevtoolsSessionListV1>(msg.payload.clone())
+                    {
+                        *sessions.lock().await = parsed.sessions;
+                    }
+                }
+                "session.added" => {
+                    if let Ok(parsed) =
+                        serde_json::from_value::<DevtoolsSessionAddedV1>(msg.payload.clone())
+                    {
+                        let mut s = sessions.lock().await;
+                        if let Some(pos) = s
+                            .iter()
+                            .position(|x| x.session_id == parsed.session.session_id)
+                        {
+                            s[pos] = parsed.session;
+                        } else {
+                            s.push(parsed.session);
+                        }
+                    }
+                }
+                "session.removed" => {
+                    if let Ok(parsed) =
+                        serde_json::from_value::<DevtoolsSessionRemovedV1>(msg.payload.clone())
+                    {
+                        let mut s = sessions.lock().await;
+                        s.retain(|x| x.session_id != parsed.session_id);
+                    }
+                }
+                _ => {}
+            }
+
+            {
+                let (first, contains_selected) = {
+                    let s = sessions.lock().await;
+                    let first = s.first().map(|x| x.session_id.clone());
+                    let current = selected_session_id.lock().await.clone();
+                    let contains_selected = current
+                        .as_deref()
+                        .is_some_and(|sel| s.iter().any(|x| x.session_id == sel));
+                    (first, contains_selected)
+                };
+
+                let mut selected = selected_session_id.lock().await;
+                if selected.is_none() {
+                    *selected = first.clone();
+                    client.set_default_session_id(first);
+                } else if !contains_selected {
+                    *selected = first.clone();
+                    client.set_default_session_id(first);
+                }
+            }
+
+            {
+                let mut inbox = inbox.lock().await;
+                inbox.push_back(msg);
+                if inbox.len() > 2000 {
+                    let drain = inbox.len().saturating_sub(2000);
+                    inbox.drain(0..drain);
+                }
+            }
+        }
+
+        if !drained {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+}
+
+fn connect_client(ws_defaults: &WsState, cfg: ConnectConfig) -> Result<ToolingDiagClient, String> {
+    match cfg.kind {
+        DiagTransportKind::WebSocket => {
+            let ws_url = cfg
+                .ws_url
+                .as_deref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| ws_defaults.ws_url.to_string());
+            let token = cfg
+                .token
+                .as_deref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| ws_defaults.token.to_string());
+
+            let mut client_cfg = DevtoolsWsClientConfig::with_defaults(ws_url, token);
+            client_cfg.client_kind = ClientKindV1::Tooling;
+            client_cfg.capabilities = vec![
+                "inspect".to_string(),
+                "pick".to_string(),
+                "scripts".to_string(),
+                "bundles".to_string(),
+            ];
+            ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(client_cfg))
+        }
+        DiagTransportKind::FileSystem => {
+            let out_dir = cfg
+                .fs_out_dir
+                .as_deref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .or_else(|| std::env::var("FRET_DIAG_DIR").ok())
+                .unwrap_or_else(|| "target/fret-diag".to_string());
+            let fs_cfg = FsDiagTransportConfig::from_out_dir(PathBuf::from(out_dir));
+            ToolingDiagClient::connect_fs(fs_cfg)
+        }
+    }
 }
 
 fn env_u16(key: &str) -> Option<u16> {
@@ -728,11 +940,8 @@ fn materialize_or_resolve_bundle_dir(
             Some(p) => repo_root.join(p),
             None => repo_root.join(".fret").join("diag").join("exports"),
         };
-        let export_dir = export_root.join(exported_unix_ms.to_string());
-        std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
         let text = serde_json::to_string_pretty(bundle).unwrap_or_else(|_| "{}".to_string());
-        std::fs::write(export_dir.join("bundle.json"), text.as_bytes())
-            .map_err(|e| e.to_string())?;
+        let export_dir = artifacts::materialize_bundle_json(&export_root, exported_unix_ms, &text)?;
         return Ok((
             export_root.to_string_lossy().to_string(),
             export_dir.to_string_lossy().to_string(),
