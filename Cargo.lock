@@ -1136,6 +1136,7 @@ version = "0.1.0"
 dependencies = [
  "keyboard-types",
  "serde",
+ "serde_json",
  "slotmap",
  "web-time",
 ]

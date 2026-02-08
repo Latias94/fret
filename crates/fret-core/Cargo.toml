@@ -16,3 +16,6 @@ keyboard-types.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
