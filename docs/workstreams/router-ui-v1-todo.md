@@ -47,6 +47,8 @@ Status legend:
 - `[x]` Add `RouterLink` helper:
   - compute canonical `RouteLocation` + `href` (`RouterUiStore::link_to`)
   - provide desktop affordance hook (`copy_href_on_activate`)
+- `[x]` Add a navigation activation hook:
+  - `RouterUiStore::navigate_link_on_activate(link)` updates router + snapshot + intents
 - `[ ]` Add `RouterLink` element:
   - computes `href` using `Router::href_to(...)`
   - on press, performs guard-aware navigation

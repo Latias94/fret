@@ -61,8 +61,7 @@ Target shape (names subject to change):
 
 - `RouterUiStore<R, H>`
   - `fn snapshot_model(&self) -> Model<RouterUiSnapshot<R>>`
-  - `fn router(&self) -> &Router<R, H>`
-  - `fn router_mut(&mut self) -> &mut Router<R, H>`
+  - owns `Model<Router<R, H>>` internally (model-owned so action hooks can drive navigation)
   - `fn navigate_*` helpers that update the snapshot model and return update-scoped intents
   - `fn sync_*` helpers for external history changes (desktop: rarely; web: popstate)
   - requests `app.request_redraw(window)` when updates change router state
@@ -101,6 +100,8 @@ As an incremental step, `fret-router-ui` may expose a small data helper:
 - `RouterLink { action, href, to }`
   - constructs canonical `RouteLocation` + `href` via `RouterUiStore::link_to(...)`
   - provides `copy_href_on_activate(...)` for desktop-friendly "Copy link" affordances
+  - `RouterUiStore::navigate_link_on_activate(link)` provides a component-owned activation hook
+    that performs navigation and updates snapshot/intents models
 
 ### 4) Command integration
 
