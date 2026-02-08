@@ -250,6 +250,7 @@ type SnapshotId =
   | "pinning_action_reset_row_pinning_default_true_clears"
   | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
   | "pinning_tree_keep_true_child_visible_when_parent_expanded"
+  | "pinning_tree_keep_true_child_surfaces_when_filtered_out"
   | "pinning_tree_keep_false_never_surfaces_child_row"
   | "pinning_tree_action_pin_root_includes_leaf_rows"
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
@@ -261,6 +262,9 @@ type SnapshotId =
   | "column_pinning_default_can_pin"
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
+  | "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells"
+  | "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells"
+  | "column_pinning_group_leafs_pinned_both_sides_prefers_left"
   | "column_pinning_action_pin_left_right_unpin"
   | "column_pinning_action_pin_group_pins_leaf_columns"
   | "column_pinning_action_pins_when_enable_column_pinning_false"
@@ -6041,6 +6045,15 @@ function snapshotColumnPinning(
         },
       ),
       mk(
+        "pinning_tree_keep_true_child_surfaces_when_filtered_out",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          expanded: { "1": true },
+          columnFilters: [{ id: "name", value: "Root 2" }],
+          rowPinning: { top: ["11"], bottom: [] },
+        },
+      ),
+      mk(
         "pinning_tree_keep_false_never_surfaces_child_row",
         { enableRowPinning: true, keepPinnedRows: false },
         {
@@ -6234,6 +6247,11 @@ function snapshotColumnPinning(
         "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells",
         {},
         { columnPinning: { left: ["a", "b"], right: [] }, columnVisibility: { b: false } },
+      ),
+      mk(
+        "column_pinning_group_leafs_pinned_both_sides_prefers_left",
+        {},
+        { columnPinning: { left: ["a"], right: ["b"] } },
       ),
       mkActions(
         "column_pinning_action_pin_left_right_unpin",

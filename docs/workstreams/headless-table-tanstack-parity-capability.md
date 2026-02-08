@@ -144,9 +144,25 @@ we are not weaker than upstream while keeping the Rust surface idiomatic.
     - `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` (column pinning leaf splits)
     - `pagination_bounds(..)` (pagination clamping)
     - plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
-- `fret-ui-shadcn` DataTable: (TODO) identify the minimal required engine surface once it is wired to `fret-ui-headless`.
-  - Note: current `fret-ui-shadcn` `DataTable*` recipes primarily mutate `TableState` directly
-    (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`) and rely on `fret-ui-kit` for rendering.
+- `fret-ui-shadcn` DataTable (shadcn/ui-style “business table” integration surface):
+  - Implementation: `ecosystem/fret-ui-shadcn/src/data_table.rs` (renders via `fret-ui-kit::declarative::table::table_virtualized`)
+  - Recipes: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar`, `DataTablePagination`)
+  - Current must-have surfaces (what consumers rely on today):
+    - `TableState` semantics:
+      - `global_filter`: consumer-facing input normalizes whitespace and uses `None` for “empty”.
+      - `column_visibility`: omitted keys mean “visible”; storing `false` means “hidden”.
+      - `pagination.{page_index,page_size}`: filter/visibility changes reset `page_index` to `0`.
+      - `row_selection`: toolbar displays selected count (selection itself is gated by TanStack fixtures).
+      - `sorting`: header UI indicates asc/desc (sorting semantics are fixture-gated).
+      - `column_sizing` + `column_sizing_info`: resizing interactions (starts/after/total sizes) are fixture-gated.
+      - `column_pinning` + `row_pinning`: not yet exposed by the shadcn DataTable recipes, but already used by
+        `fret-ui-kit` and parity-gated (must remain available for future shadcn parity).
+    - `TableViewOutput.pagination`:
+      - produced by `fret-ui-kit`’s virtualized table and consumed by shadcn pagination controls
+        (`DataTablePagination` expects `page_count`, `can_prev/can_next`, and `page_index` bounds to be stable).
+  - Gate coverage:
+    - `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` unit tests lock down the consumer-driven page-reset rules.
+    - Headless engine fixtures gate the underlying interactions relied on by DataTable (sizing/pinning/sorting/filtering).
 
 ---
 

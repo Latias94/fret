@@ -170,7 +170,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Filtering now resolves its “value source” via a shared getter across `sort_value/value_u64/facet_*`
       to avoid being weaker when consumers only configured faceting or numeric extraction.
 
-- [ ] HTP-cap-030 Refresh the `fret-ui-shadcn` DataTable must-have surface once it is fully wired to the headless engine.
+- [x] HTP-cap-030 Refresh the `fret-ui-shadcn` DataTable must-have surface once it is fully wired to the headless engine.
+  - Evidence: `docs/workstreams/headless-table-tanstack-parity-capability.md` (Consumer-driven must-have surface),
+    `ecosystem/fret-ui-shadcn/src/data_table.rs`,
+    `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (unit tests + state semantics).
   - Rationale: today, DataTable recipes primarily mutate `TableState` and rely on `fret-ui-kit` for rendering; once that
     integration changes, we should update the consumer-driven must-have list and add any missing helper surfaces.
   - Evidence target: `docs/workstreams/headless-table-tanstack-parity-capability.md` must-have section + a focused smoke gate.
