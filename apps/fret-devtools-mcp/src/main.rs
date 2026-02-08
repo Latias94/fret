@@ -534,19 +534,88 @@ impl FretDevtoolsMcp {
         let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
         let script: serde_json::Value =
             serde_json::from_str(&params.0.script_json).map_err(|e| e.to_string())?;
+        self.run_script_value_and_wait(&session_id, script, params.0.timeout_ms)
+            .await
+    }
+
+    #[tool(
+        description = "List available diagnostics scripts under tools/diag-scripts and .fret/diag/scripts."
+    )]
+    async fn fret_diag_scripts_list(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<ScriptsListRequestV1>,
+    ) -> Result<Json<ScriptsListResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let mut scripts = Vec::<ScriptDescriptorV1>::new();
+        scripts.extend(scan_scripts_dir(
+            &repo_root,
+            &repo_root.join("tools").join("diag-scripts"),
+            "workspace",
+        ));
+
+        let include_user = params.0.include_user.unwrap_or(true);
+        if include_user {
+            scripts.extend(scan_scripts_dir(
+                &repo_root,
+                &repo_root.join(".fret").join("diag").join("scripts"),
+                "user",
+            ));
+        }
+
+        scripts.sort_by(|a, b| {
+            (a.origin.as_str(), a.name.as_str(), a.rel_path.as_str()).cmp(&(
+                b.origin.as_str(),
+                b.name.as_str(),
+                b.rel_path.as_str(),
+            ))
+        });
+
+        Ok(Json(ScriptsListResultV1 {
+            schema_version: 1,
+            scripts,
+        }))
+    }
+
+    #[tool(
+        description = "Run a script by file name or relative path (tools/diag-scripts or .fret/diag/scripts)."
+    )]
+    async fn fret_diag_run_script_file(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RunScriptFileRequestV1>,
+    ) -> Result<String, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+        let script_path = resolve_script_path(&repo_root, &params.0.script)?;
+        let script_text = std::fs::read_to_string(&script_path).map_err(|e| e.to_string())?;
+        let script_value: serde_json::Value =
+            serde_json::from_str(&script_text).map_err(|e| e.to_string())?;
+
+        self.run_script_value_and_wait(&session_id, script_value, params.0.timeout_ms)
+            .await
+    }
+
+    async fn run_script_value_and_wait(
+        &self,
+        session_id: &str,
+        script: serde_json::Value,
+        timeout_ms: u64,
+    ) -> Result<String, String> {
         self.client_tx
             .send(ClientCommand::Send(DiagTransportMessageV1 {
                 schema_version: 1,
                 r#type: "script.run".to_string(),
-                session_id: Some(session_id.clone()),
+                session_id: Some(session_id.to_string()),
                 request_id: None,
-                payload: serde_json::json!({
-                    "script": script,
-                }),
+                payload: serde_json::json!({ "script": script }),
             }))
             .map_err(|_| "client task is not running".to_string())?;
 
-        let timeout_ms = params.0.timeout_ms;
         let start = tokio::time::Instant::now();
         loop {
             if start.elapsed() > Duration::from_millis(timeout_ms) {
@@ -554,7 +623,7 @@ impl FretDevtoolsMcp {
             }
 
             if let Some(msg) = self
-                .pop_next_of_type_and_session("script.result", &session_id)
+                .pop_next_of_type_and_session("script.result", session_id)
                 .await
             {
                 if let Ok(parsed) = serde_json::from_value::<UiScriptResultV1>(msg.payload.clone())
@@ -840,6 +909,36 @@ struct CompareBundlesResultV1 {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+struct ScriptsListRequestV1 {
+    /// When true (default), includes `.fret/diag/scripts` in addition to `tools/diag-scripts`.
+    #[serde(default)]
+    include_user: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct ScriptDescriptorV1 {
+    origin: String,
+    name: String,
+    /// Repo-relative path (best-effort).
+    rel_path: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct ScriptsListResultV1 {
+    schema_version: u32,
+    scripts: Vec<ScriptDescriptorV1>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RunScriptFileRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    /// File name (e.g. `todo-baseline.json`) or repo-relative path under tools/diag-scripts or .fret/diag/scripts.
+    script: String,
+    timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct SessionsListV1 {
     schema_version: u32,
     sessions: Vec<SessionInfoV1>,
@@ -1094,6 +1193,87 @@ fn resolve_bundle_json_path(src: &Path) -> PathBuf {
         return src.to_path_buf();
     }
     src.join("bundle.json")
+}
+
+fn scan_scripts_dir(repo_root: &Path, dir: &Path, origin: &str) -> Vec<ScriptDescriptorV1> {
+    let mut out = Vec::new();
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return out;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("json") {
+            continue;
+        }
+        let file_name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+        if file_name.trim().is_empty() {
+            continue;
+        }
+        let rel_path = path
+            .strip_prefix(repo_root)
+            .ok()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string());
+        out.push(ScriptDescriptorV1 {
+            origin: origin.to_string(),
+            name: file_name,
+            rel_path,
+        });
+    }
+    out
+}
+
+fn resolve_script_path(repo_root: &Path, script: &str) -> Result<PathBuf, String> {
+    let script = script.trim();
+    if script.is_empty() {
+        return Err("missing script".to_string());
+    }
+
+    let candidate = PathBuf::from(script);
+    if candidate.components().count() == 1 {
+        let tools = repo_root
+            .join("tools")
+            .join("diag-scripts")
+            .join(candidate.clone());
+        if tools.is_file() {
+            return Ok(tools);
+        }
+        let user = repo_root
+            .join(".fret")
+            .join("diag")
+            .join("scripts")
+            .join(candidate);
+        if user.is_file() {
+            return Ok(user);
+        }
+        return Err("script not found (try fret_diag_scripts_list)".to_string());
+    }
+
+    let full = resolve_repo_path(repo_root, script);
+    let full_canon = full.canonicalize().map_err(|e| e.to_string())?;
+    let repo_canon = repo_root.canonicalize().map_err(|e| e.to_string())?;
+    if !full_canon.starts_with(&repo_canon) {
+        return Err("script path must be under repo root".to_string());
+    }
+
+    let allowed_a = repo_canon.join("tools").join("diag-scripts");
+    let allowed_b = repo_canon.join(".fret").join("diag").join("scripts");
+    if !full_canon.starts_with(&allowed_a) && !full_canon.starts_with(&allowed_b) {
+        return Err(
+            "script path must be under tools/diag-scripts or .fret/diag/scripts".to_string(),
+        );
+    }
+    if full_canon.extension().and_then(|s| s.to_str()) != Some("json") {
+        return Err("script file must be a .json".to_string());
+    }
+    if !full_canon.is_file() {
+        return Err("script path is not a file".to_string());
+    }
+    Ok(full_canon)
 }
 
 fn bundle_json_from_bundle_dumped_payload(
