@@ -229,7 +229,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         };
 
-        let rows = super::super::searcher::build_rows_flat(&ctx0.candidates, "");
+        let rows = crate::ui::canvas::searcher::build_rows_flat(&ctx0.candidates, "");
         let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let origin = self.clamp_searcher_origin(

@@ -11,6 +11,7 @@ use fret_ui_kit::{Justify, LayoutRefinement, Space};
 pub struct MessageToolbar {
     children: Vec<AnyElement>,
     justify: Justify,
+    gap: Space,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -30,14 +31,20 @@ impl MessageToolbar {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
-            justify: Justify::End,
+            justify: Justify::Between,
+            gap: Space::N4,
             test_id: None,
-            layout: LayoutRefinement::default(),
+            layout: LayoutRefinement::default().mt(Space::N4),
         }
     }
 
     pub fn justify(mut self, justify: Justify) -> Self {
         self.justify = justify;
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
         self
     }
 
@@ -54,14 +61,16 @@ impl MessageToolbar {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout.merge(LayoutRefinement::default().w_full());
         let justify = self.justify;
+        let gap = self.gap;
         let children = self.children;
 
         let row = stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(layout)
-                .gap(Space::N2)
-                .justify(justify),
+                .gap(gap)
+                .justify(justify)
+                .items_center(),
             |_cx| children,
         );
 

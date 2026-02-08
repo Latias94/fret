@@ -3,10 +3,10 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
+
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -61,7 +61,7 @@ fn paint_uses_node_corner_radius_from_style() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();

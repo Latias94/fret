@@ -2,12 +2,13 @@ use fret_core::{Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent
 use fret_ui::retained_bridge::Widget;
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
+
 use crate::ui::NodeGraphCanvas;
 
-use super::super::{cubic_bezier, wire_ctrl_points};
+use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn bounds() -> Rect {
@@ -50,7 +51,7 @@ fn double_click_edge_inserts_reroute_when_enabled() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
         s.interaction.reroute_on_edge_double_click = true;
@@ -117,7 +118,7 @@ fn alt_double_click_edge_opens_insert_node_picker() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     let mut services = NullServices::default();
@@ -178,7 +179,7 @@ fn alt_double_click_edge_prefers_picker_over_reroute_when_both_enabled() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
         s.interaction.reroute_on_edge_double_click = true;
@@ -249,7 +250,7 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edge_insert_on_alt_drag = true;
     });

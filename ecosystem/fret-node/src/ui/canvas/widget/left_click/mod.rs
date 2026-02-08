@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 mod handlers;
 mod hit;
 
-use super::super::state::ViewSnapshot;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::ViewSnapshot;
 
 fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
     let zoom = if zoom.is_finite() && zoom > 0.0 {

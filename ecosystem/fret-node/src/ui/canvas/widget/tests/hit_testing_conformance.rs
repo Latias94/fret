@@ -2,10 +2,9 @@ use fret_core::{PathCommand, Point, Px};
 use uuid::Uuid;
 
 use crate::interaction::NodeGraphConnectionMode;
-use crate::io::NodeGraphViewState;
 
 use super::prelude::*;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
@@ -71,7 +70,7 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
 
@@ -168,7 +167,7 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.connection_mode = NodeGraphConnectionMode::Loose;
@@ -247,7 +246,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let snapshot = canvas.sync_view_state(&mut host);
@@ -292,7 +291,7 @@ fn edge_hit_testing_tie_breaks_by_edge_id_when_custom_paths_overlap() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let edge_types =
         crate::ui::NodeGraphEdgeTypes::new().with_fallback_path(|_g, _e, _style, _hint, input| {
@@ -348,7 +347,7 @@ fn edge_focus_anchor_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = true;
     });

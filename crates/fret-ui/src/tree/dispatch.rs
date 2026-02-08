@@ -822,7 +822,12 @@ impl<H: UiHost> UiTree<H> {
                         UiDebugInvalidationSource::Focus,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                     );
-                    self.scroll_node_into_view(app, focus);
+                    // Avoid scrolling during pointer-down sequences (e.g. click):
+                    // programmatic scroll-to-focus can move content under a stationary cursor,
+                    // causing pressable activation to fail on pointer-up.
+                    if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                        self.scroll_node_into_view(app, focus);
+                    }
                 }
 
                 if let Some(capture) = requested_capture
@@ -961,7 +966,12 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationSource::Focus,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                 );
-                self.scroll_node_into_view(app, focus);
+                // Avoid scrolling during pointer-down sequences (e.g. click):
+                // programmatic scroll-to-focus can move content under a stationary cursor,
+                // causing pressable activation to fail on pointer-up.
+                if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    self.scroll_node_into_view(app, focus);
+                }
             }
 
             if let Some(capture) = requested_capture
@@ -1490,6 +1500,7 @@ impl<H: UiHost> UiTree<H> {
             // - optionally suppress hit-tested pointer dispatch for underlay layers depending on
             //   the occlusion mode.
             let mut hit_for_hover = hit;
+            let mut hit_for_hover_region = hit;
             if captured.is_none()
                 && let Some((occlusion_layer, occlusion)) =
                     self.topmost_pointer_occlusion_layer(barrier_root)
@@ -1514,6 +1525,7 @@ impl<H: UiHost> UiTree<H> {
                     // Match GPUI-style "occluded hover": underlay hover/pressable detection is
                     // disabled while occlusion is active, even when scroll is still allowed.
                     hit_for_hover = None;
+                    hit_for_hover_region = None;
 
                     let blocks_pointer_dispatch = match occlusion {
                         PointerOcclusion::None => false,
@@ -1595,7 +1607,7 @@ impl<H: UiHost> UiTree<H> {
                     app,
                     window,
                     hit_for_hover,
-                    hit,
+                    hit_for_hover_region,
                     &mut invalidation_visited,
                     &mut needs_redraw,
                 );
@@ -1875,7 +1887,12 @@ impl<H: UiHost> UiTree<H> {
                         }
                         self.focus = Some(focus);
                         self.mark_invalidation(focus, Invalidation::Paint);
-                        self.scroll_node_into_view(app, focus);
+                        // Avoid scrolling during pointer-down sequences (e.g. click):
+                        // programmatic scroll-to-focus can move content under a stationary cursor,
+                        // causing pressable activation to fail on pointer-up.
+                        if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                            self.scroll_node_into_view(app, focus);
+                        }
                     } else if requested_focus.is_some() {
                         focus_requested = true;
                     }
@@ -2514,7 +2531,9 @@ impl<H: UiHost> UiTree<H> {
                 }
                 self.focus = Some(focus);
                 self.mark_invalidation(focus, Invalidation::Paint);
-                self.scroll_node_into_view(app, focus);
+                // Pointer-driven focus should not scroll: the user is already interacting at the
+                // pointer location, and scrolling here can move content under the cursor between
+                // pointer-down and pointer-up.
                 needs_redraw = true;
             }
         }
@@ -2783,6 +2802,7 @@ impl<H: UiHost> UiTree<H> {
             let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
 
             let mut hit_for_hover = hit;
+            let mut hit_for_hover_region = hit;
             if let Some((occlusion_layer, occlusion)) =
                 self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
@@ -2802,6 +2822,7 @@ impl<H: UiHost> UiTree<H> {
                 };
                 if hit_is_below_occlusion {
                     hit_for_hover = None;
+                    hit_for_hover_region = None;
                 }
             }
 
@@ -2809,7 +2830,7 @@ impl<H: UiHost> UiTree<H> {
                 app,
                 window,
                 hit_for_hover,
-                hit,
+                hit_for_hover_region,
                 &mut invalidation_visited,
                 &mut needs_redraw,
             );

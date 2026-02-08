@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 
 pub(super) fn closest_point_on_step_wire(p: Point, from: Point, to: Point) -> (Point, f32) {
     let mx = 0.5 * (from.x.0 + to.x.0);

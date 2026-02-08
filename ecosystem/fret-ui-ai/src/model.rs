@@ -24,11 +24,20 @@ pub type ExternalId = Arc<str>;
 /// Tool call lifecycle state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToolCallState {
-    Pending,
-    Running,
-    Succeeded,
-    Failed,
-    Cancelled,
+    /// Awaiting user approval/confirmation before running.
+    ApprovalRequested,
+    /// Approval was responded to (accepted/denied), but a concrete output is not yet available.
+    ApprovalResponded,
+    /// Tool input is available and the tool is considered running.
+    InputAvailable,
+    /// Tool input is still streaming / not fully available yet.
+    InputStreaming,
+    /// Tool output is available and completed successfully.
+    OutputAvailable,
+    /// Tool output was denied (e.g. user rejected) or the call was cancelled.
+    OutputDenied,
+    /// Tool output ended in error.
+    OutputError,
 }
 
 /// A source/citation item associated with assistant output.
@@ -110,7 +119,7 @@ impl ToolCall {
         Self {
             id: id.into(),
             name: name.into(),
-            state: ToolCallState::Pending,
+            state: ToolCallState::InputStreaming,
             input: None,
             output: None,
             error: None,

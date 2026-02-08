@@ -7,14 +7,13 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{EdgeId, Graph, GraphId, Node, NodeId, NodeKindKey};
-use crate::io::NodeGraphViewState;
 use crate::ui::internals::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
 use crate::ui::{
     NodeGraphEdgeToolbar, NodeGraphEditor, NodeGraphNodeToolbar, NodeGraphToolbarAlign,
     NodeGraphToolbarPosition, NodeGraphToolbarSize,
 };
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -83,9 +82,7 @@ fn node_toolbar_pointer_events_fall_through_outside_bounds() {
             data: serde_json::Value::Null,
         },
     );
-    let graph = host.models.insert(graph_value);
-
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![node_id];
     });
@@ -170,8 +167,7 @@ fn edge_toolbar_pointer_events_fall_through_outside_bounds() {
     ui.set_window(AppWindowId::default());
 
     let edge_id = EdgeId::new();
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_edges = vec![edge_id];
     });
@@ -248,8 +244,7 @@ fn toolbars_release_focus_to_canvas_when_hidden() {
     let node_id = NodeId::new();
     let edge_id = EdgeId::new();
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![node_id];
         s.selected_edges = vec![edge_id];

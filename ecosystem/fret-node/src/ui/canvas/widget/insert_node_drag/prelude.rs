@@ -16,6 +16,6 @@ pub(super) use crate::rules::ConnectDecision;
 pub(super) use crate::ui::canvas::state::{InsertNodeDragPreview, ViewSnapshot};
 pub(super) use crate::ui::presenter::InsertNodeCandidate;
 
-pub(super) use super::super::{
+pub(super) use crate::ui::canvas::widget::{
     HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
 };

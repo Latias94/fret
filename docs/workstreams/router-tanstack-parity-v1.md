@@ -5,12 +5,15 @@ Status: Draft (design targets; ADRs remain the source of truth)
 Related workstreams:
 
 - `docs/workstreams/router-v1.md` (baseline helpers + Web adapters)
+- `docs/workstreams/router-ui-v1.md` (desktop UI adoption layer: Outlet/Link/store)
 - `docs/workstreams/query-lifecycle-v1.md` (loader/prefetch backend: `fret-query`)
 - `docs/workstreams/state-management-v1.md` (app-owned state + selectors)
 
 References:
 
 - TanStack Router concepts (in-repo snapshot): `repo-ref/router`
+- ADR 1168: `docs/adr/1168-router-transitions-and-guards-v1.md`
+- ADR 1169: `docs/adr/1169-router-route-hooks-and-query-seam-v1.md`
 
 ## Why this exists
 
@@ -62,6 +65,7 @@ Rationale:
 Start with:
 
 - a canonical `SearchMap` representation (stable ordering, duplicate keys preserved)
+- a lightweight typed codec seam (`SearchValue`) that apps can implement for enums/newtypes
 - per-route `validate_search` hooks that return either:
   - a validated/stabilized `SearchMap`, or
   - a route-specific typed view wrapper (manual impl)
@@ -82,10 +86,13 @@ Rationale:
 Treat `fret-query` as the default cache/loader backend and model TanStack-style loader semantics as:
 
 - route -> query keys (namespaced, canonical location)
-- router transition -> invalidate/prefetch plan
-- optional cancellation hooks for rapid navigation (future phase)
+  - router transition -> invalidate/prefetch plan
+  - optional cancellation hooks for rapid navigation (future phase)
 
 Keep a small adapter seam so tests can run with a mock client.
+
+Note: query key canonicalization should **ignore URL fragments** by default. Fragments are typically
+view-local UI state (scroll anchors, tabs) and should not invalidate loader data.
 
 ## Proposed architecture (v1 targets)
 
@@ -116,15 +123,35 @@ Target behavior (TanStack-aligned):
 - each route can validate/augment search
 - child route sees parent-validated search
 - canonicalization is deterministic (important for query keys and caching)
+ 
+### Build location (TanStack-aligned)
+
+Apps should be able to construct canonical, search-stabilized locations without duplicating URL
+string assembly logic. In v1, prefer a lightweight helper that:
+
+- formats the path from a route id + path params
+- runs the per-route search validation chain (root -> leaf) to apply defaults
+- returns a canonical `RouteLocation` suitable for navigation + query keying
+
+For link rendering (web, diagnostics, and copy/paste), prefer `Router::href_to(...)` which wraps
+`build_location(...)` and formats the canonical URL string.
 
 ### Transitions
 
-Standardize a transition snapshot (portable, serializable for diagnostics):
+Standardize a transition snapshot (portable; diagnostics-friendly):
 
-- `cause`: push/replace/back/forward/redirect/guard
+- `cause`: `RouterTransitionCause` (`Init`, `Navigate { action }`, `Redirect { action }`, `Sync`)
 - `from` / `to`: canonical locations
-- `redirect_chain`: optional
-- `blocked_by`: optional
+- `redirect_chain`: attempted locations (0..N, excludes the final `to`; capped with a hop limit)
+- `blocked_by`: optional guard reason
+- `RouterUpdate`: `navigate` / `sync` returns a structured “changed vs no-op” result
+- `Router::init_with_prefetch_intents`: collect loader intents for the current location even when
+  there is no navigation (useful for initial app boot and deep links)
+- `RouterEvent`: a deterministic event stream (`Router::take_events()`) for diagnostics and tests
+- `guard`: optional app/ecosystem policy hook:
+  - `Push`/`Replace`: pre-guard (can `Allow`/`Block`/`Redirect`)
+  - `Back`/`Forward`: pre-guard if the `HistoryAdapter` can `peek`; otherwise post-guard with a
+    soft-block fallback (`Replace(from)`)
 
 ### History adapters
 
@@ -156,6 +183,8 @@ Unify under a trait:
 
 - Provide a route->query key convention and invalidate/prefetch planning from transitions.
 - Add race/cancellation tests for rapid route changes.
+- Provide update-scoped helpers that return prefetch intents alongside navigation results, so apps
+  do not need to rely on `take_prefetch_intents()` ordering across multiple transitions.
 
 ## Evidence anchors (current baseline)
 
@@ -164,4 +193,6 @@ Unify under a trait:
 - `ecosystem/fret-router/src/history.rs` (portable history)
 - `ecosystem/fret-router/src/web.rs` + `ecosystem/fret-router/tests/web_wasm.rs` (web adapters)
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
-
+- `ecosystem/fret-router/src/router_state.rs` (`navigate_with_prefetch_intents` / `sync_with_prefetch_intents`)
+- `ecosystem/fret-query/src/lib.rs` (tests: namespace invalidation cancels inflight and ignores stale apply)
+- `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; wasm: `WebHistoryAdapter` + browser navigation sync; route-driven query effects; page back/forward)

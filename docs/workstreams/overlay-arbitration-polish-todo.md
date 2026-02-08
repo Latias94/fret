@@ -27,8 +27,8 @@ Each TODO is labeled:
 
 ## Baseline (Existing Harnesses)
 
-- Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
-- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
+- Scripted UI regressions: `crates/fret-diag/src/lib.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
+- Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `crates/fret-diag/src/lib.rs`)
 - View-cache reuse gating: `--check-view-cache-reuse-min <n>`
 - Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
 - Matrix runner: `fretboard diag matrix ui-gallery` (runs cached+uncached variants and compares per-script bundles)

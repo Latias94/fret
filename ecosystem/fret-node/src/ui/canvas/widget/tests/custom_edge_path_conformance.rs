@@ -1,4 +1,4 @@
-use super::super::path_midpoint_and_normal;
+use super::prelude::{HitTestCtx, HitTestScratch, path_midpoint_and_normal};
 use super::*;
 
 #[test]
@@ -19,8 +19,7 @@ fn hit_testing_uses_custom_edge_path() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let edge_types = crate::ui::NodeGraphEdgeTypes::new().register_path(
         crate::ui::EdgeTypeKey::new("data"),
@@ -98,8 +97,8 @@ fn hit_testing_uses_custom_edge_path() {
         .graph
         .read_ref(cx.app, |g| g.clone())
         .unwrap_or_default();
-    let mut scratch = super::super::HitTestScratch::default();
-    let mut ctx = super::super::HitTestCtx::new(&geom, &index, zoom, &mut scratch);
+    let mut scratch = HitTestScratch::default();
+    let mut ctx = HitTestCtx::new(&geom, &index, zoom, &mut scratch);
     let hit = canvas.hit_edge(&graph, &snapshot, &mut ctx, mid);
     assert_eq!(hit, Some(edge_id));
 }
@@ -122,8 +121,7 @@ fn spatial_index_includes_custom_edge_path_bounds() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let edge_types = crate::ui::NodeGraphEdgeTypes::new().register_path(
         crate::ui::EdgeTypeKey::new("data"),
@@ -215,8 +213,7 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view_state = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view_state) = insert_graph_view(&mut host, graph_value);
     let view = view_state.clone();
 
     let _ = view.update(&mut host, |s, _cx| {

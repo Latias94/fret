@@ -10,7 +10,8 @@ pub(super) fn edges_tiles_base_key(
     b.add_u32(base_key.zoom_bits);
     b.add_u32(base_key.node_origin_x_bits);
     b.add_u32(base_key.node_origin_y_bits);
-    b.add_u64(base_key.draw_order_hash);
+    b.add_u64(base_key.draw_order.lo);
+    b.add_u64(base_key.draw_order.hi);
     b.add_u64(base_key.presenter_rev);
     b.add_u64(base_key.edge_types_rev);
     b.add_u64(style_key);
@@ -28,7 +29,8 @@ pub(super) fn edge_labels_tiles_base_key(
     b.add_u32(base_key.zoom_bits);
     b.add_u32(base_key.node_origin_x_bits);
     b.add_u32(base_key.node_origin_y_bits);
-    b.add_u64(base_key.draw_order_hash);
+    b.add_u64(base_key.draw_order.lo);
+    b.add_u64(base_key.draw_order.hi);
     b.add_u64(base_key.presenter_rev);
     b.add_u64(base_key.edge_types_rev);
     b.add_u64(style_key);
@@ -47,7 +49,8 @@ pub(super) fn edges_single_rect_key(
     b.add_u32(base_key.zoom_bits);
     b.add_u32(base_key.node_origin_x_bits);
     b.add_u32(base_key.node_origin_y_bits);
-    b.add_u64(base_key.draw_order_hash);
+    b.add_u64(base_key.draw_order.lo);
+    b.add_u64(base_key.draw_order.hi);
     b.add_u64(base_key.presenter_rev);
     b.add_u64(base_key.edge_types_rev);
     b.add_u64(style_key);
@@ -68,7 +71,8 @@ pub(super) fn edge_labels_single_rect_key(
     b.add_u32(base_key.zoom_bits);
     b.add_u32(base_key.node_origin_x_bits);
     b.add_u32(base_key.node_origin_y_bits);
-    b.add_u64(base_key.draw_order_hash);
+    b.add_u64(base_key.draw_order.lo);
+    b.add_u64(base_key.draw_order.hi);
     b.add_u64(base_key.presenter_rev);
     b.add_u64(base_key.edge_types_rev);
     b.add_u64(style_key);

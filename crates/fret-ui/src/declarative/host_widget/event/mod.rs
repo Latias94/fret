@@ -47,6 +47,24 @@ pub(super) fn invalidate_scroll_handle_bindings<H: UiHost>(
 }
 
 impl ElementHostWidget {
+    pub(super) fn event_capture_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+            return;
+        };
+
+        match instance {
+            ElementInstance::PointerRegion(props) => {
+                if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
+                    pointer_region::handle_pointer_region(self, cx, window, props, event);
+                }
+            }
+            _ => {}
+        }
+    }
+
     pub(super) fn event_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let Some(window) = cx.window else {
             return;

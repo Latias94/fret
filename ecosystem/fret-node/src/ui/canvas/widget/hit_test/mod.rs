@@ -25,7 +25,7 @@ impl HitTestScratch {
 #[derive(Debug)]
 pub(super) struct HitTestCtx<'a> {
     pub(super) geom: &'a CanvasGeometry,
-    pub(super) index: &'a CanvasSpatialIndex,
+    pub(super) index: &'a CanvasSpatialDerived,
     pub(super) zoom: f32,
     pub(super) scratch: &'a mut HitTestScratch,
 }
@@ -33,7 +33,7 @@ pub(super) struct HitTestCtx<'a> {
 impl<'a> HitTestCtx<'a> {
     pub(super) fn new(
         geom: &'a CanvasGeometry,
-        index: &'a CanvasSpatialIndex,
+        index: &'a CanvasSpatialDerived,
         zoom: f32,
         scratch: &'a mut HitTestScratch,
     ) -> Self {

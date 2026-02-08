@@ -16,9 +16,10 @@ use std::time::Duration;
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
 use fret_core::{
-    Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole, Size,
+    AppWindowId, Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole,
+    Size,
 };
-use fret_runtime::DragPhase;
+use fret_runtime::{DragPhase, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
     DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
@@ -510,6 +511,13 @@ pub struct SelectOptions {
     pub focusable: bool,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
+    /// Optional stable popup scope id override.
+    ///
+    /// When set, `select_model_ex` will use this id for its internal popup scope instead of
+    /// deriving one from `test_id`/`label`. This is useful to avoid accidental collisions (e.g.
+    /// multiple selects with the same label) and to keep popup store growth bounded when call sites
+    /// generate dynamic labels.
+    pub popup_scope_id: Option<Arc<str>>,
     pub placeholder: Option<Arc<str>>,
     pub popup: PopupMenuOptions,
 }
@@ -521,6 +529,7 @@ impl Default for SelectOptions {
             focusable: true,
             a11y_label: None,
             test_id: None,
+            popup_scope_id: None,
             placeholder: Some(Arc::from("Select?")),
             popup: PopupMenuOptions::default(),
         }
@@ -610,31 +619,72 @@ struct PopupStoreState {
     open: fret_runtime::Model<bool>,
     anchor: fret_runtime::Model<Option<fret_core::Rect>>,
     panel_id: Option<GlobalElementId>,
+    /// Last frame id where the popup was "kept alive" by a `begin_popup_*` call.
+    keep_alive_frame: Option<FrameId>,
+}
+
+#[derive(Default)]
+struct PopupStoreWindowState {
+    by_id: HashMap<Arc<str>, PopupStoreState>,
+    prepared_frame: Option<FrameId>,
 }
 
 #[derive(Default)]
 struct ImUiPopupStore {
-    by_id: HashMap<Arc<str>, PopupStoreState>,
+    by_window: HashMap<AppWindowId, PopupStoreWindowState>,
+}
+
+fn prepare_popup_store_for_frame<H: UiHost>(
+    store: &mut ImUiPopupStore,
+    app: &mut H,
+    window: AppWindowId,
+    frame_id: FrameId,
+) {
+    let state = store.by_window.entry(window).or_default();
+    if state.prepared_frame == Some(frame_id) {
+        return;
+    }
+    state.prepared_frame = Some(frame_id);
+
+    let required_keep_alive = FrameId(frame_id.0.saturating_sub(1));
+    for st in state.by_id.values_mut() {
+        let is_open = app.models().get_copied(&st.open).unwrap_or(false);
+        if !is_open {
+            continue;
+        }
+        if st.keep_alive_frame == Some(required_keep_alive) {
+            continue;
+        }
+        let _ = app.models_mut().update(&st.open, |v| *v = false);
+        let _ = app.models_mut().update(&st.anchor, |v| *v = None);
+        st.panel_id = None;
+    }
 }
 
 fn with_popup_store_for_id<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
     id: &str,
-    f: impl FnOnce(&mut PopupStoreState) -> R,
+    f: impl FnOnce(&mut PopupStoreState, &mut H) -> R,
 ) -> R {
+    let window = cx.window;
+    let frame_id = cx.frame_id;
     cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
-            if let Some(existing) = st.by_id.get_mut(id) {
-                return f(existing);
+        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
+            prepare_popup_store_for_frame(store, app, window, frame_id);
+
+            let state = store.by_window.entry(window).or_default();
+            if let Some(existing) = state.by_id.get_mut(id) {
+                return f(existing, app);
             }
 
             let key: Arc<str> = Arc::from(id);
-            let entry = st.by_id.entry(key).or_insert_with(|| PopupStoreState {
+            let entry = state.by_id.entry(key).or_insert_with(|| PopupStoreState {
                 open: app.models_mut().insert(false),
                 anchor: app.models_mut().insert(None::<fret_core::Rect>),
                 panel_id: None,
+                keep_alive_frame: None,
             });
-            f(entry)
+            f(entry, app)
         })
 }
 
@@ -973,6 +1023,42 @@ impl Default for FloatingWindowResizeOptions {
         Self {
             min_size: Size::new(Px(120.0), Px(72.0)),
             max_size: None,
+        }
+    }
+}
+
+/// Behavior flags for in-window floating windows.
+///
+/// This is an ecosystem-level facade surface (not a mechanism-layer contract). The goal is to
+/// provide ImGui-like control over common floating window behavior without introducing a parallel
+/// runtime or duplicating canonical policy.
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingWindowOptions {
+    /// When true, the window can be moved by dragging the title bar.
+    pub movable: bool,
+    /// When true, resize handles are active when the window is rendered with an initial size.
+    pub resizable: bool,
+    /// When true, title-bar double click toggles collapse/expand.
+    pub collapsible: bool,
+    /// When true and an `open` model is provided, the close button and `Escape`-to-close are enabled.
+    pub closable: bool,
+    /// When true, pointer down anywhere in the window activates it for z-order (when nested under
+    /// `floating_layer(...)`).
+    pub activate_on_click: bool,
+    /// When false, the window is rendered but pointer interactions are blocked (no activation,
+    /// drag, resize, or child clicks).
+    pub inputs_enabled: bool,
+}
+
+impl Default for FloatingWindowOptions {
+    fn default() -> Self {
+        Self {
+            movable: true,
+            resizable: true,
+            collapsible: true,
+            closable: true,
+            activate_on_click: true,
+            inputs_enabled: true,
         }
     }
 }
@@ -1401,6 +1487,8 @@ struct FloatWindowLayerMarker {
 #[derive(Debug, Default)]
 struct FloatWindowLayerZOrder {
     order: Vec<GlobalElementId>,
+    dirty: bool,
+    snapshot: FloatWindowLayerZOrderSnapshot,
 }
 
 impl FloatWindowLayerZOrder {
@@ -1409,6 +1497,7 @@ impl FloatWindowLayerZOrder {
             return;
         }
         self.order.push(window);
+        self.dirty = true;
     }
 
     fn bring_to_front(&mut self, window: GlobalElementId) {
@@ -1421,7 +1510,42 @@ impl FloatWindowLayerZOrder {
         }
         self.order.remove(idx);
         self.order.push(window);
+        self.dirty = true;
     }
+
+    fn prune_missing(&mut self, windows: &[AnyElement]) {
+        let before = self.order.len();
+        self.order.retain(|id| windows.iter().any(|w| w.id == *id));
+        if self.order.len() != before {
+            self.dirty = true;
+        }
+    }
+
+    fn snapshot(&mut self) -> FloatWindowLayerZOrderSnapshot {
+        if !self.dirty {
+            return self.snapshot.clone();
+        }
+
+        let order: Arc<[GlobalElementId]> = self.order.clone().into();
+        let mut rank = HashMap::with_capacity(order.len());
+        for (ix, id) in order.iter().enumerate() {
+            rank.insert(*id, ix);
+        }
+
+        self.snapshot = FloatWindowLayerZOrderSnapshot {
+            order,
+            rank: Arc::new(rank),
+        };
+        self.dirty = false;
+        self.snapshot.clone()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct FloatWindowLayerZOrderSnapshot {
+    #[allow(dead_code)]
+    order: Arc<[GlobalElementId]>,
+    rank: Arc<HashMap<GlobalElementId, usize>>,
 }
 
 fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
@@ -1429,6 +1553,7 @@ fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
     area: FloatingAreaContext,
     props: PointerRegionProps,
     on_left_double_click: Option<OnFloatingAreaLeftDoubleClick>,
+    enable_drag: bool,
     setup: Setup,
     build: Build,
 ) -> AnyElement
@@ -1454,9 +1579,16 @@ where
             }
 
             host.request_focus(acx.target);
-            host.capture_pointer();
-            if host.drag(down.pointer_id).is_none() {
-                host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+            if enable_drag {
+                host.capture_pointer();
+                if host.drag(down.pointer_id).is_none() {
+                    host.begin_drag_with_kind(
+                        down.pointer_id,
+                        drag_kind,
+                        acx.window,
+                        down.position,
+                    );
+                }
             }
             if down.click_count == 2
                 && let Some(on_left_double_click) = on_left_double_click_for_down.as_ref()
@@ -1475,6 +1607,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+            if !enable_drag {
+                return false;
+            }
             let Some(drag) = host.drag_mut(mv.pointer_id) else {
                 return false;
             };
@@ -1505,6 +1640,9 @@ where
         }));
 
         cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+            if !enable_drag {
+                return false;
+            }
             if let Some(drag) = host.drag(up.pointer_id)
                 && drag.kind == drag_kind
                 && drag.source_window == acx.window
@@ -1656,25 +1794,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     f(&mut ui);
                 }
 
-                let mut z_order =
-                    cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
-                        for w in windows.iter() {
-                            st.ensure_present(w.id);
-                        }
-                        st.order.clone()
-                    });
-
-                // Ensure we never rank missing windows above present ones if the order vector is stale.
-                z_order.retain(|id| windows.iter().any(|w| w.id == *id));
+                let z_order = cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
+                    for w in windows.iter() {
+                        st.ensure_present(w.id);
+                    }
+                    st.prune_missing(&windows);
+                    st.snapshot()
+                });
 
                 let mut indexed: Vec<(usize, usize, AnyElement)> = windows
                     .into_iter()
                     .enumerate()
                     .map(|(original, w)| {
-                        let idx = z_order
-                            .iter()
-                            .position(|id| *id == w.id)
-                            .unwrap_or(usize::MAX);
+                        let idx = z_order.rank.get(&w.id).copied().unwrap_or(usize::MAX);
                         (idx, original, w)
                     })
                     .collect();
@@ -1882,7 +2014,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, None, setup, f))
+        self.with_cx_mut(|cx| {
+            floating_area_drag_surface_element(cx, area, props, None, true, setup, f)
+        })
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -1890,12 +2024,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
-        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st| st.open.clone()))
+        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st, _app| st.open.clone()))
+    }
+
+    /// Drops all internal state for a named popup scope.
+    ///
+    /// This is primarily intended for ephemeral/dynamic scopes where the id space could grow
+    /// without bound (e.g. popups keyed by user-generated strings). Dropping a scope will close the
+    /// popup (if open) and release the internal models if no other references exist.
+    fn drop_popup_scope(&mut self, id: &str) {
+        self.with_cx_mut(|cx| {
+            cx.app
+                .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
+                    prepare_popup_store_for_frame(st, app, cx.window, cx.frame_id);
+                    let Some(window_state) = st.by_window.get_mut(&cx.window) else {
+                        return;
+                    };
+                    let Some(entry) = window_state.by_id.remove(id) else {
+                        return;
+                    };
+                    let _ = app.models_mut().update(&entry.open, |v| *v = false);
+                    let _ = app.models_mut().update(&entry.anchor, |v| *v = None);
+                });
+            cx.app.request_redraw(cx.window);
+        });
     }
 
     fn open_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let keep_alive_frame = cx.frame_id;
+            let open = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                st.open.clone()
+            });
             let _ = cx.app.models_mut().update(&open, |v| *v = true);
             cx.app.request_redraw(cx.window);
         });
@@ -1903,8 +2064,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model) =
-                with_popup_store_for_id(cx, id, |st| (st.open.clone(), st.anchor.clone()));
+            let keep_alive_frame = cx.frame_id;
+            let (open, anchor_model) = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                (st.open.clone(), st.anchor.clone())
+            });
             let _ = cx
                 .app
                 .models_mut()
@@ -1916,7 +2080,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn close_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let _ = cx.app.models_mut().update(&open, |v| *v = false);
             cx.app.request_redraw(cx.window);
         });
@@ -1939,7 +2103,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st| {
+            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st, _app| {
                 (st.open.clone(), st.anchor.clone(), st.panel_id)
             });
             let is_open = cx
@@ -1953,8 +2117,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 .read_model(&anchor_model, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(None);
             let Some(anchor) = anchor else {
+                let _ = cx.app.models_mut().update(&open, |v| *v = false);
+                let _ = cx.app.models_mut().update(&anchor_model, |v| *v = None);
+                with_popup_store_for_id(cx, id, |st, _app| {
+                    st.panel_id = None;
+                    st.keep_alive_frame = None;
+                });
+                cx.app.request_redraw(cx.window);
                 return false;
             };
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -2031,7 +2207,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         })]
                     });
                     menu_id_for_focus = Some(menu.id);
-                    with_popup_store_for_id(cx, id, |st| st.panel_id = Some(menu.id));
+                    with_popup_store_for_id(cx, id, |st, _app| st.panel_id = Some(menu.id));
                     menu
                 })
             });
@@ -2078,13 +2254,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let is_open = cx
                 .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(false);
             if !is_open {
                 return false;
             }
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -3233,7 +3414,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             .unwrap_or_else(|| Arc::from("Select..."));
         let trigger_text: Arc<str> = Arc::from(format!("{label}: {selected_label}"));
 
-        let popup_scope_id: Arc<str> = {
+        let popup_scope_id: Arc<str> = options.popup_scope_id.clone().unwrap_or_else(|| {
             let base = options
                 .test_id
                 .as_deref()
@@ -3248,7 +3429,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }
             }
             Arc::from(format!("imui-select-popup-{normalized}"))
-        };
+        });
         let popup_open = self.popup_open_model(popup_scope_id.as_ref());
 
         let trigger = self.push_id(format!("{popup_scope_id}.trigger"), |ui| {
@@ -3686,13 +3867,37 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
-        self.floating_window_impl_on_area_show(
+        self.floating_window_impl_on_area_show_with_options(
             id,
             title,
             open,
             initial_position,
             initial_size,
             resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            options,
             f,
         )
     }
@@ -3749,6 +3954,29 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> FloatingWindowResponse {
+        self.floating_window_impl_on_area_show_with_options(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            FloatingWindowOptions::default(),
+            f,
+        )
+    }
+
+    fn floating_window_impl_on_area_show_with_options(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
         if let Some(open) = open {
             let is_open = self
                 .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
@@ -3791,6 +4019,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     initial_position,
                     initial_size,
                     resize,
+                    options,
                     f,
                 );
                 chrome_out.set(chrome);
@@ -3804,6 +4033,96 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             resizing: chrome.resizing,
             collapsed: chrome.collapsed,
         }
+    }
+
+    /// Render a floating window with explicit behavior flags.
+    fn window_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model floating window with explicit behavior flags.
+    fn window_open_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            None,
+            None,
+            options,
+            f,
+        )
+    }
+
+    /// Render a resizable floating window with explicit behavior flags.
+    fn window_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
+    }
+
+    /// Render an `open`-model resizable floating window with explicit behavior flags.
+    fn window_open_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        options: FloatingWindowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> FloatingWindowResponse {
+        self.floating_window_impl_show_with_options(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            Some(initial_size),
+            Some(resize),
+            options,
+            f,
+        )
     }
 
     fn floating_window_impl_legacy(
