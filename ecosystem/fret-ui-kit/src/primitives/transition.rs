@@ -48,6 +48,7 @@ impl TransitionProfile {
 }
 
 /// Drive a transition using the UI runtime's monotonic clock (same duration for open/close).
+#[track_caller]
 pub fn drive_transition<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -57,6 +58,7 @@ pub fn drive_transition<H: UiHost>(
 }
 
 /// Drive a transition using the UI runtime's monotonic clock, with separate open/close durations.
+#[track_caller]
 pub fn drive_transition_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -72,6 +74,7 @@ pub fn drive_transition_with_durations<H: UiHost>(
 }
 
 /// Drive a transition with separate durations and a custom easing curve.
+#[track_caller]
 pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -89,6 +92,7 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
 }
 
 /// Drive a transition using a reusable [`TransitionProfile`].
+#[track_caller]
 pub fn drive_transition_with_profile<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -120,6 +124,16 @@ pub fn lerp_size(from: Size, to: Size, t: f32) -> Size {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size as CoreSize};
+    use fret_runtime::{FrameId, TickId};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        )
+    }
 
     #[test]
     fn lerp_px_is_clamped_and_monotonic() {
@@ -128,5 +142,28 @@ mod tests {
         assert_eq!(lerp_px(Px(0.0), Px(10.0), 0.5), Px(5.0));
         assert_eq!(lerp_px(Px(0.0), Px(10.0), 1.0), Px(10.0));
         assert_eq!(lerp_px(Px(0.0), Px(10.0), 2.0), Px(10.0));
+    }
+
+    #[test]
+    fn wrapper_drivers_keep_independent_state_per_call_site() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let (a, b) = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t", |cx| {
+            let a = drive_transition_with_durations(cx, true, 6, 6);
+            let b = drive_transition_with_durations(cx, false, 6, 6);
+            (a, b)
+        });
+
+        assert!(a.present);
+        assert!(a.animating);
+        assert!(a.progress > 0.0 && a.progress < 1.0);
+
+        assert!(!b.present);
+        assert!(!b.animating);
+        assert_eq!(b.progress, 0.0);
     }
 }
