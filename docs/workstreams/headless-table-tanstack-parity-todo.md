@@ -915,15 +915,19 @@ Next UI parity targets (capability, not exact DOM behavior):
           - Gallery: `apps/fret-ui-gallery/src/ui.rs` wires a `Name filter` input (column id `name`) and a stable
             status row (`NameFilter: ...`) for assertions.
           - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`.
-        - [ ] HTP-ui-dt-023 Add a faceted filter control for a categorical column (menu of unique values).
+        - [x] HTP-ui-dt-023 Add a faceted filter control for a categorical column (menu of unique values).
           - Prefer headless-backed faceting when the caller can provide a facet key/label mapping.
           - Accept a static option list fallback (still drives `column_filters`) to keep the recipe usable
             in apps that already own their domain option inventories.
+          - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar::faceted_filter(..)`).
+          - Gallery: `apps/fret-ui-gallery/src/ui.rs` wires a `Status` dropdown (column id `status`) and a stable
+            status row (`StatusFilter: ...`) for assertions.
+          - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`.
         - [ ] HTP-ui-dt-024 Add a “Reset filters” affordance (clears global + column filters and resets `page_index`).
       - Gates:
         - `tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json`
         - `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
-        - (planned) `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
+        - `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
     - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
       - Scope note: sticky rendering + split layout are already wired in `table_virtualized` (HTP-ui-colpin-010).
         This milestone focuses on *UI entrypoints* that let users drive `TableState.column_pinning`.

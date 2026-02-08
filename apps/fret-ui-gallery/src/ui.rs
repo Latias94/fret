@@ -16629,6 +16629,24 @@ fn preview_data_table_torture(
                     .size(220.0),
                 ColumnDef::new("status")
                     .sort_by(|a: &Row, b: &Row| a.status.cmp(&b.status))
+                    .filter_by_with_meta(|row: &Row, value: &serde_json::Value, _add_meta| {
+                        match value {
+                            serde_json::Value::String(s) => row.status.as_ref() == s,
+                            serde_json::Value::Array(items) => items
+                                .iter()
+                                .filter_map(|it| it.as_str())
+                                .any(|s| row.status.as_ref() == s),
+                            _ => false,
+                        }
+                    })
+                    .facet_key_by(|row: &Row| match row.status.as_ref() {
+                        "Running" => 1,
+                        "Idle" => 2,
+                        "Sleeping" => 3,
+                        "Blocked" => 4,
+                        _ => 0,
+                    })
+                    .facet_str_by(|row: &Row| row.status.as_ref())
                     .size(140.0),
                 ColumnDef::new("cpu%")
                     .sort_by(|a: &Row, b: &Row| a.cpu.cmp(&b.cpu))
@@ -16748,6 +16766,33 @@ fn preview_data_table_torture(
         }
     };
 
+    let status_filter_text: Arc<str> = {
+        let value = cx
+            .app
+            .models()
+            .read(&state, |st| {
+                st.column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == "status")
+                    .map(|f| f.value.clone())
+            })
+            .ok()
+            .flatten();
+        match value {
+            None => Arc::<str>::from("StatusFilter: <none>"),
+            Some(serde_json::Value::String(s)) => Arc::<str>::from(format!("StatusFilter: {s}")),
+            Some(serde_json::Value::Array(items)) => {
+                let parts: Vec<&str> = items.iter().filter_map(|it| it.as_str()).collect();
+                if parts.is_empty() {
+                    Arc::<str>::from("StatusFilter: <none>")
+                } else {
+                    Arc::<str>::from(format!("StatusFilter: {}", parts.join(", ")))
+                }
+            }
+            Some(v) => Arc::<str>::from(format!("StatusFilter: {v}")),
+        }
+    };
+
     let toolbar_columns = columns.clone();
     let toolbar =
         shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
@@ -16755,7 +16800,17 @@ fn preview_data_table_torture(
         })
         .column_filter("name")
         .column_filter_placeholder("Filter name...")
-        .column_filter_a11y_label("Name filter");
+        .column_filter_a11y_label("Name filter")
+        .faceted_filter(
+            "status",
+            "Status",
+            Arc::<[Arc<str>]>::from(vec![
+                Arc::<str>::from("Running"),
+                Arc::<str>::from("Idle"),
+                Arc::<str>::from("Sleeping"),
+                Arc::<str>::from("Blocked"),
+            ]),
+        );
 
     let header = stack::vstack(
         cx,
@@ -16789,6 +16844,12 @@ fn preview_data_table_torture(
                         .role(fret_core::SemanticsRole::Text)
                         .label(name_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-name-filter"),
+                ),
+                cx.text(status_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(status_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-status-filter"),
                 ),
                 toolbar.clone().into_element(cx),
             ]

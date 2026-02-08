@@ -178,12 +178,36 @@ impl Clone for ColumnPinningBinding {
     }
 }
 
+#[derive(Clone)]
+struct FacetedFilterConfig {
+    column_id: ColumnId,
+    button_label: Arc<str>,
+    options: Arc<[Arc<str>]>,
+}
+
+struct FacetedFilterItemBinding {
+    value: Arc<str>,
+    model: Model<bool>,
+}
+
+impl Clone for FacetedFilterItemBinding {
+    fn clone(&self) -> Self {
+        Self {
+            value: self.value.clone(),
+            model: self.model.clone(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct DataTableToolbarState {
     filter_model: Option<Model<String>>,
     column_filter_model: Option<Model<String>>,
     columns_open: Option<Model<bool>>,
     pinning_open: Option<Model<bool>>,
+    faceted_open: Option<Model<bool>>,
+    faceted_column: Option<ColumnId>,
+    faceted_items: Vec<FacetedFilterItemBinding>,
     column_visibility: Vec<ColumnVisibilityBinding>,
     column_pinning: Vec<ColumnPinningBinding>,
     last_synced_state_revision: Option<u64>,
@@ -204,6 +228,7 @@ pub struct DataTableToolbar<TData> {
     column_filter: Option<ColumnId>,
     column_filter_placeholder: Arc<str>,
     column_filter_a11y_label: Arc<str>,
+    faceted_filter: Option<FacetedFilterConfig>,
 }
 
 impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
@@ -228,6 +253,7 @@ impl<TData> DataTableToolbar<TData> {
             column_filter: None,
             column_filter_placeholder: Arc::from("Filter..."),
             column_filter_a11y_label: Arc::from("Column filter"),
+            faceted_filter: None,
         }
     }
 
@@ -252,6 +278,24 @@ impl<TData> DataTableToolbar<TData> {
 
     pub fn column_filter_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.column_filter_a11y_label = label.into();
+        self
+    }
+
+    /// Adds a simple faceted multi-select filter control for a categorical column.
+    ///
+    /// The selected values are stored as a JSON array of strings in `TableState.column_filters`
+    /// for the given `column_id`.
+    pub fn faceted_filter(
+        mut self,
+        column_id: impl Into<ColumnId>,
+        button_label: impl Into<Arc<str>>,
+        options: impl Into<Arc<[Arc<str>]>>,
+    ) -> Self {
+        self.faceted_filter = Some(FacetedFilterConfig {
+            column_id: column_id.into(),
+            button_label: button_label.into(),
+            options: options.into(),
+        });
         self
     }
 
@@ -337,6 +381,21 @@ impl<TData> DataTableToolbar<TData> {
             }
         };
 
+        let faceted_open =
+            cx.with_state(DataTableToolbarState::default, |st| st.faceted_open.clone());
+        let faceted_open = match (self.faceted_filter.as_ref(), faceted_open) {
+            (None, _) => None,
+            (Some(_), Some(m)) => Some(m),
+            (Some(_), None) => {
+                let m = cx.app.models_mut().insert(false);
+                let m_for_state = m.clone();
+                cx.with_state(DataTableToolbarState::default, move |st| {
+                    st.faceted_open = Some(m_for_state);
+                });
+                Some(m)
+            }
+        };
+
         let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
             st.column_visibility.clone()
         });
@@ -381,6 +440,54 @@ impl<TData> DataTableToolbar<TData> {
             });
         }
 
+        let mut faceted_items = cx.with_state(DataTableToolbarState::default, |st| {
+            st.faceted_items.clone()
+        });
+        let faceted_column = cx.with_state(DataTableToolbarState::default, |st| {
+            st.faceted_column.clone()
+        });
+        if let Some(cfg) = self.faceted_filter.as_ref() {
+            let should_rebuild = faceted_column
+                .as_ref()
+                .is_none_or(|id| id.as_ref() != cfg.column_id.as_ref())
+                || faceted_items.len() != cfg.options.len();
+            if should_rebuild {
+                let selected: std::collections::HashSet<Arc<str>> = state_value
+                    .column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
+                    .map(|f| f.value.clone())
+                    .and_then(|v| match v {
+                        Value::String(s) => Some(vec![Arc::<str>::from(s)]),
+                        Value::Array(items) => Some(
+                            items
+                                .into_iter()
+                                .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
+                                .collect::<Vec<_>>(),
+                        ),
+                        _ => None,
+                    })
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect();
+
+                faceted_items = cfg
+                    .options
+                    .iter()
+                    .map(|opt| FacetedFilterItemBinding {
+                        value: opt.clone(),
+                        model: cx.app.models_mut().insert(selected.contains(opt)),
+                    })
+                    .collect();
+                let next_items = faceted_items.clone();
+                let next_column = cfg.column_id.clone();
+                cx.with_state(DataTableToolbarState::default, move |st| {
+                    st.faceted_items = next_items;
+                    st.faceted_column = Some(next_column);
+                });
+            }
+        }
+
         let last_synced_state_revision = cx.with_state(DataTableToolbarState::default, |st| {
             st.last_synced_state_revision
         });
@@ -392,6 +499,33 @@ impl<TData> DataTableToolbar<TData> {
                     .models_mut()
                     .update(&binding.model, |v| *v = desired.clone());
             }
+
+            if let Some(cfg) = self.faceted_filter.as_ref() {
+                let selected: std::collections::HashSet<Arc<str>> = state_value
+                    .column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == cfg.column_id.as_ref())
+                    .map(|f| f.value.clone())
+                    .and_then(|v| match v {
+                        Value::String(s) => Some(vec![Arc::<str>::from(s)]),
+                        Value::Array(items) => Some(
+                            items
+                                .into_iter()
+                                .filter_map(|it| it.as_str().map(|s| Arc::<str>::from(s)))
+                                .collect::<Vec<_>>(),
+                        ),
+                        _ => None,
+                    })
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect();
+
+                for item in faceted_items.iter() {
+                    let desired = selected.contains(&item.value);
+                    let _ = cx.app.models_mut().update(&item.model, |v| *v = desired);
+                }
+            }
+
             cx.with_state(DataTableToolbarState::default, |st| {
                 st.last_synced_state_revision = Some(state_revision);
             });
@@ -431,6 +565,59 @@ impl<TData> DataTableToolbar<TData> {
                         st.column_filters
                             .push(fret_ui_headless::table::ColumnFilter {
                                 column: column_id.clone(),
+                                value: next,
+                            });
+                        st.pagination.page_index = 0;
+                    }
+                }
+            });
+        }
+
+        if let Some(cfg) = self.faceted_filter.as_ref() {
+            let selected: Vec<Arc<str>> = faceted_items
+                .iter()
+                .filter_map(|it| {
+                    cx.watch_model(&it.model)
+                        .layout()
+                        .copied()
+                        .unwrap_or(false)
+                        .then(|| it.value.clone())
+                })
+                .collect();
+
+            let next = if selected.is_empty() {
+                None
+            } else {
+                Some(Value::Array(
+                    selected
+                        .iter()
+                        .map(|v| Value::String(v.as_ref().to_string()))
+                        .collect(),
+                ))
+            };
+
+            let _ = cx.app.models_mut().update(&self.state, |st| {
+                let existing = st
+                    .column_filters
+                    .iter()
+                    .position(|f| f.column.as_ref() == cfg.column_id.as_ref());
+
+                match (existing, next.clone()) {
+                    (None, None) => {}
+                    (Some(idx), None) => {
+                        st.column_filters.remove(idx);
+                        st.pagination.page_index = 0;
+                    }
+                    (Some(idx), Some(next)) => {
+                        if st.column_filters[idx].value != next {
+                            st.column_filters[idx].value = next;
+                            st.pagination.page_index = 0;
+                        }
+                    }
+                    (None, Some(next)) => {
+                        st.column_filters
+                            .push(fret_ui_headless::table::ColumnFilter {
+                                column: cfg.column_id.clone(),
                                 value: next,
                             });
                         st.pagination.page_index = 0;
@@ -529,6 +716,34 @@ impl<TData> DataTableToolbar<TData> {
             move |_cx| pin_items.clone(),
         );
 
+        let faceted_menu = self
+            .faceted_filter
+            .as_ref()
+            .and_then(|cfg| faceted_open.clone().map(|open| (cfg.clone(), open)))
+            .map(|(cfg, open)| {
+                let button_label = cfg.button_label.clone();
+                let entries: Vec<DropdownMenuEntry> = faceted_items
+                    .iter()
+                    .map(|it| {
+                        DropdownMenuEntry::CheckboxItem(DropdownMenuCheckboxItem::new(
+                            it.model.clone(),
+                            it.value.clone(),
+                        ))
+                    })
+                    .collect();
+
+                DropdownMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        Button::new(button_label.clone())
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Sm)
+                            .into_element(cx)
+                    },
+                    move |_cx| entries.clone(),
+                )
+            });
+
         let global_filter = Input::new(filter_model)
             .a11y_label("Global filter")
             .a11y_role(SemanticsRole::TextField)
@@ -563,6 +778,9 @@ impl<TData> DataTableToolbar<TData> {
                 children.push(global_filter);
                 if let Some(filter) = column_filter.clone() {
                     children.push(filter);
+                }
+                if let Some(menu) = faceted_menu.clone() {
+                    children.push(menu);
                 }
                 children.push(cols_menu);
                 children.push(pin_menu);
