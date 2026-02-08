@@ -287,6 +287,11 @@ Notes:
 
 - The web IME baseline gate must be stable; if it cannot be made stable, it stays as a manual harness.
 
+Diagnostics gates (baseline set; add more as needed):
+
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`
+
 #### M10.4 — Diag gates as the definition-of-done
 
 Exit criteria:

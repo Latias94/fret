@@ -344,6 +344,9 @@ Markdown Editor v0”).
 - [x] Add a Markdown editor a11y composition regression (ADR 0071 range invariants; synthetic preedit injection).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`.
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition`).
+- [x] Add a soft-wrap a11y composition regression (same invariants with wrap=80 enabled).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap`).
 - [ ] Deferred: Web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
   - Decision: keep as a manual harness until it can be stabilized.
 
