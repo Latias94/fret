@@ -2511,6 +2511,8 @@ See: `docs/tracy.md`.\n";
             }
 
             let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_overlay_steady_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-overlay-steady";
             let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
             let is_ui_gallery_virt_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
@@ -2565,6 +2567,14 @@ See: `docs/tracy.md`.\n";
                 if is_ui_gallery_suite {
                     (
                         ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_overlay_steady_suite {
+                    (
+                        ui_gallery_overlay_steady_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -6655,6 +6665,15 @@ fn ui_gallery_suite_scripts() -> [&'static str; 22] {
         "tools/diag-scripts/ui-gallery-table-smoke.json",
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    ]
+}
+
+fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
+    [
+        "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+        "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
     ]
 }
 
