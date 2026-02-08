@@ -709,11 +709,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (coalescing model): added an explicit TanStack-style auto-reset queue for rebuild-each-frame callers.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` (`TanStackAutoResetQueue`)
   - Remaining (tracked separately): data-update-trigger coverage (row identity preserving/changing).
-- [ ] HTP-page-041 Add auto-reset fixtures for data updates (identity-preserving vs identity-changing).
+- [x] HTP-page-041 Add auto-reset fixtures for data updates (identity-preserving vs identity-changing).
   - Target: `autoResetPageIndex` (and `autoResetExpanded` where applicable) behavior when:
     - data rows are mutated but `getRowId` stays stable,
     - data rows are replaced and row ids change (rows removed/added/reordered).
-  - Evidence target: new fixture + parity gate (likely `auto_reset_data_updates.json`).
+  - Done (parity-gated): stable RowId data mutation + RowId identity changes both trigger page-index
+    auto reset by default, respect `manualPagination`, and allow explicit override via
+    `autoResetPageIndex=true`.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset_data_updates.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_data_updates_parity.rs`
 - [x] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).

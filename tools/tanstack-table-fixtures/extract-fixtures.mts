@@ -6,6 +6,7 @@ import { execSync } from "child_process"
 type CaseId =
   | "demo_process"
   | "auto_reset"
+  | "auto_reset_data_updates"
   | "resets"
   | "pagination"
   | "sort_undefined"
@@ -45,6 +46,18 @@ type SnapshotId =
   | "auto_reset_global_filter_manual_pagination_true_no_reset"
   | "auto_reset_global_filter_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
   | "auto_reset_global_filter_auto_reset_all_false_disables"
+  | "auto_reset_column_filters_default_resets"
+  | "auto_reset_column_filters_manual_pagination_true_no_reset"
+  | "auto_reset_column_filters_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_column_filters_auto_reset_all_false_disables"
+  | "auto_reset_data_updates_stable_ids_default_resets"
+  | "auto_reset_data_updates_stable_ids_manual_pagination_true_no_reset"
+  | "auto_reset_data_updates_stable_ids_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_data_updates_stable_ids_auto_reset_all_false_disables"
+  | "auto_reset_data_updates_identity_change_default_resets"
+  | "auto_reset_data_updates_identity_change_manual_pagination_true_no_reset"
+  | "auto_reset_data_updates_identity_change_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_data_updates_identity_change_auto_reset_all_false_disables"
   | "resets_reset_sorting_restores_initial"
   | "resets_reset_sorting_default_true_clears"
   | "resets_reset_column_filters_restores_initial"
@@ -909,6 +922,10 @@ type FixtureAction =
       value: unknown
     }
   | {
+      type: "setData"
+      data: unknown[]
+    }
+  | {
       type: "toggleColumnVisibility"
       column_id: string
       value?: boolean
@@ -1078,6 +1095,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
       if (
         v !== "demo_process" &&
         v !== "auto_reset" &&
+        v !== "auto_reset_data_updates" &&
         v !== "resets" &&
         v !== "pagination" &&
         v !== "sort_undefined" &&
@@ -1111,7 +1129,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1341,6 +1359,7 @@ async function main(): Promise<void> {
   if (
     case_id === "demo_process" ||
     case_id === "auto_reset" ||
+    case_id === "auto_reset_data_updates" ||
     case_id === "resets" ||
     case_id === "pagination" ||
     case_id === "state_shapes" ||
@@ -1946,7 +1965,11 @@ async function main(): Promise<void> {
     }))
   }
 
-  function buildTable(options: TanStackOptions, state: TanStackState) {
+  function buildTable(
+    options: TanStackOptions,
+    state: TanStackState,
+    data_override?: unknown[],
+  ) {
     const currentState = {
       sorting: [],
       columnFilters: [],
@@ -1977,10 +2000,10 @@ async function main(): Promise<void> {
         : (row: DemoProcessRow) => String(row.id)
 
     const table = tableCore.createTable<DemoProcessRow>({
-    data,
-    columns,
-    getRowId,
-    getSubRows: (row: DemoProcessRow) => (row as any).subRows,
+      data: (data_override ?? data) as any,
+      columns,
+      getRowId,
+      getSubRows: (row: DemoProcessRow) => (row as any).subRows,
       initialState: options.initialState,
       autoResetAll: options.autoResetAll,
       manualFiltering: options.manualFiltering ?? false,
@@ -2217,8 +2240,9 @@ function snapshotForState(
   options: TanStackOptions,
   state: TanStackState,
   extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
+  data_override?: unknown[],
 ): FixtureSnapshot["expect"] {
-  const { table } = buildTable(options, state)
+  const { table } = buildTable(options, state, data_override)
   const out: FixtureSnapshot["expect"] = {
       core: snapshotRowModel(table.getCoreRowModel()),
       filtered: snapshotRowModel(table.getFilteredRowModel()),
@@ -3552,7 +3576,8 @@ function snapshotColumnPinning(
     state: TanStackState,
     actions: FixtureAction[],
   ): Promise<FixtureSnapshot["expect"]> {
-    const { table, currentState } = buildTable(options, state)
+    let currentData = data as unknown[]
+    const { table, currentState } = buildTable(options, state, currentData)
 
     // Simulate an initial render pass that computes the full row model. TanStack's row-model
     // memo debug callbacks register auto-reset behavior without resetting on the first call.
@@ -3575,6 +3600,9 @@ function snapshotColumnPinning(
         col.setFilterValue(action.value)
       } else if (action.type === "setGlobalFilterValue") {
         table.setGlobalFilter(action.value)
+      } else if (action.type === "setData") {
+        currentData = action.data
+        table.setOptions((old: any) => ({ ...old, data: currentData }))
       } else {
         throw new Error(
           `snapshotForAutoResetActionsWithFlush does not support action: ${action.type}`,
@@ -3590,7 +3618,7 @@ function snapshotColumnPinning(
       await Promise.resolve()
     }
 
-    const expect = snapshotForState(options, currentState)
+    const expect = snapshotForState(options, currentState, undefined, currentData)
 
     return {
       ...expect,
@@ -3940,6 +3968,92 @@ function snapshotColumnPinning(
         { autoResetAll: false },
         { pagination: { pageIndex: 1, pageSize: 2 } },
         [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+    ]
+  } else if (case_id === "auto_reset_data_updates") {
+    const mkActionsAutoReset = async (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = await snapshotForAutoResetActionsWithFlush(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect,
+      }
+    }
+
+    const stableIds = [
+      { id: 1, name: "Renderer", status: "Running", cpu: 99, mem_mb: 420 },
+      { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 3, name: "Indexer", status: "Running", cpu: 1, mem_mb: 860 },
+      { id: 4, name: "Spellcheck", status: "Disabled", cpu: 0, mem_mb: 0 },
+      { id: 5, name: "Language Server", status: "Running", cpu: 7, mem_mb: 512 },
+    ]
+
+    const identityChange = [
+      { id: 10, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
+      { id: 11, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 12, name: "Indexer", status: "Running", cpu: 38, mem_mb: 860 },
+      { id: 13, name: "Spellcheck", status: "Disabled", cpu: 0, mem_mb: 0 },
+      { id: 14, name: "Language Server", status: "Running", cpu: 7, mem_mb: 512 },
+    ]
+
+    snapshots = [
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_stable_ids_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: stableIds }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_data_updates_identity_change_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setData", data: identityChange }],
       ),
     ]
   } else if (case_id === "resets") {
