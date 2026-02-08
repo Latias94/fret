@@ -100,6 +100,9 @@ struct State {
     semantics_selected_node_live_json: Model<String>,
     semantics_selected_node_live_status: Model<Option<Arc<str>>>,
     semantics_selected_node_live_updated_unix_ms: Model<Option<u64>>,
+    semantics_selected_node_live_children: Model<Vec<u64>>,
+    semantics_live_enabled: Model<bool>,
+    semantics_live_force_nonce: Model<u64>,
 
     client: DevtoolsWsClient,
     applied_session_id: Option<Arc<str>>,
@@ -107,6 +110,7 @@ struct State {
     next_transport_request_id: u64,
     live_semantics_last_target: Option<(u64, u64)>,
     live_semantics_last_sent_unix_ms: Option<u64>,
+    live_semantics_last_force_nonce: u64,
 
     pack_tx: std::sync::mpsc::Sender<pack::PackJobResult>,
     pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
@@ -209,6 +213,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let semantics_selected_node_live_json = app.models_mut().insert(String::new());
     let semantics_selected_node_live_status = app.models_mut().insert(None::<Arc<str>>);
     let semantics_selected_node_live_updated_unix_ms = app.models_mut().insert(None::<u64>);
+    let semantics_selected_node_live_children = app.models_mut().insert(Vec::<u64>::new());
+    let semantics_live_enabled = app.models_mut().insert(true);
+    let semantics_live_force_nonce = app.models_mut().insert(0u64);
 
     let mut client_cfg =
         DevtoolsWsClientConfig::with_defaults(cfg.ws_url.to_string(), cfg.token.to_string());
@@ -267,11 +274,15 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         semantics_selected_node_live_json,
         semantics_selected_node_live_status,
         semantics_selected_node_live_updated_unix_ms,
+        semantics_selected_node_live_children,
+        semantics_live_enabled,
+        semantics_live_force_nonce,
         client,
         applied_session_id: None,
         next_transport_request_id: 1000,
         live_semantics_last_target: None,
         live_semantics_last_sent_unix_ms: None,
+        live_semantics_last_force_nonce: 0,
         pack_tx,
         pack_rx,
     };
@@ -348,6 +359,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         &st.semantics_selected_node_live_updated_unix_ms,
         Invalidation::Paint,
     );
+    cx.observe_model(
+        &st.semantics_selected_node_live_children,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.semantics_live_enabled, Invalidation::Paint);
+    cx.observe_model(&st.semantics_live_force_nonce, Invalidation::Paint);
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -1261,46 +1278,7 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .models()
         .read(&st.last_screenshot_json, |v| v.clone())
         .unwrap_or_default();
-    let semantics_node_fallback = cx
-        .app
-        .models()
-        .read(&st.semantics_selected_node_json, |v| v.clone())
-        .unwrap_or_default();
-    let semantics_node_live = cx
-        .app
-        .models()
-        .read(&st.semantics_selected_node_live_json, |v| v.clone())
-        .unwrap_or_default();
-    let semantics_node_live_status = cx
-        .app
-        .models()
-        .read(&st.semantics_selected_node_live_status, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("unknown"));
-    let semantics_node_live_updated = cx
-        .app
-        .models()
-        .read(&st.semantics_selected_node_live_updated_unix_ms, |v| *v)
-        .ok()
-        .flatten();
-
-    let semantics_node = if !semantics_node_live.is_empty() {
-        let mut out = String::new();
-        out.push_str(&format!(
-            "live_status={}",
-            semantics_node_live_status.as_ref()
-        ));
-        if let Some(ts) = semantics_node_live_updated {
-            out.push_str(&format!(" updated_unix_ms={ts}"));
-        }
-        out.push('\n');
-        out.push('\n');
-        out.push_str(&semantics_node_live);
-        out
-    } else {
-        semantics_node_fallback
-    };
+    let semantics_node = sem_node_panel(cx, st);
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -1309,7 +1287,7 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
             shadcn::TabsItem::new("screenshot", "Screenshot", [text_blob(cx, screenshot)]),
-            shadcn::TabsItem::new("sem_node", "Sem Node", [text_blob(cx, semantics_node)]),
+            shadcn::TabsItem::new("sem_node", "Sem Node", [semantics_node]),
         ])
         .into_element(cx);
 
@@ -1333,6 +1311,192 @@ fn text_blob(cx: &mut ElementContext<'_, App>, text: String) -> AnyElement {
 
     let pre = cx.text(text);
     shadcn::ScrollArea::new([pre]).into_element(cx)
+}
+
+fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let fallback = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_json, |v| v.clone())
+        .unwrap_or_default();
+    let live = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_json, |v| v.clone())
+        .unwrap_or_default();
+    let live_status = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_status, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("unknown"));
+    let live_updated = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_updated_unix_ms, |v| *v)
+        .ok()
+        .flatten();
+    let children = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_children, |v| v.clone())
+        .unwrap_or_default();
+    let live_enabled = cx
+        .app
+        .models()
+        .read(&st.semantics_live_enabled, |v| *v)
+        .unwrap_or(true);
+    let selected_id = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_id, |v| *v)
+        .ok()
+        .flatten();
+    let index = cx
+        .app
+        .models()
+        .read(&st.semantics_cache, |v| v.clone())
+        .ok()
+        .flatten();
+
+    let status_line = {
+        let mut line = format!(
+            "live_enabled={live_enabled} status={}",
+            live_status.as_ref()
+        );
+        if let Some(ts) = live_updated {
+            line.push_str(&format!(" updated_unix_ms={ts}"));
+        }
+        line
+    };
+
+    let live_toggle_label = if live_enabled {
+        "Live: On"
+    } else {
+        "Live: Off"
+    };
+    let live_enabled_model = st.semantics_live_enabled.clone();
+    let force_nonce_model = st.semantics_live_force_nonce.clone();
+    let on_toggle: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&live_enabled_model, |v| *v = !*v);
+        let _ = host
+            .models_mut()
+            .update(&force_nonce_model, |v| *v = v.saturating_add(1));
+        host.request_redraw(action_cx.window);
+    });
+
+    let on_refresh: fret_ui::action::OnActivate = {
+        let force_nonce_model = st.semantics_live_force_nonce.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&force_nonce_model, |v| *v = v.saturating_add(1));
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let live_toggle_btn = shadcn::Button::new(live_toggle_label)
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .on_activate(on_toggle)
+        .into_element(cx);
+    let refresh_btn = shadcn::Button::new("Refresh")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .on_activate(on_refresh)
+        .into_element(cx);
+    let status_elem = cx.text(status_line);
+
+    let header = fret_ui_kit::declarative::stack::hstack(
+        cx,
+        fret_ui_kit::declarative::stack::HStackProps::default()
+            .gap_x(fret_ui_kit::Space::N2)
+            .items_center()
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+        |_cx| [live_toggle_btn, refresh_btn, status_elem],
+    );
+
+    let mut child_buttons: Vec<AnyElement> = Vec::new();
+    child_buttons.reserve(children.len().min(64));
+    if let (Some(index), Some(_selected)) = (index, selected_id) {
+        for child in children.iter().take(200) {
+            let id = *child;
+            let label = index
+                .node(id)
+                .map(semantics::node_label)
+                .unwrap_or_else(|| format!("id={id}"));
+
+            let selected_id_model = st.semantics_selected_id.clone();
+            let selected_json_model = st.semantics_selected_node_json.clone();
+            let selected_live_json_model = st.semantics_selected_node_live_json.clone();
+            let selected_live_status_model = st.semantics_selected_node_live_status.clone();
+            let selected_live_updated_model =
+                st.semantics_selected_node_live_updated_unix_ms.clone();
+            let selected_live_children_model = st.semantics_selected_node_live_children.clone();
+            let index_for_select = Arc::clone(&index);
+            let on_child: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_id_model, |v| *v = Some(id));
+                    let text = semantics::selected_node_json(index_for_select.as_ref(), Some(id));
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_json_model, |v| *v = text);
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_live_json_model, |v| v.clear());
+                    let _ = host.models_mut().update(&selected_live_status_model, |v| {
+                        *v = None;
+                    });
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_live_updated_model, |v| *v = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_live_children_model, |v| v.clear());
+                    host.request_redraw(action_cx.window);
+                });
+
+            child_buttons.push(
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_child)
+                    .into_element(cx),
+            );
+        }
+    }
+
+    let children_panel = if child_buttons.is_empty() {
+        cx.text("children: <none>")
+    } else {
+        shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| child_buttons,
+        )])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_full()
+                .h_px(Px(160.0)),
+        )
+        .into_element(cx)
+    };
+
+    let json_text = if !live.is_empty() { live } else { fallback };
+    let body = text_blob(cx, json_text);
+
+    fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
+        |_cx| [header, children_panel, body],
+    )
 }
 
 fn on_command(

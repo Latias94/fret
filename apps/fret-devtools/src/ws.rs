@@ -186,10 +186,26 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                 if !message_matches_selected_session(app, st, &msg) {
                     continue;
                 }
-                let payload = msg.payload;
+                let payload = msg.payload.clone();
                 if let Ok(parsed) =
                     serde_json::from_value::<UiSemanticsNodeGetAckV1>(payload.clone())
                 {
+                    let expected_node_id = app
+                        .models()
+                        .read(&st.semantics_selected_id, |v| *v)
+                        .ok()
+                        .flatten();
+                    let expected_window_ffi = app
+                        .models()
+                        .read(&st.semantics_cache, |v| v.as_ref().map(|i| i.window))
+                        .ok()
+                        .flatten();
+                    if expected_node_id != Some(parsed.node_id)
+                        || expected_window_ffi != Some(parsed.window)
+                    {
+                        continue;
+                    }
+
                     let _ = app
                         .models_mut()
                         .update(&st.semantics_selected_node_live_status, |v| {
@@ -200,6 +216,11 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                         .update(&st.semantics_selected_node_live_updated_unix_ms, |v| {
                             *v = parsed.captured_unix_ms
                         });
+                    let _ =
+                        app.models_mut()
+                            .update(&st.semantics_selected_node_live_children, |v| {
+                                *v = parsed.children;
+                            });
 
                     if let Some(node) = parsed.node {
                         if let Ok(text) = serde_json::to_string_pretty(&node) {
@@ -240,6 +261,7 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
 
     st.live_semantics_last_target = None;
     st.live_semantics_last_sent_unix_ms = None;
+    st.live_semantics_last_force_nonce = 0;
     let _ = app
         .models_mut()
         .update(&st.semantics_selected_node_live_json, |v| v.clear());
@@ -251,9 +273,23 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
         .update(&st.semantics_selected_node_live_updated_unix_ms, |v| {
             *v = None
         });
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_node_live_children, |v| v.clear());
 }
 
 pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {
+    let live_enabled = app
+        .models()
+        .read(&st.semantics_live_enabled, |v| *v)
+        .unwrap_or(true);
+    if !live_enabled {
+        st.live_semantics_last_target = None;
+        st.live_semantics_last_sent_unix_ms = None;
+        st.live_semantics_last_force_nonce = 0;
+        return;
+    }
+
     let selected_session_id = app
         .models()
         .read(&st.selected_session_id, |v| v.clone())
@@ -286,18 +322,24 @@ pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State
     };
 
     let now = unix_ms_now();
+    let force_nonce = app
+        .models()
+        .read(&st.semantics_live_force_nonce, |v| *v)
+        .unwrap_or(0);
     let target = (window_ffi, selected_node_id);
     let selection_changed = st.live_semantics_last_target != Some(target);
+    let force_refresh = force_nonce != st.live_semantics_last_force_nonce;
     let due = match st.live_semantics_last_sent_unix_ms {
         None => true,
         Some(prev) => now.saturating_sub(prev) >= 1000,
     };
-    if !selection_changed && !due {
+    if !selection_changed && !force_refresh && !due {
         return;
     }
 
     st.live_semantics_last_target = Some(target);
     st.live_semantics_last_sent_unix_ms = Some(now);
+    st.live_semantics_last_force_nonce = force_nonce;
 
     let request_id = st.next_transport_request_id;
     st.next_transport_request_id = st.next_transport_request_id.saturating_add(1);
