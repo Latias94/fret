@@ -1578,7 +1578,6 @@ pub struct UiTree<H: UiHost> {
     frame_arena: FrameArenaScratch,
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
-    scratch_visible_layers: Vec<UiLayerId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,
@@ -2015,7 +2014,6 @@ impl<H: UiHost> Default for UiTree<H> {
             frame_arena: FrameArenaScratch::default(),
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
-            scratch_visible_layers: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,
@@ -7257,17 +7255,6 @@ fn event_position(event: &Event) -> Option<Point> {
         Event::InternalDrag(e) => Some(e.position),
         _ => None,
     }
-}
-
-fn event_allows_hit_test_path_cache_reuse(event: &Event) -> bool {
-    matches!(
-        event,
-        Event::Pointer(PointerEvent::Move { .. })
-            | Event::Pointer(PointerEvent::Wheel { .. })
-            | Event::Pointer(PointerEvent::PinchGesture { .. })
-            | Event::ExternalDrag(_)
-            | Event::InternalDrag(_)
-    )
 }
 
 fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
