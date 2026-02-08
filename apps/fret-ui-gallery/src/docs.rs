@@ -646,6 +646,24 @@ use fret_ui_ai::{Commit, CommitHeader, CommitContent, CommitCopyButton};
 ```
 "#;
 
+pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
+## AI schema display (demo)
+
+This page is a small demo for the AI Elements-aligned `SchemaDisplay` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- section collapsibles (Parameters / Request Body / Response),
+- recursive property disclosure defaults (`depth < 2` opens by default),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{HttpMethod, SchemaDisplay, SchemaParameter, SchemaProperty};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 

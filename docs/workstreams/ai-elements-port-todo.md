@@ -71,7 +71,7 @@ Status legend:
 | `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
-| `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
+| `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
 | `test-results` | Not started | `fret-ui-ai` | Optional; can be app-level initially. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
@@ -144,6 +144,10 @@ Existing gates (UI Gallery `ai_file_tree_demo`):
 - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
 - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
 
+Existing gates (UI Gallery `ai_schema_display_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
+
 ### M3 — Code artifacts (developer-facing outputs)
 
 Prioritize thin adapters over new engines:
@@ -153,7 +157,7 @@ Prioritize thin adapters over new engines:
 - [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `StackTrace` / `TestResults` are still pending.
-- [ ] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
+- [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)
 

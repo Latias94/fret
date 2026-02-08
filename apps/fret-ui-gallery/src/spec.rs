@@ -114,6 +114,7 @@ pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
+pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -243,6 +244,8 @@ pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_dem
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
+pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
+    "ui_gallery.nav.select.ai_schema_display_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -830,6 +833,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "commit", "git", "copy", "diff", "demo"],
                 docs::DOC_AI_COMMIT_DEMO,
                 docs::USAGE_AI_COMMIT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SCHEMA_DISPLAY_DEMO,
+                "AI Schema Display (Demo)",
+                "AI Elements SchemaDisplay / OpenAPI-ish Viewer Demo",
+                "fret-ui-ai (schema display)",
+                CMD_NAV_AI_SCHEMA_DISPLAY_DEMO,
+                &["ai", "schema", "openapi", "json", "demo"],
+                docs::DOC_AI_SCHEMA_DISPLAY_DEMO,
+                docs::USAGE_AI_SCHEMA_DISPLAY_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,

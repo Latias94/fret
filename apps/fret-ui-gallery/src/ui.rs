@@ -708,6 +708,7 @@ fn page_preview(
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
+        PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -17999,6 +18000,128 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Commit (AI Elements)"), commit],
+    )]
+}
+
+fn preview_ai_schema_display_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let parameters: Arc<[ui_ai::SchemaParameter]> = Arc::from(vec![
+        ui_ai::SchemaParameter::new("userId", "string")
+            .location(ui_ai::SchemaParameterLocation::Path)
+            .required(true)
+            .description("User id for the target account."),
+        ui_ai::SchemaParameter::new("limit", "integer")
+            .location(ui_ai::SchemaParameterLocation::Query)
+            .description("Maximum number of messages to return."),
+        ui_ai::SchemaParameter::new("x-request-id", "string")
+            .location(ui_ai::SchemaParameterLocation::Header)
+            .description("Client-provided request correlation id."),
+    ]);
+
+    let request_body: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("metadata", "object")
+            .description("Optional structured metadata.")
+            .properties(Arc::from(vec![
+                ui_ai::SchemaProperty::new("tags", "array")
+                    .description("Free-form tags.")
+                    .items(ui_ai::SchemaProperty::new("tag", "string")),
+                ui_ai::SchemaProperty::new("source", "object").properties(Arc::from(vec![
+                    ui_ai::SchemaProperty::new("kind", "string").required(true),
+                    ui_ai::SchemaProperty::new("tool", "object").properties(Arc::from(vec![
+                        ui_ai::SchemaProperty::new("name", "string").required(true),
+                        ui_ai::SchemaProperty::new("version", "string"),
+                    ])),
+                ])),
+            ])),
+        ui_ai::SchemaProperty::new("content", "string")
+            .required(true)
+            .description("Message body (plain text)."),
+        ui_ai::SchemaProperty::new("attachments", "array")
+            .description("Optional file attachments.")
+            .items(
+                ui_ai::SchemaProperty::new("attachment", "object").properties(Arc::from(vec![
+                    ui_ai::SchemaProperty::new("filename", "string").required(true),
+                    ui_ai::SchemaProperty::new("size_bytes", "integer"),
+                ])),
+            ),
+    ]);
+
+    let response_body: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
+        ui_ai::SchemaProperty::new("message", "object").properties(Arc::from(vec![
+            ui_ai::SchemaProperty::new("role", "string").required(true),
+            ui_ai::SchemaProperty::new("content", "string").required(true),
+            ui_ai::SchemaProperty::new("citations", "array")
+                .description("Optional source citations.")
+                .items(
+                    ui_ai::SchemaProperty::new("citation", "object").properties(Arc::from(vec![
+                        ui_ai::SchemaProperty::new("title", "string"),
+                        ui_ai::SchemaProperty::new("url", "string"),
+                    ])),
+                ),
+        ])),
+        ui_ai::SchemaProperty::new("id", "string").required(true),
+        ui_ai::SchemaProperty::new("created_at", "string").description("RFC 3339 timestamp."),
+    ]);
+
+    let header_row = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N3)
+            .items_center()
+            .layout(LayoutRefinement::default().min_w_0()),
+        move |cx| {
+            vec![
+                ui_ai::SchemaDisplayMethod::new(ui_ai::HttpMethod::Post).into_element(cx),
+                ui_ai::SchemaDisplayPath::new("/v1/users/{userId}/messages").into_element(cx),
+            ]
+        },
+    );
+    let header = ui_ai::SchemaDisplayHeader::new([header_row]).into_element(cx);
+
+    let description =
+        ui_ai::SchemaDisplayDescription::new("Create a new message for a user.").into_element(cx);
+
+    let parameters_section = ui_ai::SchemaDisplayParameters::new(parameters.clone())
+        .default_open(true)
+        .test_id_trigger("ui-ai-schema-display-parameters-trigger")
+        .into_element(cx);
+
+    let request_section = ui_ai::SchemaDisplayRequest::new(request_body.clone())
+        .default_open(true)
+        .test_id_trigger("ui-ai-schema-display-request-trigger")
+        .test_id_first_property_trigger("ui-ai-schema-display-request-prop0-trigger")
+        .test_id_first_property_child0_trigger("ui-ai-schema-display-request-prop0-child0-trigger")
+        .into_element(cx);
+
+    let response_section = ui_ai::SchemaDisplayResponse::new(response_body.clone())
+        .default_open(true)
+        .test_id_trigger("ui-ai-schema-display-response-trigger")
+        .test_id_first_property_trigger("ui-ai-schema-display-response-prop0-trigger")
+        .test_id_first_property_child0_trigger("ui-ai-schema-display-response-prop0-child0-trigger")
+        .into_element(cx);
+
+    let content =
+        ui_ai::SchemaDisplayContent::new([parameters_section, request_section, response_section])
+            .into_element(cx);
+
+    let schema = ui_ai::SchemaDisplay::new(ui_ai::HttpMethod::Post, "/v1/users/{userId}/messages")
+        .children([header, description, content])
+        .test_id_root("ui-ai-schema-display-root")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("SchemaDisplay (AI Elements)"), schema],
     )]
 }
 
