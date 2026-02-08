@@ -1915,6 +1915,16 @@ fn ui_app_render<S>(
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
     scene.clear();
+
+    #[cfg(feature = "diagnostics")]
+    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled()) {
+        // Diagnostics scripts select targets by semantics bounds. We must ensure we have a fresh
+        // semantics snapshot for the current frame before we drive scripted input; otherwise,
+        // scripts may act on a 1-frame-stale snapshot and mis-predict visibility in virtualized
+        // lists (estimate -> measured jumps).
+        state.ui.request_semantics_snapshot();
+    }
+
     let layout_started = hitch_config.map(|_| Instant::now());
     {
         #[cfg(feature = "tracing")]
@@ -1928,70 +1938,6 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));
-
-    #[cfg(feature = "diagnostics")]
-    {
-        let semantics_snapshot = state.ui.semantics_snapshot();
-        #[cfg(feature = "tracing")]
-        let diag_span = tracing::info_span!("fret.ui.diagnostics.drive_script");
-        #[cfg(feature = "tracing")]
-        let _diag_guard = diag_span.enter();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                semantics_snapshot,
-                element_runtime,
-            )
-        });
-        for effect in drive.effects {
-            app.push_effect(effect);
-        }
-        if drive.request_redraw {
-            app.request_redraw(window);
-            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-            // scene is otherwise idle. Requesting an animation frame ensures the runner
-            // schedules another render tick.
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            ui_app_handle_event(
-                driver,
-                WinitEventContext {
-                    app,
-                    services,
-                    window,
-                    state,
-                },
-                &event,
-            );
-        }
-
-        if injected_any {
-            state.ui.request_semantics_snapshot();
-
-            let relayout_started = hitch_config.map(|_| Instant::now());
-            {
-                #[cfg(feature = "tracing")]
-                let relayout_span = tracing::info_span!("fret.ui.layout.relayout_after_script");
-                #[cfg(feature = "tracing")]
-                let _relayout_guard = relayout_span.enter();
-                let mut frame =
-                    UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-                frame.layout_all();
-            }
-            if let Some(started) = relayout_started {
-                layout_total_ms =
-                    Some(layout_total_ms.unwrap_or(0) + started.elapsed().as_millis() as u64);
-            }
-        }
-    }
 
     let hitch_layout_ms = layout_total_ms;
 
@@ -2011,6 +1957,52 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
+        // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g. VirtualList)
+        // have their realized item subtrees available for hit-testing.
+        //
+        // The injected events will typically affect the *next* frame; the diagnostics recorder
+        // below captures the current frame state.
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        #[cfg(feature = "tracing")]
+        let diag_span = tracing::info_span!("fret.ui.diagnostics.drive_script");
+        #[cfg(feature = "tracing")]
+        let _diag_guard = diag_span.enter();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(
+                &*app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                semantics_snapshot,
+                element_runtime,
+            )
+        });
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        for event in drive.events {
+            ui_app_handle_event(
+                driver,
+                WinitEventContext {
+                    app,
+                    services,
+                    window,
+                    state,
+                },
+                &event,
+            );
+        }
+
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
             svc.record_snapshot(

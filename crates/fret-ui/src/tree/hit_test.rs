@@ -65,16 +65,30 @@ impl<H: UiHost> UiTree<H> {
     fn hit_test_node(&self, node: NodeId, position: Point) -> Option<NodeId> {
         // Avoid recursion: deep UI trees can overflow the stack during hit testing.
         enum Frame {
-            Visit(NodeId, Point),
+            Visit {
+                node: NodeId,
+                position: Point,
+                /// When true, treat this node as hit-test clipped by its bounds even if the node
+                /// itself does not clip hit testing.
+                force_clip_to_bounds: bool,
+            },
             SelfCheck(NodeId, Point),
         }
 
         let mut stack: Vec<Frame> = Vec::new();
-        stack.push(Frame::Visit(node, position));
+        stack.push(Frame::Visit {
+            node,
+            position,
+            force_clip_to_bounds: false,
+        });
 
         while let Some(frame) = stack.pop() {
             match frame {
-                Frame::Visit(node, position) => {
+                Frame::Visit {
+                    node,
+                    position,
+                    force_clip_to_bounds,
+                } => {
                     let Some(n) = self.nodes.get(node) else {
                         continue;
                     };
@@ -110,7 +124,7 @@ impl<H: UiHost> UiTree<H> {
                         position
                     };
 
-                    if clips_hit_test {
+                    if clips_hit_test || force_clip_to_bounds {
                         if !n.bounds.contains(position_local) {
                             continue;
                         }
@@ -139,7 +153,11 @@ impl<H: UiHost> UiTree<H> {
                         // Children should be hit-tested before the node itself.
                         stack.push(Frame::SelfCheck(node, position_local));
                         for &child in n.children.iter() {
-                            stack.push(Frame::Visit(child, child_position));
+                            stack.push(Frame::Visit {
+                                node: child,
+                                position: child_position,
+                                force_clip_to_bounds,
+                            });
                         }
                         continue;
                     }
@@ -205,6 +223,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn try_hit_test_along_cached_path(&self, path: &[NodeId], position: Point) -> Option<NodeId> {
         let mut position = position;
+        let force_clip_to_bounds = false;
 
         for (idx, &node) in path.iter().enumerate() {
             let n = self.nodes.get(node)?;
@@ -236,7 +255,7 @@ impl<H: UiHost> UiTree<H> {
             } else {
                 position
             };
-            if clips_hit_test {
+            if clips_hit_test || force_clip_to_bounds {
                 if !n.bounds.contains(position_local) {
                     return None;
                 }

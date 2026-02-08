@@ -221,7 +221,14 @@ fn apply_overlay_layer_state<H: UiHost>(
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
-            ui.set_layer_wants_pointer_move_events(layer, false);
+            // Hover overlays (e.g. HoverCard) are non-modal surfaces. Do not install a window-wide
+            // pointer occlusion barrier: doing so would suppress underlay pointer dispatch even
+            // when the pointer is not over the hover card content (breaking trigger clicks).
+            ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
+            // Hover overlays (e.g. HoverCard) must receive pointer-move events while interactive
+            // so hover intent and "overlay hovered" policies can keep the surface open while the
+            // pointer moves within the overlay content.
+            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
         }
         OverlayLayerKind::Toast => {
             ui.set_layer_visible(layer, st.present);

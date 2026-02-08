@@ -6132,8 +6132,26 @@ fn focus_ring_is_focus_visible_only() {
     );
     assert_eq!(
         ui.focus(),
+        None,
+        "expected pressable not to be focused after pointer down"
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
+            position: fret_core::Point::new(Px(4.0), Px(4.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
         Some(pressable_node),
-        "expected pressable to be focused after pointer down"
+        "expected pressable to be focused after pointer up"
     );
 
     let mut scene = Scene::default();

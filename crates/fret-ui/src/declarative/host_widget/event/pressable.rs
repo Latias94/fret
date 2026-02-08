@@ -2,6 +2,12 @@ use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 use fret_runtime::DragHost;
 
+#[derive(Debug, Default, Clone, Copy)]
+struct PressablePressTracking {
+    pointer_id: Option<fret_core::PointerId>,
+    down_position: Option<Point>,
+}
+
 pub(super) fn handle_pressable<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
@@ -322,15 +328,27 @@ pub(super) fn handle_pressable<H: UiHost>(
                 if *button != MouseButton::Left {
                     return;
                 }
-                if props.focusable {
-                    cx.request_focus(cx.node);
-                }
+                // Defer focus until pointer-up activation:
+                // focusing on pointer-down can trigger scroll-to-focus policies that move content
+                // under a stationary cursor, causing the subsequent pointer-up to miss and cancel
+                // activation.
+                cx.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                 cx.capture_pointer(cx.node);
                 if let Some(prev_node) =
                     crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element))
                 {
                     cx.invalidate(prev_node, Invalidation::Paint);
                 }
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    PressablePressTracking::default,
+                    |st| {
+                        st.pointer_id = Some(*pointer_id);
+                        st.down_position = Some(*position);
+                    },
+                );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
@@ -349,6 +367,18 @@ pub(super) fn handle_pressable<H: UiHost>(
                 }
                 let pressed =
                     crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
+                let (down_pointer_id, down_position) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    PressablePressTracking::default,
+                    |st| {
+                        let out = (st.pointer_id, st.down_position);
+                        st.pointer_id = None;
+                        st.down_position = None;
+                        out
+                    },
+                );
 
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -401,7 +431,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                     );
                 }
 
-                cx.release_pointer_capture();
                 if let Some(prev_node) =
                     crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
                 {
@@ -413,10 +442,25 @@ pub(super) fn handle_pressable<H: UiHost>(
                 // Activate based on the pointer-up position, not the cached hovered state. This
                 // keeps click-through outside-press dismissal semantics (ADR 0069) robust even
                 // when overlay policies update hover state in an observer pass.
-                let hovered = cx.bounds.contains(*position);
+                //
+                // If the pointer did not move between down/up, treat the interaction as "hovered"
+                // even if the node moved (e.g. scroll-to-focus policies).
+                let moved = if down_pointer_id == Some(*pointer_id)
+                    && let Some(prev) = down_position
+                {
+                    let dx = position.x.0 - prev.x.0;
+                    let dy = position.y.0 - prev.y.0;
+                    (dx * dx + dy * dy).sqrt()
+                } else {
+                    f32::INFINITY
+                };
+                let hovered = cx.bounds.contains(*position) || moved <= 2.0;
 
                 let is_touch = *pointer_type == fret_core::PointerType::Touch;
                 if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
+                    if props.focusable {
+                        cx.request_focus(cx.node);
+                    }
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
@@ -518,6 +562,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         );
                     }
                 }
+                cx.release_pointer_capture();
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
@@ -528,6 +573,16 @@ pub(super) fn handle_pressable<H: UiHost>(
             if !crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element) {
                 return;
             }
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                PressablePressTracking::default,
+                |st| {
+                    st.pointer_id = None;
+                    st.down_position = None;
+                },
+            );
             if cx.captured == Some(cx.node) {
                 cx.release_pointer_capture();
             }

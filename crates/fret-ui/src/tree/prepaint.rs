@@ -691,10 +691,69 @@ impl<H: UiHost> UiTree<H> {
                 let start = self.interaction_cache.records.len();
                 let replay: Vec<InteractionRecord> =
                     self.interaction_cache.prev_records[range].to_vec();
-                for record in &replay {
-                    self.interaction_cache.records.push(*record);
-                    self.apply_interaction_record(record);
-                    self.prepaint_virtual_list_window_from_interaction_record(app, record);
+                for mut record in replay {
+                    // View-cache reuse can legitimately skip rerender/layout for the subtree, but
+                    // hit-test-only invalidations (e.g. scroll handle offset changes) still need
+                    // up-to-date interaction transforms so pointer routing stays correct.
+                    //
+                    // If the node was marked hit-test-invalidated this frame, refresh the
+                    // interaction record from live widget state instead of replaying the cached
+                    // inverse transforms.
+                    if self
+                        .nodes
+                        .get(record.node)
+                        .is_some_and(|n| n.invalidation.hit_test)
+                    {
+                        let (bounds, widget) = self
+                            .nodes
+                            .get(record.node)
+                            .map(|n| (n.bounds, n.widget.as_ref()))
+                            .unwrap_or((record.bounds, None));
+
+                        let (
+                            render_transform_inv,
+                            children_render_transform_inv,
+                            clips_hit_test,
+                            corner_radii,
+                        ) = match widget {
+                            Some(widget) => (
+                                widget.render_transform(bounds).and_then(|t| t.inverse()),
+                                widget
+                                    .children_render_transform(bounds)
+                                    .and_then(|t| t.inverse()),
+                                widget.clips_hit_test(bounds),
+                                widget.clip_hit_test_corner_radii(bounds),
+                            ),
+                            None => (None, None, true, None),
+                        };
+
+                        let (
+                            is_focusable,
+                            focus_traversal_children,
+                            can_scroll_descendant_into_view,
+                        ) = widget
+                            .map(|w| {
+                                (
+                                    w.is_focusable(),
+                                    w.focus_traversal_children(),
+                                    w.can_scroll_descendant_into_view(),
+                                )
+                            })
+                            .unwrap_or((false, true, false));
+
+                        record.bounds = bounds;
+                        record.render_transform_inv = render_transform_inv;
+                        record.children_render_transform_inv = children_render_transform_inv;
+                        record.clips_hit_test = clips_hit_test;
+                        record.clip_hit_test_corner_radii = corner_radii;
+                        record.is_focusable = is_focusable;
+                        record.focus_traversal_children = focus_traversal_children;
+                        record.can_scroll_descendant_into_view = can_scroll_descendant_into_view;
+                    }
+
+                    self.interaction_cache.records.push(record);
+                    self.apply_interaction_record(&record);
+                    self.prepaint_virtual_list_window_from_interaction_record(app, &record);
                 }
                 let end = self.interaction_cache.records.len();
 

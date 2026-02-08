@@ -1044,8 +1044,13 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let bounds =
-                    best_bounds_for_semantics_node(ui, window, element_runtime, Some(snapshot), node);
+                let bounds = best_bounds_for_semantics_node(
+                    ui,
+                    window,
+                    element_runtime,
+                    Some(snapshot),
+                    node,
+                );
                 let pos = center_of_rect(bounds);
                 output.events.extend(click_events(pos, button));
 
@@ -1099,7 +1104,9 @@ impl UiDiagnosticsService {
                             Some(snapshot),
                             node,
                         );
-                        let mut center = state.resolved_center.unwrap_or_else(|| center_of_rect(bounds));
+                        let mut center = state
+                            .resolved_center
+                            .unwrap_or_else(|| center_of_rect(bounds));
 
                         let target_test_id = node.test_id.as_deref();
                         let mut hit_snapshot_for_center = UiHitTestSnapshotV1::from_tree(
@@ -1216,9 +1223,8 @@ impl UiDiagnosticsService {
                         }
 
                         if state.remaining_frames == 0 {
-                            force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-click_stable-timeout"
-                            ));
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                             stop_script = true;
                             failure_reason = Some("click_stable_timeout".to_string());
                             active.v2_step_state = None;
@@ -1262,13 +1268,10 @@ impl UiDiagnosticsService {
                                         window,
                                         Some(snapshot),
                                     );
-                                    let semantics_at_center = pick_semantics_node_at(
-                                        snapshot,
-                                        ui,
-                                        center,
-                                    )
-                                    .and_then(|n| n.test_id.as_deref())
-                                    .unwrap_or("<none>");
+                                    let semantics_at_center =
+                                        pick_semantics_node_at(snapshot, ui, center)
+                                            .and_then(|n| n.test_id.as_deref())
+                                            .unwrap_or("<none>");
                                     let target_node = select_semantics_node(
                                         snapshot,
                                         window,
@@ -1287,15 +1290,14 @@ impl UiDiagnosticsService {
                                     let target_debug_bounds = target_node
                                         .and_then(|n| ui.debug_node_bounds(n.id))
                                         .unwrap_or(Rect::default());
-                                    let viewport_node = snapshot
-                                        .nodes
-                                        .iter()
-                                        .find(|n| n.test_id.as_deref() == Some("ui-gallery-content-viewport"));
-                                    let viewport_node_id = viewport_node
-                                        .map(|n| n.id.data().as_ffi())
-                                        .unwrap_or(0);
-                                    let viewport_children_transform = viewport_node
-                                        .and_then(|n| ui.debug_node_children_render_transform(n.id));
+                                    let viewport_node = snapshot.nodes.iter().find(|n| {
+                                        n.test_id.as_deref() == Some("ui-gallery-content-viewport")
+                                    });
+                                    let viewport_node_id =
+                                        viewport_node.map(|n| n.id.data().as_ffi()).unwrap_or(0);
+                                    let viewport_children_transform = viewport_node.and_then(|n| {
+                                        ui.debug_node_children_render_transform(n.id)
+                                    });
                                     let target_path_contains_viewport = target_node
                                         .as_ref()
                                         .map(|n| {
@@ -1311,16 +1313,14 @@ impl UiDiagnosticsService {
                                         .unwrap_or("<none>");
                                     let hit_path_contains_target_node =
                                         hit.hit_node_path.contains(&target_node_id);
-                                    let hit_path_contains_sources = hit.hit_node_path_nodes.iter().any(|entry| {
-                                        entry
-                                            .element_path
-                                            .as_ref()
-                                            .is_some_and(|p| {
+                                    let hit_path_contains_sources =
+                                        hit.hit_node_path_nodes.iter().any(|entry| {
+                                            entry.element_path.as_ref().is_some_and(|p| {
                                                 p.contains("sources_block.rs")
                                                     || p.contains("fret-ui-ai")
                                                     || p.contains("sources")
                                             })
-                                    });
+                                        });
 
                                     // Probe a small grid inside the chosen click bounds. If none of these points
                                     // ever includes the target node in the hit-test path, the target bounds are
@@ -1501,8 +1501,13 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let bounds =
-                    best_bounds_for_semantics_node(ui, window, element_runtime, Some(snapshot), node);
+                let bounds = best_bounds_for_semantics_node(
+                    ui,
+                    window,
+                    element_runtime,
+                    Some(snapshot),
+                    node,
+                );
                 let pos = center_of_rect(bounds);
                 output.events.push(move_pointer_event(pos));
 
@@ -1826,8 +1831,9 @@ impl UiDiagnosticsService {
                         )
                     };
 
-                    let hit_test_visible = target_node
-                        .is_some_and(|node| ui.debug_hit_test(center_of_rect(node.bounds)).hit.is_some());
+                    let hit_test_visible = target_node.is_some_and(|node| {
+                        ui.debug_hit_test(center_of_rect(node.bounds)).hit.is_some()
+                    });
 
                     let ok = within_target && hit_test_visible;
                     if ok {
@@ -1893,7 +1899,8 @@ impl UiDiagnosticsService {
                                 let pos = fret_core::Point::new(fret_core::Px(x), fret_core::Px(y));
                                 output.events.push(move_pointer_event(pos));
                                 let (dx, dy) = if let Some(target_node) = target_node {
-                                    let container_left = bounds.origin.x.0 + insets.left_px.max(0.0);
+                                    let container_left =
+                                        bounds.origin.x.0 + insets.left_px.max(0.0);
                                     let container_top = bounds.origin.y.0 + insets.top_px.max(0.0);
                                     let container_right = bounds.origin.x.0 + bounds.size.width.0
                                         - insets.right_px.max(0.0);
@@ -1902,8 +1909,8 @@ impl UiDiagnosticsService {
 
                                     let t_left = target_node.bounds.origin.x.0;
                                     let t_top = target_node.bounds.origin.y.0;
-                                    let t_right =
-                                        target_node.bounds.origin.x.0 + target_node.bounds.size.width.0;
+                                    let t_right = target_node.bounds.origin.x.0
+                                        + target_node.bounds.size.width.0;
                                     let t_bottom = target_node.bounds.origin.y.0
                                         + target_node.bounds.size.height.0;
 
@@ -8691,7 +8698,11 @@ fn center_of_rect(rect: Rect) -> Point {
     Point::new(x, y)
 }
 
-fn find_hittable_point_for_node(ui: &UiTree<App>, node: NodeId, seed_bounds: Rect) -> Option<Point> {
+fn find_hittable_point_for_node(
+    ui: &UiTree<App>,
+    node: NodeId,
+    seed_bounds: Rect,
+) -> Option<Point> {
     // Scan a padded region around the seed bounds to locate an on-screen point whose hit-test
     // path includes `node`. This is intentionally conservative: it runs only when scripted
     // clicks cannot find a hittable point via semantics-derived geometry (often due to scroll
@@ -8734,7 +8745,9 @@ fn best_bounds_for_semantics_node(
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
     node: &fret_core::SemanticsNode,
 ) -> Rect {
-    if node.test_id.is_some() && let Some(snapshot) = semantics_snapshot {
+    if node.test_id.is_some()
+        && let Some(snapshot) = semantics_snapshot
+    {
         // Prefer hit-test-derived geometry to avoid mismatches when scroll offsets are applied as
         // "hit-test-only" transforms.
         let seed_rect = ui.debug_node_visual_bounds(node.id).unwrap_or(node.bounds);
@@ -8796,13 +8809,8 @@ fn best_bounds_for_semantics_node(
         }
 
         for pos in candidates {
-            let hit = UiHitTestSnapshotV1::from_tree(
-                pos,
-                ui,
-                element_runtime,
-                window,
-                Some(snapshot),
-            );
+            let hit =
+                UiHitTestSnapshotV1::from_tree(pos, ui, element_runtime, window, Some(snapshot));
             // Prefer a position whose hit-test path contains the target node id, even if the
             // semantics "best match" at that position is a deeper leaf without a test id.
             if hit.hit_node_path.contains(&target_node_id)
