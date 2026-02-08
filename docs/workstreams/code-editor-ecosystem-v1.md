@@ -231,6 +231,69 @@ If the code editor surfaces can reliably power a minimal Markdown source editor,
 contracts are likely “good enough” for broader editor-grade use cases (logs, diffs, config editors,
 note-taking) without forcing a `fret-ui` rewrite.
 
+### Milestone breakdown (v0)
+
+The downstream milestone is intentionally split into smaller, gateable increments so we can ship
+contract confidence without waiting for a full “editor product”.
+
+#### M10.1 — Source editor shell + interaction control
+
+Exit criteria:
+
+- A UI Gallery page (`markdown_editor_source`) exists and is stable enough for diagnostics.
+- The editor can be configured as:
+  - editable,
+  - read-only (select/copy/nav, but no buffer mutations),
+  - disabled (no focus/IME routing, no selection updates).
+
+Evidence:
+
+- `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorInteractionOptions`, `CodeEditorState::set_interaction`)
+- `ecosystem/fret-code-editor/src/editor/input/mod.rs` (edit/undo/redo gating)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MARKDOWN_EDITOR_SOURCE`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`)
+
+#### M10.2 — Soft-wrap + selection/navigation consistency
+
+Exit criteria:
+
+- Soft-wrap can be toggled without destabilizing caret/selection/buffer revision.
+- Word boundaries and double-click selection match ADR 0194 baselines in source mode.
+- Selection remains stable across wrap boundaries while editing (not only on toggles).
+
+Diagnostics gates (baseline set; add more as needed):
+
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`
+
+#### M10.3 — IME bridge seam validation (native + web)
+
+Exit criteria:
+
+- Native IME:
+  - inline preedit renders without breaking buffer↔display mapping,
+  - cursor-area feedback is best-effort correct for editor-grade surfaces.
+- Web/WASM IME:
+  - the runner-owned bridge remains attachable to the focused editor region (ADR 0195),
+  - we have at least one non-flaky diagnostics baseline that detects “IME not attached” regressions.
+
+Notes:
+
+- The web IME baseline gate must be stable; if it cannot be made stable, it stays as a manual harness.
+
+#### M10.4 — Diag gates as the definition-of-done
+
+Exit criteria:
+
+- The Markdown source editor v0 contract is continuously regression-tested via `fretboard diag` gates.
+- Each “hard-to-change” behavior claimed by this milestone has:
+  - an ADR reference (normative),
+  - a diagnostic script (repro),
+  - and a gate check (assertion) in the suite runner.
+
 ## Architectural Principles (performance-first, Fret-aligned)
 
 1) **No CSS runtime dependency**
