@@ -10,13 +10,26 @@ use std::{
     borrow::Cow,
     collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use parley::fontique::GenericFamily as ParleyGenericFamily;
 
 pub(crate) mod parley_shaper;
 pub(crate) mod wrapper;
+
+fn released_blob_cache_entries() -> usize {
+    static ENTRIES: OnceLock<usize> = OnceLock::new();
+    *ENTRIES.get_or_init(|| {
+        // Default: off. Opt in to retain recently released text blobs to reduce `Text::prepare`
+        // thrash when wrap widths oscillate (e.g. interactive resize jitter).
+        std::env::var("FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0)
+            .min(2048)
+    })
+}
 
 struct FretFallback;
 
@@ -1330,6 +1343,8 @@ pub struct TextSystem {
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
+    released_blob_lru: VecDeque<TextBlobId>,
+    released_blob_set: HashSet<TextBlobId>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
     measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
     measure_shaping_cache: HashMap<TextMeasureShapingKey, TextMeasureShapingEntry>,
@@ -1750,6 +1765,7 @@ impl TextSystem {
             self.blobs.clear();
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
+            self.clear_released_blob_cache();
             self.shape_cache.clear();
             self.measure_cache.clear();
             self.measure_shaping_cache.clear();
@@ -1901,6 +1917,8 @@ impl TextSystem {
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
             blob_key_by_id: HashMap::new(),
+            released_blob_lru: VecDeque::new(),
+            released_blob_set: HashSet::new(),
             shape_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             measure_shaping_cache: HashMap::new(),
@@ -2037,6 +2055,7 @@ impl TextSystem {
         self.blobs.clear();
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
+        self.clear_released_blob_cache();
         self.shape_cache.clear();
         self.measure_cache.clear();
         self.measure_shaping_cache.clear();
@@ -2362,11 +2381,24 @@ impl TextSystem {
         let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
-            if let Some(blob) = self.blobs.get_mut(id) {
-                self.perf_frame_blob_cache_hits = self.perf_frame_blob_cache_hits.saturating_add(1);
-                blob.ref_count = blob.ref_count.saturating_add(1);
-                return (id, blob.shape.metrics);
+            let hit = match self.blobs.get_mut(id) {
+                Some(blob) => {
+                    self.perf_frame_blob_cache_hits =
+                        self.perf_frame_blob_cache_hits.saturating_add(1);
+                    let was_released = blob.ref_count == 0;
+                    blob.ref_count = blob.ref_count.saturating_add(1);
+                    Some((blob.shape.metrics, was_released))
+                }
+                None => None,
+            };
+
+            if let Some((metrics, was_released)) = hit {
+                if was_released {
+                    self.remove_released_blob(id);
+                }
+                return (id, metrics);
             }
+
             // Stale cache entry (shouldn't happen, but keep it robust).
             self.blob_cache.remove(&key);
             self.blob_key_by_id.remove(&id);
@@ -3020,22 +3052,75 @@ impl TextSystem {
     }
 
     pub fn release(&mut self, blob: TextBlobId) {
-        let (should_remove, remove_shape) = match self.blobs.get_mut(blob) {
-            Some(b) => {
-                if b.ref_count > 1 {
-                    b.ref_count = b.ref_count.saturating_sub(1);
-                    (false, false)
-                } else {
-                    let remove_shape = Arc::strong_count(&b.shape) == 2;
-                    (true, remove_shape)
-                }
-            }
-            None => return,
+        let entries = released_blob_cache_entries();
+
+        let Some(b) = self.blobs.get_mut(blob) else {
+            return;
         };
 
-        if !should_remove {
+        if b.ref_count > 1 {
+            b.ref_count = b.ref_count.saturating_sub(1);
             return;
         }
+
+        if b.ref_count == 0 {
+            return;
+        }
+
+        if entries > 0 {
+            b.ref_count = 0;
+            self.insert_released_blob(blob, entries);
+            return;
+        }
+
+        self.evict_blob(blob);
+    }
+
+    fn remove_released_blob(&mut self, id: TextBlobId) {
+        if !self.released_blob_set.remove(&id) {
+            return;
+        }
+        if let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id) {
+            self.released_blob_lru.remove(pos);
+        }
+    }
+
+    fn insert_released_blob(&mut self, id: TextBlobId, entries: usize) {
+        if entries == 0 {
+            return;
+        }
+
+        if !self.released_blob_set.insert(id) {
+            if let Some(pos) = self.released_blob_lru.iter().position(|v| *v == id) {
+                self.released_blob_lru.remove(pos);
+            }
+        }
+        self.released_blob_lru.push_back(id);
+
+        while self.released_blob_lru.len() > entries {
+            let Some(evict) = self.released_blob_lru.pop_front() else {
+                break;
+            };
+            self.released_blob_set.remove(&evict);
+            if self.blobs.get(evict).is_some_and(|b| b.ref_count > 0) {
+                continue;
+            }
+            self.evict_blob(evict);
+        }
+    }
+
+    fn clear_released_blob_cache(&mut self) {
+        self.released_blob_lru.clear();
+        self.released_blob_set.clear();
+    }
+
+    fn evict_blob(&mut self, blob: TextBlobId) {
+        self.remove_released_blob(blob);
+
+        let remove_shape = self
+            .blobs
+            .get(blob)
+            .is_some_and(|b| Arc::strong_count(&b.shape) == 2);
 
         if let Some(key) = self.blob_key_by_id.remove(&blob) {
             self.blob_cache.remove(&key);
