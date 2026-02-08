@@ -17,6 +17,7 @@ mod prompt_input;
 mod schema_display;
 mod snippet;
 mod sources_block;
+mod stack_trace;
 mod tool;
 mod tool_call_block;
 
@@ -39,5 +40,6 @@ pub use prompt_input::*;
 pub use schema_display::*;
 pub use snippet::*;
 pub use sources_block::*;
+pub use stack_trace::*;
 pub use tool::*;
 pub use tool_call_block::*;

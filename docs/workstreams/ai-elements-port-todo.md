@@ -71,6 +71,7 @@ Status legend:
 | `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
+| `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
 | `test-results` | Not started | `fret-ui-ai` | Optional; can be app-level initially. |
@@ -134,6 +135,10 @@ Existing gates (UI Gallery `ai_commit_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
 
+Existing gates (UI Gallery `ai_stack_trace_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+
 Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
@@ -156,7 +161,8 @@ Prioritize thin adapters over new engines:
 - [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
 - [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
-  - `StackTrace` / `TestResults` are still pending.
+  - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
+  - `TestResults` is still pending.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)

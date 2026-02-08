@@ -77,6 +77,7 @@ an interactive chat demo:
 - `FileTree`: AI Elements-aligned nested file tree surface (small trees; per-row actions; no virtualization yet).
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
+- `StackTrace`: AI Elements-aligned stack trace disclosure surface (copy + parsed frames).
 - `SchemaDisplay`: AI Elements-aligned schema viewer surface (parameters + request/response property trees).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
@@ -96,6 +97,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
   - `AI commit (demo)` (`ai_commit_demo`): `Commit` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
+  - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
@@ -562,7 +565,7 @@ Legend:
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
 | `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Defer | Could be a markdown-like block with disclosure; wait for consumer. |
-| `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Defer | Likely a code block variant with copy + collapse. |
+| `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
 | `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
 | `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Done | Schema viewer surface + UI Gallery demo + diag gate. |
 | `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |

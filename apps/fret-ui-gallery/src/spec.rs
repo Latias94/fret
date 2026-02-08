@@ -114,6 +114,7 @@ pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
+pub(crate) const PAGE_AI_STACK_TRACE_DEMO: &str = "ai_stack_trace_demo";
 pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
@@ -244,6 +245,7 @@ pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_dem
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
+pub(crate) const CMD_NAV_AI_STACK_TRACE_DEMO: &str = "ui_gallery.nav.select.ai_stack_trace_demo";
 pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
     "ui_gallery.nav.select.ai_schema_display_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
@@ -833,6 +835,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "commit", "git", "copy", "diff", "demo"],
                 docs::DOC_AI_COMMIT_DEMO,
                 docs::USAGE_AI_COMMIT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_STACK_TRACE_DEMO,
+                "AI Stack Trace (Demo)",
+                "AI Elements StackTrace / Parsed Frames Demo",
+                "fret-ui-ai (code artifacts)",
+                CMD_NAV_AI_STACK_TRACE_DEMO,
+                &["ai", "stack", "trace", "error", "copy", "demo"],
+                docs::DOC_AI_STACK_TRACE_DEMO,
+                docs::USAGE_AI_STACK_TRACE_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SCHEMA_DISPLAY_DEMO,

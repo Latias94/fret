@@ -708,6 +708,7 @@ fn page_preview(
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -18000,6 +18001,41 @@ fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> V
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Commit (AI Elements)"), commit],
+    )]
+}
+
+fn preview_ai_stack_trace_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let trace: Arc<str> = Arc::from(
+        "TypeError: Cannot read properties of undefined (reading 'foo')\n\
+         at renderApp (src/app.ts:42:13)\n\
+         at main (src/main.ts:10:1)\n\
+         at Module._compile (node:internal/modules/cjs/loader:1234:14)\n\
+         at Object.<anonymous> (node_modules/react/index.js:12:3)\n",
+    );
+
+    let stack_trace = ui_ai::StackTrace::new(trace)
+        .test_id_root("ui-ai-stack-trace-root")
+        .test_id_header_trigger("ui-ai-stack-trace-header")
+        .test_id_copy_button("ui-ai-stack-trace-copy")
+        .test_id_copy_copied_marker("ui-ai-stack-trace-copied-marker")
+        .test_id_content("ui-ai-stack-trace-content")
+        .test_id_frames("ui-ai-stack-trace-frames")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("StackTrace (AI Elements)"), stack_trace],
     )]
 }
 

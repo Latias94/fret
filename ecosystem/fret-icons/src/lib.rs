@@ -40,6 +40,7 @@ pub mod ids {
     pub mod ui {
         use super::IconId;
 
+        pub const ALERT_TRIANGLE: IconId = IconId::new_static("ui.alert.triangle");
         pub const ARROW_LEFT: IconId = IconId::new_static("ui.arrow.left");
         pub const ARROW_RIGHT: IconId = IconId::new_static("ui.arrow.right");
         pub const BOOK: IconId = IconId::new_static("ui.book");

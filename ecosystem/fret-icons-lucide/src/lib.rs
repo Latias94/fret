@@ -54,6 +54,10 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
+        let _ = reg.alias(
+            ids::ui::ALERT_TRIANGLE,
+            IconId::new("lucide.triangle-alert"),
+        );
         let _ = reg.alias(ids::ui::ARROW_LEFT, IconId::new("lucide.arrow-left"));
         let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("lucide.arrow-right"));
         let _ = reg.alias(ids::ui::BOOK, IconId::new("lucide.book"));

@@ -646,6 +646,25 @@ use fret_ui_ai::{Commit, CommitHeader, CommitContent, CommitCopyButton};
 ```
 "#;
 
+pub(crate) const DOC_AI_STACK_TRACE_DEMO: &str = r#"
+## AI stack trace (demo)
+
+This page is a small demo for the AI Elements-aligned `StackTrace` disclosure surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- stack trace parsing (error type/message + frames),
+- Collapsible header/content composition,
+- stable copy feedback state (`Copied` timeout),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_STACK_TRACE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{StackTrace, StackTraceFrames, StackTraceCopyButton, parse_stack_trace};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

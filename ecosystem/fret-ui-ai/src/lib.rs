@@ -81,12 +81,14 @@ pub use elements::{
     FileTreeItem, FileTreeName, HttpMethod, InlineCitation, Message, MessageAction,
     MessageActionTemplate, MessageActions, MessageContent, MessageParts, MessageResponse,
     MessageToolbar, OnFileTreeActionActivate, OnFileTreeExpandedChange, OnFileTreeSelect,
-    PromptInput, SchemaDisplay, SchemaDisplayContent, SchemaDisplayDescription,
-    SchemaDisplayExample, SchemaDisplayHeader, SchemaDisplayMethod, SchemaDisplayParameter,
-    SchemaDisplayParameters, SchemaDisplayPath, SchemaDisplayProperty, SchemaDisplayRequest,
-    SchemaDisplayResponse, SchemaParameter, SchemaParameterLocation, SchemaProperty, Snippet,
-    SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock, Tool, ToolCallBlock, ToolContent,
-    ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
+    OnStackTraceFilePathClick, ParsedStackTrace, PromptInput, SchemaDisplay, SchemaDisplayContent,
+    SchemaDisplayDescription, SchemaDisplayExample, SchemaDisplayHeader, SchemaDisplayMethod,
+    SchemaDisplayParameter, SchemaDisplayParameters, SchemaDisplayPath, SchemaDisplayProperty,
+    SchemaDisplayRequest, SchemaDisplayResponse, SchemaParameter, SchemaParameterLocation,
+    SchemaProperty, Snippet, SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock,
+    StackFrame, StackTrace, StackTraceCopyButton, StackTraceFrames, Tool, ToolCallBlock,
+    ToolContent, ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
+    parse_stack_trace,
 };
 pub use export::messages_to_markdown;
 pub use model::{

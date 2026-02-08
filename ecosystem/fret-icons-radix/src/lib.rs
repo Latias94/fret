@@ -57,6 +57,10 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
+        let _ = reg.alias(
+            ids::ui::ALERT_TRIANGLE,
+            IconId::new("radix.exclamation-triangle"),
+        );
         let _ = reg.alias(ids::ui::ARROW_LEFT, IconId::new("radix.arrow-left"));
         let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("radix.arrow-right"));
         let _ = reg.alias(ids::ui::BOOK, IconId::new("radix.bookmark"));
