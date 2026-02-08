@@ -64,6 +64,15 @@ pub fn collect_common_json_pointers(script_text: &str) -> Vec<String> {
             push(format!("{prefix}/path"));
             push(format!("{prefix}/path/0"));
         }
+
+        // Predicates often embed selectors under nested fields.
+        if let Some(pred) = obj.get("predicate").and_then(|v| v.as_object()) {
+            for key in ["target", "a", "b"] {
+                if pred.contains_key(key) {
+                    push(format!("{prefix}/predicate/{key}"));
+                }
+            }
+        }
     }
 
     out
@@ -395,8 +404,8 @@ mod tests {
         assert!(pointers.contains(&"/steps/1/predicate".to_string()));
         assert!(pointers.contains(&"/steps/2/from".to_string()));
         assert!(pointers.contains(&"/steps/2/to".to_string()));
-        assert!(pointers.contains(&"/steps/3/a".to_string()));
-        assert!(pointers.contains(&"/steps/3/b".to_string()));
+        assert!(pointers.contains(&"/steps/3/predicate/a".to_string()));
+        assert!(pointers.contains(&"/steps/3/predicate/b".to_string()));
         assert!(pointers.contains(&"/steps/4/path/0".to_string()));
     }
 }
