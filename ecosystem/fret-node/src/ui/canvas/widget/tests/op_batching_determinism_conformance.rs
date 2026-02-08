@@ -5,14 +5,14 @@ use uuid::Uuid;
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Group, GroupId, Node, NodeId,
 };
-use crate::io::NodeGraphViewState;
+
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::{
     NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
 };
 
-use super::super::{NodeGraphCanvas, node_drag, pointer_up};
-use super::{NullServices, TestUiHostImpl, event_cx};
+use super::prelude::{NodeGraphCanvas, node_drag, pointer_up};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
 use crate::ui::canvas::state::NodeDrag;
 
 #[derive(Debug, Default)]
@@ -114,7 +114,7 @@ fn node_drag_end_batches_group_rect_ops_in_sorted_group_id_order() {
     }
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas =
         NodeGraphCanvas::new(graph, view).with_middleware(CaptureGroupRectCommitOrder::default());

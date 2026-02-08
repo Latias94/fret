@@ -107,7 +107,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             },
         };
         let remapper = IdRemapper::new(IdRemapSeed::new_random());
-        let tx = fragment.to_paste_transaction(&remapper, tuning);
+        let mut tx = fragment.to_paste_transaction(&remapper, tuning);
+        if !fragment.imports.is_empty() {
+            self.graph
+                .read_ref(host, |graph| {
+                    tx.ops.retain(|op| {
+                        !matches!(op, GraphOp::AddImport { id, .. } if graph.imports.contains_key(id))
+                    });
+                })
+                .ok();
+        }
 
         let new_nodes: Vec<GraphNodeId> = tx
             .ops
@@ -175,6 +184,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
         let remapper = IdRemapper::new(IdRemapSeed::new_random());
         let mut tx = fragment.to_paste_transaction(&remapper, tuning);
+        if !fragment.imports.is_empty() {
+            self.graph
+                .read_ref(host, |graph| {
+                    tx.ops.retain(|op| {
+                        !matches!(op, GraphOp::AddImport { id, .. } if graph.imports.contains_key(id))
+                    });
+                })
+                .ok();
+        }
         tx.label = Some("Duplicate".to_string());
 
         let new_nodes: Vec<GraphNodeId> = tx

@@ -1,8 +1,8 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::io::NodeGraphViewState;
 use crate::ui::presenter::EdgeRouteKind;
 
+use super::prelude::{HitTestCtx, HitTestScratch};
 use super::*;
 
 fn bounds() -> Rect {
@@ -41,7 +41,7 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
         s.interaction.edge_interaction_width = edge_interaction_width;
@@ -85,8 +85,8 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
         .ok()
         .unwrap_or_default();
 
-    let mut scratch = super::super::HitTestScratch::default();
-    let mut ctx = super::super::HitTestCtx::new(geom.as_ref(), &index, zoom, &mut scratch);
+    let mut scratch = HitTestScratch::default();
+    let mut ctx = HitTestCtx::new(geom.as_ref(), &index, zoom, &mut scratch);
     let hit = canvas.hit_edge(&graph_snapshot, &snapshot, &mut ctx, pos_hit);
     let miss = canvas.hit_edge(&graph_snapshot, &snapshot, &mut ctx, pos_miss);
 

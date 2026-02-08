@@ -5,14 +5,13 @@ use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{NodeId, PortId};
-use crate::io::NodeGraphViewState;
 use crate::ui::internals::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
 use crate::ui::{
     NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas,
     NodeGraphEditor,
 };
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -55,7 +54,7 @@ fn canvas_active_descendant_points_to_focused_port_semantics_node() {
 
     let (graph_value, a, a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
@@ -104,7 +103,7 @@ fn canvas_active_descendant_points_to_focused_node_semantics_node() {
 
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();

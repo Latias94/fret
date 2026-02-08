@@ -1,20 +1,3 @@
-use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
-    TextBlobId,
-};
-use fret_runtime::ui_host::{
-    CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
-};
-use fret_runtime::{
-    ClipboardToken, CommandId, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect,
-    FrameId, ModelHost, ModelStore, TickId, TimerToken,
-};
-use fret_ui::retained_bridge::Widget as _;
-use serde_json::Value;
-use std::any::{Any, TypeId};
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
-
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -27,6 +10,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
 };
+use fret_core::{
+    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
+};
+use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
+use fret_ui::retained_bridge::Widget as _;
+use serde_json::Value;
+use std::time::Instant;
 
 mod a11y_active_descendant_conformance;
 mod background_style_conformance;
@@ -60,6 +50,7 @@ mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod group_preview_conformance;
+mod harness;
 mod hit_testing_conformance;
 mod hit_testing_semantic_zoom_conformance;
 mod hot_state_invalidation_conformance;
@@ -94,6 +85,7 @@ mod portal_measured_geometry_conformance;
 mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
+mod render_culling_metrics_conformance;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;
@@ -104,8 +96,14 @@ mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
 
-use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
+use harness::{
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_graph_view, insert_view,
+    make_host_graph_view, make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    read_node_pos,
+};
+
+use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
 
 #[test]
 fn inflate_rect_expands_by_margin() {
@@ -141,8 +139,7 @@ fn edge_bounds_rect_applies_padding() {
 fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let bounds = Rect::new(
@@ -197,8 +194,7 @@ fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
 fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let bounds = Rect::new(
@@ -306,8 +302,7 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
 fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.space_to_pan = true;
@@ -369,8 +364,7 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
 fn pan_activation_key_code_none_disables_space_to_pan_activation() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.space_to_pan = true;
@@ -411,8 +405,7 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
 fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = true;
@@ -467,8 +460,7 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
 fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = true;
@@ -514,8 +506,7 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
 fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = false;
@@ -581,8 +572,7 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
 fn pinch_gesture_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_pinch = true;
@@ -629,8 +619,7 @@ fn pinch_gesture_zooms_in_about_pointer() {
 fn pinch_gesture_respects_toggle() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_pinch = false;
@@ -670,8 +659,7 @@ fn pinch_gesture_respects_toggle() {
 fn wheel_zoom_zooms_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_scroll = true;
@@ -715,8 +703,7 @@ fn wheel_zoom_zooms_about_pointer() {
 fn delete_key_defaults_to_backspace() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let bounds = Rect::new(
@@ -779,8 +766,7 @@ fn delete_key_defaults_to_backspace() {
 fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.disable_keyboard_a11y = true;
@@ -827,8 +813,7 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
 fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.disable_keyboard_a11y = true;
@@ -870,8 +855,7 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
 fn double_click_background_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
@@ -920,8 +904,7 @@ fn double_click_background_zooms_in_about_pointer() {
 fn shift_double_click_background_zooms_out_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
@@ -1032,8 +1015,7 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
         super::insert_node_drag::InsertNodeDragPayload { candidate },
     ));
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     let bounds = Rect::new(
@@ -1089,523 +1071,528 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     assert_eq!(after.selected_edges.len(), 0);
 }
 
-#[derive(Default)]
-struct NullServices;
+#[cfg(any())]
+mod legacy_inline_harness {
+    use super::*;
 
-impl fret_core::TextService for NullServices {
-    fn prepare(
-        &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: fret_core::TextConstraints,
-    ) -> (TextBlobId, fret_core::TextMetrics) {
-        (
-            TextBlobId::default(),
-            fret_core::TextMetrics {
-                size: Size::new(Px(0.0), Px(0.0)),
-                baseline: Px(0.0),
-            },
-        )
-    }
+    #[derive(Default)]
+    struct NullServices;
 
-    fn release(&mut self, _blob: TextBlobId) {}
-}
-
-impl fret_core::PathService for NullServices {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for NullServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        true
-    }
-}
-
-#[derive(Default)]
-struct TestUiHostImpl {
-    globals: HashMap<TypeId, Box<dyn Any>>,
-    models: ModelStore,
-    commands: CommandRegistry,
-    redraw: HashSet<AppWindowId>,
-    effects: Vec<Effect>,
-    drag: Option<DragSession>,
-    tick_id: TickId,
-    frame_id: FrameId,
-    next_timer_token: u64,
-    next_clipboard_token: u64,
-    next_image_upload_token: u64,
-}
-
-impl GlobalsHost for TestUiHostImpl {
-    fn set_global<T: Any>(&mut self, value: T) {
-        self.globals.insert(TypeId::of::<T>(), Box::new(value));
-    }
-
-    fn global<T: Any>(&self) -> Option<&T> {
-        self.globals
-            .get(&TypeId::of::<T>())
-            .and_then(|b| b.downcast_ref::<T>())
-    }
-
-    fn with_global_mut<T: Any, R>(
-        &mut self,
-        init: impl FnOnce() -> T,
-        f: impl FnOnce(&mut T, &mut Self) -> R,
-    ) -> R {
-        let type_id = TypeId::of::<T>();
-        if !self.globals.contains_key(&type_id) {
-            self.globals.insert(type_id, Box::new(init()));
+    impl fret_core::TextService for NullServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (TextBlobId, fret_core::TextMetrics) {
+            (
+                TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
         }
 
-        // Avoid aliasing `&mut self` by temporarily removing the value.
-        let boxed = self
-            .globals
-            .remove(&type_id)
-            .expect("global must exist")
-            .downcast::<T>()
-            .ok()
-            .expect("global has wrong type");
-        let mut value = *boxed;
-
-        let out = f(&mut value, self);
-        self.globals.insert(type_id, Box::new(value));
-        out
-    }
-}
-
-impl ModelHost for TestUiHostImpl {
-    fn models(&self) -> &ModelStore {
-        &self.models
+        fn release(&mut self, _blob: TextBlobId) {}
     }
 
-    fn models_mut(&mut self) -> &mut ModelStore {
-        &mut self.models
-    }
-}
-
-impl ModelsHost for TestUiHostImpl {
-    fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
-        self.models.take_changed_models()
-    }
-}
-
-impl CommandsHost for TestUiHostImpl {
-    fn commands(&self) -> &CommandRegistry {
-        &self.commands
-    }
-}
-
-impl EffectSink for TestUiHostImpl {
-    fn request_redraw(&mut self, window: AppWindowId) {
-        self.redraw.insert(window);
-    }
-
-    fn push_effect(&mut self, effect: Effect) {
-        self.effects.push(effect);
-    }
-}
-
-impl TimeHost for TestUiHostImpl {
-    fn tick_id(&self) -> TickId {
-        self.tick_id
-    }
-
-    fn frame_id(&self) -> FrameId {
-        self.frame_id
-    }
-
-    fn next_timer_token(&mut self) -> TimerToken {
-        self.next_timer_token = self.next_timer_token.saturating_add(1);
-        TimerToken(self.next_timer_token)
-    }
-
-    fn next_clipboard_token(&mut self) -> ClipboardToken {
-        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
-        ClipboardToken(self.next_clipboard_token)
-    }
-
-    fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
-        self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
-        fret_runtime::ImageUploadToken(self.next_image_upload_token)
-    }
-}
-
-impl DragHost for TestUiHostImpl {
-    fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
-        self.drag
-            .as_ref()
-            .filter(|drag| drag.pointer_id == pointer_id)
-    }
-
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drag.as_ref().is_some_and(|d| predicate(d))
-    }
-
-    fn find_drag_pointer_id(
-        &self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Option<fret_core::PointerId> {
-        self.drag
-            .as_ref()
-            .filter(|d| predicate(d))
-            .map(|d| d.pointer_id)
-    }
-
-    fn cancel_drag_sessions(
-        &mut self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Vec<fret_core::PointerId> {
-        let Some(drag) = self.drag.as_ref() else {
-            return Vec::new();
-        };
-        if !predicate(drag) {
-            return Vec::new();
+    impl fret_core::PathService for NullServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
         }
-        let pointer_id = drag.pointer_id;
-        self.drag = None;
-        vec![pointer_id]
+
+        fn release(&mut self, _path: fret_core::PathId) {}
     }
 
-    fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
-        self.drag
-            .as_mut()
-            .filter(|drag| drag.pointer_id == pointer_id)
+    impl fret_core::SvgService for NullServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
     }
 
-    fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
-        if self.drag(pointer_id).is_some() {
+    #[derive(Default)]
+    struct TestUiHostImpl {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
+        commands: CommandRegistry,
+        redraw: HashSet<AppWindowId>,
+        effects: Vec<Effect>,
+        drag: Option<DragSession>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for TestUiHostImpl {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|b| b.downcast_ref::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            let type_id = TypeId::of::<T>();
+            if !self.globals.contains_key(&type_id) {
+                self.globals.insert(type_id, Box::new(init()));
+            }
+
+            // Avoid aliasing `&mut self` by temporarily removing the value.
+            let boxed = self
+                .globals
+                .remove(&type_id)
+                .expect("global must exist")
+                .downcast::<T>()
+                .ok()
+                .expect("global has wrong type");
+            let mut value = *boxed;
+
+            let out = f(&mut value, self);
+            self.globals.insert(type_id, Box::new(value));
+            out
+        }
+    }
+
+    impl ModelHost for TestUiHostImpl {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl ModelsHost for TestUiHostImpl {
+        fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl CommandsHost for TestUiHostImpl {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
+    }
+
+    impl EffectSink for TestUiHostImpl {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw.insert(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl TimeHost for TestUiHostImpl {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            fret_runtime::ImageUploadToken(self.next_image_upload_token)
+        }
+    }
+
+    impl DragHost for TestUiHostImpl {
+        fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
+            self.drag
+                .as_ref()
+                .filter(|drag| drag.pointer_id == pointer_id)
+        }
+
+        fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
+            self.drag.as_ref().is_some_and(|d| predicate(d))
+        }
+
+        fn find_drag_pointer_id(
+            &self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Option<fret_core::PointerId> {
+            self.drag
+                .as_ref()
+                .filter(|d| predicate(d))
+                .map(|d| d.pointer_id)
+        }
+
+        fn cancel_drag_sessions(
+            &mut self,
+            mut predicate: impl FnMut(&DragSession) -> bool,
+        ) -> Vec<fret_core::PointerId> {
+            let Some(drag) = self.drag.as_ref() else {
+                return Vec::new();
+            };
+            if !predicate(drag) {
+                return Vec::new();
+            }
+            let pointer_id = drag.pointer_id;
             self.drag = None;
+            vec![pointer_id]
+        }
+
+        fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
+            self.drag
+                .as_mut()
+                .filter(|drag| drag.pointer_id == pointer_id)
+        }
+
+        fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
+            if self.drag(pointer_id).is_some() {
+                self.drag = None;
+            }
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            pointer_id: fret_core::PointerId,
+            kind: DragKindId,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new_cross_window(
+                DragSessionId(1),
+                pointer_id,
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
         }
     }
 
-    fn begin_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        self.drag = Some(DragSession::new(
-            DragSessionId(1),
-            pointer_id,
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
+    fn event_cx<'a>(
+        host: &'a mut TestUiHostImpl,
+        services: &'a mut NullServices,
+        bounds: Rect,
+        prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
+    ) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
+        fret_ui::retained_bridge::EventCx {
+            app: host,
+            services,
+            node: fret_core::NodeId::default(),
+            layer_root: None,
+            window: None,
+            input_ctx: fret_runtime::InputContext::default(),
+            pointer_id: None,
+            prevented_default_actions,
+            children: &[],
+            focus: None,
+            captured: None,
+            bounds,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            requested_capture: None,
+            requested_cursor: None,
+            notify_requested: false,
+            notify_requested_location: None,
+            stop_propagation: false,
+        }
     }
 
-    fn begin_cross_window_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        self.drag = Some(DragSession::new_cross_window(
-            DragSessionId(1),
-            pointer_id,
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
+    fn command_cx<'a>(
+        host: &'a mut TestUiHostImpl,
+        services: &'a mut NullServices,
+        tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
+    ) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
+        fret_ui::retained_bridge::CommandCx {
+            app: host,
+            services,
+            tree,
+            node: fret_core::NodeId::default(),
+            window: None,
+            input_ctx: fret_runtime::InputContext::default(),
+            focus: None,
+            invalidations: Vec::new(),
+            requested_focus: None,
+            stop_propagation: false,
+        }
     }
-}
 
-fn event_cx<'a>(
-    host: &'a mut TestUiHostImpl,
-    services: &'a mut NullServices,
-    bounds: Rect,
-    prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
-) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::EventCx {
-        app: host,
-        services,
-        node: fret_core::NodeId::default(),
-        layer_root: None,
-        window: None,
-        input_ctx: fret_runtime::InputContext::default(),
-        pointer_id: None,
-        prevented_default_actions,
-        children: &[],
-        focus: None,
-        captured: None,
-        bounds,
-        invalidations: Vec::new(),
-        requested_focus: None,
-        requested_capture: None,
-        requested_cursor: None,
-        notify_requested: false,
-        notify_requested_location: None,
-        stop_propagation: false,
+    fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                hidden: false,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                hidden: false,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        (graph, a, b)
     }
-}
 
-fn command_cx<'a>(
-    host: &'a mut TestUiHostImpl,
-    services: &'a mut NullServices,
-    tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
-) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::CommandCx {
-        app: host,
-        services,
-        tree,
-        node: fret_core::NodeId::default(),
-        window: None,
-        input_ctx: fret_runtime::InputContext::default(),
-        focus: None,
-        invalidations: Vec::new(),
-        requested_focus: None,
-        stop_propagation: false,
+    fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let a = NodeId::new();
+        let b = NodeId::new();
+
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                hidden: false,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 10.0, y: 5.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: Some(CanvasSize {
+                    width: 40.0,
+                    height: 20.0,
+                }),
+                hidden: false,
+                collapsed: false,
+                ports: Vec::new(),
+                data: Value::Null,
+            },
+        );
+
+        (graph, a, b)
     }
-}
 
-fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
+    fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
 
-    let a = NodeId::new();
-    let b = NodeId::new();
+        let a = NodeId::new();
+        let a_in = PortId::new();
+        let a_out = PortId::new();
+        graph.nodes.insert(
+            a,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                hidden: false,
+                collapsed: false,
+                ports: vec![a_in, a_out],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            a_in,
+            Port {
+                node: a,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            a_out,
+            Port {
+                node: a,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
 
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
+        let b = NodeId::new();
+        let b_in = PortId::new();
+        graph.nodes.insert(
+            b,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 200.0, y: 0.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                hidden: false,
+                collapsed: false,
+                ports: vec![b_in],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            b_in,
+            Port {
+                node: b,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
 
-    (graph, a, b)
-}
+        (graph, a, a_in, a_out, b, b_in)
+    }
 
-fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
+    fn make_test_graph_two_nodes_with_ports_spaced_x(
+        dx: f32,
+    ) -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+        let (mut graph, a, a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
+        graph
+            .nodes
+            .entry(b)
+            .and_modify(|n| n.pos = CanvasPoint { x: dx, y: 0.0 });
+        (graph, a, a_in, a_out, b, b_in)
+    }
 
-    let a = NodeId::new();
-    let b = NodeId::new();
-
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
-                width: 40.0,
-                height: 20.0,
-            }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 5.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
-                width: 40.0,
-                height: 20.0,
-            }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-
-    (graph, a, b)
-}
-
-fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
-
-    let a = NodeId::new();
-    let a_in = PortId::new();
-    let a_out = PortId::new();
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![a_in, a_out],
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        a_in,
-        Port {
-            node: a,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        a_out,
-        Port {
-            node: a,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Multi,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-
-    let b = NodeId::new();
-    let b_in = PortId::new();
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 200.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![b_in],
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        b_in,
-        Port {
-            node: b,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-
-    (graph, a, a_in, a_out, b, b_in)
-}
-
-fn make_test_graph_two_nodes_with_ports_spaced_x(
-    dx: f32,
-) -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
-    let (mut graph, a, a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
-    graph
-        .nodes
-        .entry(b)
-        .and_modify(|n| n.pos = CanvasPoint { x: dx, y: 0.0 });
-    (graph, a, a_in, a_out, b, b_in)
-}
-
-fn read_node_pos(
-    host: &mut TestUiHostImpl,
-    model: &fret_runtime::Model<Graph>,
-    id: NodeId,
-) -> CanvasPoint {
-    model
-        .read_ref(host, |g| g.nodes.get(&id).map(|n| n.pos))
-        .ok()
-        .flatten()
-        .unwrap_or_default()
+    fn read_node_pos(
+        host: &mut TestUiHostImpl,
+        model: &fret_runtime::Model<Graph>,
+        id: NodeId,
+    ) -> CanvasPoint {
+        model
+            .read_ref(host, |g| g.nodes.get(&id).map(|n| n.pos))
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
 }
 
 #[test]
@@ -1851,8 +1838,7 @@ fn should_add_bundle_port_requires_same_side_and_dedupes() {
 fn node_drag_records_single_history_entry_for_multi_node_move() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2012,8 +1998,7 @@ fn connect_bundle_records_single_history_entry() {
         },
     );
 
-    let graph_model = host.models.insert(graph);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph_model, view) = insert_graph_view(&mut host, graph);
 
     let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
@@ -2063,8 +2048,7 @@ fn connect_bundle_records_single_history_entry() {
 fn nudge_moves_selection_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2098,8 +2082,7 @@ fn nudge_moves_selection_and_records_history_entry() {
 fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2165,8 +2148,7 @@ fn nudge_respects_per_node_extent_rect() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2311,8 +2293,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
         },
     );
 
-    let graph = host.models.insert(graph);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -2372,8 +2353,7 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
         .get_mut(&a)
         .expect("node must exist")
         .deletable = Some(false);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2428,8 +2408,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2460,8 +2439,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
 fn align_left_moves_selected_nodes_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2555,8 +2533,7 @@ fn align_right_respects_per_node_extent_rect() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2632,8 +2609,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2772,8 +2748,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2903,8 +2878,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -3051,8 +3025,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -3085,8 +3058,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
 fn focus_next_cycles_nodes_and_updates_selection() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3140,8 +3112,7 @@ fn focus_next_skips_unselectable_nodes() {
         .expect("node exists")
         .selectable = Some(false);
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3170,8 +3141,7 @@ fn focus_next_skips_unselectable_nodes() {
 fn focus_next_port_cycles_ports_within_focused_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3209,8 +3179,7 @@ fn focus_next_port_cycles_ports_within_focused_node() {
 fn focus_next_port_filters_by_wire_direction() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3242,8 +3211,7 @@ fn focus_next_port_filters_by_wire_direction() {
 fn activate_starts_and_commits_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
-    let graph_model = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph_model, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
     canvas.sync_view_state(&mut host);
@@ -3279,8 +3247,7 @@ fn focus_port_right_moves_to_neighbor_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3302,8 +3269,7 @@ fn focus_port_left_moves_back() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);

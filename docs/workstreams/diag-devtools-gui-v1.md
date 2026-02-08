@@ -20,7 +20,7 @@ Related foundations:
 - Debugging playbook: `docs/debugging-playbook.md`
 - Base contract ADR: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - Semantics contract ADR: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- CLI tooling baseline: `apps/fretboard/src/diag/*`
+- CLI tooling baseline: `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
 - In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Offline viewer: `tools/fret-bundle-viewer`
 - UI prototype (rough): `docs/devtool.html`
@@ -50,6 +50,7 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
    - First-class UI for running `run/suite/repro/perf/matrix/compare` and showing evidence outputs.
 4. **Artifacts + sharing**
    - Latest bundle list, pack zip, open offline bundle viewer, surface triage and evidence files.
+   - Prefer emitting an explicit `out_dir` in `bundle.dumped` payloads so tooling can compute absolute paths reliably.
 5. **Web runner support**
    - A transport that works when the target app runs in the browser (no filesystem access).
 
@@ -76,11 +77,14 @@ These are v1 defaults we should treat as “sticky”:
 - **Default left-panel tree is the Semantics tree** (`SemanticsSnapshot`).
   - Rationale: stable selectors (`test_id`) and alignment with inspect/pick/scripts.
   - Layout/element trees can exist as secondary views, but scripts should not depend on them.
+- **Default real-time transport is WebSocket** (bidirectional, low-latency, web-runner friendly).
+  - Session routing uses `session_id` to support multiple app targets concurrently.
 - **Minimize live traffic**:
   - Live transport sends only a minimal tree skeleton and small hover/focus summaries.
   - Expensive details are fetched on-demand for the selected node (“inspect-on-demand”).
 - **Selected node detail refresh uses low-frequency polling** (e.g. ~1Hz), not per-frame push.
 - **Virtualize the tree UI** (target 50k+ semantics nodes) and keep filtering/search cheap.
+  - MVP implementations may start non-virtualized but must cap rows/work per frame to remain responsive.
 - **Backpressure is allowed** for hover spam: drop intermediate hover events under load.
 
 ### UI skeleton (prototype-driven)
@@ -123,7 +127,7 @@ the IA above is a good “v1 default” to converge on.
 - Owns “devtools client” workflows:
   - file-trigger transport helpers (touch/write/wait),
   - pack/share helpers,
-  - bundle stats/gates/compare (moved from `apps/fretboard/src/diag/*`),
+  - bundle stats/gates/compare (moved from `apps/fretboard` diag CLI module),
   - JSON parsing + validation utilities for scripts.
 - This is the “engine” used by both:
   - `fretboard` CLI (thin wrapper),
@@ -248,9 +252,37 @@ The first client message must be `hello`:
   - `client_version`: semver-ish string (best effort),
   - `capabilities`: feature flags (e.g. `inspect`, `pick`, `scripts`, `screenshots`, `bundles`).
 - server responds with `hello_ack` including:
-  - `session_id`,
+  - `server_version`,
   - server capabilities,
   - auth/limits (max message size, rate hints).
+
+Session assignment rules:
+
+- When `client_kind` is `native_app` or `web_app`, the server assigns a `session_id` and includes it in the `hello_ack` envelope.
+- When `client_kind` is `tooling`, the server does not assign an app session. Tooling must target an app by sending commands with `session_id` set.
+- After a `tooling` hello, the server sends an initial `session.list` to establish the set of active sessions.
+
+### Sessions (multi-app routing)
+
+`session_id` identifies a single connected app instance (native or web).
+
+The server is responsible for:
+
+- assigning unique `session_id` values to app connections,
+- publishing session lifecycle events to tooling clients,
+- routing messages so that apps only receive messages for their own session.
+
+Tooling clients must:
+
+- show the current session in the UI (and allow switching),
+- include `session_id` on all app-directed commands (`inspect.set`, `pick.arm`, `script.run`, `bundle.dump`, etc.),
+- filter session-scoped events (e.g. `pick.result`, `script.result`, `bundle.dumped`) to the selected session by default.
+
+Session discovery messages (server -> tooling):
+
+- `session.list`: `{ "sessions": [ { "session_id", "client_kind", "client_version", "capabilities" } ] }`
+- `session.added`: `{ "session": { ... } }`
+- `session.removed`: `{ "session_id": "..." }`
 
 ### Error model
 
@@ -271,6 +303,37 @@ These commands must map directly to existing in-app operations (no new semantics
 - `script.push` / `script.run` -> emits `script.progress` events + final `script.result`
 - `bundle.dump` -> emits `bundle.dumped` event (includes bundle id/path/handle)
 - `screenshot.request` -> emits `screenshot.result` event
+- `semantics.node.get` -> emits `semantics.node.get_ack` (on-demand node details from the latest semantics snapshot)
+
+#### `screenshot.request` / `screenshot.result` (v1)
+
+This is a convenience command for capturing a renderer screenshot outside of a script run.
+
+- Request payload:
+  - `label` (optional): bundle dump label (ensures a fresh bundle exists).
+  - `timeout_frames` (optional, default `300`): how long the app waits for the runner to complete the capture.
+  - `window` / `window_ffi` (optional): target a specific app window; if omitted, the first active window is used.
+- Response event (`screenshot.result`):
+  - `status`: `completed` | `timeout` | `disabled` | `unsupported` | `failed`
+  - `request_id`: a stable string (also echoed in `screenshots.result.json` entries)
+  - `entry`: best-effort completed entry parsed from `screenshots.result.json` (native only)
+
+Web runner note: as of 2026-02-07, screenshot readback is runner-owned and only implemented for the native runner.
+On wasm/web targets, `screenshot.result` returns `status=unsupported` with `reason=screenshots_not_supported_wasm`.
+
+#### `semantics.node.get` / `semantics.node.get_ack` (v1)
+
+This is a low-traffic, on-demand detail fetch for a single semantics node. It is intended to back
+the DevTools inspector without requiring frequent full bundle dumps.
+
+- Request payload:
+  - `window`: app window ffi id.
+  - `node_id`: semantics node id (ffi).
+- Response event (`semantics.node.get_ack`):
+  - `status`: `ok` | `not_found` | `no_semantics`
+  - `semantics_fingerprint`: best-effort fingerprint of the semantics snapshot used.
+  - `node`: JSON object for the selected node (shape is the in-app `UiSemanticsNodeV1`).
+  - `children`: child node ids (best-effort)
 
 Tooling-side-only operations (do not require app support):
 
@@ -309,7 +372,7 @@ at recipe/component authoring time (`ecosystem/*`) when selectors are unstable.
 
 ## Refactor plan (high level)
 
-1. Extract `apps/fretboard/src/diag/*` into `crates/fret-diag` (CLI becomes a thin wrapper).
+1. Extract `apps/fretboard` diag CLI into `crates/fret-diag` (CLI becomes a thin wrapper).
 2. Extract script + selector + result types into `crates/fret-diag-protocol` and reuse them in:
    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
    - `crates/fret-diag`
@@ -319,30 +382,38 @@ at recipe/component authoring time (`ecosystem/*`) when selectors are unstable.
    - client/bridge in `fret-bootstrap` diagnostics service (native + wasm32).
 4. Keep filesystem transport fully working and deterministic.
 
-## Open questions (must decide early)
+## Resolved v1 defaults (2026-02-07)
 
-1. **WS topology**: “DevTools hosts server (recommended)” vs “app hosts server”.
-2. **Port discovery**: fixed default vs random free port + printed URL vs env-driven.
-3. **Auth**: capability token in env vs printed once vs file-based handshake.
-4. **Artifact storage for web runner**: in-memory only vs optional IndexedDB.
-5. **Live data scope**: what is the minimal set of “real-time inspect” payloads we push (keep bundles as the heavy unit).
-6. **Web runner configuration**: how the browser learns the WS endpoint + token:
-   - query string (e.g. `?fret_devtools_ws=...&fret_devtools_token=...`),
-   - `window.__FRET_DEVTOOLS_WS` / `window.__FRET_DEVTOOLS_TOKEN` globals,
-   - a dev-server injected snippet.
-7. **MCP integration shape**:
-   - dedicated headless MCP server vs GUI-embedded,
-   - tool list size (few high-level tools vs many granular tools),
-   - which artifacts are exposed as MCP resources vs returned as paths/JSON.
-8. **Protocol naming**:
-   - env var names (`FRET_DEVTOOLS_WS`, token var),
-   - query string key names for web runner,
-   - message `type` naming conventions (dot-separated vs snake_case).
-9. **Limits / backpressure**:
-   - max message size,
-   - event rate limits (hover spam),
-   - whether the server drops intermediate hover events under load.
-10. **Tree strategy (live)**:
-   - semantics tree vs layout tree vs element tree as the default left-panel tree,
-   - whether we stream “operations” patches vs periodic snapshots,
-   - whether we add a string table / binary encoding for perf (or start with JSON and upgrade later).
+These defaults are chosen to get to “web runner works” quickly while keeping the contract surface small.
+They can evolve, but treat them as sticky unless we have strong evidence.
+
+1. **WS topology**: DevTools GUI hosts a local WS server (loopback-only).
+2. **Port discovery**: default `7331`, override via env (`FRET_DEVTOOLS_WS_PORT`) or explicit URL.
+3. **Auth**: a single per-session capability token is required on connect:
+   - env on native: `FRET_DEVTOOLS_TOKEN`,
+   - query string on web: `?fret_devtools_token=...`.
+4. **Web runner configuration**:
+   - primary: query string `?fret_devtools_ws=ws://127.0.0.1:7331&fret_devtools_token=...`,
+   - hash-routing friendly: also accept query params from `location.hash` (e.g. `#/route?fret_devtools_ws=...`),
+   - optional override: `window.__FRET_DEVTOOLS_WS` / `window.__FRET_DEVTOOLS_TOKEN` globals for dev servers.
+5. **Protocol naming**:
+   - message `type`: dot-separated (`inspect.set`, `script.run`, `bundle.dumped`),
+   - envelope: `DiagTransportMessageV1` in `crates/fret-diag-protocol`.
+6. **Limits / backpressure**:
+   - max message size (soft): 4 MiB,
+   - hover/focus updates are lossy under load (drop intermediate hover events).
+7. **Tree strategy (live)**:
+   - default left panel: semantics tree,
+   - start with JSON messages, add “operations” patches later if needed.
+8. **Artifact storage (web runner)**:
+   - in-memory store + “download zip” export in v1,
+   - optional IndexedDB is deferred.
+9. **MCP integration**:
+   - add a dedicated headless MCP server (`apps/fret-devtools-mcp`) using `rmcp` (stdio first),
+   - keep the tool surface small and map 1:1 to existing CLI/GUI operations.
+
+## Open questions (remaining)
+
+1. **Transport evolution**: do we later add HTTP endpoints for large artifact download, or keep WS-only + zip export?
+2. **Multi-session UX**: how DevTools chooses a session/window when multiple apps connect.
+3. **Binary encoding**: when (if ever) to add a binary framing for perf-heavy payloads.

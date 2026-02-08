@@ -5,17 +5,16 @@ use serde_json::Value;
 
 use crate::ui::presenter::InsertNodeCandidate;
 
-use super::super::NodeGraphCanvas;
-use super::super::insert_node_drag::InsertNodeDragPayload;
-use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes};
+use super::prelude::insert_node_drag::InsertNodeDragPayload;
+use super::prelude::{NodeGraphCanvas, insert_node_drag};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 #[test]
 fn insert_node_drag_does_not_start_until_threshold() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -49,7 +48,7 @@ fn insert_node_drag_does_not_start_until_threshold() {
         start_tick: fret_runtime::TickId(0),
     });
 
-    let started = super::super::insert_node_drag::handle_pending_insert_node_drag_move(
+    let started = insert_node_drag::handle_pending_insert_node_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -69,8 +68,7 @@ fn insert_node_drag_does_not_start_until_threshold() {
 fn insert_node_drag_starts_after_threshold() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -104,7 +102,7 @@ fn insert_node_drag_starts_after_threshold() {
         start_tick: fret_runtime::TickId(0),
     });
 
-    let started = super::super::insert_node_drag::handle_pending_insert_node_drag_move(
+    let started = insert_node_drag::handle_pending_insert_node_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -121,10 +119,7 @@ fn insert_node_drag_starts_after_threshold() {
     let drag = host.drag.as_ref().expect("drag should start");
     assert!(drag.cross_window_hover);
     assert_eq!(drag.pointer_id, pointer_id);
-    assert_eq!(
-        drag.kind,
-        super::super::insert_node_drag::DRAG_KIND_INSERT_NODE
-    );
+    assert_eq!(drag.kind, insert_node_drag::DRAG_KIND_INSERT_NODE);
     assert_eq!(drag.start_position, Point::new(Px(0.0), Px(0.0)));
     assert!(drag.dragging);
     assert!(drag.payload::<InsertNodeDragPayload>().is_some());

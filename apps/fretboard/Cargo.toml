@@ -11,8 +11,5 @@ documentation.workspace = true
 publish = false
 
 [dependencies]
+fret-diag = { path = "../../crates/fret-diag" }
 serde_json.workspace = true
-zip.workspace = true
-image.workspace = true
-windows-sys.workspace = true
-sysinfo.workspace = true

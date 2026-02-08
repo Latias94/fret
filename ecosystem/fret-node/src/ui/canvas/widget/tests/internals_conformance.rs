@@ -8,12 +8,13 @@ use fret_ui::UiTree;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::MeasuredGeometryStore;
 
-use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::prelude::NodeGraphCanvas;
+use super::{
+    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -55,10 +56,8 @@ fn bounds_at(x: f32, y: f32) -> Rect {
 
 #[test]
 fn internals_store_is_stable_across_identical_paint() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -87,10 +86,8 @@ fn internals_store_is_stable_across_identical_paint() {
 
 #[test]
 fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -104,6 +101,7 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     let rev1 = internals.revision();
@@ -122,9 +120,18 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(Arc::ptr_eq(&geom1, &geom2));
     assert!(Arc::ptr_eq(&index1, &index2));
+    assert_eq!(
+        counters2.geom_rebuilds, counters1.geom_rebuilds,
+        "pan-only must not rebuild geometry cache"
+    );
+    assert_eq!(
+        counters2.index_rebuilds, counters1.index_rebuilds,
+        "pan-only must not rebuild spatial index cache"
+    );
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     assert!(internals.revision() > rev1);
@@ -144,10 +151,8 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
 
 #[test]
 fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -193,10 +198,8 @@ fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
 
 #[test]
 fn bounds_origin_updates_internals_transform() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut canvas = NodeGraphCanvas::new(graph, view).with_internals_store(internals.clone());
@@ -235,10 +238,8 @@ fn bounds_origin_updates_internals_transform() {
 
 #[test]
 fn graph_edit_rebuilds_geometry_and_updates_internals() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -252,6 +253,7 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     let rev1 = internals.revision();
@@ -273,9 +275,18 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(!Arc::ptr_eq(&geom1, &geom2));
     assert!(!Arc::ptr_eq(&index1, &index2));
+    assert!(
+        counters2.geom_rebuilds > counters1.geom_rebuilds,
+        "graph edit should rebuild geometry cache"
+    );
+    assert!(
+        counters2.index_rebuilds > counters1.index_rebuilds,
+        "graph edit should rebuild spatial index cache"
+    );
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     assert!(internals.revision() > rev1);
@@ -294,22 +305,30 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
 #[test]
 fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(Arc::ptr_eq(&geom1, &geom2));
     assert!(!Arc::ptr_eq(&index1, &index2));
+    assert_eq!(
+        counters2.geom_rebuilds, counters1.geom_rebuilds,
+        "spatial index tuning should not rebuild geometry cache"
+    );
+    assert!(
+        counters2.index_rebuilds > counters1.index_rebuilds,
+        "spatial index tuning should rebuild index cache"
+    );
 }

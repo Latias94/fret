@@ -53,7 +53,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         &mut self,
         host: &H,
         snapshot: &ViewSnapshot,
-    ) -> (Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>) {
+    ) -> (Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>) {
         let geom_key = self.geometry_key(host, snapshot);
         let geom = self.ensure_canvas_geometry_cache(host, snapshot, geom_key);
         let index = self.ensure_spatial_index_cache(host, snapshot, geom_key, &geom);

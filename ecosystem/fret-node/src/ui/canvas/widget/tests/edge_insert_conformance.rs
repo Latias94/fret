@@ -8,13 +8,14 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::NodeGraphViewState;
+
 use crate::ui::canvas::state::{ContextMenuTarget, EdgeInsertDrag, PendingEdgeInsertDrag};
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 
-use super::super::{NodeGraphCanvas, edge_insert_drag};
+use super::prelude::{NodeGraphCanvas, edge_insert_drag};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn bounds() -> Rect {
@@ -43,7 +44,7 @@ fn edge_insert_drag_threshold_is_zoom_invariant_in_screen_space() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
@@ -120,7 +121,7 @@ fn edge_insert_left_up_does_not_open_picker_when_searcher_is_open() {
     }
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     canvas.open_edge_insert_node_picker(&mut host, None, edge_a, Point::new(Px(10.0), Px(10.0)));
@@ -396,7 +397,7 @@ fn double_click_edge_splits_lowest_edge_id_when_overlapping() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
         s.interaction.reroute_on_edge_double_click = true;

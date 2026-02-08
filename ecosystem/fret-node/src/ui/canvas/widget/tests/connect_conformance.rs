@@ -8,13 +8,14 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::interaction::NodeGraphConnectionMode;
-use crate::io::NodeGraphViewState;
+
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::{NodeGraphCanvas, wire_drag};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{ContextMenuTarget, WireDrag, WireDragKind};
 
@@ -225,7 +226,7 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
         let (graph_value, _a, _a_in, a_out, _b, b_in) =
             make_test_graph_two_nodes_with_ports_spaced_x(260.0);
         let graph = host.models.insert(graph_value);
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
 
         let _ = view.update(&mut host, |s, _cx| {
             s.interaction.connection_mode = mode;
@@ -263,15 +264,13 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
             pos,
         });
 
-        assert!(
-            super::super::wire_drag::handle_wire_left_up_with_forced_target(
-                &mut canvas,
-                &mut cx,
-                &snapshot,
-                snapshot.zoom,
-                Some(b_in),
-            )
-        );
+        assert!(wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(b_in),
+        ));
 
         assert!(canvas.interaction.suspended_wire_drag.is_some());
 
@@ -306,7 +305,7 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
         let (graph_value, _a, _a_in, a_out, _b, b_in) =
             make_test_graph_two_nodes_with_ports_spaced_x(260.0);
         let graph = host.models.insert(graph_value);
-        let view = host.models.insert(NodeGraphViewState::default());
+        let view = insert_view(&mut host);
 
         let _ = view.update(&mut host, |s, _cx| {
             s.interaction.connection_mode = mode;
@@ -341,15 +340,13 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
             pos,
         });
 
-        assert!(
-            super::super::wire_drag::handle_wire_left_up_with_forced_target(
-                &mut canvas,
-                &mut cx,
-                &snapshot,
-                snapshot.zoom,
-                Some(b_in),
-            )
-        );
+        assert!(wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(b_in),
+        ));
 
         assert!(canvas.interaction.searcher.is_none());
         assert!(canvas.interaction.suspended_wire_drag.is_none());
@@ -426,7 +423,7 @@ fn reconnect_preserves_edge_identity_and_updates_endpoint() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, old_to, new_to) = make_graph_reconnect_to_new_target();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = true;
@@ -457,15 +454,13 @@ fn reconnect_preserves_edge_identity_and_updates_endpoint() {
         pos,
     });
 
-    assert!(
-        super::super::wire_drag::handle_wire_left_up_with_forced_target(
-            &mut canvas,
-            &mut cx,
-            &snapshot,
-            snapshot.zoom,
-            Some(new_to),
-        )
-    );
+    assert!(wire_drag::handle_wire_left_up_with_forced_target(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        snapshot.zoom,
+        Some(new_to),
+    ));
 
     let (edge_count, from_after, to_after) = graph
         .read_ref(&host, |g| {

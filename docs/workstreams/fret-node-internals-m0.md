@@ -210,6 +210,7 @@ After M0A gates are green:
 - [x] Centralize hit-testing candidate collection + scoring (explicit broad-phase vs narrow-phase).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/score.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 - [x] Bundle hit-testing parameters into a single context to avoid call-site drift.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` (`HitTestCtx`)
 - [x] Split “derived geometry build” from “spatial index build” into explicit stages.
@@ -254,11 +255,122 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_drop_conformance.rs`
+- [x] Normalize widget pipeline prelude imports to `crate::ui::canvas::widget::*` paths to reduce relative-path drift.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs`
+- [x] Normalize low-risk widget module references from `super::super::*` call sites to explicit `crate::ui::canvas::*` paths.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/left_click/handlers.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/left_click/hit.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit/mod.rs`
+- [x] Normalize remaining widget submodule wildcard imports (`use super::super::*;`) to absolute module paths.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/commit/apply.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/view_state/frame.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_math/path.rs`
 - [x] Split measured-geometry module into small modules to reduce drift (store vs presenter wrappers).
   - Evidence: `ecosystem/fret-node/src/ui/measured/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/presenter.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+- [x] Split canvas widget test harness into focused modules (host/services/contexts/graph fixtures) to reduce drift when bridge fields evolve.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/mod.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/host.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/contexts.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/services.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/prelude.rs` (grouped exports by concern and switched to `crate::ui::canvas::widget::*` paths to reduce import drift)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` (routes shared state types via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs` (routes widget internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs` (routes widget internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs` (routes geometry helpers via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs` (routes widget internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs` (routes widget internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs` (routes wire-drop internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs` (routes group-resize internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/custom_edge_path_conformance.rs` (routes hit-test context via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs` (routes hit-test context via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_conformance.rs` (routes insert-drag internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs` (routes geometry helpers via `prelude`)
+- [x] Add harness graph/view setup helper API and adopt it in high-churn conformance suites.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_view`, `insert_graph_view`, `make_host_graph_view`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_menu_searcher_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_animation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_helper_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/color_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_graph_view` / `make_host_graph_view` route through `insert_view`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/custom_edge_path_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_drop_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache_prune_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_nodes_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_on_mount_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_padding_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/op_batching_determinism_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/draw_order_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/drag_preview_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_port_anchor_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_route_anchor_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_style_override_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_types_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hot_state_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
@@ -286,3 +398,18 @@ After M0A gates are green:
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hot_state_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`

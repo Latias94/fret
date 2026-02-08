@@ -7,7 +7,7 @@ pub(super) fn maybe_extend_bundle_on_shift<H: UiHost, M: NodeGraphCanvasMiddlewa
     modifiers: Modifiers,
     zoom: f32,
     geom: &CanvasGeometry,
-    index: &CanvasSpatialIndex,
+    index: &CanvasSpatialDerived,
     pos: Point,
     kind: &mut WireDragKind,
 ) {

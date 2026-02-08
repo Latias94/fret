@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 
 pub(super) fn closest_point_on_segment(p: Point, a: Point, b: Point) -> (Point, f32) {
     let apx = p.x.0 - a.x.0;

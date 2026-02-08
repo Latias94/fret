@@ -21,7 +21,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
-        let canvas = fret_runner_winit::canvas_by_id(&self.config.web_canvas_id).ok();
+        let canvas = fret_runner_web::canvas_by_id(&self.config.web_canvas_id).ok();
         let append = canvas.is_none();
 
         let mut attrs =
@@ -51,12 +51,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
         if self.web_cursor.is_none() {
             if let Some(proxy) = self.event_loop_proxy.clone() {
-                if let Ok(listener) =
-                    fret_runner_winit::install_web_cursor_listener(window.as_ref(), move || {
-                        proxy.wake_up();
-                    })
-                {
-                    self.web_cursor = Some(listener);
+                if let Some(canvas) = window.canvas().map(|c| c.clone()) {
+                    if let Ok(listener) =
+                        fret_runner_web::install_canvas_cursor_listener(canvas, move || {
+                            proxy.wake_up();
+                        })
+                    {
+                        self.web_cursor = Some(listener);
+                    }
                 }
             }
         }
@@ -139,9 +141,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         let Some(window) = self.window.as_ref() else {
             return;
         };
-        self.platform
-            .input
-            .poll_web_cursor_updates(window.scale_factor(), &mut self.pending_events);
+        self.platform.input.poll_web_cursor_updates(
+            window.scale_factor(),
+            fret_runner_web::last_cursor_offset_px(),
+            &mut self.pending_events,
+        );
 
         self.web_services.tick();
         self.pending_events.extend(self.web_services.take_events());

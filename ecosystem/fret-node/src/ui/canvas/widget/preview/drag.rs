@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::geometry::node_rect_origin_from_anchor;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn drag_preview_derived<H: UiHost>(
@@ -9,7 +9,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         kind: DragPreviewKind,
         preview_rev: u64,
         nodes: &[(GraphNodeId, CanvasPoint)],
-    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>)> {
         if nodes.is_empty() {
             return None;
         }

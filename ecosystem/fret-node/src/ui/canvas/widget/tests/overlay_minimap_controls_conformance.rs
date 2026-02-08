@@ -23,7 +23,7 @@ use crate::ui::{
     NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
 };
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -133,7 +133,7 @@ fn controls_overlay_pointer_events_fall_through_outside_panel() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -170,7 +170,7 @@ fn controls_overlay_blocks_canvas_input_within_panel_even_off_button() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, style);
     let controls_node = ui.create_node_retained(controls);
 
@@ -215,7 +215,7 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, style);
     let controls_node = ui.create_node_retained(controls);
 
@@ -276,7 +276,7 @@ fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_re
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -330,7 +330,7 @@ fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut bindings = NodeGraphControlsBindings::default();
     bindings.toggle_connection_mode = NodeGraphControlsCommandBinding::Command(CommandId::from(
@@ -411,7 +411,7 @@ fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command()
     ui.set_window(AppWindowId::default());
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -467,7 +467,7 @@ fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canva
 
     let underlay = ui.create_node_retained(FocusableUnderlay::default());
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view.clone(), test_style());
     let controls_node = ui.create_node_retained(controls);
 
@@ -561,8 +561,7 @@ fn minimap_pointer_events_fall_through_outside_rect() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let style = test_style();
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
     snap.transform.bounds_size = bounds().size;
@@ -605,8 +604,7 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
 
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
@@ -729,8 +727,7 @@ fn minimap_supports_view_queue_navigation_binding_for_b_layer_wiring() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
 
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
@@ -842,8 +839,7 @@ fn minimap_keyboard_pan_updates_view_state_and_store_when_attached() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
@@ -909,8 +905,7 @@ fn minimap_keyboard_zoom_updates_view_state_and_store_zoom_about_center() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
@@ -981,7 +976,7 @@ fn controls_overlay_contributes_semantics_test_id() {
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
     let controls_node = ui.create_node_retained(controls);
 

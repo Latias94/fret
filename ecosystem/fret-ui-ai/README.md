@@ -11,3 +11,17 @@ The goal is to provide a modular, policy-heavy component surface for "assistant 
 (messages, conversation views, prompts, tool calls, diffs, file trees, etc.) without pushing these
 policies into `fret-ui` / `fret-ui-kit`.
 
+## Notes on alignment
+
+This crate tracks upstream outcomes rather than React APIs. For example, AI Elements `message.tsx`
+includes:
+
+- `Message` + `MessageContent` for role-aware message chrome
+- `MessageActions` + `MessageAction` for per-message affordances (copy, retry, etc.)
+- `MessageToolbar` for a “justify-between” row that typically hosts actions + branch selectors
+
+In Fret:
+
+- `MessageAction` is a thin wrapper over `fret-ui-shadcn::Button` + optional tooltip.
+- `MessageActionTemplate` is a small convenience for apps/demos to predefine actions (id, label,
+  tooltip, icon, handler, role filtering) while keeping effects app-owned.

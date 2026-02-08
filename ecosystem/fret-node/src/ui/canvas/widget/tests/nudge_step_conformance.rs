@@ -2,20 +2,20 @@ use fret_runtime::CommandId;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{CanvasPoint, CanvasSize};
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_NUDGE_UP,
 };
 
-use super::{NullServices, TestUiHostImpl, command_cx, make_test_graph_two_nodes, read_node_pos};
+use super::{
+    NullServices, TestUiHostImpl, command_cx, make_host_graph_view, make_test_graph_two_nodes,
+    read_node_pos,
+};
 
 #[test]
 fn nudge_screen_px_step_is_zoom_invariant() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     view.update(&mut host, |s, _cx| {
         s.zoom = 2.0;
@@ -39,10 +39,8 @@ fn nudge_screen_px_step_is_zoom_invariant() {
 
 #[test]
 fn nudge_grid_step_uses_snap_grid_even_when_snap_to_grid_is_disabled() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     view.update(&mut host, |s, _cx| {
         s.zoom = 2.0;
@@ -76,10 +74,8 @@ fn nudge_grid_step_uses_snap_grid_even_when_snap_to_grid_is_disabled() {
 
 #[test]
 fn nudge_grid_fast_step_moves_ten_cells_by_default() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     view.update(&mut host, |s, _cx| {
         s.zoom = 0.5;

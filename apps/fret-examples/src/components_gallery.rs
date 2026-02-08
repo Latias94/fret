@@ -1887,6 +1887,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
                 window,
                 bounds,
                 scale_factor,
+                &state.ui,
                 semantics_snapshot,
                 element_runtime,
             )

@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::geometry::node_rect_origin_from_anchor;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn node_resize_preview_derived<H: UiHost>(
@@ -10,7 +10,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         node_id: GraphNodeId,
         pos: CanvasPoint,
         size_opt_px: Option<CanvasSize>,
-    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
+    ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialDerived>)> {
         let base_index_key = self.geometry.index_key?;
         let base_geom = self.geometry.geom.clone();
         let base_index = self.geometry.index.clone();
