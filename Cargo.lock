@@ -1229,6 +1229,7 @@ dependencies = [
  "fret-query",
  "fret-render",
  "fret-router",
+ "fret-router-ui",
  "fret-runtime",
  "fret-selector",
  "fret-ui",
@@ -1544,6 +1545,17 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "fret-router-ui"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-router",
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]
