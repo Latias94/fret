@@ -26,7 +26,7 @@ The intent is to stop drifting into “endless experiments” by pinning:
 
 ## Current state (as of 2026-02-08)
 
-- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json`.
+- Canonical steady-state baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json`.
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
 - P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
