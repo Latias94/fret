@@ -78,12 +78,16 @@ Legend:
 
 ### 1.3 Disabled semantics
 
-- **Scoped disabling** (`BeginDisabled`): **Gap**
-  - ImGui: `BeginDisabled()` affects interactions and modifies visual alpha.
-  - Fret `imui` facade: per-widget `enabled` exists for some widgets (menus/select/input), but there is no
-    “disable a subtree” wrapper that matches ImGui’s ergonomics and semantics.
-  - Note: `InteractivityGate` can make a subtree inert, but the facade lacks a first-class helper and
-    does not define how “disabled” interacts with hover/tooltip signals.
+- **Scoped disabling** (`BeginDisabled`): **Aligned (facade-level)**
+  - ImGui: `BeginDisabled()` disables interactions and multiplies `Style.Alpha` by `Style.DisabledAlpha` (`0.60f` default).
+  - Fret `imui` facade: `disabled_scope(true, |ui| ...)` / `begin_disabled(true, |ui| ...)` disables `imui`-facade widget
+    interactions in the subtree and dims visuals via an `Opacity` group. The alpha multiplier is configurable via the theme
+    number `component.imui.disabled_alpha` (default `0.60`).
+  - Response contract: disabled items suppress interaction signals by default (`hovered=false`, `pressed=false`, `focused=false`,
+    `clicked=false`, `changed=false`, and `hovered_like_imgui()==false`).
+  - Known gap: there is no ImGui-style per-query override (e.g. `ImGuiHoveredFlags_AllowWhenDisabled`) yet; see `IMUIECO3-resp-020`.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `sanitize_response_for_enabled`) + `ecosystem/fret-imui/src/lib.rs`
+    (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
 
 ### 1.4 Identity / ID stack ergonomics
 

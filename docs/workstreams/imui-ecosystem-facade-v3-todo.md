@@ -123,10 +123,13 @@ Exit criteria:
     `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt.core.hovered` is pointer-hover driven by canonical pressable state).
   - Note: recommended direction is to keep `Response` stable/minimal and add a facade-only helper surface (e.g. `hovered_for_tooltip`)
     if upstream-like defaults are important for editor UX.
-- [ ] IMUIECO3-resp-021 Add a scoped disable helper aligned with ImGui `BeginDisabled` (and define how it affects responses).
+- [x] IMUIECO3-resp-021 Add a scoped disable helper aligned with ImGui `BeginDisabled` (and define how it affects responses).
   - Reference: `repo-ref/imgui/imgui.h` (`BeginDisabled`) + `repo-ref/imgui/imgui.cpp` (`BeginDisabled`, `EndDisabled`).
-  - Evidence (current Fret behavior): `ecosystem/fret-ui-kit/src/imui.rs` (some widgets have per-call `enabled`, but no subtree scope helper).
-  - Decision required: should disabled items report `hovered=false` by default (ImGui-style), and should tooltips be allowed via an explicit flag?
+  - Decision: disabled items are inert and report `hovered=false` / `pressed=false` / `focused=false` / `clicked=false` by default
+    (ImGui-style). Tooltip-style queries that allow hover when disabled are deferred to `IMUIECO3-resp-020`.
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `begin_disabled`).
+  - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`sanitize_response_for_enabled`, `component.imui.disabled_alpha`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
 
 ---
 

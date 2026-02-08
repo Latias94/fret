@@ -87,19 +87,20 @@ Mapping notes (Fret vs ImGui):
 
 Known gaps vs ImGui (tracked in this v3 TODO):
 
-- No clean separation between ImGui `NoMouseInputs` (pointer pass-through but nav still allowed) vs `NoInputs`
-  (pointer + nav disabled). Today `pointer_passthrough` only covers the `NoMouseInputs`-style outcome.
-- `activate_on_click` is not yet a full `NoBringToFrontOnFocus` analog (ImGui separates focus from z-order more cleanly).
+- `NoMouseInputs` (pointer pass-through) vs `NoInputs` (pointer + focus traversal disabled) are split
+  (`hit_test_passthrough` / `pointer_passthrough` vs `no_inputs`), but more ImGui-style flag surfaces are still missing.
+- Focus vs z-order activation is split (`focus_on_click` vs `activate_on_click`), but this is still not a full
+  `NoBringToFrontOnFocus` analog (ImGui’s window activation model is more nuanced).
 - No ID-stack ergonomics (`PushID`-style nesting, `"##"` / `"###"` label parsing) at the facade level; callers must
   explicitly scope identity with `ui.push_id(...)` / `ui.keyed(...)`.
 - `Response.core.hovered` remains pointer-hover driven, but `ResponseExt` now exposes an explicit `nav_highlighted`
   signal and a `hovered_like_imgui()` helper (pointer-hover OR nav-highlight). Remaining gap: no
   ImGui-style hovered query flags (`ImGuiHoveredFlags_*`).
-- No ImGui-style hovered query flag surface (`ImGuiHoveredFlags_*`) and no scoped disable helper (`BeginDisabled`).
-  Today, `ResponseExt` exposes a single `hovered` boolean and some wrappers have per-call `enabled`, but the facade
-  does not offer hover-delay/tooltip defaults or define how "disabled" interacts with hover/tooltip queries.
-- Drag threshold is currently a fixed facade constant (Fret uses `4px`; ImGui defaults `MouseDragThreshold=6px`) and
-  is not yet expressed as a theme/metric knob.
+- Hovered query flags (`ImGuiHoveredFlags_*`) remain a gap. The facade does not yet provide ImGui-style overrides like
+  `AllowWhenDisabled` for tooltip-style queries.
+- Scoped disable helper is available (`disabled_scope` / `begin_disabled`), and disabled items suppress interaction
+  signals by default (`hovered=false`, `clicked=false`, etc.).
+- Drag threshold is expressed as a theme metric knob (`component.imui.drag_threshold_px`, default `6px`).
 
 ## 1) Why v3
 
