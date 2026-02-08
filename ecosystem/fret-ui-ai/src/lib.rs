@@ -73,9 +73,11 @@ pub mod model;
 pub use elements::{
     AiChat, AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
     ConversationMessage, ConversationScrollButton, ConversationTranscript, InlineCitation, Message,
+    FileTree, FileTreeFile, FileTreeFolder, FileTreeIcon, FileTreeItem, FileTreeName,
     MessageAction, MessageActionTemplate, MessageActions, MessageContent, MessageParts,
-    MessageResponse, MessageToolbar, PromptInput, SourcesBlock, Tool, ToolCallBlock, ToolContent,
-    ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
+    MessageResponse, MessageToolbar, OnFileTreeExpandedChange, OnFileTreeSelect, PromptInput,
+    SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,
+    ToolSectionTitle, ToolStatus,
 };
 pub use export::messages_to_markdown;
 pub use model::{
