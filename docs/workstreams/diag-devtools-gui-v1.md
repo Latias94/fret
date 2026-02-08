@@ -148,6 +148,14 @@ This MCP adapter should not invent new capabilities. It should expose a *small* 
 map directly to the same operations the GUI/CLI perform (inspect, pick, run script, pack artifacts,
 compare bundles), and (optionally) expose common artifacts as MCP resources.
 
+Resource model (recommended):
+
+- Expose key artifacts as resources under a stable URI scheme (e.g. `fret-diag://sessions/<id>/bundle.json`).
+- Support `resources/subscribe` so AI clients can wait for updates without polling.
+  - On updates, send notifications:
+    - `notifications/resources/list_changed` when the set of resource URIs changes (session add/remove),
+    - `notifications/resources/updated` when a subscribed resource’s content changes (e.g. after `bundle.dumped`).
+
 Recommended packaging:
 
 - A dedicated binary `apps/fret-devtools-mcp` (headless) for automation and CI.

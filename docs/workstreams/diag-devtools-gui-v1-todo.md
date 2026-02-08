@@ -65,9 +65,10 @@ Conventions:
   - [x] validate schema version (v1/v2) on push/run,
   - [x] step palette (v1 steps + v2 intent steps),
   - [x] structured editor for selector/predicate.
-- [ ] Pick-to-fill UX:
+- [x] Pick-to-fill UX:
   - [x] select a JSON pointer (e.g. `/steps/3/target`) and apply pick result into the editor (equivalent of `diag pick-apply`).
-- [ ] Script library ergonomics:
+  - [x] discover pointer candidates from the current script (faster pointer targeting).
+- [x] Script library ergonomics:
   - [x] fork/copy a script into `.fret/diag/scripts/` (avoid editing workspace scripts by default),
   - [x] “Run this script” can produce a shareable zip (Run & Pack / Pack last bundle).
 
@@ -118,7 +119,7 @@ Conventions:
 ### M7: MCP server adapter (AI-friendly tooling API)
 
 - [x] Add `apps/fret-devtools-mcp` using `rmcp` (stdio transport first).
-- [ ] Expose a minimal tool set (names TBD):
+- [x] Expose a minimal tool set (names TBD):
   - [x] `fret_diag_sessions_list` (list sessions),
   - [x] `fret_diag_sessions_select` (select a session),
   - [x] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
@@ -132,10 +133,11 @@ Conventions:
   - [x] `fret_diag_pack_last_bundle_zip_bytes` (dump + pack bundle.json zip bytes as base64),
   - [x] `fret_diag_bundle_dump_latest` (best-effort latest bundle.dumped payload),
   - [x] `fret_diag_compare`.
-- [ ] (Optional) Expose key artifacts as resources:
+- [x] (Optional) Expose key artifacts as resources:
   - [x] latest `bundle.json`,
   - [x] `repro.summary.json` (when present on disk),
   - [x] `bundle.zip` (generated on read; same layout as `diag pack`).
+- [x] Support resource subscriptions + notifications for artifact updates.
 - [ ] Add an end-to-end AI scenario doc:
   - [x] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
 

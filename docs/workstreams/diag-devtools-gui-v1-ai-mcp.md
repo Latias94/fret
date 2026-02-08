@@ -98,3 +98,15 @@ The server also accepts `selected` as an alias for the default session:
 - If the transport is filesystem-based (`fret_diag_connect` with `"fs"`), the latest bundle is
   sourced from `latest.txt` under the configured `FRET_DIAG_DIR`.
 
+### Keeping artifacts fresh (subscriptions)
+
+If your MCP client supports resource subscriptions, prefer subscribing to the resource URIs you care
+about instead of polling.
+
+- Request: `resources/subscribe` with `{ "uri": "fret-diag://selected/bundle.json" }` (and/or `bundle.zip`).
+- Notifications:
+  - `notifications/resources/updated` when a subscribed URI changes (typically after `bundle.dumped`),
+  - `notifications/resources/list_changed` when sessions/resources appear/disappear.
+
+If updates do not arrive, trigger a fresh dump via the tool `fret_diag_bundle_dump` and then read the
+resource again.
