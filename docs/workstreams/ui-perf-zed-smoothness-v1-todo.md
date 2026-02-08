@@ -24,6 +24,11 @@ Conventions:
   - Reference: `docs/workstreams/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
 
+- [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
+  bucketed/deferred/cached during live resize, and what must remain exact).
+  - Candidates: text wrap width bucketing, measure/shaping caching, released blob retention, and any LOD/deferral.
+  - Goal: make future “fearless refactors” safer by pinning what must remain stable.
+
 - [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
