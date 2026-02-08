@@ -1,10 +1,9 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 
-use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::prelude::NodeGraphCanvas;
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn frame_view_padding_reduces_zoom_for_same_nodes() {
@@ -19,7 +18,7 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
 
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
         s.interaction.frame_view_padding = 0.0;
@@ -35,7 +34,7 @@ fn frame_view_padding_reduces_zoom_for_same_nodes() {
     let mut host2 = TestUiHostImpl::default();
     let graph2 = host2.models.insert(graph_value);
 
-    let view2 = host2.models.insert(NodeGraphViewState::default());
+    let view2 = insert_view(&mut host2);
     let _ = view2.update(&mut host2, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
         s.interaction.frame_view_padding = 0.2;

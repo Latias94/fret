@@ -4,11 +4,11 @@ use crate::core::{
     CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey,
     Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
-use crate::io::NodeGraphViewState;
+
 use crate::rules::EdgeEndpoint;
 
-use super::super::{NodeGraphCanvas, edge_drag};
-use super::{NullServices, TestUiHostImpl, event_cx};
+use super::prelude::{NodeGraphCanvas, edge_drag};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
@@ -125,7 +125,7 @@ fn edge_drag_prefers_from_endpoint_when_port_centers_are_equidistant() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, out, inn) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
@@ -187,7 +187,7 @@ fn edge_reconnect_radius_is_zoom_invariant_in_screen_space() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, out, inn) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let radius_screen = 16.0;
 

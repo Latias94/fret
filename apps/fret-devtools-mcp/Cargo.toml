@@ -1,0 +1,27 @@
+[package]
+name = "fret-devtools-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+default-run = "fret-devtools-mcp"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "io-std"] }
+schemars = "1.2"
+rmcp = { version = "0.14.0", default-features = false, features = ["base64", "macros", "server", "transport-io"] }
+base64 = "0.22"
+
+fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
+fret-diag = { path = "../../crates/fret-diag" }
+fret-diag-ws = { path = "../../crates/fret-diag-ws", default-features = false, features = ["client-native", "server-native"] }

@@ -505,9 +505,21 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if !focused {
                     return;
                 }
+
+                let mut anchor = *anchor as usize;
+                let mut focus = *focus as usize;
+                if self.is_ime_composing() {
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+                    let preedit_len = self.preedit.len();
+                    anchor =
+                        crate::text_edit::ime::display_to_base_index(caret, preedit_len, anchor);
+                    focus = crate::text_edit::ime::display_to_base_index(caret, preedit_len, focus);
+                }
+
                 self.clear_preedit();
                 self.edit_state()
-                    .set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
+                    .set_selection_grapheme_clamped(anchor, focus);
                 self.ensure_caret_visible = true;
 
                 cx.invalidate_self(Invalidation::Paint);
@@ -1092,8 +1104,11 @@ impl<H: UiHost> Widget<H> for TextArea {
         let layout_text_owned = self.layout_text();
         let layout_text = layout_text_owned.as_deref().unwrap_or(&self.text);
 
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_width(self.wrap, inner.size.width);
         let mut constraints = TextConstraints {
-            max_width: Some(inner.size.width),
+            max_width: Some(max_width),
             wrap: self.wrap,
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
@@ -1104,7 +1119,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 .measure_str(layout_text, &self.text_style, constraints);
         let show_scrollbar = metrics.size.height.0 > inner.size.height.0;
         if show_scrollbar {
-            constraints.max_width = Some(Px((inner.size.width.0 - scrollbar_w.0).max(0.0)));
+            let max_width = Px((inner.size.width.0 - scrollbar_w.0).max(0.0));
+            let max_width = cx.tree.maybe_bucket_text_wrap_width(self.wrap, max_width);
+            constraints.max_width = Some(max_width);
             metrics = cx
                 .services
                 .text()
@@ -1149,6 +1166,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         } else {
             inner.size.width
         };
+        let max_width = cx.tree.maybe_bucket_text_wrap_width(self.wrap, max_width);
         let constraints = TextConstraints {
             max_width: Some(max_width),
             wrap: self.wrap,

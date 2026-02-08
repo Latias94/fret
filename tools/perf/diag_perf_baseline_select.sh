@@ -20,7 +20,7 @@ Notes:
   - Designed for Fret `diag perf` baseline generation/selection.
   - Candidate winner priority:
       1) fewer validation failures
-      2) lower resize p90 (top_total_time_us)
+      2) lower suite p90 (sum of top_total_time_us)
       3) lower sum of max_top_total_us thresholds
 USAGE
 }
@@ -233,7 +233,7 @@ for ((i=1; i<=candidates; i++)); do
       <<<"$fail_details")"
   done
 
-  resize_p90="$(jq -r '.rows[] | select(.script=="tools/diag-scripts/ui-gallery-window-resize-stress-steady.json") | .measured_p90.top_total_time_us' "$candidate_baseline")"
+  resize_p90="$(jq -r '[.rows[].measured_p90.top_total_time_us // 0] | add' "$candidate_baseline")"
   threshold_sum="$(jq '[.rows[].thresholds.max_top_total_us] | add' "$candidate_baseline")"
 
   echo "[candidate] name=${candidate_name} fail_total=${fail_total} resize_p90=${resize_p90} threshold_sum=${threshold_sum}"
@@ -294,6 +294,7 @@ jq -n \
       path: $best_candidate,
       fail_total: $best_failures,
       resize_p90_top_total_us: $best_resize_p90,
+      suite_p90_total_time_us_sum: $best_resize_p90,
       threshold_sum_max_top_total_us: $best_threshold_sum
     },
     candidates: $candidate_results

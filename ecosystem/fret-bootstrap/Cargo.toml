@@ -29,6 +29,7 @@ ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
 diagnostics = ["tracing", "dep:fret-canvas", "dep:fret-query", "fret-launch/diag-screenshots"]
+diagnostics-ws = ["diagnostics", "dep:fret-diag-ws"]
 
 [dependencies]
 thiserror.workspace = true
@@ -46,6 +47,7 @@ fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-icons = { path = "../fret-icons" }
 fret-launch = { path = "../../crates/fret-launch" }
 fret-render = { path = "../../crates/fret-render" }
+fret-diag-protocol = { path = "../../crates/fret-diag-protocol" }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
 fret-ui-app = { path = "../../crates/fret-ui-app", optional = true }
 fret-canvas = { path = "../fret-canvas", optional = true }
@@ -58,3 +60,9 @@ fret-ui-assets = { path = "../fret-ui-assets", optional = true }
 fret-icons-lucide = { path = "../fret-icons-lucide", optional = true }
 fret-icons-radix = { path = "../fret-icons-radix", optional = true }
 subsecond = { version = "0.7.2", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fret-diag-ws = { path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-native"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+fret-diag-ws = { path = "../../crates/fret-diag-ws", optional = true, default-features = false, features = ["client-wasm"] }

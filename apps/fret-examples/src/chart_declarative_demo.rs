@@ -204,5 +204,5 @@ fn view(
 
     let mut props = ChartCanvasPanelProps::new(st.spec.clone());
     props.engine = Some(st.engine.clone());
-    vec![chart_canvas_panel(cx, props)].into()
+    chart_canvas_panel(cx, props).into()
 }

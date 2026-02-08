@@ -1,7 +1,7 @@
-use super::super::state::{
+use super::*;
+use crate::ui::canvas::state::{
     ViewportAnimationEase, ViewportAnimationInterpolate, ViewportAnimationState,
 };
-use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn stop_viewport_animation_timer<H: UiHost>(&mut self, host: &mut H) {

@@ -8,8 +8,8 @@ use crate::core::GroupId;
 use crate::ops::GraphOp;
 use crate::runtime::callbacks::{NodeDragEndOutcome, ViewportMoveEndOutcome, ViewportMoveKind};
 
-use super::super::state::{PendingNodeSelectAction, ViewSnapshot, WireDrag, WireDragKind};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{PendingNodeSelectAction, ViewSnapshot, WireDrag, WireDragKind};
 
 pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

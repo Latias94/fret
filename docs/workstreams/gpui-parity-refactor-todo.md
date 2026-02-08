@@ -731,7 +731,7 @@ topics (if/when we implement them):
     - Anchors:
       - `crates/fret-ui/src/tree/prepaint.rs` (non-retained prefetch; `window_shift_kind=prefetch`)
       - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
-      - `apps/fretboard/src/diag/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
+      - `crates/fret-diag/src/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
       - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
     - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
       - `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
@@ -1503,7 +1503,7 @@ topics (if/when we implement them):
     - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --launch -- cargo run -p fret-ui-gallery`
   - Progress (v2):
     - Suite defaults now enable cache+shell and a variable-height dataset:
-      - `apps/fretboard/src/diag/mod.rs` (`ui-gallery-ai-transcript-retained` sets `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`, and defaults `--warmup-frames 5`)
+      - `crates/fret-diag/src/lib.rs` (`ui-gallery-ai-transcript-retained` sets `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`, and defaults `--warmup-frames 5`)
     - Script now includes an append step so “new messages arriving while scrolling” is exercised:
       - `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-ai-transcript-append`)
       - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (click append + idle tail)
@@ -1525,7 +1525,7 @@ topics (if/when we implement them):
       `crates/fret-ui/src/tree/dispatch.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
     - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` writes `check.notify_hotspots.json`
       next to the bundle (even on failure).
-      - Anchors: `apps/fretboard/src/diag/stats.rs`, `apps/fretboard/src/diag/mod.rs`.
+      - Anchors: `crates/fret-diag/src/stats.rs`, `crates/fret-diag/src/lib.rs`.
   - Baseline note (pre-v1): worst-tick bundles were layout-dominated and frequently attributed dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:*`.
   - Progress (v1):

@@ -1,5 +1,5 @@
-use super::super::EdgeEndpoint;
 use crate::core::{EdgeId, PortId};
+use crate::ui::canvas::widget::EdgeEndpoint;
 
 pub(super) struct BestByDistance<K: Ord + Copy, V: Copy> {
     eps: f32,

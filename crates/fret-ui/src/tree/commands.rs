@@ -49,6 +49,8 @@ impl<H: UiHost> UiTree<H> {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
@@ -65,6 +67,8 @@ impl<H: UiHost> UiTree<H> {
             {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
             }
             input_ctx.window_arbitration = Some(self.window_input_arbitration_snapshot());
         }
@@ -284,6 +288,8 @@ impl<H: UiHost> UiTree<H> {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
@@ -300,6 +306,8 @@ impl<H: UiHost> UiTree<H> {
             {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
             }
 
             let window_arbitration = self.window_input_arbitration_snapshot();
@@ -435,6 +443,8 @@ impl<H: UiHost> UiTree<H> {
                 text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
                 edit_can_undo: true,
                 edit_can_redo: true,
+                router_can_back: false,
+                router_can_forward: false,
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(mode) = app
@@ -450,6 +460,8 @@ impl<H: UiHost> UiTree<H> {
             {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
             }
 
             let window_arbitration = self.window_input_arbitration_snapshot();
@@ -563,12 +575,17 @@ impl<H: UiHost> UiTree<H> {
         true
     }
 
-    pub(super) fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
+    pub fn scroll_node_into_view(&mut self, app: &mut H, target: NodeId) -> bool {
         let Some(target_bounds) = self.nodes.get(target).map(|n| n.bounds) else {
             return false;
         };
 
-        let mut node = Some(target);
+        // Only scroll *ancestors* of the target into view.
+        //
+        // If the target itself is scrollable, attempting to scroll it “into view” via itself can
+        // incorrectly mutate its offset (e.g. resetting a virtual list to top when it receives
+        // focus).
+        let mut node = self.nodes.get(target).and_then(|n| n.parent);
         while let Some(id) = node {
             let parent = self.nodes.get(id).and_then(|n| n.parent);
             node = parent;

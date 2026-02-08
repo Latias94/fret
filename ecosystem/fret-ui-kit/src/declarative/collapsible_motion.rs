@@ -378,7 +378,7 @@ mod tests {
                 "collapsible-motion",
                 |cx| {
                     let state_id = cx.root_id();
-                    let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+                    let is_open = cx.watch_model(&open).copied_or_default();
 
                     let measured = last_measured_height_for(cx, state_id);
                     let has_measurement = measured.0 > 0.0;

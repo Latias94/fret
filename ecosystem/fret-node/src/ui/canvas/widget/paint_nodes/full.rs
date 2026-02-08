@@ -1,6 +1,6 @@
-use super::super::paint_render_data::RenderData;
-use super::super::*;
 use crate::ui::canvas::geometry::node_size_default_px;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     #[allow(dead_code)]

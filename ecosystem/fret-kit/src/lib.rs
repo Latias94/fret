@@ -74,6 +74,7 @@ pub mod prelude {
         TextProps,
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui_kit::declarative::AnyElementSemanticsExt;
     pub use fret_ui_kit::declarative::ModelWatchExt;
     #[cfg(not(feature = "shadcn"))]
     pub use fret_ui_kit::{
@@ -427,6 +428,11 @@ pub fn app_with_hooks<S: 'static>(
         .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
+
+    #[cfg(feature = "router")]
+    let builder = builder.install_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+    });
 
     #[cfg(feature = "diagnostics")]
     let builder = builder.with_default_diagnostics();

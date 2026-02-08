@@ -2016,9 +2016,10 @@ impl Gizmo3dDemoDriver {
         let availability = WindowCommandAvailability {
             edit_can_undo,
             edit_can_redo,
+            ..Default::default()
         };
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
-            svc.set_snapshot(window, availability);
+            svc.set_edit_availability(window, edit_can_undo, edit_can_redo);
         });
         availability
     }

@@ -189,8 +189,9 @@ Known “core engine” gaps (as of this workstream start):
   `filterFns` + `resolveFilterValue` + `autoRemove`, plus `filterFromLeafRows` /
   `maxLeafRowFilterDepth` depth controls and per-row pass/fail + filter meta maps (including
   custom `addMeta`-like callbacks). Remaining gap: fully typed `globalFilter` surface.
-- Sorting lacks TanStack behaviors like sortingFn auto-selection, and the remaining
-  `sortUndefined: false` semantics (see M3 / HTP-sort-010 + HTP-sort-040).
+- Sorting is mostly parity-gated (sortingFn resolution, multi-sort transitions, `invertSorting`,
+  `sortDescFirst`, and `sortUndefined`). Remaining work is primarily broader edge-case coverage
+  (mixed/nullish values, grouped sorting interactions) and continued capability inventory work.
 - “Auto-reset” behaviors are parity-gated, but we do not yet model TanStack’s instance-level
   `_queue` mechanism as a first-class runtime concern. Current parity tests simulate the
   “register first, reset later” semantics at the state-transition layer.

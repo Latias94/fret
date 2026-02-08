@@ -30,6 +30,12 @@ Related ADRs:
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
 
+Implementation pointers (where the code lives today):
+
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- Script/selector/result types (serde): `crates/fret-diag-protocol`
+- CLI tooling engine (pack/stats/gates/compare): `crates/fret-diag` (wrapped by `apps/fretboard/src/diag.rs`)
+
 ## Quick Start (manual bundle dump)
 
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
@@ -91,6 +97,30 @@ Workflow tip:
 - To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
+
+## DevTools GUI (preview)
+
+This repo includes a WIP DevTools GUI app at `apps/fret-devtools` that wraps the same inspect/pick/scripts/bundles
+contracts with a low-friction, real-time UI (including web runner support via WebSocket transport).
+
+Run the DevTools GUI (it hosts a loopback-only WS server):
+
+- `cargo run -p fret-devtools`
+
+Connect a target app (native):
+
+- set `FRET_DEVTOOLS_WS=ws://127.0.0.1:7331/`
+- set `FRET_DEVTOOLS_TOKEN=<token>`
+
+Connect a target app (web runner):
+
+- add `?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>` to the URL
+
+Notes:
+
+- The GUI prints a ready-to-copy `ws://.../?fret_devtools_token=...` URL on startup.
+- `FRET_DEVTOOLS_WS_PORT` overrides the default port (`7331`).
+- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains `bundle.json`.
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:

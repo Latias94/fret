@@ -270,7 +270,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cancel::cancel_active_gestures(self, cx);
             if snapshot.interaction.pan_on_drag.right {
                 self.interaction.pending_right_click =
-                    Some(super::super::state::PendingRightClick {
+                    Some(crate::ui::canvas::state::PendingRightClick {
                         start_pos: position,
                     });
                 cx.capture_pointer(cx.node);

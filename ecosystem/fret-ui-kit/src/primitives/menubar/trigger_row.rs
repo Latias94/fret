@@ -820,7 +820,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
     focused: bool,
 ) {
     let active_value = cx.watch_model(&group_active).cloned().flatten();
-    let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+    let is_open = cx.watch_model(&open).copied_or_default();
 
     let (hovered_model, hover_timer) = ensure_hover_switch_models(cx, trigger_id);
 

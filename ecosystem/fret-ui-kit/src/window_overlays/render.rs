@@ -1122,6 +1122,8 @@ pub fn render<H: UiHost + 'static>(
         let from_producer = hover_request_ids.contains(&req.id);
         seen_hover_overlays.insert(req.id);
 
+        // Hover overlays (e.g. HoverCard) can remain mounted during close transitions, but they
+        // must become pointer-transparent while closing to avoid blocking underlay interactions.
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let interactive = req.interactive && open_now;
         let on_pointer_move = req.on_pointer_move.clone();

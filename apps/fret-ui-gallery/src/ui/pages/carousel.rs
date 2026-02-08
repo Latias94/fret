@@ -88,8 +88,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             base = base.refine_viewport_layout(LayoutRefinement::default().h_px(viewport_h));
         }
 
-        base.into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        base.into_element(cx).test_id(test_id)
     };
 
     let demo_content = carousel(
@@ -290,8 +289,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-carousel-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-carousel-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

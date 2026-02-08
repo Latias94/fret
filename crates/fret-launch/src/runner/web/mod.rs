@@ -74,7 +74,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     nv12_gpu: Option<super::yuv_gpu::Nv12GpuConverter>,
 
     platform: fret_runner_winit::WinitPlatform,
-    web_cursor: Option<fret_runner_winit::WebCursorListener>,
+    web_cursor: Option<fret_runner_web::WebCursorListener>,
     web_services: WebPlatformServices,
 }
 

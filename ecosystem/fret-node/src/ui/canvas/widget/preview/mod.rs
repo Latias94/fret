@@ -3,8 +3,8 @@ mod node_resize;
 
 use std::collections::HashMap;
 
-use super::super::state::DragPreviewCacheMetaMut;
 use super::*;
+use crate::ui::canvas::state::DragPreviewCacheMetaMut;
 
 pub(super) fn ports_for_node<'a>(
     node_ports: &'a HashMap<GraphNodeId, Vec<PortId>>,

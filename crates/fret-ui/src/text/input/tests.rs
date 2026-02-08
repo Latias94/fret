@@ -6,7 +6,7 @@ use crate::widget::Widget;
 use fret_core::{
     AppWindowId, Event, ImeEvent, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
 };
-use fret_runtime::{Effect, PlatformCapabilities};
+use fret_runtime::{CommandId, Effect, PlatformCapabilities};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
@@ -610,6 +610,133 @@ fn double_click_cancels_preedit_and_maps_hit_test_from_display_to_base_indices()
         (input.selection_anchor, input.caret),
         (6, 11),
         "expected display hit-test index to map to base indices after cancelling preedit"
+    );
+}
+
+#[test]
+fn command_navigation_cancels_preedit_deterministically() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = ImeTextService::default();
+    let mut tree = UiTree::new();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = input.text.len();
+    input.selection_anchor = input.caret;
+
+    input.event(
+        &mut event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            Rect::default(),
+            &mut fret_runtime::DefaultActionSet::default(),
+        ),
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((0, 2)),
+        }),
+    );
+    assert!(input.is_ime_composing());
+
+    let mut cx = command_cx(&mut app, &mut services, &mut tree, node, window);
+    let handled = input.command(&mut cx, &CommandId::new("text.move_left"));
+    assert!(handled);
+    assert!(
+        !input.is_ime_composing(),
+        "expected command-driven navigation to cancel preedit deterministically"
+    );
+    assert_eq!(input.preedit, "");
+    assert_eq!(input.preedit_cursor, None);
+    assert_eq!(input.caret, "hell".len());
+    assert_eq!(input.selection_anchor, input.caret);
+}
+
+#[test]
+fn vertical_navigation_command_does_not_cancel_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = ImeTextService::default();
+    let mut tree = UiTree::new();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = input.text.len();
+    input.selection_anchor = input.caret;
+
+    input.event(
+        &mut event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            Rect::default(),
+            &mut fret_runtime::DefaultActionSet::default(),
+        ),
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((0, 2)),
+        }),
+    );
+    assert!(input.is_ime_composing());
+
+    let mut cx = command_cx(&mut app, &mut services, &mut tree, node, window);
+    let handled = input.command(&mut cx, &CommandId::new("text.move_up"));
+    assert!(handled);
+    assert!(
+        input.is_ime_composing(),
+        "expected vertical navigation to be reserved for IME arbitration while composing"
+    );
+    assert_eq!(input.preedit, "yo");
+    assert_eq!(input.caret, input.text.len());
+    assert_eq!(input.selection_anchor, input.caret);
+}
+
+#[test]
+fn copy_command_does_not_cancel_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = ImeTextService::default();
+    let mut tree = UiTree::new();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = input.text.len();
+    input.selection_anchor = input.caret;
+
+    input.event(
+        &mut event_cx(
+            &mut app,
+            &mut services,
+            node,
+            window,
+            Rect::default(),
+            &mut fret_runtime::DefaultActionSet::default(),
+        ),
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((0, 2)),
+        }),
+    );
+    assert!(input.is_ime_composing());
+
+    let mut cx = command_cx(&mut app, &mut services, &mut tree, node, window);
+    let handled = input.command(&mut cx, &CommandId::new("text.copy"));
+    assert!(handled);
+    assert!(
+        input.is_ime_composing(),
+        "expected copy to preserve preedit (non-mutating command)"
     );
 }
 

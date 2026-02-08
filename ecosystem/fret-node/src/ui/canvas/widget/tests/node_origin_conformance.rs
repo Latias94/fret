@@ -1,15 +1,11 @@
-use crate::io::NodeGraphViewState;
-
-use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::prelude::NodeGraphCanvas;
+use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn node_origin_center_shifts_node_rect_origin() {
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
         s.interaction.node_origin.x = 0.5;

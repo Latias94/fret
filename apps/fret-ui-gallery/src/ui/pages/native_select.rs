@@ -80,9 +80,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .a11y_label("Fruit")
             .refine_layout(select_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-native-select-demo"),
-            );
+            .test_id("ui-gallery-native-select-demo");
         section_card(cx, "Demo", content)
     };
 
@@ -106,7 +104,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-native-select-groups"));
+        .test_id("ui-gallery-native-select-groups");
         section_card(cx, "Groups", content)
     };
 
@@ -116,9 +114,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .disabled(true)
             .refine_layout(select_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-native-select-disabled"),
-            );
+            .test_id("ui-gallery-native-select-disabled");
         section_card(cx, "Disabled", content)
     };
 
@@ -128,9 +124,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             .aria_invalid(true)
             .refine_layout(select_width.clone())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-native-select-invalid"),
-            );
+            .test_id("ui-gallery-native-select-invalid");
         section_card(cx, "Invalid", content)
     };
 
@@ -161,9 +155,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 ]
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-native-select-vs-select"),
-        );
+        .test_id("ui-gallery-native-select-vs-select");
         section_card(cx, "Native Select vs Select", content)
     };
 
@@ -178,7 +170,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-native-select-rtl"));
+        .test_id("ui-gallery-native-select-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -204,9 +196,8 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-native-select-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-native-select-component");
 
     let code_panel_body = stack::vstack(
         cx,

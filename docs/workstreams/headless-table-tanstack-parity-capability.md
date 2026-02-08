@@ -19,7 +19,79 @@ Legend:
 - **Partial**: implemented, but lacks option/edge-case parity coverage.
 - **Missing**: no equivalent capability surface yet.
 
-Last updated: 2026-02-07
+Last updated: 2026-02-08
+
+---
+
+## Core instance surface (Table/Row/Column/Header/Cell)
+
+This section turns the upstream “core” public instance surfaces into an explicit capability
+checklist. The goal is to ensure Fret is **not weaker** than TanStack `table-core` even if we do not
+mirror the exact JS instance object model.
+
+Upstream source of truth:
+
+- `repo-ref/table/packages/table-core/src/core/table.ts`
+- `repo-ref/table/packages/table-core/src/core/row.ts`
+- `repo-ref/table/packages/table-core/src/core/column.ts`
+- `repo-ref/table/packages/table-core/src/core/headers.ts`
+- `repo-ref/table/packages/table-core/src/core/cell.ts`
+
+Mapping conventions:
+
+- When TanStack exposes instance methods on `table/row/column/header/cell`, Fret may express the
+  same capability via:
+  - a pure derived model (`RowModel`, header groups, column ordering),
+  - a snapshot (`CoreModelSnapshot`),
+  - or a targeted helper on `Table` that returns the observable outcome.
+- When the capability is “UI query heavy” (widths/starts, pin-family splits), prefer the
+  snapshot-style inventories to prevent consumers from re-computing and drifting.
+
+### Table core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `table.getAllColumns()` | `Table::column_tree()` (nested `ColumnDef` tree) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `table.getAllFlatColumns()` | `Table::all_flat_columns()` (preorder DFS; no columnOrder) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`all_flat_columns`) + `visibility_ordering.json` |
+| `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
+| `table.getColumn(columnId)` | `Table::column(column_id)` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column`) |
+| `table.getCoreRowModel()` | `Table::core_row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRowModel()` | `Table::row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRow(rowId, searchAll?)` | `Table::row_by_id(row_id, search_all)` | Aligned | `row_id_lookup.json` + `tanstack_v8_row_id_lookup_parity.rs` |
+| `table.getState()` | `Table::state()` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
+| `table.options.renderFallbackValue` | `Table::render_fallback_value()` + `Table::cell_render_value(..)` | Aligned | `render_fallback.json` |
+| `table._queue(cb)` (auto-reset scheduling) | modeled via state-transition parity gates (no runtime queue yet) | Partial | `auto_reset.json` + `docs/workstreams/headless-table-tanstack-parity.md` notes |
+
+### Row core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `row.id/index/depth/parentId/subRows` | `RowModel` arena fields | Aligned | `selection_tree.json` + `tanstack_v8_selection_tree_parity.rs` |
+| `row.getLeafRows()` | `RowModel::leaf_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getParentRow()/getParentRows()` | `RowModel::parent_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`cell_value`) |
+| `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
+| `row.getAllCells()` | `Table::row_cells(row_key)` (snapshot of ids + flags + pin splits) | Partial | `headers_cells.json` / `column_pinning.json` |
+| `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_unique_values`) |
+
+### Column core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `column.id/depth/parent/columns` | `ColumnDef` tree (`Table::column_tree`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `column.getFlatColumns()` | `Table::all_flat_columns()` (table-level equivalent) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` |
+| `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Partial | parity fixtures (ordering/visibility) |
+
+### Header + cell core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| Header groups (`getHeaderGroups`, pin-family variants) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
+| Flat/leaf/footer inventories | `Table::{flat_headers,leaf_headers,footer_groups}` (+ pin-family variants) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `header.getSize()/getStart()` | `CoreModelSnapshot.header_sizing` (versioned inventory by header id) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.id` | `CoreModelSnapshot.cells[*].{all,visible,left,center,right}[].id` | Aligned | `headers_cells.json` |
+| `cell.getIsGrouped/isPlaceholder/isAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.getValue()/renderValue()` | `Table::{cell_value,cell_render_value}` | Partial | helper exists; not snapshot-serialized today |
 
 ---
 
@@ -33,6 +105,12 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
 - **Core snapshot completeness**: `CoreModelSnapshot` is still “structure + ids” heavy.
   - Gap: lacks a first-class, versioned inventory of column/header/cell capabilities that UI consumers typically
     query on instances (e.g. `getCanResize`, `getIsPlaceholder`, pin-family splits).
+  - Update: an initial, versioned `column_capabilities` inventory for **leaf columns** is now parity-gated
+    (`getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`).
+    Update: fold **header sizing** (`header.getSize/getStart`) into the core snapshot as a versioned inventory keyed
+    by header id, so UI consumers do not re-compute starts/sizes and drift under pin-family splits.
+    Parity gate: `headers_cells.json`, `headers_inventory_deep.json` (`core_model.header_sizing`).
+    Remaining: expand the same approach across header/cell capabilities (and decide the minimal row surface).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:
   - Closed (initial): a documented + gated integration pattern exists for “rebuild per frame, keep memo cache”
@@ -99,7 +177,7 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::column_tree_snapshot` + `Table::ordered_columns` + `Table::column` + `Table::visible_leaf_columns`-style surfaces | Partial | `tanstack_v8_headers_cells_parity.rs` (core model snapshot) |
+| `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,column_tree_snapshot,all_flat_columns,ordered_columns,column_any,column_node_snapshot}` | Aligned | `headers_inventory_deep.json`, `visibility_ordering.json` |
 | `getHeaderGroups/getLeftHeaderGroups/getCenterHeaderGroups/getRightHeaderGroups` | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` (snapshot output) | Aligned | `tanstack_v8_headers_cells_parity.rs` |
 | `getFooterGroups/getLeftFooterGroups/getCenterFooterGroups/getRightFooterGroups` | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Aligned | `tanstack_v8_headers_cells_parity.rs` |
 | `getFlatHeaders/getLeftFlatHeaders/getCenterFlatHeaders/getRightFlatHeaders` | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Aligned | `tanstack_v8_headers_cells_parity.rs` |
@@ -114,10 +192,10 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Partial | row model fixtures across cases |
+| `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 | `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
-| `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Partial | `tanstack_v8_headers_cells_parity.rs` |
-| `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Partial | currently unit/fixture gated only where needed |
+| `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
+| `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
 ### Column (CoreColumn)
 
@@ -147,9 +225,9 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `row.getCanPin()` | `Table::row_can_pin(RowKey)` | Aligned | `pinning.json`, `grouping.json` |
+| `row.getCanPin()` | `Table::row_can_pin(RowKey)` | Aligned | `pinning.json`, `grouping.json`, `pinning_grouped_rows.json` |
 | `row.getIsPinned()` | `Table::row_is_pinned(RowKey)` | Aligned | `pinning.json` |
-| `row.getPinnedIndex()` | `Table::row_pinned_index(RowKey)` | Aligned | `pinning.json` |
+| `row.getPinnedIndex()` | `Table::row_pinned_index(RowKey)` | Aligned | `pinning.json`, `pinning_grouped_rows.json` |
 | `row.pin(position, includeLeafRows, includeParentRows)` | `Table::row_pinning_updater(..)` / `row_pinning_updater_by_id(..)` | Aligned | `pinning_tree.json`, `pinning_grouped_rows.json` |
 | `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_ids/center_row_ids/bottom_row_ids` (and `*_row_keys`) | Aligned | `pinning.json`, `grouping.json`, `pinning_grouped_rows.json` |
 | `table.getIsSomeRowsPinned(position?)` | `Table::is_some_rows_pinned(..)` | Aligned | `pinning.json` |
@@ -650,11 +728,11 @@ Rules:
 
 **Columns**
 
-- **Partial**: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`
+- **Aligned**: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`
   → `Table::{column_tree,ordered_columns,column}` + `CoreModelSnapshot.column_tree/leaf_columns` (`headers_cells.json`).
 - **Aligned**: `getVisibleLeafColumns` (+ left/center/right variants)
   → `CoreModelSnapshot.leaf_columns.{visible,left_visible,center_visible,right_visible}` (`headers_cells.json`).
-- **Partial**: `getVisibleFlatColumns` (may need a dedicated “flat column” snapshot helper).
+- **Aligned**: `getVisibleFlatColumns/getAllFlatColumns` → `Table::{visible_flat_columns,all_flat_columns}` (gated via `visibility_ordering.json`).
 
 **Headers**
 
@@ -732,7 +810,7 @@ Legend:
 | `getExpandedDepth` | `Table::expanded_depth()` | Partial | unit gate: `row_expanding.rs` (`expanded_depth_tracks_max_depth_plus_one`) |
 | `getTopRows/getCenterRows/getBottomRows` | `Table::{top_row_keys,center_row_keys,bottom_row_keys}` + row lookup | Aligned | `pinning.json` |
 | `getIsSomeRowsPinned` | `Table::is_some_rows_pinned(position)` | Aligned | `pinning.json` |
-| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column}` + core snapshot | Partial | `headers_cells.json` |
+| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column_any}` (+ `column_tree_snapshot/column_node_snapshot`) | Aligned | `headers_inventory_deep.json`, `headers_cells.json` |
 | `getVisibleLeafColumns` (+ left/center/right) | `CoreModelSnapshot.leaf_columns.*` | Aligned | `headers_cells.json` |
 | `getLeft/Center/RightLeafColumns` | `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` | Aligned | `column_pinning.json` |
 | `getHeaderGroups` (+ left/center/right) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` |
@@ -743,7 +821,7 @@ Legend:
 | `getIsSomeColumnsPinned` | `Table::is_some_columns_pinned(position)` | Aligned | `column_pinning.json` |
 | `getIsAllColumnsVisible/getIsSomeColumnsVisible` | `Table::{is_all_columns_visible,is_some_columns_visible}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `toggleAllColumnsVisible` | `Table::toggled_all_columns_visible(visible)` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
-| `getVisibleFlatColumns/getAllFlatColumns` | derive via column tree snapshot; may need `visible_flat_columns` helper | Partial | N/A |
+| `getVisibleFlatColumns/getAllFlatColumns` | `Table::{visible_flat_columns,all_flat_columns}` | Aligned | `visibility_ordering.json`, `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` |
 | `getGlobalFilterFn/getGlobalAutoFilterFn` | `TableBuilder::global_filter_fn(..)` + `FilteringFnSpec::Auto` | Partial | fixture gates cover outcomes (`filtering_fns.json`) but not a dedicated “fn identity” surface |
 | `getGlobalFacetedRowModel/getGlobalFacetedUniqueValues/getGlobalFacetedMinMaxValues` | currently not first-class; upstream built-ins often yield empty/null (fixture captures) | Partial | `faceting.json` |
 | `getState` | state is external (`TableState` owned by consumers) | Partial | state conversion + presence gates |
@@ -837,7 +915,7 @@ and does not need to preserve method names, but the **capability must exist**.
 
 | Upstream (`row.*`) | Fret mapping (capability) | Status | Evidence / gate |
 | --- | --- | --- | --- |
-| `id/index/depth/parentId/subRows` | `Row` snapshot fields via `RowModel::row(..)` (`Row::{id,index,depth,parent,sub_rows}`) | Partial | `row_model` fixtures gate ids/ordering; full per-row structural snapshot not yet fixture-gated |
+| `id/index/depth/parentId/subRows` | `Row` snapshot fields via `RowModel::row(..)` (`Row::{id,index,depth,parent,sub_rows}`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 | `original/originalSubRows` | `Row::original` + `TableBuilder::get_sub_rows` | Partial | N/A |
 | `getValue` | `Table::cell_value(row_key, column_id)` | Partial | behavior gated indirectly by sorting/filtering fixtures |
 | `getAllCells/getVisibleCells/getLeft/Center/RightVisibleCells` | `Table::row_cells(row_key)` (`RowCellsSnapshot`) | Aligned | `headers_cells.json` |
@@ -851,7 +929,7 @@ and does not need to preserve method names, but the **capability must exist**.
 | `pin` | `Table::{row_pinning_updater,toggled_row_pinned}` (+ by-id variants) | Aligned | `pinning.json`, `pinning_tree.json`, `row_id_state_ops.json` |
 | `columnFilters/columnFiltersMeta` | `Table::row_filter_state_snapshot()` | Aligned | `filtering_meta.json` |
 | `groupingColumnId/getGroupingValue/getIsGrouped` | exposed via grouped-row model snapshots (`GroupedRowModel`) rather than per-row instance methods | Partial | `grouping.json` + grouped fixtures |
-| `getLeafRows/getParentRows` | derivable via `RowModel` traversal (`Row.parent` / `sub_rows`) | Partial | no dedicated gate yet |
+| `getLeafRows/getParentRows` | derivable via `RowModel` traversal (`Row.parent` / `sub_rows`) | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
 ### Header instance (public, non-underscore)
 

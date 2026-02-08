@@ -227,7 +227,7 @@ pub(super) fn render_component_page_tabs(
             shadcn::TabsItem::new("notes", "Notes", [notes_panel]),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id(format!("{test_id_prefix}-tabs")));
+        .test_id(format!("{test_id_prefix}-tabs"));
 
     vec![tabs]
 }

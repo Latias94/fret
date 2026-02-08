@@ -94,6 +94,8 @@ reflow + paint work. Zed feels smooth here primarily because it keeps the per-fr
 What we already do in Fret (evidence in the perf log):
 
 - **Coalesce resizes to once per frame** at the runner boundary (apply pending size at `RedrawRequested`).
+  - Code: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`pending_surface_resize` is applied inside
+    `WindowEvent::RedrawRequested`).
 - **Defer known-expensive scroll measurement** while the viewport is actively resizing (unbounded probe deferral).
 - **Make resize probes stable and reproducible** (so baselines measure “work per resize” rather than “scheduler timing”).
 
@@ -102,11 +104,25 @@ Open questions / likely gaps (need code-level confirmation against `repo-ref/zed
 Baseline fact (quick reference):
 - On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
   (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+- On Wayland, GPUI explicitly throttles interactive resizes to once per vblank (`configure.resizing` + `resize_throttle`)
+  (see `repo-ref/zed/crates/gpui/src/platform/linux/wayland/window.rs`).
 
 1) **Text layout cache model under width jitter**
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+     - Implemented probe: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
+   - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
+     long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
+   - Fret stopgap (default-on for jitter-class interactive resize):
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
+     - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
+   - Fret experiment knob (still default-off, broader scope): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+   - Latest evidence: see the perf log entries dated `2026-02-08` for `ui-resize-probes` gate stability before/after
+     the small-step default bucketing change.
+   - Conclusion: quantization is a pragmatic “make live-resize bounded” lever, but it is not the end state; the
+     longer-term direction remains improving wrapped-text reuse (separate shaping vs wrapping keys and reuse line
+     layouts across frames), closer to GPUI’s amortization model.
 
 2) **Layout invalidation granularity**
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.

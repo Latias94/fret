@@ -182,7 +182,7 @@ pub(super) fn preview_date_picker(
         .variant(shadcn::AlertVariant::Default)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        .test_id(test_id);
         section_card(cx, title, alert_content)
     };
 
@@ -197,7 +197,7 @@ pub(super) fn preview_date_picker(
     let basic_picker = shadcn::DatePicker::new(open, month, selected.clone())
         .placeholder("Pick a date")
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-basic"));
+        .test_id("ui-gallery-date-picker-basic");
 
     let basic_content = stack::vstack(
         cx,
@@ -227,7 +227,7 @@ pub(super) fn preview_date_picker(
     )
     .placeholder("Pick a date range")
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-range"));
+    .test_id("ui-gallery-date-picker-range");
 
     let range_content = stack::vstack(
         cx,
@@ -275,7 +275,7 @@ pub(super) fn preview_date_picker(
                     .into_element(cx)
                 },
             )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-dob"));
+            .test_id("ui-gallery-date-picker-dob");
 
         section_card(cx, "Date of Birth", dob_picker)
     };
@@ -311,7 +311,7 @@ pub(super) fn preview_date_picker(
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-rtl"));
+        .test_id("ui-gallery-date-picker-rtl");
 
         section_card(cx, "RTL", rtl_picker)
     };
@@ -340,9 +340,7 @@ pub(super) fn preview_date_picker(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-date-picker-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-date-picker-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

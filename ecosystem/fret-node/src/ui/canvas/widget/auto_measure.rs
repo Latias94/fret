@@ -1,5 +1,5 @@
-use super::super::geometry::node_size_default_px;
 use super::*;
+use crate::ui::canvas::geometry::node_size_default_px;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn update_auto_measured_node_sizes<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {

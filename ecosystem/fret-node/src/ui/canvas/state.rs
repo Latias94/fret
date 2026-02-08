@@ -527,12 +527,18 @@ pub(crate) struct PendingPaste {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct DrawOrderFingerprint {
+    pub(crate) lo: u64,
+    pub(crate) hi: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct DerivedBaseKey {
     pub(crate) graph_rev: u64,
     pub(crate) zoom_bits: u32,
     pub(crate) node_origin_x_bits: u32,
     pub(crate) node_origin_y_bits: u32,
-    pub(crate) draw_order_hash: u64,
+    pub(crate) draw_order: DrawOrderFingerprint,
     pub(crate) presenter_rev: u64,
     pub(crate) edge_types_rev: u64,
 }
@@ -566,13 +572,20 @@ pub(crate) struct InternalsCacheKey {
     pub(crate) view: InternalsViewKey,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DerivedBuildCounters {
+    pub(crate) geom_rebuilds: u64,
+    pub(crate) index_rebuilds: u64,
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct GeometryCache {
     pub(crate) geom_key: Option<GeometryCacheKey>,
     pub(crate) index_key: Option<SpatialIndexCacheKey>,
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
-    pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) index: Arc<super::spatial::CanvasSpatialDerived>,
     pub(crate) drag_preview: Option<DragPreviewCache>,
+    pub(crate) counters: DerivedBuildCounters,
 }
 
 impl GeometryCache {
@@ -590,6 +603,7 @@ impl GeometryCache {
         self.geom_key = Some(geom_key);
         self.index_key = None;
         self.clear_drag_preview();
+        self.counters.geom_rebuilds = self.counters.geom_rebuilds.saturating_add(1);
         true
     }
 
@@ -602,6 +616,7 @@ impl GeometryCache {
         }
         self.index_key = Some(index_key);
         self.clear_drag_preview();
+        self.counters.index_rebuilds = self.counters.index_rebuilds.saturating_add(1);
         true
     }
 
@@ -625,11 +640,11 @@ impl GeometryCache {
         update: impl FnOnce(
             &mut DragPreviewCacheMetaMut<'_>,
             &mut super::geometry::CanvasGeometry,
-            &mut super::spatial::CanvasSpatialIndex,
+            &mut super::spatial::CanvasSpatialDerived,
         ),
     ) -> Option<(
         Arc<super::geometry::CanvasGeometry>,
-        Arc<super::spatial::CanvasSpatialIndex>,
+        Arc<super::spatial::CanvasSpatialDerived>,
     )> {
         let cache = self.drag_preview.as_mut()?;
         if cache.preview_rev != preview_rev {
@@ -663,7 +678,7 @@ pub(crate) struct DragPreviewCache {
     pub(crate) base_index_key: SpatialIndexCacheKey,
     pub(crate) preview_rev: u64,
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
-    pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
+    pub(crate) index: Arc<super::spatial::CanvasSpatialDerived>,
     pub(crate) node_positions: HashMap<GraphNodeId, CanvasPoint>,
     pub(crate) node_rects: HashMap<GraphNodeId, Rect>,
     pub(crate) node_ports: HashMap<GraphNodeId, Vec<PortId>>,

@@ -63,6 +63,9 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
         let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
         let _ = reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
+        let _ = reg.alias(ids::ui::FILE, IconId::new("lucide.file"));
+        let _ = reg.alias(ids::ui::FOLDER, IconId::new("lucide.folder"));
+        let _ = reg.alias(ids::ui::FOLDER_OPEN, IconId::new("lucide.folder-open"));
         let _ = reg.alias(ids::ui::LOADER, IconId::new("lucide.loader-circle"));
         let _ = reg.alias(ids::ui::MORE_HORIZONTAL, IconId::new("lucide.ellipsis"));
         let _ = reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));

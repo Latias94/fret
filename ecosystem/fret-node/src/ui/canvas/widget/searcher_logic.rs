@@ -24,9 +24,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn rebuild_searcher_rows(searcher: &mut SearcherState) {
         let rows = match &searcher.target {
             ContextMenuTarget::ConnectionConvertPicker { .. } => {
-                super::super::searcher::build_rows_flat(&searcher.candidates, &searcher.query)
+                crate::ui::canvas::searcher::build_rows_flat(&searcher.candidates, &searcher.query)
             }
-            _ => super::super::searcher::build_rows(
+            _ => crate::ui::canvas::searcher::build_rows(
                 &searcher.candidates,
                 &searcher.query,
                 &searcher.recent_kinds,
@@ -124,7 +124,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let rows = super::super::searcher::build_rows(
+        let rows = crate::ui::canvas::searcher::build_rows(
             &menu_candidates,
             "",
             &self.interaction.recent_kinds,
@@ -180,7 +180,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let rows = super::super::searcher::build_rows(
+        let rows = crate::ui::canvas::searcher::build_rows(
             &menu_candidates,
             "",
             &self.interaction.recent_kinds,

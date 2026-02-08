@@ -44,6 +44,9 @@
     "release": [
       "fret-release-check-and-publish"
     ],
+    "performance": [
+      "fret-perf-workflow"
+    ],
     "parity": [
       "fret-shadcn-source-alignment"
     ],
@@ -180,6 +183,28 @@
       "CARGO_REGISTRY_TOKEN",
       "trusted publishing",
       "publish dry-run"
+    ],
+    "perf": [
+      "perf",
+      "performance",
+      "benchmark",
+      "profiling",
+      "profile",
+      "frame time",
+      "frametime",
+      "stutter",
+      "jank",
+      "hitch",
+      "gpu",
+      "wgpu",
+      "tracy",
+      "renderdoc",
+      "resize",
+      "scroll",
+      "pointer-move",
+      "diag perf",
+      "perf baseline",
+      "perf gates"
     ],
     "shadcn_radix": [
       "shadcn",

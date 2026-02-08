@@ -47,6 +47,8 @@ fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     }
 }

@@ -33,6 +33,7 @@ const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
 const HOVER_CARD_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
+const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -423,6 +424,7 @@ impl HoverCard {
             #[derive(Default)]
             struct HoverCardPointerDownModelState {
                 model: Option<Model<bool>>,
+                lease: Option<Model<u32>>,
             }
 
             let pointer_down_on_content = cx.with_state_for(
@@ -448,6 +450,31 @@ impl HoverCard {
                 .layout()
                 .copied()
                 .unwrap_or(false);
+
+            let interaction_lease = cx.with_state_for(
+                hover_card_id,
+                HoverCardPointerDownModelState::default,
+                |st| st.lease.clone(),
+            );
+            let interaction_lease = if let Some(model) = interaction_lease {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(0u32);
+                cx.with_state_for(
+                    hover_card_id,
+                    HoverCardPointerDownModelState::default,
+                    |st| {
+                        st.lease = Some(model.clone());
+                    },
+                );
+                model
+            };
+            let interaction_lease_now = cx
+                .watch_model(&interaction_lease)
+                .layout()
+                .copied()
+                .unwrap_or(0);
+            let interaction_lease_active = interaction_lease_now > 0;
 
             let (overlay_hovered, anchor_bounds, floating_bounds) =
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -529,7 +556,18 @@ impl HoverCard {
                 cfg,
             );
 
-            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+            scheduling::set_continuous_frames(
+                cx,
+                update.wants_continuous_ticks || interaction_lease_active,
+            );
+
+            if interaction_lease_active {
+                let next = interaction_lease_now.saturating_sub(1);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&interaction_lease, |v| *v = next);
+            }
 
             if update.open != open_now {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
@@ -562,14 +600,25 @@ impl HoverCard {
             let scale = motion.scale;
             let overlay_presence = OverlayPresence {
                 present: motion.present,
-                interactive: update.open,
+                // Keep the hover card interactive for the full duration it is mounted. Otherwise
+                // the card can remain visible during close transitions but become click-through,
+                // which breaks “interactive hover card” outcomes (pager buttons, links, etc.).
+                interactive: motion.present,
             };
 
             let out = vec![trigger];
             if debug_trace {
                 eprintln!(
-                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={}",
-                    cx.frame_id.0, open_now, update.open, motion.present, hovered
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={} overlay_hovered={} pointer_down_on_content={} interaction_lease={} has_text_selection={}",
+                    cx.frame_id.0,
+                    open_now,
+                    update.open,
+                    motion.present,
+                    hovered,
+                    overlay_hovered,
+                    pointer_down_on_content_now,
+                    interaction_lease_now,
+                    has_text_selection,
                 );
             }
             if !motion.present {
@@ -583,6 +632,9 @@ impl HoverCard {
                         .app
                         .models_mut()
                         .update(&pointer_down_on_content, |v| *v = false);
+                }
+                if interaction_lease_active {
+                    let _ = cx.app.models_mut().update(&interaction_lease, |v| *v = 0);
                 }
                 return out;
             }
@@ -663,6 +715,7 @@ impl HoverCard {
                 );
 
                 let pointer_down_on_content_model = pointer_down_on_content.clone();
+                let interaction_lease_model = interaction_lease.clone();
                 let content_for_panel = content.clone();
                 let wrapper = cx.hover_region(
                     HoverRegionProps {
@@ -686,6 +739,8 @@ impl HoverCard {
                             move |cx| {
                                 let pointer_down_model_for_down =
                                     pointer_down_on_content_model.clone();
+                                let interaction_lease_model_for_down =
+                                    interaction_lease_model.clone();
                                 cx.pointer_region_on_pointer_down(Arc::new(
                                     move |host: &mut dyn UiPointerActionHost,
                                           cx: ActionCx,
@@ -694,6 +749,11 @@ impl HoverCard {
                                         let _ = host
                                             .models_mut()
                                             .update(&pointer_down_model_for_down, |v| *v = true);
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&interaction_lease_model_for_down, |v| {
+                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                            });
                                         host.request_redraw(cx.window);
                                         false
                                     },
@@ -701,13 +761,22 @@ impl HoverCard {
 
                                 let pointer_down_model_for_up =
                                     pointer_down_on_content_model.clone();
+                                let interaction_lease_model_for_up =
+                                    interaction_lease_model.clone();
                                 cx.pointer_region_on_pointer_up(Arc::new(
                                     move |host: &mut dyn UiPointerActionHost,
                                           cx: ActionCx,
                                           _up: PointerUpCx| {
+                                        host.release_pointer_capture();
                                         let _ = host
                                             .models_mut()
                                             .update(&pointer_down_model_for_up, |v| *v = false);
+                                        let _ = host.models_mut().update(
+                                            &interaction_lease_model_for_up,
+                                            |v| {
+                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                            },
+                                        );
                                         host.request_redraw(cx.window);
                                         false
                                     },
@@ -1899,6 +1968,19 @@ mod tests {
                 position: select_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: select_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 click_count: 2,
                 pointer_type: fret_core::PointerType::Mouse,
             }),

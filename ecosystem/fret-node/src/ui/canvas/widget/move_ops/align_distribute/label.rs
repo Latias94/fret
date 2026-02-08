@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::move_ops::*;
 
 pub(super) fn label_for_mode(mode: AlignDistributeMode) -> &'static str {
     match mode {

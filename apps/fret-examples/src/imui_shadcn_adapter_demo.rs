@@ -35,27 +35,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiShadcnAdapterState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiShadcnAdapterState) -> ViewElements {
-    let count = cx
-        .watch_model(&st.count)
-        .layout()
-        .copied()
-        .unwrap_or_default();
-    let enabled = cx
-        .watch_model(&st.enabled)
-        .paint()
-        .copied()
-        .unwrap_or_default();
-    let value = cx
-        .watch_model(&st.value)
-        .paint()
-        .copied()
-        .unwrap_or_default();
-    let mode = cx.watch_model(&st.mode).paint().cloned().unwrap_or(None);
-    let draft = cx
-        .watch_model(&st.draft)
-        .paint()
-        .cloned()
-        .unwrap_or_default();
+    let count = cx.watch_model(&st.count).layout().copied_or_default();
+    let enabled = cx.watch_model(&st.enabled).paint().copied_or_default();
+    let value = cx.watch_model(&st.value).paint().copied_or_default();
+    let mode = cx.watch_model(&st.mode).paint().cloned_or_default();
+    let draft = cx.watch_model(&st.draft).paint().cloned_or_default();
 
     let mode_label: Arc<str> = mode.unwrap_or_else(|| Arc::from("none"));
 
@@ -119,7 +103,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiShadcnAdapterState) -> Vi
             },
         );
 
-        let _ = ui.select_model("Mode", &st.mode, &select_items);
+        let _ = ui.select_model_ex(
+            "Mode",
+            &st.mode,
+            &select_items,
+            fret_ui_kit::imui::SelectOptions {
+                test_id: Some(Arc::from("imui-shadcn-demo.mode")),
+                ..Default::default()
+            },
+        );
 
         let _ = ui.input_text_model_ex(
             &st.draft,

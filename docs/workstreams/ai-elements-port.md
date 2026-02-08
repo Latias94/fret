@@ -15,6 +15,8 @@ This workstream tracks the port of Vercel's **AI Elements** component taxonomy i
 
 This is an **outcomes-first** port: we align behavior and composition outcomes, not React/DOM APIs.
 
+Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`.
+
 ## Version stamp (upstream reference)
 
 The upstream spec for this workstream is the pinned local checkout under
@@ -72,10 +74,20 @@ an interactive chat demo:
 - `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
   conversation/message parts for app composition.
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
+- `FileTree`: AI Elements-aligned nested file tree surface (small trees; no virtualization yet).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
-  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates (prompt input,
-    streaming finalize, tool-call disclosure, citation highlight, export-to-markdown).
+  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates:
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
+  - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
@@ -355,7 +367,10 @@ Notes:
 
 Tool calls should have an explicit lifecycle state so the UI can show running/progress/error:
 
-- `Pending` → `Running` → `Succeeded | Failed | Cancelled`
+- AI Elements-aligned states:
+  - `ApprovalRequested` / `ApprovalResponded`
+  - `InputStreaming` / `InputAvailable`
+  - `OutputAvailable` / `OutputDenied` / `OutputError`
 
 Represent `input`/`output` as structured values (e.g. JSON string or `serde_json::Value`) so apps
 can choose how to present them.
@@ -468,6 +483,34 @@ minimum v1 gate set:
 
 Concrete script names and gating checklists live in the TODO tracker:
 `docs/workstreams/ai-elements-port-todo.md`.
+
+## Known pitfalls (v1)
+
+### Diag automation: scroll container selection and semantics wrappers
+
+If multiple semantics nodes accidentally share the same `test_id` (e.g. a layout-transparent
+semantics decorator plus an inner leaf), a naive “pick deepest match” strategy can select a tiny
+wrapper node. For scroll-driven automation, this matters because wheel routing depends on the
+hit-test target.
+
+Current mitigation (diagnostics):
+
+- `scroll_into_view` container selection prefers a container candidate that is an ancestor of the
+  target semantics node and has the largest bounds (more likely to be the true scroll surface).
+- `fret-ui-ai` parts use layout-transparent semantics wrappers for `test_id` anchors so adding
+  selectors does not change layout or hit-test routing.
+
+If these gates regress again:
+
+- Capture a bundle at the failure step and inspect `debug.semantics` for duplicate `test_id` nodes.
+- If a selector matches multiple candidates, prefer a selector that is path-qualified (role + path)
+  or add a container/root `test_id` that is unique.
+
+### Sticky bottom chrome and safe insets
+
+Even with correct container selection, targets can land too close to sticky prompt chrome (the
+prompt panel). Keep `scroll_into_view.padding_insets_px.bottom_px` conservative in scripts so click
+targets land above the sticky region.
 
 ## Component inventory (upstream → Fret mapping)
 

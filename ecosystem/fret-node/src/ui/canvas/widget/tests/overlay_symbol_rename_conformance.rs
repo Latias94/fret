@@ -7,14 +7,13 @@ use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId, Symbol, SymbolId};
-use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::{
     NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
     NodeGraphStyle, SymbolRenameOverlay,
 };
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -87,9 +86,7 @@ fn symbol_rename_overlay_enter_commits_transaction_and_closes() {
             meta: serde_json::Value::Null,
         },
     );
-    let graph = host.models.insert(graph_value);
-
-    let _view = host.models.insert(NodeGraphViewState::default());
+    let (graph, _view) = insert_graph_view(&mut host, graph_value);
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());
@@ -195,9 +192,7 @@ fn symbol_rename_overlay_escape_closes_without_queueing_transaction() {
             meta: serde_json::Value::Null,
         },
     );
-    let graph = host.models.insert(graph_value);
-
-    let _view = host.models.insert(NodeGraphViewState::default());
+    let (graph, _view) = insert_graph_view(&mut host, graph_value);
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());
@@ -290,9 +285,7 @@ fn symbol_rename_overlay_enter_with_unchanged_text_closes_without_queueing_trans
             meta: serde_json::Value::Null,
         },
     );
-    let graph = host.models.insert(graph_value);
-
-    let _view = host.models.insert(NodeGraphViewState::default());
+    let (graph, _view) = insert_graph_view(&mut host, graph_value);
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());

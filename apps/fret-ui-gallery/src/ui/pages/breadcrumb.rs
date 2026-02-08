@@ -58,7 +58,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-demo"));
+        .test_id("ui-gallery-breadcrumb-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = shadcn::Breadcrumb::new()
@@ -68,7 +68,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-basic"));
+        .test_id("ui-gallery-breadcrumb-basic");
     let basic = section_card(cx, "Basic", basic_content);
 
     let custom_separator_content = shadcn::Breadcrumb::new()
@@ -79,9 +79,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-separator"),
-        );
+        .test_id("ui-gallery-breadcrumb-separator");
     let custom_separator = section_card(cx, "Custom Separator", custom_separator_content);
 
     let dropdown_content = shadcn::Breadcrumb::new()
@@ -92,7 +90,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-dropdown"));
+        .test_id("ui-gallery-breadcrumb-dropdown");
     let dropdown = section_card(cx, "Dropdown", dropdown_content);
 
     let collapsed_content = shadcn::Breadcrumb::new()
@@ -104,9 +102,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-collapsed"),
-        );
+        .test_id("ui-gallery-breadcrumb-collapsed");
     let collapsed = section_card(cx, "Collapsed", collapsed_content);
 
     let link_component_content = shadcn::Breadcrumb::new()
@@ -118,7 +114,7 @@ pub(super) fn preview_breadcrumb(
             shadcn::BreadcrumbItem::new("Breadcrumb"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-link"));
+        .test_id("ui-gallery-breadcrumb-link");
     let link_component = section_card(cx, "Link Component", link_component_content);
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
@@ -135,7 +131,7 @@ pub(super) fn preview_breadcrumb(
                 .into_element(cx)
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-rtl"));
+    .test_id("ui-gallery-breadcrumb-rtl");
     let rtl = section_card(cx, "RTL", rtl_content);
 
     let preview_hint = shadcn::typography::muted(

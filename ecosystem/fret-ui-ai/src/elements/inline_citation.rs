@@ -102,6 +102,10 @@ impl InlineCitation {
         };
 
         let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DIAG_DEBUG_AI_INLINE_CITATION_ACTIVATE").is_some() {
+                eprintln!("inline_citation activate: source_id={}", source_id.as_ref());
+            }
             let _ = host
                 .models_mut()
                 .update(&model, |v| *v = Some(source_id.clone()));
@@ -361,7 +365,7 @@ impl InlineCitation {
 
         HoverCard::new(trigger, card)
             .open_delay_frames(0)
-            .close_delay_frames(0)
+            .close_delay_frames(18)
             .into_element(cx)
     }
 }

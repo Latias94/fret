@@ -26,23 +26,6 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
-    },
-    { "type": "type_text", "text": "hello citations" },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-send" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" }
       },
       "timeout_frames": 240
@@ -55,7 +38,24 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-trigger" } },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-ai-chat-transcript-root" },
+      "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-trigger" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": { "left_px": 16.0, "top_px": 16.0, "right_px": 16.0, "bottom_px": 40.0 },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -64,7 +64,22 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" } },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-ai-chat-transcript-root" },
+      "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": { "left_px": 16.0, "top_px": 16.0, "right_px": 16.0, "bottom_px": 40.0 },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" }
+    },
     {
       "type": "wait_until",
       "predicate": {

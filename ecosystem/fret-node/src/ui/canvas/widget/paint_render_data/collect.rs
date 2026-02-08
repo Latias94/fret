@@ -6,7 +6,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &H,
         snapshot: &ViewSnapshot,
         geom: Arc<CanvasGeometry>,
-        index: Arc<CanvasSpatialIndex>,
+        index: Arc<CanvasSpatialDerived>,
         render_cull_rect: Option<Rect>,
         zoom: f32,
         hovered_edge: Option<EdgeId>,
@@ -36,7 +36,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 if include_groups {
                     let order = group_order(graph, &snapshot.group_draw_order);
+                    out.metrics.group_total = order.len();
                     for group_id in order {
+                        out.metrics.group_candidates =
+                            out.metrics.group_candidates.saturating_add(1);
                         let Some(group) = graph.groups.get(&group_id) else {
                             continue;
                         };
@@ -53,13 +56,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             Arc::<str>::from(group.title.clone()),
                             selected_groups.contains(&group_id),
                         ));
+                        out.metrics.group_visible = out.metrics.group_visible.saturating_add(1);
                     }
                 }
 
                 if include_nodes {
+                    out.metrics.node_total = geom.order.len();
                     if let Some(c) = cull {
                         let mut candidates: Vec<GraphNodeId> = Vec::new();
                         index.query_nodes_in_rect(c, &mut candidates);
+                        out.metrics.node_candidates = candidates.len();
 
                         let mut visible: Vec<GraphNodeId> = Vec::with_capacity(candidates.len());
                         for node in candidates {
@@ -95,6 +101,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 pin_rows,
                                 resize_handles,
                             ));
+                            out.metrics.node_visible = out.metrics.node_visible.saturating_add(1);
 
                             // Only build port labels/pins for visible nodes (but keep edge endpoints
                             // available via `CanvasGeometry` lookups).
@@ -120,6 +127,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             }
                         }
                     } else {
+                        out.metrics.node_candidates = geom.order.len();
                         for node in geom.order.iter().copied() {
                             let Some(node_geom) = geom.nodes.get(&node) else {
                                 continue;
@@ -140,6 +148,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                 pin_rows,
                                 resize_handles,
                             ));
+                            out.metrics.node_visible = out.metrics.node_visible.saturating_add(1);
 
                             // Only build port labels/pins for visible nodes (but keep edge endpoints
                             // available via `CanvasGeometry` lookups).
@@ -168,12 +177,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
 
                 if include_edges {
+                    out.metrics.edge_total = graph.edges.len();
                     let mut edge_ids: Vec<EdgeId> = Vec::new();
                     if let Some(c) = cull {
                         index.query_edges_in_rect(c, &mut edge_ids);
                     } else {
                         edge_ids.extend(graph.edges.keys().copied());
                     }
+                    out.metrics.edge_candidates = edge_ids.len();
 
                     for edge_id in edge_ids {
                         let Some(edge) = graph.edges.get(&edge_id) else {
@@ -267,6 +278,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             selected,
                             hovered,
                         });
+                        out.metrics.edge_visible = out.metrics.edge_visible.saturating_add(1);
                     }
 
                     out.edges

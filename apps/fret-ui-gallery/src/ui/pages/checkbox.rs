@@ -236,7 +236,7 @@ pub(super) fn preview_checkbox(
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-demo"));
+    .test_id("ui-gallery-checkbox-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let checked_state_content = stack::vstack(
@@ -292,7 +292,7 @@ pub(super) fn preview_checkbox(
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-checked-state"));
+    .test_id("ui-gallery-checkbox-checked-state");
     let checked_state = section_card(cx, "Checked State", checked_state_content);
 
     let invalid_content = shadcn::Field::new([
@@ -317,7 +317,7 @@ pub(super) fn preview_checkbox(
     )
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-invalid-field"));
+    .test_id("ui-gallery-checkbox-invalid-field");
     let invalid_state = section_card(cx, "Invalid State", invalid_content);
 
     let basic_content = shadcn::Field::new([
@@ -330,7 +330,7 @@ pub(super) fn preview_checkbox(
     .orientation(shadcn::FieldOrientation::Horizontal)
     .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-basic-field"));
+    .test_id("ui-gallery-checkbox-basic-field");
     let basic = section_card(cx, "Basic", basic_content);
 
     let description_content = shadcn::Field::new([
@@ -350,9 +350,7 @@ pub(super) fn preview_checkbox(
     .orientation(shadcn::FieldOrientation::Horizontal)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
-    .attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-checkbox-description-field"),
-    );
+    .test_id("ui-gallery-checkbox-description-field");
     let description_section = section_card(cx, "Description", description_content);
 
     let disabled_content = shadcn::Field::new([
@@ -371,7 +369,7 @@ pub(super) fn preview_checkbox(
     .orientation(shadcn::FieldOrientation::Horizontal)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-disabled-field"));
+    .test_id("ui-gallery-checkbox-disabled-field");
     let disabled_section = section_card(cx, "Disabled", disabled_content);
 
     let group_item = |cx: &mut ElementContext<'_, App>,
@@ -426,7 +424,7 @@ pub(super) fn preview_checkbox(
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-group"));
+    .test_id("ui-gallery-checkbox-group");
     let group = section_card(cx, "Group", group_content);
 
     let table_row = |cx: &mut ElementContext<'_, App>,
@@ -499,7 +497,7 @@ pub(super) fn preview_checkbox(
     ])
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-table"));
+    .test_id("ui-gallery-checkbox-table");
     let table = section_card(cx, "Table", table_content);
 
     let rtl_content = fret_ui_kit::primitives::direction::with_direction_provider(
@@ -518,7 +516,7 @@ pub(super) fn preview_checkbox(
             .into_element(cx)
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-rtl-field"));
+    .test_id("ui-gallery-checkbox-rtl-field");
     let rtl_section = section_card(cx, "RTL", rtl_content);
 
     let preview_hint = shadcn::typography::muted(
@@ -546,8 +544,7 @@ pub(super) fn preview_checkbox(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-checkbox-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-checkbox-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

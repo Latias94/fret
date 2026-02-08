@@ -96,7 +96,7 @@ mod tests {
 
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-                let checked_now = cx.watch_model(&checked).copied().unwrap_or(false);
+                let checked_now = cx.watch_model(&checked).copied_or_default();
                 vec![
                     cx.container(
                         ContainerProps {

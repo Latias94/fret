@@ -15,4 +15,4 @@ pub(super) use crate::ui::presenter::{
 pub(super) use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRowKind};
 pub(super) use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 
-pub(super) use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+pub(super) use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};

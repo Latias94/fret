@@ -75,7 +75,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-demo"));
+        .test_id("ui-gallery-kbd-demo");
         section_card(cx, "Demo", content)
     };
 
@@ -86,7 +86,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             shadcn::Kbd::new("P").into_element(cx),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-group"));
+        .test_id("ui-gallery-kbd-group");
         section_card(cx, "Group", content)
     };
 
@@ -100,7 +100,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .into_element(cx)])
             .on_click(CMD_APP_OPEN)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-button"));
+            .test_id("ui-gallery-kbd-button");
         section_card(cx, "Button", content)
     };
 
@@ -154,7 +154,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .trailing_has_kbd(true)
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-input-group"));
+            .test_id("ui-gallery-kbd-input-group");
 
         section_card(cx, "Input Group", content)
     };
@@ -172,7 +172,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-rtl"));
+        .test_id("ui-gallery-kbd-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -198,8 +198,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-kbd-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-kbd-component");
 
     let code_panel_body = stack::vstack(
         cx,

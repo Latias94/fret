@@ -2,11 +2,10 @@ use fret_canvas::view::{CanvasViewport2D, PanZoom2D};
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
-use crate::io::NodeGraphViewState;
 use crate::ui::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
 
-use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::prelude::NodeGraphCanvas;
+use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 fn rect_contains(outer: Rect, inner: Rect, eps: f32) -> bool {
     let outer_x0 = outer.origin.x.0;
@@ -41,9 +40,7 @@ fn set_viewport_clamps_pan_to_translate_extent() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let extent = CanvasRect {
@@ -104,9 +101,7 @@ fn set_viewport_clamps_pan_to_translate_extent_at_zoom() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let extent = CanvasRect {
@@ -164,9 +159,7 @@ fn translate_extent_centers_when_viewport_is_larger_than_extent() {
 
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
 
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
     let extent = CanvasRect {

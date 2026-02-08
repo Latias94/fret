@@ -18,8 +18,9 @@ unstable-retained-bridge = []
 diagnostics = []
 
 [dependencies]
-fret-core = { version = "0.1.0", path = "../fret-core" }
-fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
+fret-core = { path = "../fret-core" }
+fret-runtime = { path = "../fret-runtime" }
+fret-text-nav = { path = "../fret-text-nav" }
 slotmap.workspace = true
 smallvec.workspace = true
 stacksafe.workspace = true
