@@ -632,4 +632,31 @@ mod tests {
             .expect("window menu should be present");
         assert_eq!(window_menu.title.as_ref(), "窗口");
     }
+
+    #[test]
+    fn workspace_default_menu_includes_router_navigation_menu_when_configured() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.router_back = Some(CommandId::new("router.back"));
+        cmds.router_forward = Some(CommandId::new("router.forward"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+        let navigate_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.title.as_ref() == "Navigate")
+            .expect("navigate menu should be present");
+
+        assert!(
+            navigate_menu.items.iter().any(|item| {
+                matches!(item, MenuItem::Command { command, .. } if command == &CommandId::new("router.back"))
+            }),
+            "navigate menu should contain router.back"
+        );
+        assert!(
+            navigate_menu.items.iter().any(|item| {
+                matches!(item, MenuItem::Command { command, .. } if command == &CommandId::new("router.forward"))
+            }),
+            "navigate menu should contain router.forward"
+        );
+    }
 }
