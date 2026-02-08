@@ -496,6 +496,13 @@ Gate tiers (suggested; tune to your machine/CI budgets):
 - Fast (developer inner loop): layering + fmt + a small nextest subset for the touched crate(s).
 - Full (pre-merge / nightly): layering + fmt + clippy + wider nextest coverage + at least one diag suite.
 
+Canonical scripts (keep these stable so “fearless” stays repeatable):
+
+- Fast: `pwsh -NoProfile -File tools/gates_fast.ps1`
+- Full: `pwsh -NoProfile -File tools/gates_full.ps1`
+  - Note: the heaviest shadcn web-golden-backed conformance tests are gated behind
+    `--features web-goldens` for `fret-ui-shadcn` to keep the default inner loop cheaper.
+
 ## 6.2) Skills (recommended)
 
 Repo-local skills exist to make the refactor loop repeatable for humans and AI.

@@ -18,10 +18,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0 — Guardrails first
 
-- [ ] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
-  - Candidates: `pwsh -NoProfile -File tools/check_layering.ps1`, `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo nextest run`.
-  - Prefer documenting the minimal subsets that catch most regressions early (e.g. `-p fret-ui`, `-p fret-ui-shadcn`).
-  - Prefer defining “Fast vs Full” gate tiers so contributors know what to run in the inner loop vs before merge.
+- [x] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
+  - Evidence:
+    - `tools/gates_fast.ps1`
+    - `tools/gates_full.ps1`
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Always-run gates”)
 
 - [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard diag`).
   - Link: `docs/ui-diagnostics-and-scripted-tests.md`
@@ -35,6 +36,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] BU-FR-guard-004 Convert “huge Rust conformance sources” into data-driven harnesses where possible.
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
+  - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
