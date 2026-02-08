@@ -11,6 +11,7 @@ type CaseId =
   | "pagination"
   | "sort_undefined"
   | "sorting_fns"
+  | "sorting_edge_cases"
   | "filtering_fns"
   | "headers_cells"
   | "headers_inventory_deep"
@@ -132,6 +133,11 @@ type SnapshotId =
   | "sorting_fns_registry_custom_text"
   | "sorting_fns_toggle_num_auto_first"
   | "sorting_fns_toggle_text_auto_first"
+  | "sorting_edge_text_mixed_default_asc"
+  | "sorting_edge_text_mixed_sort_undefined_false_asc"
+  | "sorting_edge_multi_text_false_then_dt"
+  | "sorting_edge_alphanumeric_mixed_asc"
+  | "sorting_edge_datetime_nullish_asc"
   | "filtering_fns_text_auto_includes"
   | "filtering_fns_text_equals_string"
   | "filtering_fns_num_in_number_range"
@@ -1104,6 +1110,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "pagination" &&
         v !== "sort_undefined" &&
         v !== "sorting_fns" &&
+        v !== "sorting_edge_cases" &&
         v !== "filtering_fns" &&
         v !== "headers_cells" &&
         v !== "headers_inventory_deep" &&
@@ -1134,7 +1141,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|sorting_edge_cases|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1716,6 +1723,56 @@ async function main(): Promise<void> {
         id: "text_custom",
         accessorFn: (row: any) => row.text,
         sortingFn: "custom_text",
+      },
+    ]
+  } else if (case_id === "sorting_edge_cases") {
+    const rows = [
+      // Intentionally "weird" edge set: mixed primitives + nullish + NaN/Infinity tags.
+      { id: 1, text_raw: "  ", alpha: "a2", dt_ms: 1700000000000 },
+      { id: 2, text_raw: 10, alpha: "a10", dt_ms: null },
+      { id: 3, text_raw: "__NaN__", alpha: "a1", dt_ms: 1600000000000 },
+      { id: 4, text_raw: "__Inf__", alpha: "b2" },
+      { id: 5, text_raw: "__-Inf__", alpha: "b10", dt_ms: 1500000000000 },
+      { id: 6, text_raw: null, alpha: "b1" },
+      { id: 7, alpha: "A2", dt_ms: 1400000000000 },
+      { id: 8, text_raw: "Banana", alpha: "A10", dt_ms: 1300000000000 },
+      { id: 9, text_raw: "apple", alpha: "a0", dt_ms: 1200000000000 },
+      { id: 10, text_raw: "", alpha: "a", dt_ms: 1100000000000 },
+      { id: 11, text_raw: "zzz", alpha: "", dt_ms: 1000000000000 },
+      { id: 12, text_raw: "0", alpha: "a00", dt_ms: 900000000000 },
+    ]
+
+    data = rows
+
+    const mapTaggedNumber = (v: any) => {
+      if (v === "__NaN__") return Number.NaN
+      if (v === "__Inf__") return Number.POSITIVE_INFINITY
+      if (v === "__-Inf__") return Number.NEGATIVE_INFINITY
+      return v
+    }
+
+    columns = [
+      {
+        id: "text_mixed_default",
+        accessorFn: (row: any) => mapTaggedNumber(row.text_raw),
+        sortingFn: "text",
+      },
+      {
+        id: "text_mixed_false",
+        accessorFn: (row: any) => mapTaggedNumber(row.text_raw),
+        sortingFn: "text",
+        sortUndefined: false,
+      },
+      {
+        id: "alpha_mixed",
+        accessorFn: (row: any) => row.alpha,
+        sortingFn: "alphanumeric",
+      },
+      {
+        id: "dt_mixed",
+        accessorFn: (row: any) =>
+          row.dt_ms === undefined ? undefined : row.dt_ms === null ? null : new Date(row.dt_ms),
+        sortingFn: "datetime",
       },
     ]
   } else if (case_id === "filtering_fns") {
@@ -4900,6 +4957,57 @@ function snapshotColumnPinning(
         expect: snapshotForActions(defaultOptions, {}, [
           { type: "toggleSorting", column_id: "dt_auto" },
         ]),
+      },
+    ]
+  } else if (case_id === "sorting_edge_cases") {
+    snapshots = [
+      {
+        id: "sorting_edge_text_mixed_default_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "text_mixed_default", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "text_mixed_default", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_text_mixed_sort_undefined_false_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "text_mixed_false", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "text_mixed_false", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_multi_text_false_then_dt",
+        options: defaultOptions,
+        state: {
+          sorting: [
+            { id: "text_mixed_false", desc: false },
+            { id: "dt_mixed", desc: false },
+          ],
+        },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [
+            { id: "text_mixed_false", desc: false },
+            { id: "dt_mixed", desc: false },
+          ],
+        }),
+      },
+      {
+        id: "sorting_edge_alphanumeric_mixed_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "alpha_mixed", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "alpha_mixed", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_edge_datetime_nullish_asc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "dt_mixed", desc: false }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "dt_mixed", desc: false }],
+        }),
       },
     ]
   } else if (case_id === "filtering_fns") {

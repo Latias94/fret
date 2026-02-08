@@ -1,0 +1,1207 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "sorting_edge_cases",
+  "data": [
+    {
+      "id": 1,
+      "text_raw": "  ",
+      "alpha": "a2",
+      "dt_ms": 1700000000000
+    },
+    {
+      "id": 2,
+      "text_raw": 10,
+      "alpha": "a10",
+      "dt_ms": null
+    },
+    {
+      "id": 3,
+      "text_raw": "__NaN__",
+      "alpha": "a1",
+      "dt_ms": 1600000000000
+    },
+    {
+      "id": 4,
+      "text_raw": "__Inf__",
+      "alpha": "b2"
+    },
+    {
+      "id": 5,
+      "text_raw": "__-Inf__",
+      "alpha": "b10",
+      "dt_ms": 1500000000000
+    },
+    {
+      "id": 6,
+      "text_raw": null,
+      "alpha": "b1"
+    },
+    {
+      "id": 7,
+      "alpha": "A2",
+      "dt_ms": 1400000000000
+    },
+    {
+      "id": 8,
+      "text_raw": "Banana",
+      "alpha": "A10",
+      "dt_ms": 1300000000000
+    },
+    {
+      "id": 9,
+      "text_raw": "apple",
+      "alpha": "a0",
+      "dt_ms": 1200000000000
+    },
+    {
+      "id": 10,
+      "text_raw": "",
+      "alpha": "a",
+      "dt_ms": 1100000000000
+    },
+    {
+      "id": 11,
+      "text_raw": "zzz",
+      "alpha": "",
+      "dt_ms": 1000000000000
+    },
+    {
+      "id": 12,
+      "text_raw": "0",
+      "alpha": "a00",
+      "dt_ms": 900000000000
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "sorting_edge_text_mixed_default_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "text_mixed_default",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11",
+            "7"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11",
+            "7"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11",
+            "7"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11",
+            "7"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 12,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "sorting_edge_text_mixed_sort_undefined_false_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "text_mixed_false",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9"
+          ],
+          "flat": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "10",
+            "1",
+            "12",
+            "2",
+            "9"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 12,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "sorting_edge_multi_text_false_then_dt",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "text_mixed_false",
+            "desc": false
+          },
+          {
+            "id": "dt_mixed",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ],
+          "flat": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ],
+          "flat": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9",
+            "8",
+            "11"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9"
+          ],
+          "flat": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9"
+          ],
+          "flat": [
+            "10",
+            "7",
+            "5",
+            "3",
+            "4",
+            "6",
+            "1",
+            "12",
+            "2",
+            "9"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 12,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "sorting_edge_alphanumeric_mixed_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "alpha_mixed",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6"
+          ],
+          "flat": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6"
+          ],
+          "flat": [
+            "11",
+            "10",
+            "9",
+            "12",
+            "3",
+            "1",
+            "7",
+            "2",
+            "8",
+            "6"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 12,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "sorting_edge_datetime_nullish_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "dt_mixed",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1",
+            "4",
+            "6"
+          ],
+          "flat": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1",
+            "4",
+            "6"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1",
+            "4",
+            "6"
+          ],
+          "flat": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1",
+            "4",
+            "6"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1"
+          ],
+          "flat": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1"
+          ],
+          "flat": [
+            "2",
+            "12",
+            "11",
+            "10",
+            "9",
+            "8",
+            "7",
+            "5",
+            "3",
+            "1"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 12,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    }
+  ]
+}

@@ -483,10 +483,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Update: added explicit descending and datetime toggle coverage.
     - Snapshots: `sorting_fns_builtin_basic_desc`, `sorting_fns_builtin_datetime_desc`, `sorting_fns_toggle_dt_auto_first`
   - Remaining: broader edge-case coverage (mixed types / nullish behaviors).
-- [ ] HTP-sort-060 Expand sorting edge-case fixture coverage (capability parity hardening).
-  - Target: ensure we are not weaker than TanStack across mixed-type/nullish datasets and grouped sorting interactions.
-  - Evidence target: a dedicated fixture + parity gate (e.g. `sorting_edge_cases.json` +
-    `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_edge_cases_parity.rs`).
+- [x] HTP-sort-060 Expand sorting edge-case fixture coverage (capability parity hardening).
+  - Done (parity-gated): mixed-type/nullish edge coverage for built-in `text`/`alphanumeric`/`datetime`
+    (including `sortUndefined=false` vs default behavior, and multi-sort interactions).
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_edge_cases.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_edge_cases_parity.rs`
 - [x] HTP-sort-050 Align manual sorting semantics:
   - Done (parity-gated): `manualSorting=true` returns `pre_sorted` row model.
   - Done (parity-gated): `getSortedRowModel` override to `pre_sorted` matches upstream behavior.
