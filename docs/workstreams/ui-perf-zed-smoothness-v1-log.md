@@ -8043,3 +8043,40 @@ Worst-frame attribution (editor jitter script; max solve snapshot within bundle)
 - On bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/attempt-1/1770541992598-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - `layout_engine_solve_time_us`: `347`
   - `paint_text_prepare_time_us`: `1275` (width-changed prepares: `30`)
+
+## 2026-02-08 20:26:18 (commit `00d170cfa`)
+
+Change:
+- Bump the canonical macOS M4 steady-suite baseline to `v25` because `v23` was consistently failing on current head
+  (not a micro-flake class; multiple scripts exceeded `max_top_total_us`).
+
+Suites:
+- `ui-gallery-steady` (baseline selection + validation)
+
+Commands:
+```powershell
+tools/perf/diag_perf_baseline_select.sh `
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --suite ui-gallery-steady `
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json `
+  --candidates 3 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 30 `
+  --work-dir target/fret-diag-baseline-select-ui-gallery-steady-v25 `
+  --launch-bin target/release/fret-ui-gallery
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/fret-diag-perf/ui-gallery-steady-baseline-v25-r3 `
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v25/selection-summary.json`
+- Candidate results: `target/fret-diag-baseline-select-ui-gallery-steady-v25/candidate-results.json`
+- Validation check: `target/fret-diag-perf/ui-gallery-steady-baseline-v25-r3/check.perf_thresholds.json`
+
+Results:
+- Baseline selection: PASS on best candidate validation (fail_total=0; see selection summary).
+- `ui-gallery-steady` vs `v25`: PASS (failures=0).
