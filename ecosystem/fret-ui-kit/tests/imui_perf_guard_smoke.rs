@@ -21,3 +21,12 @@ fn virtual_list_stress_demo_keeps_keyed_virtualization_path() {
         "virtual_list_stress_demo should keep keyed virtualization as default path"
     );
 }
+
+#[test]
+fn floating_layer_z_order_does_not_clone_vec_each_frame() {
+    let source = include_str!("../src/imui.rs");
+    assert!(
+        !source.contains("st.order.clone()"),
+        "floating_layer should avoid cloning the z-order Vec on every frame"
+    );
+}
