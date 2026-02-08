@@ -422,7 +422,6 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
                 window,
                 bounds,
                 scale_factor,
-                &state.ui,
                 semantics_snapshot,
                 element_runtime,
             )

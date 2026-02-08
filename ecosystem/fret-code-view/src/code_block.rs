@@ -1,5 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet},
+    cell::RefCell,
+    collections::{HashMap, HashSet, VecDeque},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -844,6 +846,68 @@ fn build_code_block_line_rich(
     AttributedText::new(Arc::<str>::from(text), spans)
 }
 
+#[derive(Default)]
+struct CodeBlockWindowedLineRichCache {
+    theme_revision: u64,
+    prepared_revision: u64,
+    tick: u64,
+    max_entries: usize,
+    entries: HashMap<usize, (AttributedText, u64)>,
+    queue: VecDeque<(usize, u64)>,
+}
+
+impl CodeBlockWindowedLineRichCache {
+    fn resolve(
+        &mut self,
+        theme_revision: u64,
+        prepared_revision: u64,
+        row_theme: &CodeBlockLineRowTheme,
+        prepared: &crate::prepare::PreparedCodeBlock,
+        line_i: usize,
+        max_entries: usize,
+    ) -> AttributedText {
+        let max_entries = max_entries.max(1);
+        if self.theme_revision != theme_revision
+            || self.prepared_revision != prepared_revision
+            || self.max_entries != max_entries
+        {
+            self.theme_revision = theme_revision;
+            self.prepared_revision = prepared_revision;
+            self.tick = 0;
+            self.max_entries = max_entries;
+            self.entries.clear();
+            self.queue.clear();
+        }
+
+        self.tick = self.tick.saturating_add(1);
+        let tick = self.tick;
+
+        if let Some((rich, last_used)) = self.entries.get_mut(&line_i) {
+            *last_used = tick;
+            self.queue.push_back((line_i, tick));
+            return rich.clone();
+        }
+
+        let rich = build_code_block_line_rich(row_theme, prepared, line_i);
+        self.entries.insert(line_i, (rich.clone(), tick));
+        self.queue.push_back((line_i, tick));
+
+        while self.entries.len() > max_entries {
+            let Some((victim, victim_tick)) = self.queue.pop_front() else {
+                break;
+            };
+            let Some((_, last_used)) = self.entries.get(&victim) else {
+                continue;
+            };
+            if *last_used == victim_tick {
+                self.entries.remove(&victim);
+            }
+        }
+
+        rich
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CodeBlockLineRowTheme {
     mono_size: Px,
@@ -890,6 +954,7 @@ fn render_code_block_line_row<H: UiHost>(
     row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
     line_i: usize,
+    rich: AttributedText,
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
@@ -906,7 +971,7 @@ fn render_code_block_line_row<H: UiHost>(
             layout.size.width = Length::Auto;
             layout
         },
-        rich: build_code_block_line_rich(row_theme, prepared, line_i),
+        rich,
         style: Some(text_style),
         color: Some(row_theme.fg),
         wrap: TextWrap::None,
@@ -996,6 +1061,13 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     };
 
     let row_h = theme.metric_required("metric.font.mono_line_height");
+    let theme_revision = theme.revision();
+    let prepared_revision = prepared.revision;
+
+    let line_rich_cache = cx.with_state(
+        || Rc::new(RefCell::new(CodeBlockWindowedLineRichCache::default())),
+        |h| h.clone(),
+    );
 
     let scroll_y_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
     let mut list_options = VirtualListOptions::fixed(row_h, overscan.max(1));
@@ -1006,6 +1078,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     let prepared_for_rows = prepared.clone();
     let row_theme = Arc::new(CodeBlockLineRowTheme::new(theme, prepared.as_ref()));
     let row_theme_for_rows = Arc::clone(&row_theme);
+    let line_rich_cache_for_rows = line_rich_cache.clone();
+    let max_cache_entries = (overscan.max(1)).saturating_mul(16).max(256);
 
     let list_layout = {
         let mut layout = LayoutStyle::default();
@@ -1022,11 +1096,20 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         &scroll_y_handle,
         |i| i as u64,
         move |cx, i| {
+            let rich = line_rich_cache_for_rows.borrow_mut().resolve(
+                theme_revision,
+                prepared_revision,
+                row_theme_for_rows.as_ref(),
+                prepared_for_rows.as_ref(),
+                i,
+                max_cache_entries,
+            );
             render_code_block_line_row(
                 cx,
                 row_theme_for_rows.as_ref(),
                 prepared_for_rows.as_ref(),
                 i,
+                rich,
             )
         },
     );

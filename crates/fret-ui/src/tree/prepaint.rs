@@ -780,20 +780,28 @@ impl<H: UiHost> UiTree<H> {
                             .map(|n| (n.bounds, n.widget.as_ref()))
                             .unwrap_or((record.bounds, None));
 
-                        let (render_transform_inv, children_render_transform_inv, clips_hit_test, corner_radii) =
-                            match widget {
-                                Some(widget) => (
-                                    widget.render_transform(bounds).and_then(|t| t.inverse()),
-                                    widget
-                                        .children_render_transform(bounds)
-                                        .and_then(|t| t.inverse()),
-                                    widget.clips_hit_test(bounds),
-                                    widget.clip_hit_test_corner_radii(bounds),
-                                ),
-                                None => (None, None, true, None),
-                            };
+                        let (
+                            render_transform_inv,
+                            children_render_transform_inv,
+                            clips_hit_test,
+                            corner_radii,
+                        ) = match widget {
+                            Some(widget) => (
+                                widget.render_transform(bounds).and_then(|t| t.inverse()),
+                                widget
+                                    .children_render_transform(bounds)
+                                    .and_then(|t| t.inverse()),
+                                widget.clips_hit_test(bounds),
+                                widget.clip_hit_test_corner_radii(bounds),
+                            ),
+                            None => (None, None, true, None),
+                        };
 
-                        let (is_focusable, focus_traversal_children, can_scroll_descendant_into_view) = widget
+                        let (
+                            is_focusable,
+                            focus_traversal_children,
+                            can_scroll_descendant_into_view,
+                        ) = widget
                             .map(|w| {
                                 (
                                     w.is_focusable(),

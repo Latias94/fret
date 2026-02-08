@@ -400,7 +400,7 @@ impl HoverCard {
                 cx,
                 open_now,
                 hovered,
-                pointer_down_on_content_now || interaction_lease_active,
+                pointer_down_on_content_now,
                 has_text_selection,
                 cfg,
             );
@@ -445,8 +445,16 @@ impl HoverCard {
             let out = vec![trigger];
             if debug_trace {
                 eprintln!(
-                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={}",
-                    cx.frame_id.0, open_now, update.open, motion.present, hovered
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={} overlay_hovered={} pointer_down_on_content={} interaction_lease={} has_text_selection={}",
+                    cx.frame_id.0,
+                    open_now,
+                    update.open,
+                    motion.present,
+                    hovered,
+                    overlay_hovered,
+                    pointer_down_on_content_now,
+                    interaction_lease_now,
+                    has_text_selection,
                 );
             }
             if !motion.present {
@@ -1709,6 +1717,19 @@ mod tests {
                 position: select_pos,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: select_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
                 click_count: 2,
                 pointer_type: fret_core::PointerType::Mouse,
             }),

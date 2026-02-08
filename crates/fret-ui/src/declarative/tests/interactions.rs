@@ -3347,6 +3347,229 @@ fn text_input_triple_click_cancels_ime_preedit() {
 }
 
 #[test]
+fn text_input_set_text_selection_maps_display_offsets_when_composing() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-set-selection-composing",
+        |cx| {
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(160.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            vec![cx.text_input(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let move_home = CommandId::from("text.move_home");
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &move_home),
+        "expected text.move_home to be handled by text input"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "AB".to_string(),
+            cursor: Some((2, 2)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, 7);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::SetTextSelection {
+            anchor: 3,
+            focus: 3,
+        },
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected snapshot after set selection");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, 5);
+    assert_eq!(snapshot.selection_utf16, Some((1, 1)));
+    assert_eq!(app.models().get_cloned(&model).unwrap_or_default(), "hello");
+}
+
+#[test]
+fn text_area_set_text_selection_maps_display_offsets_when_composing() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-set-selection-composing",
+        |cx| {
+            let mut props = crate::element::TextAreaProps::new(model.clone());
+            props.layout.size.width = Length::Px(Px(200.0));
+            props.layout.size.height = Length::Px(Px(80.0));
+            vec![cx.text_area(props)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    let area_bounds = ui.debug_node_visual_bounds(area_node).expect("area bounds");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let move_home = CommandId::from("text.move_home");
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &move_home),
+        "expected text.move_home to be handled by text area"
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "AB".to_string(),
+            cursor: Some((2, 2)),
+        }),
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected snapshot after preedit");
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, 7);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::SetTextSelection {
+            anchor: 3,
+            focus: 3,
+        },
+    );
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected snapshot after set selection");
+    assert!(snapshot.focus_is_text_input);
+    assert!(!snapshot.is_composing);
+    assert_eq!(snapshot.marked_utf16, None);
+    assert_eq!(snapshot.text_len_utf16, 5);
+    assert_eq!(snapshot.selection_utf16, Some((1, 1)));
+    assert_eq!(app.models().get_cloned(&model).unwrap_or_default(), "hello");
+}
+
+#[test]
 fn text_area_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
         let mut app = TestHost::new();

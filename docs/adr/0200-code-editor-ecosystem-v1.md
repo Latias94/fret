@@ -1,4 +1,4 @@
-# ADR 0193: Code Editor Ecosystem v1 (Buffer/View/Surface Contracts)
+# ADR 0200: Code Editor Ecosystem v1 (Buffer/View/Surface Contracts)
 
 - Status: Proposed
 - Date: 2026-01-27
@@ -52,7 +52,18 @@ We introduce (names are normative unless later revised):
    - Edit operations (insert/delete/replace) expressed in UTF-8 byte indices (ADR 0044).
    - Selection/cursor primitives (single cursor v1; multi-cursor as a follow-up).
    - Undo integration hooks (ADR 0136; app-owned policy).
-   - Stable document identity (`DocId` or URI-like id) for multi-document workflows.
+   - Stable document identity for multi-document workflows.
+
+Document identity contract (v1):
+
+- The buffer MUST have a stable, opaque `DocId` used as the primary identity for caching and
+  cross-layer coordination.
+- The buffer MAY have an optional, URI-like `DocUri` intended for workspace shells and external
+  integrations (e.g. LSP, “open recent”, file-backed documents).
+  - `DocUri` is treated as an opaque string by the editor ecosystem crates.
+  - Normalization and scheme decisions are owned by the workspace layer.
+  - Changing a document’s `DocUri` is metadata-only and MUST NOT affect the buffer’s text
+    revision.
 
 2. `ecosystem/fret-code-editor-view`
    - A “display map” layer that maps buffer content into **display rows** and coordinate spaces:
@@ -173,15 +184,43 @@ Undo/redo:
 - Fold regions + placeholder rendering.
 - Inlays (e.g. type hints) as injected display fragments.
 
+Decision note (v1 + current v2 direction):
+
+- While inline IME preedit is active, fold placeholders and inlays are suppressed (do not compose).
+- Revisit composition only after preedit is modeled as a first-class injected display fragment and the DisplayMap can compose
+  multiple fragment sources under a single, deterministic buffer↔display↔a11y mapping surface.
+
 ### Phase 3: “Composable rows / embedded widgets (if required)”
 
 - Adopt ADR 0192 retained windowed hosts for composable per-row subtrees (when needed).
+
+## M0 Review Checklist (Non-Normative)
+
+The workstream blocks on explicitly confirming these v1 decisions:
+
+1) Layering: the normative split is buffer (`fret-code-editor-buffer`) → view (`fret-code-editor-view`)
+   → UI surface (`fret-code-editor`), and editor policy remains ecosystem-owned (ADR 0066).
+2) Document identity:
+   - `DocId` is the primary, stable identity used for caching/cross-layer coordination.
+   - `DocUri` is optional metadata for workspace shells; it is treated as opaque by the editor crates.
+   - Changing `DocUri` MUST NOT affect the text revision.
+3) Performance baseline:
+   - windowed virtual surface first (ADR 0190),
+   - no monolithic document `TextBlobId` (row-local shaping/caching only),
+   - bounded caches keyed by stable row identity and revision.
+4) Input/IME: reuse the runtime contracts (`Event::Ime` / `Event::TextInput`, ADR 0012/0071) and keep
+   the web IME bridge runner-owned (ADR 0195).
+5) Commands: baseline editing uses `text.*` (ADR 0044); editor-only behaviors live under `editor.*`.
 
 ## Evidence anchors (implementation)
 
 - Ecosystem split (buffer/view/surface): `ecosystem/fret-code-editor-buffer/src/lib.rs`, `ecosystem/fret-code-editor-view/src/lib.rs`, `ecosystem/fret-code-editor/src/lib.rs`.
 - Windowed surface + per-row text shaping/caching (no monolithic document blob): `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditor::into_element`), `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`paint_row`, `cached_row_text`, `cached_row_syntax_spans`, `materialize_row_rich_text`).
 - Harness + regression tests: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`, `PAGE_CODE_EDITOR_TORTURE`), `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture`), `ecosystem/fret-code-editor/src/editor/tests/mod.rs`.
+- Downstream validation (Markdown Editor v0, source mode): `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MARKDOWN_EDITOR_SOURCE`), `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`), `tools/diag-scripts/ui-gallery-markdown-editor-source-*.json`, `apps/fretboard/src/diag/stats.rs` (markdown editor gates).
+- Soft-wrap regression gates (diag scripts + checks): `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json`, `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json`, `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low`, `check_bundle_for_ui_gallery_code_editor_torture_marker_*`).
+- Fold placeholder baseline (unwrapped only; wrap+fold semantics deferred): `ecosystem/fret-code-editor-view/src/folds.rs` (`apply_fold_spans`), `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range` fold materialization), `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present`), `tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json`.
+- Inlay baseline (unwrapped only; wrap+inlay semantics deferred): `ecosystem/fret-code-editor-view/src/inlays.rs` (`apply_inlay_spans`), `ecosystem/fret-code-editor/src/editor/paint/mod.rs` (`cached_row_text_with_range` decoration materialization), `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present`), `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json`.
 
 ## License Notes
 

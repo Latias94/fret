@@ -49,9 +49,10 @@ use time::Date;
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::harness::UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::harness::UiGalleryCodeEditorHandlesStore;
+use crate::harness::{
+    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+    UiGalleryMarkdownEditorHandlesStore,
+};
 use crate::spec::*;
 use crate::ui;
 
@@ -290,6 +291,8 @@ struct UiGalleryHarnessModelIds {
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
 }
@@ -383,6 +386,8 @@ struct UiGalleryWindowState {
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -1040,6 +1045,8 @@ impl UiGalleryDriver {
         let code_editor_syntax_rust = app.models_mut().insert(true);
         let code_editor_boundary_identifier = app.models_mut().insert(true);
         let code_editor_soft_wrap = app.models_mut().insert(false);
+        let code_editor_folds = app.models_mut().insert(false);
+        let code_editor_inlays = app.models_mut().insert(false);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -1175,6 +1182,8 @@ impl UiGalleryDriver {
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
             code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -1254,6 +1263,8 @@ impl UiGalleryDriver {
                     code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
                     code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
                     code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                    code_editor_folds: state.code_editor_folds.clone(),
+                    code_editor_inlays: state.code_editor_inlays.clone(),
                     text_input: state.text_input.clone(),
                     text_area: state.text_area.clone(),
                 },
@@ -2136,6 +2147,8 @@ impl UiGalleryDriver {
         let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
         let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
         let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
+        let code_editor_folds = state.code_editor_folds.clone();
+        let code_editor_inlays = state.code_editor_inlays.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -2565,6 +2578,8 @@ impl UiGalleryDriver {
                                             code_editor_syntax_rust.clone(),
                                             code_editor_boundary_identifier.clone(),
                                             code_editor_soft_wrap.clone(),
+                                            code_editor_folds.clone(),
+                                            code_editor_inlays.clone(),
                                         )
                                     }
                                 })]
@@ -2664,6 +2679,8 @@ impl UiGalleryDriver {
                                         code_editor_syntax_rust.clone(),
                                         code_editor_boundary_identifier.clone(),
                                         code_editor_soft_wrap.clone(),
+                                        code_editor_folds.clone(),
+                                        code_editor_inlays.clone(),
                                     )
                                 }
                             })
@@ -3445,31 +3462,97 @@ pub fn build_app() -> App {
             let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
             let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
             let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+            let folds = app.models().get_cloned(&ids.code_editor_folds)?;
+            let inlays = app.models().get_cloned(&ids.code_editor_inlays)?;
             let text_input = app.models().get_cloned(&ids.text_input)?;
             let text_area = app.models().get_cloned(&ids.text_area)?;
 
-            let torture: Option<serde_json::Value> = {
+            let (torture, markdown_editor_source): (Option<serde_json::Value>, Option<serde_json::Value>) = {
                 #[cfg(not(target_arch = "wasm32"))]
                 {
-                    app.global::<UiGalleryCodeEditorHandlesStore>()
+                    let torture = app
+                        .global::<UiGalleryCodeEditorHandlesStore>()
                         .and_then(|store| store.per_window.get(&window))
                         .map(|handle| {
                             let text = handle.with_buffer(|b| b.text_string());
                             let selection = handle.selection();
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
+                            let stats = handle.cache_stats();
+                            let preedit_active = handle.preedit_active();
+                            let interaction = handle.interaction();
+                            let buffer_revision = handle.buffer_revision().0 as u64;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
                             serde_json::json!({
                                 "schema_version": 1,
                                 "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                                "preedit_active": preedit_active,
+                                "interaction": {
+                                    "enabled": interaction.enabled,
+                                    "focusable": interaction.focusable,
+                                    "selectable": interaction.selectable,
+                                    "editable": interaction.editable,
+                                },
+                                "buffer_revision": buffer_revision,
+                                "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
+                                "inlays": { "enabled": inlays, "line0_present": inlay_present },
+                                "text_len_bytes": text.len() as u64,
+                                "selection": { "anchor": anchor, "caret": caret },
+                                "cache_stats": {
+                                    "row_text_get_calls": stats.row_text_get_calls,
+                                    "row_text_hits": stats.row_text_hits,
+                                    "row_text_misses": stats.row_text_misses,
+                                    "row_text_evictions": stats.row_text_evictions,
+                                    "row_text_resets": stats.row_text_resets,
+                                    "geom_pointer_hit_test_fallbacks": stats.geom_pointer_hit_test_fallbacks,
+                                    "geom_caret_rect_fallbacks": stats.geom_caret_rect_fallbacks,
+                                    "geom_vertical_move_fallbacks": stats.geom_vertical_move_fallbacks,
+                                    "syntax_get_calls": stats.syntax_get_calls,
+                                    "syntax_hits": stats.syntax_hits,
+                                    "syntax_misses": stats.syntax_misses,
+                                    "syntax_evictions": stats.syntax_evictions,
+                                    "syntax_resets": stats.syntax_resets,
+                                },
+                            })
+                        })
+                        ;
+
+                    let markdown_editor_source = app
+                        .global::<UiGalleryMarkdownEditorHandlesStore>()
+                        .and_then(|store| store.per_window.get(&window))
+                        .map(|handle| {
+                            let text = handle.with_buffer(|b| b.text_string());
+                            let selection = handle.selection();
+                            let anchor = selection.anchor.min(text.len()) as u64;
+                            let caret = selection.caret().min(text.len()) as u64;
+                            let interaction = handle.interaction();
+                            let buffer_revision = handle.buffer_revision().0 as u64;
+                            serde_json::json!({
+                                "schema_version": 1,
+                                "interaction": {
+                                    "enabled": interaction.enabled,
+                                    "focusable": interaction.focusable,
+                                    "selectable": interaction.selectable,
+                                    "editable": interaction.editable,
+                                },
+                                "buffer_revision": buffer_revision,
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                             })
                         })
+                        ;
+
+                    (torture, markdown_editor_source)
                 }
 
                 #[cfg(target_arch = "wasm32")]
                 {
-                    None
+                    (None, None)
                 }
             };
 
@@ -3486,7 +3569,10 @@ pub fn build_app() -> App {
                     "syntax_rust": syntax_rust,
                     "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
                     "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                    "folds_fixture": folds,
+                    "inlays_fixture": inlays,
                     "torture": torture,
+                    "markdown_editor_source": markdown_editor_source,
                 }),
             );
             out.insert(
@@ -4434,7 +4520,6 @@ impl WinitAppDriver for UiGalleryDriver {
                         window,
                         bounds,
                         scale_factor,
-                        &state.ui,
                         semantics_snapshot,
                         element_runtime,
                     )

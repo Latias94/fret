@@ -1163,8 +1163,7 @@ version = "0.1.0"
 dependencies = [
  "fret-code-editor-buffer",
  "fret-runtime",
- "unicode-ident",
- "unicode-segmentation",
+ "fret-text-nav",
 ]
 
 [[package]]
@@ -1790,11 +1789,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-text-nav"
+version = "0.1.0"
+dependencies = [
+ "fret-runtime",
+ "unicode-ident",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "fret-ui"
 version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-runtime",
+ "fret-text-nav",
  "serde",
  "serde_json",
  "slotmap",
