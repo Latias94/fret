@@ -27,7 +27,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
+    ui, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
 };
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -666,15 +666,13 @@ impl ContextMenuRenderEnv {
                 ..Default::default()
             },
             move |cx| {
-                vec![
-                    ui::text(cx, text)
-                        .text_size_px(font_size)
-                        .line_height_px(font_line_height)
-                        .font_medium()
-                        .nowrap()
-                        .text_color(ColorRef::Color(label_fg))
-                        .into_element(cx),
-                ]
+                vec![ui::text(cx, text)
+                    .text_size_px(font_size)
+                    .line_height_px(font_line_height)
+                    .font_medium()
+                    .nowrap()
+                    .text_color(ColorRef::Color(label_fg))
+                    .into_element(cx)]
             },
         )
     }
@@ -1160,15 +1158,13 @@ impl ContextMenuContentRenderEnv {
                 ..Default::default()
             },
             move |cx| {
-                vec![
-                    ui::text(cx, text)
-                        .text_size_px(font_size)
-                        .line_height_px(font_line_height)
-                        .font_medium()
-                        .nowrap()
-                        .text_color(ColorRef::Color(label_fg))
-                        .into_element(cx),
-                ]
+                vec![ui::text(cx, text)
+                    .text_size_px(font_size)
+                    .line_height_px(font_line_height)
+                    .font_medium()
+                    .nowrap()
+                    .text_color(ColorRef::Color(label_fg))
+                    .into_element(cx)]
             },
         )
     }
@@ -2216,13 +2212,22 @@ impl ContextMenu {
                 menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
+            let touch_long_press = menu::context_menu_touch_long_press();
             let pointer_policy = Arc::new({
                 let anchor_store_model = anchor_store_model.clone();
+                let touch_long_press = touch_long_press.clone();
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       cx: fret_ui::action::ActionCx,
                       down: fret_ui::action::PointerDownCx| {
+                    let _ = menu::context_menu_touch_long_press_on_pointer_down(
+                        &touch_long_press,
+                        host,
+                        cx,
+                        down,
+                    );
                     let handled = base_pointer_policy(host, cx, down);
                     if handled {
+                        menu::context_menu_touch_long_press_clear(&touch_long_press, host);
                         let _ = host.models_mut().update(&anchor_store_model, |map| {
                             map.insert(open_model_id, down.position);
                         });
@@ -2232,10 +2237,38 @@ impl ContextMenu {
             });
 
             let pointer_policy_for_region = pointer_policy.clone();
+            let anchor_store_model_for_region = anchor_store_model.clone();
+            let open_for_region = open.clone();
             let trigger = cx.keyed((open_model_id, "context-menu-trigger-region"), move |cx| {
                 let pointer_policy_for_region = pointer_policy_for_region.clone();
+                let (touch_on_move, touch_on_up, touch_on_cancel) =
+                    menu::context_menu_touch_long_press_pointer_handlers(touch_long_press.clone());
+                let touch_long_press_for_timer = touch_long_press.clone();
+                let anchor_store_model_for_timer = anchor_store_model_for_region.clone();
+                let open_for_timer = open_for_region.clone();
                 cx.pointer_region(PointerRegionProps::default(), move |cx| {
                     cx.pointer_region_on_pointer_down(pointer_policy_for_region);
+                    cx.pointer_region_on_pointer_move(touch_on_move);
+                    cx.pointer_region_on_pointer_up(touch_on_up);
+                    cx.pointer_region_on_pointer_cancel(touch_on_cancel);
+                    cx.timer_add_on_timer_for(
+                        cx.root_id(),
+                        Arc::new(move |host, action_cx, token| {
+                            let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
+                                &touch_long_press_for_timer,
+                                token,
+                            ) else {
+                                return false;
+                            };
+
+                            let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
+                                map.insert(open_model_id, anchor);
+                            });
+                            let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
+                            host.request_redraw(action_cx.window);
+                            true
+                        }),
+                    );
                     vec![trigger_element]
                 })
             });
@@ -3276,14 +3309,15 @@ impl ContextMenu {
 mod tests {
     use super::*;
 
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::UiServices;
     use fret_core::{
-        AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -3445,35 +3479,33 @@ mod tests {
             bounds,
             "context-menu",
             move |cx| {
-                vec![
-                    ContextMenu::new(open)
-                        .on_dismiss_request(on_dismiss_request)
-                        .into_element(
-                            cx,
-                            |cx| {
-                                cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
-                                        },
-                                        ..Default::default()
+                vec![ContextMenu::new(open)
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
                                     },
-                                    |_cx| Vec::new(),
-                                )
-                            },
-                            |_cx| {
-                                vec![
-                                    ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
-                                    ContextMenuEntry::Separator,
-                                    ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
-                                    ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
-                                ]
-                            },
-                        ),
-                ]
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )
+                        },
+                        |_cx| {
+                            vec![
+                                ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
+                            ]
+                        },
+                    )]
             },
         );
         ui.set_root(root);
@@ -3606,6 +3638,87 @@ mod tests {
         );
 
         assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_timer_opens_menu() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        // Frame 1: establish trigger geometry and pointer hooks.
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(7),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        // Frame 2: long-press timer should have opened the context menu.
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
@@ -4016,38 +4129,36 @@ mod tests {
                     },
                 );
 
-                let trigger =
-                    ContextMenu::new(open)
-                        .on_open_auto_focus(on_open_auto_focus.clone())
-                        .on_close_auto_focus(on_close_auto_focus.clone())
-                        .into_element(
-                            cx,
-                            {
-                                let trigger_id_out = trigger_id_out.clone();
-                                move |cx| {
-                                    cx.pressable_with_id(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(120.0));
-                                                layout.size.height = Length::Px(Px(40.0));
-                                                layout
-                                            },
-                                            enabled: true,
-                                            focusable: true,
-                                            ..Default::default()
+                let trigger = ContextMenu::new(open)
+                    .on_open_auto_focus(on_open_auto_focus.clone())
+                    .on_close_auto_focus(on_close_auto_focus.clone())
+                    .into_element(
+                        cx,
+                        {
+                            let trigger_id_out = trigger_id_out.clone();
+                            move |cx| {
+                                cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
                                         },
-                                        move |cx, _st, id| {
-                                            trigger_id_out.set(Some(id));
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })]
-                                        },
-                                    )
-                                }
-                            },
-                            move |_cx| entries.clone(),
-                        );
+                                        enabled: true,
+                                        focusable: true,
+                                        ..Default::default()
+                                    },
+                                    move |cx, _st, id| {
+                                        trigger_id_out.set(Some(id));
+                                        vec![cx
+                                            .container(ContainerProps::default(), |_cx| Vec::new())]
+                                    },
+                                )
+                            }
+                        },
+                        move |_cx| entries.clone(),
+                    );
 
                 vec![trigger, underlay]
             },
