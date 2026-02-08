@@ -6,6 +6,8 @@ use fret_runtime::CommandId;
 
 #[cfg(not(target_arch = "wasm32"))]
 use fret_kit::mvu::KeyedMessageRouter;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Mutex;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";

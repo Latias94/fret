@@ -121,6 +121,26 @@ pub struct UiActionScriptV2 {
     pub steps: Vec<UiActionStepV2>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiPaddingInsetsV1 {
+    pub left_px: f32,
+    pub top_px: f32,
+    pub right_px: f32,
+    pub bottom_px: f32,
+}
+
+impl UiPaddingInsetsV1 {
+    pub fn uniform(padding_px: f32) -> Self {
+        let p = padding_px.max(0.0);
+        Self {
+            left_px: p,
+            top_px: p,
+            right_px: p,
+            bottom_px: p,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiActionStepV2 {
@@ -194,6 +214,22 @@ pub enum UiActionStepV2 {
     },
 
     // v2 intent-level steps
+    /// Click a target only after its bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for virtualized lists where a target's measured bounds can jump
+    /// across frames (e.g. estimate -> measured), causing clicks to land at stale
+    /// positions when using a single-frame snapshot.
+    ClickStable {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     EnsureVisible {
         target: UiSelectorV1,
         #[serde(default)]
@@ -211,9 +247,13 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_scroll_delta_y")]
         delta_y: f32,
         #[serde(default)]
+        require_fully_within_container: bool,
+        #[serde(default)]
         require_fully_within_window: bool,
         #[serde(default)]
         padding_px: f32,
+        #[serde(default)]
+        padding_insets_px: Option<UiPaddingInsetsV1>,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
@@ -329,6 +369,14 @@ fn default_drag_steps() -> u32 {
 
 fn default_move_frames_per_step() -> u32 {
     1
+}
+
+fn default_click_stable_frames() -> u32 {
+    2
+}
+
+fn default_click_stable_max_move_px() -> f32 {
+    1.0
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {

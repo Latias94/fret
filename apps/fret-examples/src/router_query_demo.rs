@@ -9,6 +9,8 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
+use fret_router_ui::{RouterLink, RouterUiStore, router_link, router_outlet};
+use fret_ui::Invalidation;
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
 const ROUTER_QUERY_DEMO_PAGE_NS: &str = "fret-examples.router_query_demo.page_content.v1";
@@ -26,7 +28,7 @@ struct PageData {
 }
 
 struct RouterQueryDemoState {
-    router: Router<RouteId, MemoryHistory>,
+    router: RouterUiStore<RouteId, MemoryHistory>,
     prefetch_log: Model<Vec<Arc<str>>>,
     msg_router: MessageRouter<RouterQueryDemoMsg>,
 }
@@ -118,7 +120,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> RouterQueryDemoState {
     );
 
     RouterQueryDemoState {
-        router,
+        router: RouterUiStore::new(app, window, router),
         prefetch_log: app.models_mut().insert(Vec::new()),
         msg_router: MessageRouter::new(format!("router-query-demo.{window:?}.")),
     }
@@ -128,10 +130,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     let theme = Theme::global(&*cx.app).clone();
     st.msg_router.clear();
 
-    let location_label: Arc<str> = Arc::from(st.router.state().location.to_url());
-    let last_transition = st
-        .router
-        .state()
+    let snapshot_model = st.router.snapshot_model();
+    let snapshot = cx
+        .get_model_cloned(&snapshot_model, Invalidation::Layout)
+        .expect("router snapshot model should be readable");
+
+    let location_label: Arc<str> = Arc::from(snapshot.location.to_url());
+    let last_transition = snapshot
         .last_transition
         .as_ref()
         .map(|t| {
@@ -146,8 +151,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
 
     let nav_key =
         route_query_key::<PageData>(ROUTER_QUERY_DEMO_NAV_NS, &RouteLocation::from_path("/nav"));
-    let page_key =
-        route_query_key::<PageData>(ROUTER_QUERY_DEMO_PAGE_NS, &st.router.state().location);
+    let page_key = route_query_key::<PageData>(ROUTER_QUERY_DEMO_PAGE_NS, &snapshot.location);
     let policy = QueryPolicy {
         stale_time: Duration::from_secs(60),
         cache_time: Duration::from_secs(5 * 60),
@@ -270,11 +274,48 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .into_element(cx);
 
     let header_lines = ui::v_flex(cx, |cx| {
+        let settings_link = st
+            .router
+            .link_to_location(NavigationAction::Push, RouteLocation::parse("/settings"));
         [
-            ui::raw_text(cx, format!("location={location_label}")).into_element(cx),
+            ui::h_flex(cx, |cx| {
+                [
+                    ui::raw_text(cx, format!("location={location_label}")).into_element(cx),
+                    shadcn::Button::new("Copy URL")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .on_activate(RouterLink::copy_href_on_activate(location_label.clone()))
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
             ui::raw_text(cx, last_transition)
                 .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
                 .into_element(cx),
+            ui::h_flex(cx, |cx| {
+                [
+                    shadcn::Badge::new("leaf")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx),
+                    router_outlet(cx, &snapshot_model, |cx, snap| {
+                        let label = match snap.leaf_route().copied() {
+                            Some(RouteId::Root) => "Root",
+                            Some(RouteId::Settings) => "Settings",
+                            Some(RouteId::User) => "User",
+                            None => "<none>",
+                        };
+                        shadcn::Badge::new(label).into_element(cx)
+                    }),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            {
+                let label = ui::raw_text(cx, "router_link: /settings").into_element(cx);
+                router_link(cx, &st.router, settings_link, [label])
+            },
         ]
     })
     .gap(Space::N1)
@@ -348,17 +389,21 @@ fn on_command(
 
     let update = match msg {
         RouterQueryDemoMsg::NavigateRoot => st.router.navigate_with_prefetch_intents(
+            app,
             NavigationAction::Replace,
             Some(RouteLocation::parse("/")),
         ),
         RouterQueryDemoMsg::NavigateSettings => st.router.navigate_with_prefetch_intents(
+            app,
             NavigationAction::Push,
             Some(RouteLocation::parse("/settings")),
         ),
         RouterQueryDemoMsg::NavigateUser => {
-            let location = st
+            let link = st
                 .router
-                .build_location(
+                .link_to(
+                    app,
+                    NavigationAction::Push,
                     &RouteId::User,
                     &[PathParam {
                         name: "id".to_string(),
@@ -369,16 +414,18 @@ fn on_command(
                         .with_typed("debug", Some(true)),
                     None,
                 )
-                .expect("router should build a user location");
+                .expect("router should build a user link");
             st.router
-                .navigate_with_prefetch_intents(NavigationAction::Push, Some(location))
+                .navigate_with_prefetch_intents(app, link.action, Some(link.to))
         }
-        RouterQueryDemoMsg::Back => st
-            .router
-            .navigate_with_prefetch_intents(NavigationAction::Back, None),
-        RouterQueryDemoMsg::Forward => st
-            .router
-            .navigate_with_prefetch_intents(NavigationAction::Forward, None),
+        RouterQueryDemoMsg::Back => {
+            st.router
+                .navigate_with_prefetch_intents(app, NavigationAction::Back, None)
+        }
+        RouterQueryDemoMsg::Forward => {
+            st.router
+                .navigate_with_prefetch_intents(app, NavigationAction::Forward, None)
+        }
         RouterQueryDemoMsg::ClearLog => {
             let _ = app.models_mut().update(&st.prefetch_log, |v| v.clear());
             app.request_redraw(window);
