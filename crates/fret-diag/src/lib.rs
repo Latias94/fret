@@ -2671,6 +2671,12 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
                                 ),
                             ),

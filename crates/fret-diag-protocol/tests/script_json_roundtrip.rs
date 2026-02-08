@@ -46,6 +46,13 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"
+    ));
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,

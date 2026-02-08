@@ -1,6 +1,6 @@
 use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
-use fret_ui::action::PressablePointerDownResult;
+use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
     PressableProps, ScrollAxis, ScrollProps, SemanticsProps, VirtualListOptions,
@@ -3700,6 +3700,42 @@ where
                                                                                 },
                                                                                     |cx, _| {
                                                                                         if enabled {
+                                                                                            let state_model_for_pointer =
+                                                                                                state_model.clone();
+                                                                                            let sort_toggle_column_for_pointer =
+                                                                                                sort_toggle_column.clone();
+                                                                                            let sort_options_for_pointer =
+                                                                                                sort_options.clone();
+                                                                                            cx.pressable_on_pointer_up(Arc::new(
+                                                                                                move |host, _acx, up| {
+                                                                                                    if !up.is_click
+                                                                                                        || up.button
+                                                                                                            != fret_core::MouseButton::Left
+                                                                                                    {
+                                                                                                        return PressablePointerUpResult::Continue;
+                                                                                                    }
+
+                                                                                                    let multi =
+                                                                                                        up.modifiers.shift;
+                                                                                                    let _ = host
+                                                                                                        .update_model(
+                                                                                                            &state_model_for_pointer,
+                                                                                                            |st| {
+                                                                                                                toggle_sorting_state_handler_tanstack(
+                                                                                                                    &mut st.sorting,
+                                                                                                                    &sort_toggle_column_for_pointer,
+                                                                                                                    sort_options_for_pointer,
+                                                                                                                    multi,
+                                                                                                                    auto_sort_dir_desc,
+                                                                                                                );
+                                                                                                                st.pagination.page_index = 0;
+                                                                                                            },
+                                                                                                        );
+                                                                                                    host.notify(_acx);
+                                                                                                    PressablePointerUpResult::SkipActivate
+                                                                                                },
+                                                                                            ));
+
                                                                                             cx.pressable_update_model(
                                                                                                 &state_model,
                                                                                                 move |st| {

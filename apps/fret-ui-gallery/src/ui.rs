@@ -18124,6 +18124,22 @@ fn preview_table_retained_torture(
         }
     };
 
+    let sorting: Vec<fret_ui_kit::headless::table::SortSpec> = cx
+        .app
+        .models()
+        .read(&state, |st| st.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+    let sorting_text: Arc<str> = if sorting.is_empty() {
+        Arc::<str>::from("Sorting: <none>")
+    } else {
+        let parts: Vec<String> = sorting
+            .iter()
+            .map(|s| format!("{} {}", s.column, if s.desc { "desc" } else { "asc" }))
+            .collect();
+        Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
+    };
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -18136,6 +18152,12 @@ fn preview_table_retained_torture(
                 ),
                 cx.text(
                     "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
+                ),
+                cx.text(sorting_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(sorting_text.clone())
+                        .test_id("ui-gallery-table-retained-sorting"),
                 ),
             ]
         },

@@ -859,13 +859,34 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 Next UI parity targets (capability, not exact DOM behavior):
 
-- [ ] HTP-ui-sort-010 Enable multi-sort input semantics in `table_virtualized` header activation:
+- [x] HTP-ui-sort-010 Enable multi-sort input semantics in `table_virtualized` header activation:
   - TanStack default: multi-sort when the input event matches `options.isMultiSortEvent` (typically Shift).
-  - Plan: wire pointer modifiers into the header sort toggle (component-owned pointer hook) and keep keyboard activation as single-sort.
-  - Gate: requires a diag/automation path that can express “modifier+click” (see `HTP-diag-010`) or an equivalent keyboard recipe.
-- [ ] HTP-diag-010 Extend the diag script protocol to support `modifiers` on `click` steps (so Shift-click is gateable).
-  - Motivation: current scripts can express modifier keys for `press_key`, but not pointer clicks.
-  - Target: `crates/fret-diag-protocol` `UiActionStepV2::Click` + runner plumbing + one table repro script.
+  - Plan (UI policy, not headless):
+    - Pointer click: pass `PointerUpCx.modifiers` into `toggle_sorting_state_handler_tanstack(.., multi, ..)`:
+      - `multi = modifiers.shift` (TanStack default).
+      - `multi = false` for non-shift pointer clicks (single-sort replaces the sort array).
+    - Keyboard activation: keep as single-sort (predictable “Enter to sort” behavior; no modifier concept).
+  - Gate: add a diag script that Shift-clicks two headers and asserts both columns are sorted (order matters).
+    - Requires `HTP-diag-010` so the script can express “modifier+click”.
+- Done:
+  - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (header pressable pointer-up hook returns `SkipActivate`).
+  - Gate: `tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json`
+    + `apps/fret-ui-gallery/src/ui.rs` adds a stable sorting label for the script to assert.
+- [x] HTP-diag-010 Extend the diag script protocol + runner to support `modifiers` on click steps (so Shift-click is gateable).
+  - Motivation: scripts can express modifier keys for `press_key`, but not pointer clicks.
+  - Protocol:
+    - Add optional `modifiers: UiKeyModifiersV1` to `UiActionStepV2::Click` and `UiActionStepV2::ClickStable`.
+    - Back-compat: `#[serde(default)]` so existing scripts keep parsing and serialize identically.
+    - Keep `UiActionStepV1::Click` unchanged; `From<V1> for V2` should fill `modifiers: default()`.
+  - Runner plumbing:
+    - Thread `modifiers` into the injected pointer events (`PointerEvent::{Move,Down,Up}`) via `fret_core::Modifiers`.
+  - Evidence:
+    - Protocol roundtrip test (explicit JSON with `click.modifiers`).
+    - One table repro script that Shift-clicks headers (used by `HTP-ui-sort-010`).
+- Done:
+  - Protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::{Click,ClickStable}`).
+  - Runner: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`click_events_with_modifiers` + ClickStable injection).
+  - Tests: `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
 - [ ] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
   - Column filters UI (per-column filtering + faceting-driven menus)
   - Column pinning UI affordances (left/center/right sticky behavior)
