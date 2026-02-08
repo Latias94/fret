@@ -16,7 +16,7 @@ use fret_router::{
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
-use fret_runtime::{CommandId, Effect};
+use fret_runtime::{CommandId, CommandMeta, CommandRegistry, CommandScope, Effect};
 use fret_runtime::{Model, WeakModel};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
@@ -86,6 +86,26 @@ where
     router: Model<Router<R, H>>,
     snapshot: Model<RouterUiSnapshot<R>>,
     intents: Model<Vec<RoutePrefetchIntent<R>>>,
+}
+
+pub const ROUTER_COMMAND_BACK: &str = "router.back";
+pub const ROUTER_COMMAND_FORWARD: &str = "router.forward";
+
+pub fn register_router_commands(registry: &mut CommandRegistry) {
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_BACK),
+        CommandMeta::new("Back")
+            .with_category("Router")
+            .with_description("Navigate back in router history.")
+            .with_scope(CommandScope::Window),
+    );
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_FORWARD),
+        CommandMeta::new("Forward")
+            .with_category("Router")
+            .with_description("Navigate forward in router history.")
+            .with_scope(CommandScope::Window),
+    );
 }
 
 impl<R, H> RouterUiStore<R, H>
@@ -171,6 +191,37 @@ where
         app.models_mut()
             .update(&self.router, |router| router.take_events())
             .expect("router model should be updatable")
+    }
+
+    pub fn can_navigate(&self, app: &App, action: NavigationAction) -> bool {
+        app.models()
+            .read(&self.router, |router| router.history().can_navigate(action))
+            .expect("router model should be readable")
+    }
+
+    pub fn handle_router_command(
+        &self,
+        app: &mut App,
+        command: &CommandId,
+    ) -> Result<bool, RouteSearchValidationFailure> {
+        match command.as_str() {
+            ROUTER_COMMAND_BACK => {
+                if !self.can_navigate(app, NavigationAction::Back) {
+                    return Ok(true);
+                }
+                let _ = self.navigate_with_prefetch_intents(app, NavigationAction::Back, None)?;
+                Ok(true)
+            }
+            ROUTER_COMMAND_FORWARD => {
+                if !self.can_navigate(app, NavigationAction::Forward) {
+                    return Ok(true);
+                }
+                let _ =
+                    self.navigate_with_prefetch_intents(app, NavigationAction::Forward, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
     }
 
     fn apply_update(

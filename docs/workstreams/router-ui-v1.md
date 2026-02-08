@@ -138,6 +138,11 @@ Provide recommended commands (not forced):
 
 Apps can map these to their own command IDs and menus.
 
+Implemented helpers (optional):
+
+- `register_router_commands(&mut CommandRegistry)` registers `router.back` and `router.forward`.
+- `RouterUiStore::handle_router_command(...)` performs navigation via the store and updates snapshot/intents models.
+
 ## Evidence anchors (when implemented)
 
 - `ecosystem/fret-router-ui/src/lib.rs` (store + outlet/link primitives)

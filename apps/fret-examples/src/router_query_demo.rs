@@ -53,6 +53,7 @@ pub fn run() -> anyhow::Result<()> {
     })?
     .with_main_window("router_query_demo", (680.0, 420.0))
     .init_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
         shadcn::shadcn_themes::apply_shadcn_new_york_v4(
             app,
             shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -534,6 +535,11 @@ fn on_command(
     st: &mut RouterQueryDemoState,
     cmd: &CommandId,
 ) {
+    if let Ok(true) = st.router.handle_router_command(app, cmd) {
+        app.request_redraw(window);
+        return;
+    }
+
     let Some(msg) = st.msg_router.try_take(cmd) else {
         return;
     };
