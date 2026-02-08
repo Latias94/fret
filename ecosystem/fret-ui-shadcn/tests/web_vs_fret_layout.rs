@@ -156,6 +156,13 @@ struct LayoutSidebarMenuButtonHeightCase {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct LayoutShellContainerCenteredCase {
+    id: String,
+    web_name: String,
+    container_class_tokens: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum LayoutRadioGroupRecipe {
     RowGeometry,
@@ -2038,29 +2045,28 @@ fn web_vs_fret_layout_login_02_shell_container_matches() {
 }
 
 #[test]
-fn web_vs_fret_layout_login_03_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches(
-        "login-03",
-        &["flex", "w-full", "max-w-sm", "flex-col", "gap-6"],
-    );
-}
+fn web_vs_fret_layout_shell_container_centered_x_w_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_shell_container_centered_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutShellContainerCenteredCase> =
+        serde_json::from_str(raw).expect("layout shell container centered fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-#[test]
-fn web_vs_fret_layout_login_04_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches(
-        "login-04",
-        &["w-full", "max-w-sm", "md:max-w-4xl"],
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_login_05_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("login-05", &["w-full", "max-w-sm"]);
-}
-
-#[test]
-fn web_vs_fret_layout_signup_01_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("signup-01", &["w-full", "max-w-sm"]);
+    for case in suite.cases {
+        eprintln!(
+            "layout shell container centered case={} web_name={}",
+            case.id, case.web_name
+        );
+        let tokens: Vec<&str> = case
+            .container_class_tokens
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+        assert_shell_container_centered_x_w_matches(&case.web_name, &tokens);
+    }
 }
 
 #[test]
@@ -2183,32 +2189,6 @@ fn web_vs_fret_layout_signup_02_shell_container_matches() {
 }
 
 #[test]
-fn web_vs_fret_layout_signup_03_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches(
-        "signup-03",
-        &["flex", "w-full", "max-w-sm", "flex-col", "gap-6"],
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_signup_04_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches(
-        "signup-04",
-        &["w-full", "max-w-sm", "md:max-w-4xl"],
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_signup_05_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("signup-05", &["w-full", "max-w-sm"]);
-}
-
-#[test]
-fn web_vs_fret_layout_otp_01_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("otp-01", &["w-full", "max-w-xs"]);
-}
-
-#[test]
 fn web_vs_fret_layout_otp_02_shell_container_matches() {
     let web = read_web_golden("otp-02");
     let theme = web_theme(&web);
@@ -2325,24 +2305,6 @@ fn web_vs_fret_layout_otp_02_shell_container_matches() {
         web_container.rect,
         1.0,
     );
-}
-
-#[test]
-fn web_vs_fret_layout_otp_03_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches(
-        "otp-03",
-        &["flex", "w-full", "max-w-xs", "flex-col", "gap-6"],
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_otp_04_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("otp-04", &["w-full", "max-w-sm", "md:max-w-3xl"]);
-}
-
-#[test]
-fn web_vs_fret_layout_otp_05_shell_container_matches() {
-    assert_shell_container_centered_x_w_matches("otp-05", &["w-full", "max-w-sm"]);
 }
 
 fn web_find_sidebar_menu_button_by_height<'a>(

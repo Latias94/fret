@@ -72,6 +72,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, sidebar menu button heights):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_sidebar_menu_button_height_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_sidebar_menu_button_heights_match_web_fixtures`)
+  - Evidence (fixture-driven slice, shell container centered variants):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_shell_container_centered_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_shell_container_centered_x_w_matches_web_fixtures`)
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
