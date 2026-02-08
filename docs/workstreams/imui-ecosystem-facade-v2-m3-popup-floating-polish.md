@@ -1,7 +1,7 @@
 # imui Ecosystem Facade v2 M3 Popup/Select and Floating Coexistence Polish
 
 Status: Accepted (M3 locked)
-Last updated: 2026-02-06
+Last updated: 2026-02-08
 
 This note captures the v2 M3 polish scope for popup/select choreography and floating coexistence.
 
@@ -24,6 +24,9 @@ M3 decision:
 - Trigger activation opens a popup menu anchored to trigger bounds.
 - Option activation updates the model, emits `changed` once, and closes popup.
 - Option rows are exposed as radio-menu items to reuse canonical menu interaction policy.
+- Popups are kept alive by `begin_popup_*` calls; if a popup scope is opened but not rendered on a
+  subsequent frame (e.g. the triggering widget disappears), it will auto-close to avoid stale
+  "open" state resurfacing later.
 
 Implementation anchors:
 

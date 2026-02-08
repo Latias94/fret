@@ -5921,6 +5921,276 @@ mod tests {
     }
 
     #[test]
+    fn select_popup_scope_override_controls_popup_test_id() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-scope",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-scope")),
+                            popup_scope_id: Some(Arc::from("imui-select-popup-scope-override")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let trigger = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-scope",
+        );
+        click_at(&mut ui, &mut app, &mut services, trigger);
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-scope",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-scope")),
+                            popup_scope_id: Some(Arc::from("imui-select-popup-scope-override")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-imui-select-popup-scope-override",
+        ));
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-imui-select-popup-imui-select-scope",
+        ));
+    }
+
+    #[test]
+    fn drop_popup_scope_closes_and_forgets_internal_state() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+        let popup_scope_id: Arc<str> = Arc::from("imui-drop-popup-scope");
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drop-popup-scope",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-drop-popup-trigger")),
+                            popup_scope_id: Some(popup_scope_id.clone()),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let trigger = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-drop-popup-trigger",
+        );
+        click_at(&mut ui, &mut app, &mut services, trigger);
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drop-popup-scope",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-drop-popup-trigger")),
+                            popup_scope_id: Some(popup_scope_id.clone()),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-imui-drop-popup-scope",
+        ));
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drop-popup-scope",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.drop_popup_scope(popup_scope_id.as_ref());
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-drop-popup-trigger")),
+                            popup_scope_id: Some(popup_scope_id.clone()),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-imui-drop-popup-scope",
+        ));
+    }
+
+    #[test]
+    fn popup_closes_if_opened_but_not_rendered_next_frame() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let popup_id = "imui-popup-auto-close";
+        let anchor = Rect::new(Point::new(Px(12.0), Px(12.0)), Size::new(Px(1.0), Px(1.0)));
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-auto-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.open_popup_at(popup_id, anchor);
+                    // Intentionally do not call `begin_popup_menu*` this frame.
+                })
+            },
+        );
+
+        app.advance_frame();
+        let opened = Rc::new(Cell::new(false));
+        let open_state = Rc::new(Cell::new(false));
+        let opened_out = opened.clone();
+        let open_state_out = open_state.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-auto-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    opened_out.set(ui.begin_popup_menu(popup_id, None, |_ui| {}));
+                    let open = ui.popup_open_model(popup_id);
+                    open_state_out.set(ui.cx_mut().app.models().get_copied(&open).unwrap_or(false));
+                })
+            },
+        );
+
+        assert!(!opened.get());
+        assert!(!open_state.get());
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-popup-imui-popup-auto-close",
+        ));
+    }
+
+    #[test]
     fn container_helpers_layout_horizontal_vertical_grid_and_scroll() {
         let window = AppWindowId::default();
         let bounds = Rect::new(

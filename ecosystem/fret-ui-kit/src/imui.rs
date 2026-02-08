@@ -16,9 +16,10 @@ use std::time::Duration;
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
 use fret_core::{
-    Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole, Size,
+    AppWindowId, Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, Rect, SemanticsRole,
+    Size,
 };
-use fret_runtime::DragPhase;
+use fret_runtime::{DragPhase, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
     DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
@@ -510,6 +511,13 @@ pub struct SelectOptions {
     pub focusable: bool,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
+    /// Optional stable popup scope id override.
+    ///
+    /// When set, `select_model_ex` will use this id for its internal popup scope instead of
+    /// deriving one from `test_id`/`label`. This is useful to avoid accidental collisions (e.g.
+    /// multiple selects with the same label) and to keep popup store growth bounded when call sites
+    /// generate dynamic labels.
+    pub popup_scope_id: Option<Arc<str>>,
     pub placeholder: Option<Arc<str>>,
     pub popup: PopupMenuOptions,
 }
@@ -521,6 +529,7 @@ impl Default for SelectOptions {
             focusable: true,
             a11y_label: None,
             test_id: None,
+            popup_scope_id: None,
             placeholder: Some(Arc::from("Select?")),
             popup: PopupMenuOptions::default(),
         }
@@ -610,31 +619,72 @@ struct PopupStoreState {
     open: fret_runtime::Model<bool>,
     anchor: fret_runtime::Model<Option<fret_core::Rect>>,
     panel_id: Option<GlobalElementId>,
+    /// Last frame id where the popup was "kept alive" by a `begin_popup_*` call.
+    keep_alive_frame: Option<FrameId>,
+}
+
+#[derive(Default)]
+struct PopupStoreWindowState {
+    by_id: HashMap<Arc<str>, PopupStoreState>,
+    prepared_frame: Option<FrameId>,
 }
 
 #[derive(Default)]
 struct ImUiPopupStore {
-    by_id: HashMap<Arc<str>, PopupStoreState>,
+    by_window: HashMap<AppWindowId, PopupStoreWindowState>,
+}
+
+fn prepare_popup_store_for_frame<H: UiHost>(
+    store: &mut ImUiPopupStore,
+    app: &mut H,
+    window: AppWindowId,
+    frame_id: FrameId,
+) {
+    let state = store.by_window.entry(window).or_default();
+    if state.prepared_frame == Some(frame_id) {
+        return;
+    }
+    state.prepared_frame = Some(frame_id);
+
+    let required_keep_alive = FrameId(frame_id.0.saturating_sub(1));
+    for st in state.by_id.values_mut() {
+        let is_open = app.models().get_copied(&st.open).unwrap_or(false);
+        if !is_open {
+            continue;
+        }
+        if st.keep_alive_frame == Some(required_keep_alive) {
+            continue;
+        }
+        let _ = app.models_mut().update(&st.open, |v| *v = false);
+        let _ = app.models_mut().update(&st.anchor, |v| *v = None);
+        st.panel_id = None;
+    }
 }
 
 fn with_popup_store_for_id<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
     id: &str,
-    f: impl FnOnce(&mut PopupStoreState) -> R,
+    f: impl FnOnce(&mut PopupStoreState, &mut H) -> R,
 ) -> R {
+    let window = cx.window;
+    let frame_id = cx.frame_id;
     cx.app
-        .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
-            if let Some(existing) = st.by_id.get_mut(id) {
-                return f(existing);
+        .with_global_mut_untracked(ImUiPopupStore::default, |store, app| {
+            prepare_popup_store_for_frame(store, app, window, frame_id);
+
+            let state = store.by_window.entry(window).or_default();
+            if let Some(existing) = state.by_id.get_mut(id) {
+                return f(existing, app);
             }
 
             let key: Arc<str> = Arc::from(id);
-            let entry = st.by_id.entry(key).or_insert_with(|| PopupStoreState {
+            let entry = state.by_id.entry(key).or_insert_with(|| PopupStoreState {
                 open: app.models_mut().insert(false),
                 anchor: app.models_mut().insert(None::<fret_core::Rect>),
                 panel_id: None,
+                keep_alive_frame: None,
             });
-            f(entry)
+            f(entry, app)
         })
 }
 
@@ -1974,12 +2024,35 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
-        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st| st.open.clone()))
+        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st, _app| st.open.clone()))
+    }
+
+    /// Drops all internal state for a named popup scope.
+    ///
+    /// This is primarily intended for ephemeral/dynamic scopes where the id space could grow
+    /// without bound (e.g. popups keyed by user-generated strings). Dropping a scope will close the
+    /// popup (if open) and release the internal models if no other references exist.
+    fn drop_popup_scope(&mut self, id: &str) {
+        self.with_cx_mut(|cx| {
+            cx.app
+                .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
+                    prepare_popup_store_for_frame(st, app, cx.window, cx.frame_id);
+                    let Some(window_state) = st.by_window.get_mut(&cx.window) else {
+                        return;
+                    };
+                    let Some(entry) = window_state.by_id.remove(id) else {
+                        return;
+                    };
+                    let _ = app.models_mut().update(&entry.open, |v| *v = false);
+                    let _ = app.models_mut().update(&entry.anchor, |v| *v = None);
+                });
+            cx.app.request_redraw(cx.window);
+        });
     }
 
     fn open_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let _ = cx.app.models_mut().update(&open, |v| *v = true);
             cx.app.request_redraw(cx.window);
         });
@@ -1988,7 +2061,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
         self.with_cx_mut(|cx| {
             let (open, anchor_model) =
-                with_popup_store_for_id(cx, id, |st| (st.open.clone(), st.anchor.clone()));
+                with_popup_store_for_id(cx, id, |st, _app| (st.open.clone(), st.anchor.clone()));
             let _ = cx
                 .app
                 .models_mut()
@@ -2000,7 +2073,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn close_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let _ = cx.app.models_mut().update(&open, |v| *v = false);
             cx.app.request_redraw(cx.window);
         });
@@ -2023,7 +2096,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st| {
+            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st, _app| {
                 (st.open.clone(), st.anchor.clone(), st.panel_id)
             });
             let is_open = cx
@@ -2039,6 +2112,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let Some(anchor) = anchor else {
                 return false;
             };
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -2115,7 +2193,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         })]
                     });
                     menu_id_for_focus = Some(menu.id);
-                    with_popup_store_for_id(cx, id, |st| st.panel_id = Some(menu.id));
+                    with_popup_store_for_id(cx, id, |st, _app| st.panel_id = Some(menu.id));
                     menu
                 })
             });
@@ -2162,13 +2240,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> bool {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
             let is_open = cx
                 .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(false);
             if !is_open {
                 return false;
             }
+
+            let keep_alive_frame = cx.frame_id;
+            with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+            });
 
             let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
             let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
@@ -3317,7 +3400,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             .unwrap_or_else(|| Arc::from("Select..."));
         let trigger_text: Arc<str> = Arc::from(format!("{label}: {selected_label}"));
 
-        let popup_scope_id: Arc<str> = {
+        let popup_scope_id: Arc<str> = options.popup_scope_id.clone().unwrap_or_else(|| {
             let base = options
                 .test_id
                 .as_deref()
@@ -3332,7 +3415,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }
             }
             Arc::from(format!("imui-select-popup-{normalized}"))
-        };
+        });
         let popup_open = self.popup_open_model(popup_scope_id.as_ref());
 
         let trigger = self.push_id(format!("{popup_scope_id}.trigger"), |ui| {
