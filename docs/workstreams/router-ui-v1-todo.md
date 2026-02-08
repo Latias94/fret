@@ -44,6 +44,9 @@ Status legend:
 
 ## Phase 3 - Link helpers (desktop)
 
+- `[x]` Add `RouterLink` helper:
+  - compute canonical `RouteLocation` + `href` (`RouterUiStore::link_to`)
+  - provide desktop affordance hook (`copy_href_on_activate`)
 - `[ ]` Add `RouterLink` element:
   - computes `href` using `Router::href_to(...)`
   - on press, performs guard-aware navigation

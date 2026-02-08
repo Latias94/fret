@@ -96,6 +96,12 @@ The implementation should:
 - build canonical locations via `Router::build_location(...)` / `Router::href_to(...)`
 - avoid direct coupling to web-only `anchor` semantics
 
+As an incremental step, `fret-router-ui` may expose a small data helper:
+
+- `RouterLink { action, href, to }`
+  - constructs canonical `RouteLocation` + `href` via `RouterUiStore::link_to(...)`
+  - provides `copy_href_on_activate(...)` for desktop-friendly "Copy link" affordances
+
 ### 4) Command integration
 
 Provide recommended commands (not forced):
