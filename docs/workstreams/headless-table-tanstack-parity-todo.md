@@ -233,10 +233,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ## M1 鈥?Core types (columns/headers/rows/cells)
 
-- [~] HTP-core-010 Add TanStack-like column tree representation (nested columns).
+- [x] HTP-core-010 Add TanStack-like column tree representation (nested columns).
   - Done (scaffolding): grouped column defs via `ColumnDef::columns(...)` and leaf flattening.
     - Evidence: `ecosystem/fret-ui-headless/src/table/column.rs` (`ColumnDef.columns`)
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (stores `column_tree` + leaf flatten)
+  - Done (parity-gated): column tree / flat column inventory helpers match upstream outcomes for deep nesting + visibility.
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`
 - [x] HTP-core-020 Implement header group generation (including placeholder headers).
   - Done (parity-gated): `getHeaderGroups` + pin-family variants + placeholder headers.
     - Evidence: `ecosystem/fret-ui-headless/src/table/headers.rs`
@@ -268,6 +273,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
   - Evidence (engine surfaces): `ecosystem/fret-ui-headless/src/table/row_model.rs`
     (`Table::{flat_headers,leaf_headers,footer_groups}` + pin-family variants).
+
+- [x] HTP-rowtrav-010 Gate row traversal helpers (`row.getParentRows` / `row.getLeafRows`) for nested `subRows`.
+  - Parity-gated (ordering semantics): parent chain order + DFS preorder flattening of descendants.
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json` (`row_traversal_detail`).
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`RowModel::{parent_row_ids,leaf_row_ids}`).
 
 ---
 

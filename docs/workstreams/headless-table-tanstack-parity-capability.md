@@ -19,7 +19,7 @@ Legend:
 - **Partial**: implemented, but lacks option/edge-case parity coverage.
 - **Missing**: no equivalent capability surface yet.
 
-Last updated: 2026-02-07
+Last updated: 2026-02-08
 
 ---
 
@@ -117,7 +117,7 @@ Source of truth:
 | `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Partial | row model fixtures across cases |
 | `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
 | `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Partial | `tanstack_v8_headers_cells_parity.rs` |
-| `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Partial | currently unit/fixture gated only where needed |
+| `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
 ### Column (CoreColumn)
 
@@ -851,7 +851,7 @@ and does not need to preserve method names, but the **capability must exist**.
 | `pin` | `Table::{row_pinning_updater,toggled_row_pinned}` (+ by-id variants) | Aligned | `pinning.json`, `pinning_tree.json`, `row_id_state_ops.json` |
 | `columnFilters/columnFiltersMeta` | `Table::row_filter_state_snapshot()` | Aligned | `filtering_meta.json` |
 | `groupingColumnId/getGroupingValue/getIsGrouped` | exposed via grouped-row model snapshots (`GroupedRowModel`) rather than per-row instance methods | Partial | `grouping.json` + grouped fixtures |
-| `getLeafRows/getParentRows` | derivable via `RowModel` traversal (`Row.parent` / `sub_rows`) | Partial | no dedicated gate yet |
+| `getLeafRows/getParentRows` | derivable via `RowModel` traversal (`Row.parent` / `sub_rows`) | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
 ### Header instance (public, non-underscore)
 

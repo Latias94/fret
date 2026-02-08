@@ -117,6 +117,65 @@ impl<'a, TData> RowModel<'a, TData> {
         &self.flat_rows
     }
 
+    /// TanStack-aligned: `row.getParentRows()` (root → ... → parent), excluding the row itself.
+    pub fn parent_rows(&self, row: RowIndex) -> Vec<RowIndex> {
+        let Some(mut current) = self.row(row).and_then(|r| r.parent) else {
+            return Vec::new();
+        };
+
+        let mut out = Vec::new();
+        while let Some(r) = self.row(current) {
+            out.push(current);
+            let Some(parent) = r.parent else {
+                break;
+            };
+            current = parent;
+        }
+
+        out.reverse();
+        out
+    }
+
+    /// TanStack-aligned: `row.getParentRows().map(r => r.id)`.
+    pub fn parent_row_ids(&self, row: RowIndex) -> Vec<RowId> {
+        self.parent_rows(row)
+            .into_iter()
+            .filter_map(|idx| self.row(idx).map(|r| r.id.clone()))
+            .collect()
+    }
+
+    /// TanStack-aligned: `row.getLeafRows()` is implemented upstream as
+    /// `flattenBy(row.subRows, r => r.subRows)` (DFS preorder), excluding the row itself.
+    ///
+    /// Note: despite the name, this includes all descendants (not only leaf nodes).
+    pub fn leaf_rows(&self, row: RowIndex) -> Vec<RowIndex> {
+        fn push_descendants<TData>(
+            arena: &[Row<'_, TData>],
+            out: &mut Vec<RowIndex>,
+            row: RowIndex,
+        ) {
+            let Some(r) = arena.get(row) else {
+                return;
+            };
+            for &child in &r.sub_rows {
+                out.push(child);
+                push_descendants(arena, out, child);
+            }
+        }
+
+        let mut out = Vec::new();
+        push_descendants(&self.arena, &mut out, row);
+        out
+    }
+
+    /// TanStack-aligned: `row.getLeafRows().map(r => r.id)`.
+    pub fn leaf_row_ids(&self, row: RowIndex) -> Vec<RowId> {
+        self.leaf_rows(row)
+            .into_iter()
+            .filter_map(|idx| self.row(idx).map(|r| r.id.clone()))
+            .collect()
+    }
+
     pub fn row(&self, index: RowIndex) -> Option<&Row<'a, TData>> {
         self.arena.get(index)
     }

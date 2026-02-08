@@ -400,6 +400,11 @@ type RowSelectionDetail = {
   can_select_sub_rows: Record<string, boolean>
 }
 
+type RowTraversalDetail = {
+  parent_rows: Record<string, string[]>
+  leaf_rows: Record<string, string[]>
+}
+
 type FilteringHelpersSnapshot = {
   columns: Record<
     string,
@@ -455,6 +460,7 @@ type FixtureSnapshot = {
     is_all_page_rows_selected?: boolean
     is_some_page_rows_selected?: boolean
     row_selection_detail?: RowSelectionDetail
+    row_traversal_detail?: RowTraversalDetail
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
@@ -2238,6 +2244,27 @@ function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
       filter_index: Number(col.getFilterIndex?.() ?? -1),
       can_global_filter: Boolean(col.getCanGlobalFilter?.()),
     }
+  }
+
+  return out
+}
+
+function snapshotRowTraversalDetail(table: any, rowIds: string[]): RowTraversalDetail {
+  const out: RowTraversalDetail = {
+    parent_rows: {},
+    leaf_rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.parent_rows[id] = []
+      out.leaf_rows[id] = []
+      continue
+    }
+
+    out.parent_rows[id] = (row.getParentRows?.() ?? []).map((r: any) => String(r.id))
+    out.leaf_rows[id] = (row.getLeafRows?.() ?? []).map((r: any) => String(r.id))
   }
 
   return out
@@ -4098,6 +4125,7 @@ function snapshotColumnPinning(
         expect: {
           ...baseSnap,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
         },
       }
     }
@@ -4121,6 +4149,7 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
         },
       }
     }
