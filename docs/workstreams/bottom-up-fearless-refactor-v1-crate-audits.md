@@ -32,7 +32,7 @@ Template for per-crate notes:
 | `fret-platform-native` | L0 | `docs/workstreams/crate-audits/fret-platform-native.l0.md` |
 | `fret-platform-web` | L0 | `docs/workstreams/crate-audits/fret-platform-web.l0.md` |
 | `fret-runner-winit` | Not started | |
-| `fret-runner-web` | Not started | |
+| `fret-runner-web` | L0 | `docs/workstreams/crate-audits/fret-runner-web.l0.md` |
 | `fret-launch` | Not started | |
 | `fret` | Not started | |
 
