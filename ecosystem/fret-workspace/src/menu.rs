@@ -43,6 +43,12 @@ pub struct WorkspaceMenuCommands {
     pub paste: Option<CommandId>,
     pub select_all: Option<CommandId>,
 
+    /// Optional router navigation commands for editor-style apps.
+    ///
+    /// When set, `workspace_default_menu_bar` includes a "Navigate" menu with Back/Forward.
+    pub router_back: Option<CommandId>,
+    pub router_forward: Option<CommandId>,
+
     pub next_tab: CommandId,
     pub prev_tab: CommandId,
     pub close_tab: CommandId,
@@ -94,6 +100,9 @@ impl Default for WorkspaceMenuCommands {
             copy: None,
             paste: None,
             select_all: None,
+
+            router_back: None,
+            router_forward: None,
 
             next_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_NEXT),
             prev_tab: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_PREV),
@@ -250,6 +259,8 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         copy,
         paste,
         select_all,
+        router_back,
+        router_forward,
         next_tab,
         prev_tab,
         close_tab,
@@ -331,6 +342,21 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
             mnemonic: Some('v'),
             items: view_items,
         });
+    }
+
+    if router_back.is_some() || router_forward.is_some() {
+        let mut nav_items = Vec::new();
+        push_command(&mut nav_items, router_back);
+        push_command(&mut nav_items, router_forward);
+
+        if !nav_items.is_empty() {
+            menus.push(Menu {
+                title: Arc::from("Navigate"),
+                role: None,
+                mnemonic: Some('n'),
+                items: nav_items,
+            });
+        }
     }
 
     menus.push(Menu {

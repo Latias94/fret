@@ -156,6 +156,12 @@ If you register router commands later (after config layering), call
 `fret_app::install_command_default_keybindings_into_keymap(app)` again to ensure the defaults are
 added to the baseline keymap (the installer is idempotent per command id).
 
+Menu bar integration:
+
+- `fret-workspace::menu::workspace_default_menu_bar(...)` accepts optional router command IDs.
+- `fret-kit`'s `workspace_shell_model_default_menu(...)` wires these automatically when the
+  `router` feature is enabled.
+
 ## Evidence anchors (when implemented)
 
 - `ecosystem/fret-router-ui/src/lib.rs` (store + outlet/link primitives)
