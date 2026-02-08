@@ -52,6 +52,18 @@ where
         self.leaf_match().map(|m| &m.route)
     }
 
+    pub fn match_depth(&self) -> usize {
+        self.matches.len()
+    }
+
+    pub fn match_at(&self, index: usize) -> Option<&RouteMatchSnapshot<R>> {
+        self.matches.get(index)
+    }
+
+    pub fn route_at(&self, index: usize) -> Option<&R> {
+        self.match_at(index).map(|m| &m.route)
+    }
+
     pub fn is_at_location(&self, location: &RouteLocation) -> bool {
         self.location.canonicalized() == location.canonicalized()
     }

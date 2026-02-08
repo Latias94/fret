@@ -84,6 +84,10 @@ As an initial step, `fret-router-ui` can also expose a lightweight helper:
   - delegates match-driven rendering to the caller
   - optional diagnostics sugar: `router_outlet_with_test_id(...)`
 
+Snapshot helpers include:
+
+- `RouterUiSnapshot::match_depth()` / `match_at(i)` / `route_at(i)`
+
 ### 3) Link-style navigation helpers (desktop)
 
 Desktop still benefits from a `Link` primitive:
