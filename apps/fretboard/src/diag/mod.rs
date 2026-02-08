@@ -2626,6 +2626,10 @@ See: `docs/tracy.md`.\n";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
                 if is_ui_gallery_suite {
+                    // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
+                    // post-run gate. Enable screenshots so those checks can resolve semantics
+                    // bounds against captured PNGs.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         ui_gallery_suite_scripts()
                             .into_iter()
@@ -2634,6 +2638,9 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_code_editor_suite {
+                    // The code-editor-focused UI Gallery suite also includes the pixels-changed
+                    // gate (soft-wrap editing baseline), so screenshots must be enabled.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         ui_gallery_code_editor_suite_scripts()
                             .into_iter()
@@ -3181,7 +3188,7 @@ See: `docs/tracy.md`.\n";
                 || (check_pixels_changed_test_id.is_none()
                     && scripts
                         .iter()
-                        .any(|src| ui_gallery_script_requires_pixels_changed_gate(src)))
+                        .any(|src| ui_gallery_script_pixels_changed_test_id(src).is_some()))
                 || scripts.iter().any(|src| script_requests_screenshots(src));
             // Suite defaults: most suites only need a small warmup to skip startup churn, but
             // "no shift" gates should avoid the initial VirtualList window stabilization phase.
@@ -3536,8 +3543,7 @@ See: `docs/tracy.md`.\n";
                             .then_some(1u64)
                             .filter(|_| check_windowed_rows_offset_changes_min.is_none());
                     let suite_pixels_changed_test_id =
-                        ui_gallery_script_requires_pixels_changed_gate(&src)
-                            .then_some("ui-gallery-code-editor-torture-root")
+                        ui_gallery_script_pixels_changed_test_id(&src)
                             .filter(|_| check_pixels_changed_test_id.is_none());
                     let suite_ui_gallery_code_editor_torture_marker_present =
                         ui_gallery_script_requires_code_editor_torture_marker_present_gate(&src)
@@ -6882,7 +6888,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 35] {
+fn ui_gallery_suite_scripts() -> [&'static str; 36] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -6903,6 +6909,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 35] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-read-only-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-read-only-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json",
@@ -7065,15 +7072,20 @@ fn ui_gallery_script_requires_windowed_rows_offset_changes_gate(script: &Path) -
     )
 }
 
-fn ui_gallery_script_requires_pixels_changed_gate(script: &Path) -> bool {
+fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static str> {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
-        return false;
+        return None;
     };
 
-    matches!(
-        name,
-        "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
-    )
+    match name {
+        "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json" => {
+            Some("ui-gallery-code-editor-torture-root")
+        }
+        "ui-gallery-code-view-scroll-refresh-pixels-changed.json" => {
+            Some("ui-gallery-code-view-root")
+        }
+        _ => None,
+    }
 }
 
 fn ui_gallery_script_requires_code_editor_torture_marker_present_gate(script: &Path) -> bool {
