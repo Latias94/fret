@@ -2761,6 +2761,7 @@ where
 
             let (group_aggs_u64, group_aggs_text, group_aggs_any) =
                 compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
+            let group_aggs_any = table.grouped_aggregations_any().clone();
 
             let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
             for &node in grouped.flat_rows() {

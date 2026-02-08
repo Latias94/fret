@@ -147,19 +147,19 @@ This ADR is partially implemented in a way that preserves the intended crate bou
     sampling while waiting for the demo to exit.
   - Tooling can optionally gate on process footprint thresholds (CPU/memory) and writes `check.resource_footprint.json` as
     evidence (fails `diag repro` on threshold violations).
-  - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
+  - Evidence: `crates/fret-diag/src/lib.rs` (`diag repro`, `pack_repro_zip_multi`; `apps/fretboard/src/diag.rs` is a thin wrapper).
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
     changes but `scene_fingerprint` does not (`--check-semantics-changed-repainted`), and includes a small semantics diff
     summary to aid triage. When `--dump-semantics-changed-repainted-json` is set, it also writes a structured
     `check.semantics_changed_repainted.json` next to `bundle.json` for machine consumption.
-  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_semantics_changed_repainted*`).
+  - Evidence: `crates/fret-diag/src/stats.rs` (`check_bundle_for_semantics_changed_repainted*`).
 - **Redraw-efficiency gates (`fretboard`)**
   - Tooling provides an “idle should not paint” gate (`--check-idle-no-paint-min <n>`) that asserts a trailing streak of
     snapshots with no paint work, and writes `check.idle_no_paint.json` as evidence.
   - Tooling provides a “view cache reuse should be stable” gate (`--check-view-cache-reuse-stable-min <n>`) that asserts a
     trailing streak of snapshots with view-cache reuse signals, and writes `check.view_cache_reuse_stable.json` as evidence.
-  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_idle_no_paint_min`, `check_bundle_for_view_cache_reuse_stable_min`).
+  - Evidence: `crates/fret-diag/src/stats.rs` (`check_bundle_for_idle_no_paint_min`, `check_bundle_for_view_cache_reuse_stable_min`).
 - **Semantics fingerprint export (`fret-bootstrap`)**
   - Diagnostics snapshots export `semantics_fingerprint` as a best-effort hash derived from the semantics snapshot.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`semantics_fingerprint` field and computation).

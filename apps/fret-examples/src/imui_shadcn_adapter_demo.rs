@@ -119,7 +119,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiShadcnAdapterState) -> Vi
             },
         );
 
-        let _ = ui.select_model("Mode", &st.mode, &select_items);
+        let _ = ui.select_model_ex(
+            "Mode",
+            &st.mode,
+            &select_items,
+            fret_ui_kit::imui::SelectOptions {
+                test_id: Some(Arc::from("imui-shadcn-demo.mode")),
+                ..Default::default()
+            },
+        );
 
         let _ = ui.input_text_model_ex(
             &st.draft,

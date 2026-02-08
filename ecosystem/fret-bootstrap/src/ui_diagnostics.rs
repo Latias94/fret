@@ -12,6 +12,16 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use fret_diag_protocol::{
+    DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1,
+    UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
+};
+
+#[path = "ui_diagnostics_ws_bridge.rs"]
+mod ui_diagnostics_ws_bridge;
+use ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
+
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
     pub enabled: bool,
@@ -42,13 +52,44 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    pub devtools_ws_url: Option<String>,
+    pub devtools_token: Option<String>,
 }
 
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let enabled =
-            std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
+        let (devtools_ws_url, devtools_token) = {
+            let devtools_ws_url = std::env::var("FRET_DEVTOOLS_WS")
+                .ok()
+                .filter(|v| !v.is_empty())
+                .or_else(|| {
+                    std::env::var("FRET_DEVTOOLS_WS_PORT")
+                        .ok()
+                        .filter(|v| !v.is_empty())
+                        .and_then(|v| v.parse::<u16>().ok())
+                        .map(|port| format!("ws://127.0.0.1:{port}/"))
+                });
+            let devtools_token = std::env::var("FRET_DEVTOOLS_TOKEN")
+                .ok()
+                .filter(|v| !v.is_empty());
+
+            #[cfg(all(target_arch = "wasm32", feature = "diagnostics-ws"))]
+            {
+                let (qs_ws_url, qs_token) =
+                    fret_diag_ws::client::devtools_ws_config_from_window_query();
+                (devtools_ws_url.or(qs_ws_url), devtools_token.or(qs_token))
+            }
+
+            #[cfg(not(all(target_arch = "wasm32", feature = "diagnostics-ws")))]
+            {
+                (devtools_ws_url, devtools_token)
+            }
+        };
+
+        let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || out_dir_env.is_some()
+            || (devtools_ws_url.is_some() && devtools_token.is_some());
         let out_dir = out_dir_env
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
@@ -171,6 +212,8 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            devtools_ws_url,
+            devtools_token,
         }
     }
 }
@@ -178,6 +221,7 @@ impl Default for UiDiagnosticsConfig {
 #[derive(Default)]
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
+    ws_bridge: UiDiagnosticsWsBridge,
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
@@ -191,6 +235,9 @@ pub struct UiDiagnosticsService {
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
+    pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
+    devtools_screenshot_wait: Option<DevtoolsScreenshotWaitState>,
+    pending_devtools_semantics_node_get: HashMap<u64, PendingDevtoolsSemanticsNodeGet>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
@@ -212,6 +259,12 @@ pub struct UiDiagnosticsService {
     pending_pick: Option<PendingPick>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PendingDevtoolsSemanticsNodeGet {
+    transport_request_id: Option<u64>,
+    node_id: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -251,6 +304,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
         self.poll_script_trigger();
@@ -275,11 +329,19 @@ impl UiDiagnosticsService {
             return true;
         }
 
+        if self
+            .pending_devtools_semantics_node_get
+            .contains_key(&window.data().as_ffi())
+        {
+            return true;
+        }
+
         self.active_scripts
             .get(&window)
             .is_some_and(active_script_needs_semantics_snapshot)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;
@@ -305,6 +367,11 @@ impl UiDiagnosticsService {
         };
         self.exit_last_mtime = Some(current_mtime);
         triggered
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn poll_exit_trigger(&mut self) -> bool {
+        false
     }
 
     pub fn redact_text(&self) -> bool {
@@ -848,28 +915,46 @@ impl UiDiagnosticsService {
 
                             let bytes = serde_json::to_vec_pretty(&req).ok();
                             if let Some(bytes) = bytes {
-                                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
-                                    let _ = std::fs::create_dir_all(parent);
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    if let Some(parent) = self.cfg.screenshot_request_path.parent()
+                                    {
+                                        let _ = std::fs::create_dir_all(parent);
+                                    }
+                                    let write_ok =
+                                        std::fs::write(&self.cfg.screenshot_request_path, bytes)
+                                            .is_ok()
+                                            && touch_file(&self.cfg.screenshot_trigger_path)
+                                                .is_ok();
+                                    if write_ok {
+                                        state = Some(ScreenshotWaitState {
+                                            step_index,
+                                            remaining_frames: timeout_frames,
+                                            request_id,
+                                            window_ffi,
+                                            last_result_trigger_stamp: None,
+                                        });
+                                    } else {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason =
+                                            Some("screenshot_request_write_failed".to_string());
+                                        active.screenshot_wait = None;
+                                        output.request_redraw = true;
+                                    }
                                 }
-                                let write_ok =
-                                    std::fs::write(&self.cfg.screenshot_request_path, bytes)
-                                        .is_ok()
-                                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
-                                if write_ok {
-                                    state = Some(ScreenshotWaitState {
-                                        step_index,
-                                        remaining_frames: timeout_frames,
-                                        request_id,
-                                        window_ffi,
-                                        last_result_trigger_stamp: None,
-                                    });
-                                } else {
+
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let _ = bytes;
                                     force_dump_label = Some(format!(
-                                        "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                        "script-step-{step_index:04}-capture_screenshot-unsupported-wasm"
                                     ));
                                     stop_script = true;
                                     failure_reason =
-                                        Some("screenshot_request_write_failed".to_string());
+                                        Some("screenshots_not_supported_wasm".to_string());
                                     active.screenshot_wait = None;
                                     output.request_redraw = true;
                                 }
@@ -899,6 +984,20 @@ impl UiDiagnosticsService {
                                 );
 
                             if completed {
+                                let bundle_dir_name = self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .and_then(|p| p.file_name())
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.to_string());
+                                self.emit_screenshot_result(
+                                    None,
+                                    &state.request_id,
+                                    state.window_ffi,
+                                    bundle_dir_name.as_deref(),
+                                    "completed",
+                                    None,
+                                );
                                 active.screenshot_wait = None;
                                 active.next_step = active.next_step.saturating_add(1);
                                 output.request_redraw = true;
@@ -906,6 +1005,20 @@ impl UiDiagnosticsService {
                                 force_dump_label = Some(format!(
                                     "script-step-{step_index:04}-capture_screenshot-timeout"
                                 ));
+                                let bundle_dir_name = self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .and_then(|p| p.file_name())
+                                    .and_then(|s| s.to_str())
+                                    .map(|s| s.to_string());
+                                self.emit_screenshot_result(
+                                    None,
+                                    &state.request_id,
+                                    state.window_ffi,
+                                    bundle_dir_name.as_deref(),
+                                    "timeout",
+                                    Some("capture_screenshot_timeout"),
+                                );
                                 stop_script = true;
                                 failure_reason = Some("capture_screenshot_timeout".to_string());
                                 active.screenshot_wait = None;
@@ -2303,6 +2416,7 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn ensure_ready_file(&mut self) {
         if self.ready_written {
             return;
@@ -2327,6 +2441,11 @@ impl UiDiagnosticsService {
             let _ = f.flush();
         }
 
+        self.ready_written = true;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn ensure_ready_file(&mut self) {
         self.ready_written = true;
     }
 
@@ -2689,6 +2808,8 @@ impl UiDiagnosticsService {
             return;
         }
 
+        self.drive_devtools_screenshot_for_window(app, window, scale_factor);
+
         let last_pointer_position = self
             .per_window
             .get(&window)
@@ -2709,6 +2830,12 @@ impl UiDiagnosticsService {
                 self.cfg.max_debug_string_bytes,
             )
         });
+
+        self.drive_devtools_semantics_node_get_for_window(
+            window.data().as_ffi(),
+            raw_semantics,
+            semantics_fingerprint,
+        );
 
         if self.inspect_enabled {
             let hovered = last_pointer_position.and_then(|pos| {
@@ -2854,6 +2981,7 @@ impl UiDiagnosticsService {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
         if !self.is_enabled() {
             return None;
@@ -2888,10 +3016,24 @@ impl UiDiagnosticsService {
         self.dump_bundle(None)
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn maybe_dump_if_triggered(&mut self) -> Option<PathBuf> {
+        if !self.is_enabled() {
+            return None;
+        }
+
+        if let Some(label) = self.pending_force_dump_label.take() {
+            return self.dump_bundle(Some(&label));
+        }
+
+        None
+    }
+
     fn request_force_dump(&mut self, label: String) {
         self.pending_force_dump_label = Some(sanitize_label(&label));
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_script_trigger(&mut self) {
         let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
             if let Some(dir) = self.cfg.script_trigger_path.parent() {
@@ -2964,6 +3106,10 @@ impl UiDiagnosticsService {
         });
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn poll_script_trigger(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
@@ -2979,7 +3125,6 @@ impl UiDiagnosticsService {
         }
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
-
         if write_json(dir.join("bundle.json"), &bundle).is_err() {
             return None;
         }
@@ -2988,6 +3133,57 @@ impl UiDiagnosticsService {
             let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
         }
         self.last_dump_dir = Some(dir.clone());
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dumped".to_string(),
+                session_id: None,
+                request_id: None,
+                payload: serde_json::json!({
+                    "exported_unix_ms": ts,
+                    "out_dir": self.cfg.out_dir.to_string_lossy(),
+                    "dir": display_path(&self.cfg.out_dir, &dir),
+                }),
+            },
+        );
+
+        Some(dir)
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        let ts = unix_ms_now();
+        let mut dir_name = ts.to_string();
+        if let Some(label) = label {
+            if !label.is_empty() {
+                dir_name = format!("{dir_name}-{label}");
+            }
+        }
+
+        let dir = self.cfg.out_dir.join(dir_name);
+        let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
+        self.last_dump_dir = Some(dir.clone());
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dumped".to_string(),
+                session_id: None,
+                request_id: None,
+                payload: serde_json::json!({
+                    "exported_unix_ms": ts,
+                    "out_dir": self.cfg.out_dir.to_string_lossy(),
+                    "dir": display_path(&self.cfg.out_dir, &dir),
+                    "bundle": bundle,
+                }),
+            },
+        );
+
         Some(dir)
     }
 
@@ -3009,22 +3205,546 @@ impl UiDiagnosticsService {
         id
     }
 
-    fn write_script_result(&self, result: UiScriptResultV1) {
+    fn write_script_result(&mut self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
         }
+        let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
         let _ = write_json(self.cfg.script_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.script_result_trigger_path);
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "script.result".to_string(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
     }
 
-    fn write_pick_result(&self, result: UiPickResultV1) {
+    fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
         }
+        let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
         let _ = write_json(self.cfg.pick_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.pick_result_trigger_path);
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "pick.result".to_string(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
     }
 
+    fn poll_devtools_ws(&mut self) {
+        let mut inbox: Vec<DiagTransportMessageV1> = Vec::new();
+        self.ws_bridge.drain_inbox(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            &mut inbox,
+        );
+
+        for msg in inbox {
+            self.apply_devtools_ws_message(msg);
+        }
+    }
+
+    fn apply_devtools_ws_message(&mut self, msg: DiagTransportMessageV1) {
+        match msg.r#type.as_str() {
+            "inspect.set" => {
+                let enabled = msg.payload.get("enabled").and_then(|v| v.as_bool());
+                let consume_clicks = msg.payload.get("consume_clicks").and_then(|v| v.as_bool());
+                if let (Some(enabled), Some(consume_clicks)) = (enabled, consume_clicks) {
+                    self.inspect_enabled = enabled;
+                    self.inspect_consume_clicks = consume_clicks;
+                }
+            }
+            "pick.arm" => {
+                self.pending_pick = None;
+                self.pick_armed_run_id = Some(self.next_pick_run_id());
+            }
+            "bundle.dump" => {
+                let label = msg
+                    .payload
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                if let Some(label) = label {
+                    self.request_force_dump(label);
+                } else {
+                    self.request_force_dump("devtools".to_string());
+                }
+            }
+            "screenshot.request" => {
+                let label = msg
+                    .payload
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                let timeout_frames = msg
+                    .payload
+                    .get("timeout_frames")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(300)
+                    .min(u32::MAX as u64) as u32;
+                let window_ffi = msg
+                    .payload
+                    .get("window")
+                    .and_then(|v| v.as_u64())
+                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
+
+                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
+                    request_id: msg.request_id,
+                    label,
+                    timeout_frames,
+                    window_ffi,
+                });
+                self.devtools_screenshot_wait = None;
+            }
+            "script.push" | "script.run" => {
+                let script_value = msg
+                    .payload
+                    .get("script")
+                    .cloned()
+                    .unwrap_or_else(|| msg.payload.clone());
+                let schema_version: u32 = script_value
+                    .get("schema_version")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    .min(u32::MAX as u64) as u32;
+
+                let script = match schema_version {
+                    1 => serde_json::from_value::<UiActionScriptV1>(script_value)
+                        .ok()
+                        .and_then(PendingScript::from_v1),
+                    2 => serde_json::from_value::<UiActionScriptV2>(script_value)
+                        .ok()
+                        .and_then(PendingScript::from_v2),
+                    _ => None,
+                };
+
+                let Some(script) = script else {
+                    return;
+                };
+                let run_id = self.next_script_run_id();
+                self.pending_script = Some(script);
+                self.pending_script_run_id = Some(run_id);
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Queued,
+                    step_index: None,
+                    reason: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+            }
+            "semantics.node.get" => {
+                let parsed = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload.clone())
+                    .ok()
+                    .filter(|v| v.schema_version == 1);
+
+                let window_ffi = parsed
+                    .as_ref()
+                    .map(|v| v.window)
+                    .or_else(|| msg.payload.get("window").and_then(|v| v.as_u64()))
+                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
+                let node_id = parsed
+                    .as_ref()
+                    .map(|v| v.node_id)
+                    .or_else(|| msg.payload.get("node_id").and_then(|v| v.as_u64()))
+                    .or_else(|| msg.payload.get("node").and_then(|v| v.as_u64()));
+
+                let (Some(window_ffi), Some(node_id)) = (window_ffi, node_id) else {
+                    return;
+                };
+
+                self.pending_devtools_semantics_node_get.insert(
+                    window_ffi,
+                    PendingDevtoolsSemanticsNodeGet {
+                        transport_request_id: msg.request_id,
+                        node_id,
+                    },
+                );
+            }
+            _ => {}
+        }
+    }
+
+    fn drive_devtools_semantics_node_get_for_window(
+        &mut self,
+        window_ffi: u64,
+        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        semantics_fingerprint: Option<u64>,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let Some(pending) = self.pending_devtools_semantics_node_get.remove(&window_ffi) else {
+            return;
+        };
+
+        let Some(semantics_snapshot) = semantics_snapshot else {
+            self.ws_bridge.send(
+                self.cfg.devtools_ws_url.as_deref(),
+                self.cfg.devtools_token.as_deref(),
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "semantics.node.get_ack".to_string(),
+                    session_id: None,
+                    request_id: pending.transport_request_id,
+                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "no_semantics".to_string(),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        window: window_ffi,
+                        node_id: pending.node_id,
+                        semantics_fingerprint,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null),
+                },
+            );
+            return;
+        };
+
+        let node = semantics_snapshot
+            .nodes
+            .iter()
+            .find(|n| key_to_u64(n.id) == pending.node_id);
+
+        let Some(node) = node else {
+            self.ws_bridge.send(
+                self.cfg.devtools_ws_url.as_deref(),
+                self.cfg.devtools_token.as_deref(),
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "semantics.node.get_ack".to_string(),
+                    session_id: None,
+                    request_id: pending.transport_request_id,
+                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "not_found".to_string(),
+                        reason: Some("node_not_found".to_string()),
+                        window: window_ffi,
+                        node_id: pending.node_id,
+                        semantics_fingerprint,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null),
+                },
+            );
+            return;
+        };
+
+        let ui_node = UiSemanticsNodeV1::from_node(
+            node,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
+        let children = semantics_snapshot
+            .nodes
+            .iter()
+            .filter_map(|n| {
+                n.parent
+                    .filter(|p| key_to_u64(*p) == pending.node_id)
+                    .map(|_| key_to_u64(n.id))
+            })
+            .collect::<Vec<_>>();
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "semantics.node.get_ack".to_string(),
+                session_id: None,
+                request_id: pending.transport_request_id,
+                payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                    schema_version: 1,
+                    status: "ok".to_string(),
+                    reason: None,
+                    window: window_ffi,
+                    node_id: pending.node_id,
+                    semantics_fingerprint,
+                    node: serde_json::to_value(ui_node).ok(),
+                    children,
+                    captured_unix_ms: Some(unix_ms_now()),
+                })
+                .unwrap_or(serde_json::Value::Null),
+            },
+        );
+    }
+
+    fn drive_devtools_screenshot_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        scale_factor: f32,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let window_ffi = window.data().as_ffi();
+
+        if let Some(mut state) = self.devtools_screenshot_wait.take() {
+            if state.window_ffi != window_ffi {
+                self.devtools_screenshot_wait = Some(state);
+                return;
+            }
+
+            let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+            let completed = trigger_stamp.is_some()
+                && trigger_stamp != state.last_result_trigger_stamp
+                && screenshot_request_completed(
+                    &self.cfg.screenshot_result_path,
+                    &state.request_id,
+                    state.window_ffi,
+                );
+
+            if completed {
+                self.emit_screenshot_result(
+                    state.transport_request_id,
+                    &state.request_id,
+                    state.window_ffi,
+                    Some(&state.bundle_dir_name),
+                    "completed",
+                    None,
+                );
+            } else if state.remaining_frames == 0 {
+                self.emit_screenshot_result(
+                    state.transport_request_id,
+                    &state.request_id,
+                    state.window_ffi,
+                    Some(&state.bundle_dir_name),
+                    "timeout",
+                    Some("capture_screenshot_timeout"),
+                );
+            } else {
+                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                state.last_result_trigger_stamp = trigger_stamp;
+                self.devtools_screenshot_wait = Some(state);
+            }
+
+            return;
+        }
+
+        let Some(pending) = self.pending_devtools_screenshot.take() else {
+            return;
+        };
+
+        if pending.window_ffi.is_some_and(|w| w != window_ffi) {
+            self.pending_devtools_screenshot = Some(pending);
+            return;
+        }
+
+        let request_id = format!(
+            "devtools-screenshot-window-{window_ffi}-tick-{tick}-frame-{frame}",
+            tick = app.tick_id().0,
+            frame = app.frame_id().0
+        );
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "unsupported",
+                Some("screenshots_not_supported_wasm"),
+            );
+            return;
+        }
+
+        if !self.cfg.screenshots_enabled {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "disabled",
+                Some("screenshots_disabled"),
+            );
+            return;
+        }
+
+        let label = pending
+            .label
+            .as_deref()
+            .map(sanitize_label)
+            .unwrap_or_else(|| "devtools-screenshot".to_string());
+
+        self.dump_bundle(Some(&label));
+
+        let bundle_dir_name = self
+            .last_dump_dir
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        if bundle_dir_name.is_empty() {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                None,
+                "failed",
+                Some("no_last_dump_dir"),
+            );
+            return;
+        }
+
+        let req = serde_json::json!({
+            "schema_version": 1,
+            "out_dir": self.cfg.out_dir.to_string_lossy(),
+            "bundle_dir_name": bundle_dir_name.clone(),
+            "request_id": request_id.clone(),
+            "windows": [{
+                "window": window_ffi,
+                "tick_id": app.tick_id().0,
+                "frame_id": app.frame_id().0,
+                "scale_factor": scale_factor as f64,
+            }]
+        });
+
+        let bytes = serde_json::to_vec_pretty(&req).ok();
+        if let Some(bytes) = bytes {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let write_ok = std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
+                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
+                if write_ok {
+                    self.devtools_screenshot_wait = Some(DevtoolsScreenshotWaitState {
+                        remaining_frames: pending.timeout_frames,
+                        request_id,
+                        window_ffi,
+                        last_result_trigger_stamp: None,
+                        transport_request_id: pending.request_id,
+                        bundle_dir_name,
+                    });
+                } else {
+                    self.emit_screenshot_result(
+                        pending.request_id,
+                        &request_id,
+                        window_ffi,
+                        Some(&bundle_dir_name),
+                        "failed",
+                        Some("screenshot_request_write_failed"),
+                    );
+                }
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = bytes;
+                self.emit_screenshot_result(
+                    pending.request_id,
+                    &request_id,
+                    window_ffi,
+                    Some(&bundle_dir_name),
+                    "unsupported",
+                    Some("screenshots_not_supported_wasm"),
+                );
+            }
+        } else {
+            self.emit_screenshot_result(
+                pending.request_id,
+                &request_id,
+                window_ffi,
+                Some(&bundle_dir_name),
+                "failed",
+                Some("screenshot_request_serialize_failed"),
+            );
+        }
+    }
+
+    fn emit_screenshot_result(
+        &mut self,
+        transport_request_id: Option<u64>,
+        request_id: &str,
+        window_ffi: u64,
+        bundle_dir_name: Option<&str>,
+        status: &str,
+        reason: Option<&str>,
+    ) {
+        let bundle_dir_name = bundle_dir_name
+            .map(|s| s.to_string())
+            .or_else(|| {
+                self.last_dump_dir
+                    .as_ref()
+                    .and_then(|p| p.file_name())
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_default();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let entry =
+            screenshot_request_entry(&self.cfg.screenshot_result_path, request_id, window_ffi);
+        #[cfg(target_arch = "wasm32")]
+        let entry: Option<serde_json::Value> = None;
+
+        let screenshots_dir = if bundle_dir_name.is_empty() {
+            None
+        } else {
+            Some(display_path(
+                &self.cfg.out_dir,
+                &self
+                    .cfg
+                    .out_dir
+                    .join("screenshots")
+                    .join(bundle_dir_name.clone()),
+            ))
+        };
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "screenshot.result".to_string(),
+                session_id: None,
+                request_id: transport_request_id,
+                payload: serde_json::json!({
+                    "schema_version": 1,
+                    "status": status,
+                    "reason": reason,
+                    "request_id": request_id,
+                    "window": window_ffi,
+                    "bundle_dir_name": bundle_dir_name,
+                    "screenshots_dir": screenshots_dir,
+                    "entry": entry,
+                }),
+            },
+        );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_pick_trigger(&mut self) {
         let modified =
             match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
@@ -3062,6 +3782,10 @@ impl UiDiagnosticsService {
         self.pick_armed_run_id = Some(self.next_pick_run_id());
     }
 
+    #[cfg(target_arch = "wasm32")]
+    fn poll_pick_trigger(&mut self) {}
+
+    #[cfg(not(target_arch = "wasm32"))]
     fn poll_inspect_trigger(&mut self) {
         let modified =
             match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
@@ -3110,6 +3834,9 @@ impl UiDiagnosticsService {
         self.inspect_enabled = cfg.enabled;
         self.inspect_consume_clicks = cfg.consume_clicks;
     }
+
+    #[cfg(target_arch = "wasm32")]
+    fn poll_inspect_trigger(&mut self) {}
 
     fn resolve_pending_pick_for_window(
         &mut self,
@@ -3226,12 +3953,18 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn read_touch_stamp(path: &Path) -> Option<u64> {
     let bytes = std::fs::read(path).ok()?;
     let text = std::str::from_utf8(&bytes).ok()?;
     text.lines()
         .rev()
         .find_map(|line| line.trim().parse::<u64>().ok())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_touch_stamp(_path: &Path) -> Option<u64> {
+    None
 }
 
 #[derive(Debug, Clone)]
@@ -3797,547 +4530,11 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
         .collect()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV1 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV1>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV1 {
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiActionScriptV2 {
-    pub schema_version: u32,
-    pub steps: Vec<UiActionStepV2>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum UiActionStepV2 {
-    // v1-compatible steps
-    Click {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-    },
-    ResetDiagnostics,
-    MovePointer {
-        target: UiSelectorV1,
-    },
-    DragPointer {
-        target: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-    },
-    /// Move the pointer along a straight line over multiple frames (one move event per frame).
-    ///
-    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
-    /// `drag_pointer` emits multiple pointer move events in a single frame.
-    MovePointerSweep {
-        target: UiSelectorV1,
-        delta_x: f32,
-        delta_y: f32,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_move_frames_per_step")]
-        frames_per_step: u32,
-    },
-    Wheel {
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default)]
-        delta_y: f32,
-    },
-    PressKey {
-        key: String,
-        #[serde(default)]
-        modifiers: UiKeyModifiersV1,
-        #[serde(default)]
-        repeat: bool,
-    },
-    PressShortcut {
-        shortcut: String,
-        #[serde(default)]
-        repeat: bool,
-    },
-    TypeText {
-        text: String,
-    },
-    WaitFrames {
-        n: u32,
-    },
-    WaitUntil {
-        predicate: UiPredicateV1,
-        timeout_frames: u32,
-    },
-    Assert {
-        predicate: UiPredicateV1,
-    },
-    CaptureBundle {
-        label: Option<String>,
-    },
-    CaptureScreenshot {
-        label: Option<String>,
-        #[serde(default = "default_capture_screenshot_timeout_frames")]
-        timeout_frames: u32,
-    },
-
-    // v2 intent-level steps
-    EnsureVisible {
-        target: UiSelectorV1,
-        #[serde(default)]
-        within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    ScrollIntoView {
-        container: UiSelectorV1,
-        target: UiSelectorV1,
-        #[serde(default)]
-        delta_x: f32,
-        #[serde(default = "default_scroll_delta_y")]
-        delta_y: f32,
-        #[serde(default)]
-        require_fully_within_window: bool,
-        #[serde(default)]
-        padding_px: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    TypeTextInto {
-        target: UiSelectorV1,
-        text: String,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    MenuSelect {
-        menu: UiSelectorV1,
-        item: UiSelectorV1,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    MenuSelectPath {
-        path: Vec<UiSelectorV1>,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    DragTo {
-        from: UiSelectorV1,
-        to: UiSelectorV1,
-        #[serde(default)]
-        button: UiMouseButtonV1,
-        #[serde(default = "default_drag_steps")]
-        steps: u32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-    },
-    SetSliderValue {
-        target: UiSelectorV1,
-        value: f32,
-        #[serde(default = "default_slider_min")]
-        min: f32,
-        #[serde(default = "default_slider_max")]
-        max: f32,
-        #[serde(default = "default_slider_epsilon")]
-        epsilon: f32,
-        #[serde(default = "default_action_timeout_frames")]
-        timeout_frames: u32,
-        #[serde(default = "default_drag_steps")]
-        drag_steps: u32,
-    },
-    /// Request a resize of the active window's inner size (logical px).
-    ///
-    /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
-    /// runners may ignore it on platforms where programmatic resizing is not supported.
-    SetWindowInnerSize {
-        width_px: f32,
-        height_px: f32,
-    },
-}
-
-impl From<UiActionStepV1> for UiActionStepV2 {
-    fn from(value: UiActionStepV1) -> Self {
-        match value {
-            UiActionStepV1::Click { target, button } => Self::Click { target, button },
-            UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
-            UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
-            UiActionStepV1::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            } => Self::DragPointer {
-                target,
-                button,
-                delta_x,
-                delta_y,
-                steps,
-            },
-            UiActionStepV1::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            } => Self::Wheel {
-                target,
-                delta_x,
-                delta_y,
-            },
-            UiActionStepV1::PressKey {
-                key,
-                modifiers,
-                repeat,
-            } => Self::PressKey {
-                key,
-                modifiers,
-                repeat,
-            },
-            UiActionStepV1::TypeText { text } => Self::TypeText { text },
-            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
-            UiActionStepV1::WaitUntil {
-                predicate,
-                timeout_frames,
-            } => Self::WaitUntil {
-                predicate,
-                timeout_frames,
-            },
-            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
-            UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
-            UiActionStepV1::CaptureScreenshot {
-                label,
-                timeout_frames,
-            } => Self::CaptureScreenshot {
-                label,
-                timeout_frames,
-            },
-        }
-    }
-}
-
-fn default_drag_steps() -> u32 {
-    8
-}
-
-fn default_move_frames_per_step() -> u32 {
-    1
-}
-
-fn default_capture_screenshot_timeout_frames() -> u32 {
-    300
-}
-
-fn default_action_timeout_frames() -> u32 {
-    180
-}
-
-fn default_scroll_delta_y() -> f32 {
-    -120.0
-}
-
-fn default_slider_min() -> f32 {
-    0.0
-}
-
-fn default_slider_max() -> f32 {
-    100.0
-}
-
-fn default_slider_epsilon() -> f32 {
-    0.5
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiMouseButtonV1 {
-    Left,
-    Right,
-    Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
-    }
-}
-
-impl UiMouseButtonV1 {
-    fn from_button(button: fret_core::MouseButton) -> Self {
-        match button {
-            fret_core::MouseButton::Left => Self::Left,
-            fret_core::MouseButton::Right => Self::Right,
-            fret_core::MouseButton::Middle => Self::Middle,
-            fret_core::MouseButton::Back
-            | fret_core::MouseButton::Forward
-            | fret_core::MouseButton::Other(_) => Self::Left,
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-pub struct UiKeyModifiersV1 {
-    #[serde(default)]
-    pub shift: bool,
-    #[serde(default)]
-    pub ctrl: bool,
-    #[serde(default)]
-    pub alt: bool,
-    #[serde(default)]
-    pub meta: bool,
-}
-
-impl UiKeyModifiersV1 {
-    fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
-        Self {
-            shift: modifiers.shift,
-            ctrl: modifiers.ctrl,
-            alt: modifiers.alt,
-            meta: modifiers.meta,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiPredicateV1 {
-    Exists {
-        target: UiSelectorV1,
-    },
-    NotExists {
-        target: UiSelectorV1,
-    },
-    FocusIs {
-        target: UiSelectorV1,
-    },
-    RoleIs {
-        target: UiSelectorV1,
-        role: String,
-    },
-    CheckedIs {
-        target: UiSelectorV1,
-        checked: bool,
-    },
-    CheckedIsNone {
-        target: UiSelectorV1,
-    },
-    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
-    ///
-    /// This is intentionally coarse-grained: scripts should be able to assert that close
-    /// transitions keep the pointer barrier active while releasing focus containment (or vice
-    /// versa) without needing stable node ids.
-    BarrierRoots {
-        #[serde(default)]
-        barrier_root: UiOptionalRootStateV1,
-        #[serde(default)]
-        focus_barrier_root: UiOptionalRootStateV1,
-        /// When set, additionally enforces whether the two roots are equal.
-        ///
-        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
-        /// - `false`: requires `barrier_root != focus_barrier_root`.
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        require_equal: Option<bool>,
-    },
-    /// True when the target exists and its semantics bounds intersect the active window bounds.
-    ///
-    /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
-    /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
-    /// update.
-    VisibleInWindow {
-        target: UiSelectorV1,
-    },
-    /// True when the target exists and its semantics bounds are fully contained within the active
-    /// window bounds (optionally padded inward by `padding_px`).
-    BoundsWithinWindow {
-        target: UiSelectorV1,
-        #[serde(default)]
-        padding_px: f32,
-        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
-        ///
-        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
-        /// strict edge containment checks by `eps_px`.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when the target exists and its semantics bounds are at least the specified size.
-    ///
-    /// This is useful for demos where the content can legitimately be taller than the window
-    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
-    BoundsMinSize {
-        target: UiSelectorV1,
-        #[serde(default)]
-        min_w_px: f32,
-        #[serde(default)]
-        min_h_px: f32,
-        /// A small tolerance to account for rounding / fractional layout units.
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds do not overlap.
-    ///
-    /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
-    BoundsNonOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap.
-    ///
-    /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
-    /// subpixel rounding at fractional DPI).
-    BoundsOverlapping {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the X axis.
-    ///
-    /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
-    /// and track), but we still want to assert horizontal alignment.
-    BoundsOverlappingX {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-    /// True when both targets exist and their semantics bounds overlap on the Y axis.
-    BoundsOverlappingY {
-        a: UiSelectorV1,
-        b: UiSelectorV1,
-        #[serde(default)]
-        eps_px: f32,
-    },
-}
-
-#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiOptionalRootStateV1 {
-    /// Do not assert anything about the root (accept both `Some` and `None`).
-    #[default]
-    Any,
-    None,
-    Some,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum UiSelectorV1 {
-    RoleAndName {
-        role: String,
-        name: String,
-    },
-    RoleAndPath {
-        role: String,
-        name: String,
-        /// Ancestors ordered from outermost -> innermost.
-        ancestors: Vec<UiRoleAndNameV1>,
-    },
-    TestId {
-        id: String,
-    },
-    GlobalElementId {
-        element: u64,
-    },
-    NodeId {
-        node: u64,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiRoleAndNameV1 {
-    pub role: String,
-    pub name: String,
-}
-
 #[derive(Debug, Default)]
 pub struct UiScriptFrameOutput {
     pub events: Vec<Event>,
     pub effects: Vec<Effect>,
     pub request_redraw: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiScriptResultV1 {
-    pub schema_version: u32,
-    pub run_id: u64,
-    pub updated_unix_ms: u64,
-    pub window: Option<u64>,
-    pub stage: UiScriptStageV1,
-    pub step_index: Option<u32>,
-    pub reason: Option<String>,
-    pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UiScriptStageV1 {
-    Queued,
-    Running,
-    Passed,
-    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4351,18 +4548,6 @@ pub struct UiPickResultV1 {
     pub selection: Option<UiPickSelectionV1>,
     pub reason: Option<String>,
     pub last_bundle_dir: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiInspectConfigV1 {
-    pub schema_version: u32,
-    pub enabled: bool,
-    #[serde(default = "serde_default_true")]
-    pub consume_clicks: bool,
-}
-
-fn serde_default_true() -> bool {
-    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4437,6 +4622,24 @@ impl PendingScript {
             steps: script.steps,
         })
     }
+}
+
+#[derive(Debug, Clone)]
+struct PendingDevtoolsScreenshotRequest {
+    request_id: Option<u64>,
+    label: Option<String>,
+    timeout_frames: u32,
+    window_ffi: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+struct DevtoolsScreenshotWaitState {
+    remaining_frames: u32,
+    request_id: String,
+    window_ffi: u64,
+    last_result_trigger_stamp: Option<u64>,
+    transport_request_id: Option<u64>,
+    bundle_dir_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -9989,6 +10192,7 @@ fn key_to_u64(key: NodeId) -> u64 {
     key.data().as_ffi()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Error> {
     let Some(parent) = path.parent() else {
         return Ok(());
@@ -9996,6 +10200,11 @@ fn write_json<T: Serialize>(path: PathBuf, value: &T) -> Result<(), std::io::Err
     std::fs::create_dir_all(parent)?;
     let bytes = serde_json::to_vec_pretty(value).unwrap_or_default();
     std::fs::write(path, bytes)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn write_json<T: Serialize>(_path: PathBuf, _value: &T) -> Result<(), std::io::Error> {
+    Ok(())
 }
 
 fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
@@ -10025,6 +10234,7 @@ fn truncate_string_bytes(s: &mut String, max_bytes: usize) {
     s.push_str(suffix);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io::Error> {
     let path = out_dir.join("latest.txt");
     let Some(parent) = path.parent() else {
@@ -10035,6 +10245,12 @@ fn write_latest_pointer(out_dir: &Path, export_dir: &Path) -> Result<(), std::io
     std::fs::write(path, rel.to_string_lossy().as_bytes())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn write_latest_pointer(_out_dir: &Path, _export_dir: &Path) -> Result<(), std::io::Error> {
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -10050,6 +10266,12 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn touch_file(_path: &Path) -> Result<(), std::io::Error> {
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
     let Ok(bytes) = std::fs::read(path) else {
         return false;
@@ -10064,6 +10286,29 @@ fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) 
         entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
             && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
     })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn screenshot_request_entry(
+    path: &Path,
+    request_id: &str,
+    window_ffi: u64,
+) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    let root = serde_json::from_slice::<serde_json::Value>(&bytes).ok()?;
+    let completed = root.get("completed")?.as_array()?;
+    completed
+        .iter()
+        .find(|entry| {
+            entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+                && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+        })
+        .cloned()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn screenshot_request_completed(_path: &Path, _request_id: &str, _window_ffi: u64) -> bool {
+    false
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -10103,6 +10348,7 @@ mod tests {
         AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
         SemanticsRoot, SemanticsSnapshot, Size,
     };
+    use fret_diag_protocol::UiActionStepV1;
     use slotmap::KeyData;
 
     #[test]
@@ -11489,8 +11735,8 @@ fn duration_millis_u64(duration: std::time::Duration) -> u64 {
     duration.as_millis().min(u128::from(u64::MAX)) as u64
 }
 
-fn instant_to_unix_ms(instant: std::time::Instant) -> Option<u64> {
-    let now_instant = std::time::Instant::now();
+fn instant_to_unix_ms(instant: fret_core::time::Instant) -> Option<u64> {
+    let now_instant = fret_core::time::Instant::now();
     let now_unix_ms = unix_ms_now();
 
     if instant >= now_instant {
