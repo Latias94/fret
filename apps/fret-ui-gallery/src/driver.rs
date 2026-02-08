@@ -204,24 +204,24 @@ fn apply_page_router_update_side_effects(
 
     let RouterUpdateWithPrefetchIntents { update, intents } = update;
 
-    let RouterUpdate::Changed(transition) = update else {
-        return;
+    let invalidated = if let RouterUpdate::Changed(transition) = &update {
+        collect_invalidated_namespaces(
+            &transition.from,
+            &transition.to,
+            &[
+                NamespaceInvalidationRule::new(
+                    UI_GALLERY_PAGE_CONTENT_NS,
+                    RouteChangePolicy::PathOrQueryChanged,
+                ),
+                NamespaceInvalidationRule::new(
+                    UI_GALLERY_NAV_INDEX_NS,
+                    RouteChangePolicy::QueryChanged,
+                ),
+            ],
+        )
+    } else {
+        Vec::new()
     };
-
-    let invalidated = collect_invalidated_namespaces(
-        &transition.from,
-        &transition.to,
-        &[
-            NamespaceInvalidationRule::new(
-                UI_GALLERY_PAGE_CONTENT_NS,
-                RouteChangePolicy::PathOrQueryChanged,
-            ),
-            NamespaceInvalidationRule::new(
-                UI_GALLERY_NAV_INDEX_NS,
-                RouteChangePolicy::QueryChanged,
-            ),
-        ],
-    );
 
     if invalidated.is_empty() && intents.is_empty() {
         return;
@@ -1215,6 +1215,30 @@ impl UiGalleryDriver {
         };
 
         if let Some(selected) = app.models().get_cloned(&state.selected_page) {
+            #[cfg(target_arch = "wasm32")]
+            {
+                let current_page = page_from_gallery_location(&state.page_router.state().location);
+                if current_page.is_some_and(|page| page.as_ref() == selected.as_ref()) {
+                    let update = state.page_router.init_with_prefetch_intents();
+                    apply_page_router_update_side_effects(
+                        app,
+                        window,
+                        selected,
+                        &mut state.page_router,
+                        update,
+                    );
+                } else {
+                    apply_page_route_side_effects_via_router(
+                        app,
+                        window,
+                        NavigationAction::Replace,
+                        selected,
+                        &mut state.page_router,
+                    );
+                }
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
             apply_page_route_side_effects_via_router(
                 app,
                 window,
