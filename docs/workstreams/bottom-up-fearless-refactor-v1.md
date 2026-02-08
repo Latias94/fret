@@ -159,6 +159,30 @@ Exit criteria (v1):
 - No new backend coupling has leaked into core crates (layering remains green).
 - At least one regression gate exists for the “core hazard” categories (IDs/stability/serialization invariants).
 
+#### Serialization stability checklist (v1)
+
+Core crates own several “hard-to-change” persisted/config surfaces. For fearless refactors, treat each
+surface as a **versioned contract** with at least one executable regression gate.
+
+1) Classify the surface:
+
+- **User-authored config** (e.g. `keymap.json`, menubar config): prefer strict decoding and clear errors.
+- **App-owned persisted state** (e.g. docking layouts, window placement, settings snapshots): require an explicit version and a defined compatibility policy.
+
+2) Minimum checklist per surface:
+
+- A version field exists (e.g. `*_version`, `layout_version`) and is checked on load.
+- Defaulting is explicit (`#[serde(default)]`) for optional additions that should not break older files.
+- Renames are explicit (`#[serde(rename = ...)]`) to avoid accidental drift.
+- Validation is explicit and failure messages are actionable (reject invalid graphs/ranges/non-finite values).
+- At least one gate exists:
+  - **Decode fixture test** (hand-authored JSON samples) for config surfaces.
+  - **JSON roundtrip + validate** for app-owned persisted structs (to catch schema drift during refactors).
+
+Evidence anchors (initial):
+
+- Dock layout JSON roundtrip gate: `crates/fret-core/src/dock/tests.rs` (`dock_layout_json_roundtrips_and_validates`)
+
 ### M2 — UI runtime closure (mechanism-only, debuggable, cache-safe)
 
 Outcome: `crates/fret-ui` is a stable substrate, not a component library.

@@ -87,9 +87,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Async policy”)
 
-- [ ] BU-FR-core-014 Define a v1 “serialization stability” checklist for core persisted formats.
+- [x] BU-FR-core-014 Define a v1 “serialization stability” checklist for core persisted formats.
   - Target: settings/keymap/layout and any persisted docking state formats.
   - Goal: avoid accidental format drift during internal refactors.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Serialization stability checklist (v1)”)
+    - `crates/fret-core/src/dock/tests.rs` (`dock_layout_json_roundtrips_and_validates`)
 
 - [x] BU-FR-core-015 Convert docking-related crate-root modules in `fret-core` into a single `dock/` subsystem.
   - Goal: remove `dock_*` crate-root prefixes while keeping the stable re-export surface unchanged.
