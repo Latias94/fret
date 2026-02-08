@@ -102,6 +102,15 @@ impl Dialog {
         self
     }
 
+    /// Base UI-compatible alias.
+    ///
+    /// When `true`, outside pointer press does not dismiss the dialog.
+    /// This is equivalent to `overlay_closable(false)`.
+    pub fn disable_pointer_dismissal(mut self, disable: bool) -> Self {
+        self.overlay_closable = !disable;
+        self
+    }
+
     pub fn overlay_color(mut self, overlay_color: Color) -> Self {
         self.overlay_color = Some(overlay_color);
         self
@@ -751,6 +760,18 @@ mod tests {
                 .unwrap_or(false);
             assert!(open);
         });
+    }
+
+    #[test]
+    fn dialog_disable_pointer_dismissal_alias_maps_overlay_closable() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let a = Dialog::new(open.clone()).disable_pointer_dismissal(true);
+        assert!(!a.overlay_closable);
+
+        let b = Dialog::new(open).disable_pointer_dismissal(false);
+        assert!(b.overlay_closable);
     }
 
     #[derive(Default)]

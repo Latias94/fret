@@ -45,6 +45,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Escape dismiss is handled by the shared dismissible root (Radix-aligned outcome).
 - Pass: Overlay click-to-dismiss is implemented by rendering a full-window barrier behind the
   content (default on).
+- Pass: Base UI-compatible convenience alias `disable_pointer_dismissal(bool)` is provided and
+  maps directly to `overlay_closable(!disable)`.
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `Dialog::on_dismiss_request(...)`. When set, Escape and overlay-click dismissal route through the
   handler and do not automatically close `open`.
@@ -67,6 +69,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
+- Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_dialog_demo_panel_chrome_matches`).
 - Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
