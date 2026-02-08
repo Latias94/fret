@@ -27,20 +27,20 @@ Practical rule:
 
 ## Current snapshot (shadcn-web, v4/new-york-v4)
 
-This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
+This is a **snapshot** from running `tools/golden_coverage.py` in this repo.
 
 Notes:
 
-- `tools/golden_coverage.ps1` currently counts a key as “gated” if the key appears as a
+- `tools/golden_coverage.py` currently counts a key as “gated” if the key appears as a
   **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`, excluding `*_goldens_smoke.rs`.
 - This is a reasonable proxy for “this golden is exercised by some dedicated test”, but it is not
   a perfect proxy for “high-signal behavior is gated”.
 - `shadcn_web_goldens_smoke.rs` provides a separate, *dynamic* “smoke-parse” pass that ensures we
   can parse the JSON and that the exported rectangles are finite.
-- `tools/golden_coverage.ps1` reports “smoke-parse coverage” only when it can infer that the smoke
-  test targets the requested `-Style` (otherwise it prints `n/a` to avoid false confidence).
-- To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
-- In addition to the “any gate” percentage, `tools/golden_coverage.ps1` reports a **targeted**
+- `tools/golden_coverage.py` reports “smoke-parse coverage” only when it can infer that the smoke
+  test targets the requested `--style` (otherwise it prints `n/a` to avoid false confidence).
+- To avoid local, uncommitted goldens skewing the counts, prefer `--tracked-only`.
+- In addition to the “any gate” percentage, `tools/golden_coverage.py` reports a **targeted**
   percentage that excludes the broad “catch-all” layout file(s) (`web_vs_fret_layout.rs` and
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
@@ -61,8 +61,8 @@ Note on “targeted” gates:
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
-```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -GroupMissingByPrefix -TopGroups 20
+```bash
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --as-markdown --group-missing-by-prefix --top-groups 20
 ```
 
 At the time of writing, there are no missing groups (all keys are gated by tests).
@@ -113,8 +113,8 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 
-```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
+```bash
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --group-untargeted-by-prefix --top-groups 20
 ```
 
 At the time of writing, there are no untargeted groups (all keys are referenced by purpose-built
@@ -122,21 +122,21 @@ gate tests outside the broad catch-all files).
 
 Recompute locally:
 
-```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowMissing -TopMissing 50
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowTargetedMissing -TopMissing 50
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowUsed
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUsedByPrefix -TopGroups 20
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowGateBreakdown
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
+```bash
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --show-missing --top-missing 50
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --show-targeted-missing --top-missing 50
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --show-used
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --group-used-by-prefix --top-groups 20
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --show-gate-breakdown
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only --group-untargeted-by-prefix --top-groups 20
 ```
 
 To drill into a specific family:
 
-```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -FilterMissingPrefix calendar
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -FilterMissingPrefix carousel
+```bash
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --as-markdown --filter-missing-prefix calendar
+python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --as-markdown --filter-missing-prefix carousel
 ```
 
 ## What to do next (recommended order)

@@ -121,7 +121,7 @@ Exit criteria:
 - docs and examples stay aligned with the chosen model.
 
 - [x] CSTATE-gate-050 Add a lightweight check preventing direct selector/query coupling in primitive contracts (allowlist for adapter modules).
-  - Evidence: `tools/check_component_state_coupling.ps1`
+  - Evidence: `tools/check_component_state_coupling.py`
 - [ ] CSTATE-gate-051 Add nextest coverage for one selector adapter and one query adapter path.
 - [ ] CSTATE-gate-052 Add one `fretboard diag` script for async-state + command routing interaction regression.
 - [ ] CSTATE-docs-053 Add a migration note for ecosystem maintainers adopting optional state adapters.

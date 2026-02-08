@@ -49,7 +49,7 @@ Definition of done:
 Evidence:
 
 - `docs/audits/shadcn-new-york-v4-coverage.md`
-- `pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly`
+- `python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --tracked-only`
 
 ### M1 — Deterministic goldens (in progress)
 
@@ -102,4 +102,3 @@ Suggested minimal matrix:
 
 - Runtime contracts in `crates/fret-ui` (those must be ADR-backed).
 - General “UI diagnostics + scripted tests” (see `docs/ui-diagnostics-and-scripted-tests.md`).
-

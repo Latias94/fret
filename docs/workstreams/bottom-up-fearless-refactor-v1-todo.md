@@ -19,7 +19,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## M0 — Guardrails first
 
 - [ ] BU-FR-guard-001 Define the canonical “refactor safety” command set and keep it stable in one place.
-  - Candidates: `pwsh -NoProfile -File tools/check_layering.ps1`, `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo nextest run`.
+  - Candidates: `python3 tools/check_layering.py`, `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo nextest run`.
   - Prefer documenting the minimal subsets that catch most regressions early (e.g. `-p fret-ui`, `-p fret-ui-shadcn`).
   - Prefer defining “Fast vs Full” gate tiers so contributors know what to run in the inner loop vs before merge.
 
@@ -36,7 +36,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
   - Evidence:
-    - `tools/report_largest_files.ps1`
+    - `tools/report_largest_files.py`
 
 ## M1 — Core contracts closure
 
@@ -344,7 +344,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [ ] BU-FR-eco-040 Maintain an allowlist for any crate using `fret-ui/unstable-retained-bridge`, and keep the list shrinking.
   - Link: `docs/workstreams/retained-bridge-exit-v1.md`
-  - Gate: `tools/check_layering.ps1` (extend if needed)
+  - Gate: `tools/check_layering.py` (extend if needed)
 
 - [ ] BU-FR-eco-041 Map ecosystem crates into “headless → kit → shadcn → specialized” lanes and mark ownership boundaries.
   - Start from: `docs/repo-structure.md`, `docs/workstreams/ecosystem-status.md`

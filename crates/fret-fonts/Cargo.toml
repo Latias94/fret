@@ -27,5 +27,5 @@ bootstrap-full = []
 # Optional future bundles (not implemented yet; kept as placeholders for feature gating strategy).
 emoji = []
 # A "small but useful" CJK font subset intended for Web/WASM bootstrap.
-# Generated via `crates/fret-fonts/scripts/subset_cjk_lite.ps1`.
+# Generated via `crates/fret-fonts/scripts/subset_cjk_lite.py`.
 cjk-lite = []

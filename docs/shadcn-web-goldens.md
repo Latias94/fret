@@ -392,4 +392,4 @@ Current layout gates include:
 To see which shadcn web golden keys are referenced by Rust tests (rough heuristic, but useful for
 planning):
 
-`powershell -ExecutionPolicy Bypass -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing`
+`python3 tools/golden_coverage.py --kind shadcn-web --style v4/new-york-v4 --show-missing`

@@ -646,7 +646,7 @@ Notes:
 
 Recommended (CI/automation):
 
-- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+- `python3 tools/diag_matrix_ui_gallery.py --out-dir target/fret-diag --warmup-frames 5 --release --json`
 
 ### Bundle comparison (cached vs uncached)
 
