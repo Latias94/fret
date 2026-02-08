@@ -130,7 +130,7 @@ pub(crate) fn wrap_word_from_unwrapped_ltr(
         }
 
         let line_start_x = full.clusters[cluster_idx].x0;
-        let (cut_end, used_word_boundary) = wrap_word_cut_end_from_with_kind(
+        let cut_end = wrap_word_cut_end_from(
             text,
             &full.clusters,
             cluster_idx,
@@ -138,12 +138,6 @@ pub(crate) fn wrap_word_from_unwrapped_ltr(
             line_start_x,
             max_width_px,
         );
-
-        // If we'd be forced to cut in the middle of a word (no candidate boundary), bail out and
-        // fall back to the per-line shaping path for correctness (ligatures/context shaping).
-        if !used_word_boundary {
-            return None;
-        }
 
         let mut line_end_byte = clamp_to_char_boundary(text, cut_end.min(text.len()));
         if line_end_byte <= line_start_byte {
