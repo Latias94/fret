@@ -515,3 +515,8 @@ These are examples of the type of crate-internal module hygiene issues this work
   Prefer regrouping these into a single `text/` subsystem module with clear submodules (`input`, `area`, `edit`, `props`, `style`, `surface`),
   keeping public exports unchanged.
 - Large conformance tests should avoid living as multi-ten-thousand-line Rust sources; prefer `goldens/` + a thin harness.
+  - Early targets:
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+- `ecosystem/fret-ui-kit` overlay tests are currently concentrated in a very large `src/window_overlays/tests.rs`.
+  Prefer splitting by scenario class + moving scenario matrices to fixtures to reduce merge/conflict risk and improve reviewability.

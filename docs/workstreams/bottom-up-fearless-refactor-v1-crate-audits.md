@@ -38,15 +38,15 @@ Template for per-crate notes:
 
 ## `ecosystem/` (policy + components + tools)
 
-We will keep this list coarse until we decide audit scope and priorities for ecosystem crates
-(many are experimental and may be removed/merged).
+We keep this list selective: ecosystem is larger and more experimental, so the audits focus on
+crates that are likely to produce long-lived contracts or that sit on major interaction seams.
 
-Priority candidates (expected to produce long-lived contracts):
-
-- `fret-ui-headless`
-- `fret-ui-kit`
-- `fret-ui-shadcn`
-- `fret-docking`
+| crate | status | note |
+| --- | --- | --- |
+| `fret-ui-headless` | Not started | |
+| `fret-ui-kit` | L0 | `docs/workstreams/crate-audits/fret-ui-kit.l0.md` |
+| `fret-ui-shadcn` | Not started | |
+| `fret-docking` | Not started | |
 
 ## `apps/` (demo shells)
 

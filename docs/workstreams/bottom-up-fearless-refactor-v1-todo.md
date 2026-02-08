@@ -43,7 +43,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0.5 — Code-quality audit program (make best-practice reviews repeatable)
 
-- [ ] BU-FR-audit-006 Add a stable per-crate audit template and an audits index.
+- [x] BU-FR-audit-006 Add a stable per-crate audit template and an audits index.
   - Goal: make “read each crate and review best practices” actionable and trackable.
   - Evidence:
     - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
@@ -434,3 +434,21 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 - [ ] BU-FR-eco-041 Map ecosystem crates into “headless → kit → shadcn → specialized” lanes and mark ownership boundaries.
   - Start from: `docs/repo-structure.md`, `docs/workstreams/ecosystem-status.md`
+
+- [ ] BU-FR-eco-042 L0 audit `fret-ui-kit` and capture the top refactor hazards and seams.
+  - Goal: identify which policy belongs in `fret-ui-kit` vs `fret-ui-shadcn` vs apps, and establish initial gates.
+  - Evidence:
+    - `docs/workstreams/crate-audits/fret-ui-kit.l0.md`
+    - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-kit`
+    - `cargo nextest run -p fret-ui-kit`
+
+- [ ] BU-FR-eco-043 Reduce “god test file” risk in `fret-ui-kit` overlays by moving scenario matrices to fixtures.
+  - Target: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+  - Goal: shrink Rust LOC and make overlay contracts reviewable and stable during refactors.
+  - Gate: `cargo nextest run -p fret-ui-kit`
+
+- [ ] BU-FR-eco-044 L0 audit `fret-ui-shadcn`, and plan conversion of huge web-vs-fret conformance sources into data-driven harnesses.
+  - Targets:
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  - Gate: `cargo nextest run -p fret-ui-shadcn`
