@@ -1,13 +1,13 @@
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::interaction::NodeGraphConnectionMode;
-use crate::io::NodeGraphViewState;
 
-use super::super::NodeGraphCanvas;
-use super::super::wire_drag::handle_wire_left_up_with_forced_target;
-use super::super::{HitTestCtx, HitTestScratch};
+use super::prelude::NodeGraphCanvas;
+use super::prelude::wire_drag::handle_wire_left_up_with_forced_target;
+use super::prelude::{HitTestCtx, HitTestScratch};
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{ViewSnapshot, WireDrag, WireDragKind};
 use crate::ui::presenter::NodeGraphPresenter;
@@ -91,7 +91,7 @@ fn pick_target_port_loose_can_select_same_side_when_closer() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.connection_mode = NodeGraphConnectionMode::Loose;
@@ -158,7 +158,7 @@ fn pick_target_port_strict_rejects_same_side_even_when_inside_bounds() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.connection_mode = NodeGraphConnectionMode::Strict;
@@ -190,7 +190,7 @@ fn strict_rejects_out_to_out_but_loose_commits_out_to_out_when_forced() {
     graph_value.ports.get_mut(&b_port).unwrap().dir = crate::core::PortDirection::Out;
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas =
         NodeGraphCanvas::new(graph.clone(), view.clone()).with_presenter(SimplePresenter);

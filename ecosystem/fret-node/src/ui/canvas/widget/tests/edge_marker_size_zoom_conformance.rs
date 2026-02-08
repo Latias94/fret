@@ -4,12 +4,11 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::EdgeMarker;
 
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
 struct CaptureServices {
@@ -137,7 +136,7 @@ fn capture_arrow_axis_lengths_for_zoom(zoom: f32) -> Vec<f32> {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
         s.interaction.only_render_visible_elements = false;

@@ -1,7 +1,21 @@
 use super::*;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(in crate::ui::canvas::widget) struct RenderMetrics {
+    pub(in crate::ui::canvas::widget) group_total: usize,
+    pub(in crate::ui::canvas::widget) group_candidates: usize,
+    pub(in crate::ui::canvas::widget) group_visible: usize,
+    pub(in crate::ui::canvas::widget) node_total: usize,
+    pub(in crate::ui::canvas::widget) node_candidates: usize,
+    pub(in crate::ui::canvas::widget) node_visible: usize,
+    pub(in crate::ui::canvas::widget) edge_total: usize,
+    pub(in crate::ui::canvas::widget) edge_candidates: usize,
+    pub(in crate::ui::canvas::widget) edge_visible: usize,
+}
+
 #[derive(Debug, Default)]
 pub(in super::super) struct RenderData {
+    pub(in super::super) metrics: RenderMetrics,
     pub(in super::super) groups: Vec<(Rect, Arc<str>, bool)>,
     pub(in super::super) edges: Vec<EdgeRender>,
     pub(in super::super) nodes: Vec<(

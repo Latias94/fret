@@ -2593,7 +2593,6 @@ where
                 .build();
 
             let grouped = table.grouped_row_model().clone();
-            let group_aggs_any = table.grouped_aggregations_any().clone();
             fn compute_group_aggregations<TData>(
                 model: &crate::headless::table::GroupedRowModel,
                 data: &[TData],
