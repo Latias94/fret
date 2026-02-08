@@ -3,6 +3,12 @@ use std::sync::Arc;
 
 use super::{HeaderGroupSnapshot, RowCellsSnapshot};
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeaderSizingSnapshot {
+    pub size: BTreeMap<Arc<str>, f32>,
+    pub start: BTreeMap<Arc<str>, f32>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ColumnCapabilitySnapshot {
     pub can_hide: bool,
@@ -42,7 +48,7 @@ pub struct CoreRowsSnapshot {
     pub row_model: RowModelIdSnapshot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CoreModelSnapshot {
     pub schema_version: u32,
     pub column_tree: Vec<ColumnNodeSnapshot>,
@@ -52,6 +58,7 @@ pub struct CoreModelSnapshot {
     pub left_header_groups: Vec<HeaderGroupSnapshot>,
     pub center_header_groups: Vec<HeaderGroupSnapshot>,
     pub right_header_groups: Vec<HeaderGroupSnapshot>,
+    pub header_sizing: HeaderSizingSnapshot,
     pub rows: CoreRowsSnapshot,
     pub cells: BTreeMap<Arc<str>, RowCellsSnapshot>,
 }

@@ -35,6 +35,9 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
     query on instances (e.g. `getCanResize`, `getIsPlaceholder`, pin-family splits).
   - Update: an initial, versioned `column_capabilities` inventory for **leaf columns** is now parity-gated
     (`getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`).
+    Update: fold **header sizing** (`header.getSize/getStart`) into the core snapshot as a versioned inventory keyed
+    by header id, so UI consumers do not re-compute starts/sizes and drift under pin-family splits.
+    Parity gate: `headers_cells.json`, `headers_inventory_deep.json` (`core_model.header_sizing`).
     Remaining: expand the same approach across header/cell capabilities (and decide the minimal row surface).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:

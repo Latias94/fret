@@ -2024,7 +2024,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "name",
@@ -2627,6 +2627,60 @@
               ]
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 600,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 450,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 300,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "left_1_name_left_2_name_left_3_name_name": 150,
+              "left_2_name_left_3_name_name": 150,
+              "left_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 450,
+              "center_2_stats_center_3_perf_cpu": 450,
+              "center_3_perf_cpu": 300,
+              "center_3_mem_mem_mb": 150,
+              "right_1_metrics_right_2_status_right_3_status_status": 150,
+              "right_2_status_right_3_status_status": 150,
+              "right_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 600,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "name": 0,
+              "cpu": 0,
+              "cpu2": 150,
+              "mem_mb": 300,
+              "status": 0,
+              "left_1_name_left_2_name_left_3_name_name": 0,
+              "left_2_name_left_3_name_name": 0,
+              "left_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 0,
+              "center_2_stats_center_3_perf_cpu": 0,
+              "center_3_perf_cpu": 0,
+              "center_3_mem_mem_mb": 300,
+              "right_1_metrics_right_2_status_right_3_status_status": 0,
+              "right_2_status_right_3_status_status": 0,
+              "right_3_status_status": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -5205,7 +5259,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "name",
@@ -5867,6 +5921,70 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu2": 450,
+              "2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu2": 300,
+              "2_status_3_status_status": 150,
+              "3_perf_cpu": 150,
+              "3_name_name": 150,
+              "3_perf_cpu2": 150,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "cpu": 150,
+              "name": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "left_1_metrics_left_2_stats_left_3_perf_cpu": 150,
+              "left_2_stats_left_3_perf_cpu": 150,
+              "left_3_perf_cpu": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu2": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu2": 300,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu2": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_metrics_2_stats_3_perf_cpu": 0,
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu2": 300,
+              "2_stats_3_perf_cpu": 0,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu2": 300,
+              "2_status_3_status_status": 600,
+              "3_perf_cpu": 0,
+              "3_name_name": 150,
+              "3_perf_cpu2": 300,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "cpu": 0,
+              "name": 0,
+              "cpu2": 150,
+              "mem_mb": 300,
+              "status": 450,
+              "left_1_metrics_left_2_stats_left_3_perf_cpu": 0,
+              "left_2_stats_left_3_perf_cpu": 0,
+              "left_3_perf_cpu": 0,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu2": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu2": 150,
+              "center_2_status_center_3_status_status": 450,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu2": 150,
+              "center_3_mem_mem_mb": 300,
+              "center_3_status_status": 450
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -8023,7 +8141,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "name",
@@ -8578,6 +8696,56 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 450,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 300,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu": 300,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 450,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 300,
+              "3_status_status": 450,
+              "name": 0,
+              "cpu": 150,
+              "mem_mb": 300,
+              "status": 450,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu": 150,
+              "center_2_status_center_3_status_status": 450,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 300,
+              "center_3_status_status": 450
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -10826,7 +10994,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "name",
@@ -11407,6 +11575,58 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_name_2_name_3_name_name": 150,
+              "1_metrics_2_stats_3_perf_cpu": 600,
+              "2_name_3_name_name": 150,
+              "2_stats_3_perf_cpu": 450,
+              "2_status_3_status_status": 150,
+              "3_name_name": 150,
+              "3_perf_cpu": 300,
+              "3_mem_mem_mb": 150,
+              "3_status_status": 150,
+              "name": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "mem_mb": 150,
+              "status": 150,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 600,
+              "center_2_name_center_3_name_name": 150,
+              "center_2_stats_center_3_perf_cpu": 450,
+              "center_2_status_center_3_status_status": 150,
+              "center_3_name_name": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_mem_mem_mb": 150,
+              "center_3_status_status": 150
+            },
+            "start": {
+              "1_name_2_name_3_name_name": 0,
+              "1_metrics_2_stats_3_perf_cpu": 150,
+              "2_name_3_name_name": 0,
+              "2_stats_3_perf_cpu": 150,
+              "2_status_3_status_status": 600,
+              "3_name_name": 0,
+              "3_perf_cpu": 150,
+              "3_mem_mem_mb": 450,
+              "3_status_status": 600,
+              "name": 0,
+              "cpu": 150,
+              "cpu2": 300,
+              "mem_mb": 450,
+              "status": 600,
+              "center_1_name_center_2_name_center_3_name_name": 0,
+              "center_1_metrics_center_2_stats_center_3_perf_cpu": 150,
+              "center_2_name_center_3_name_name": 0,
+              "center_2_stats_center_3_perf_cpu": 150,
+              "center_2_status_center_3_status_status": 600,
+              "center_3_name_name": 0,
+              "center_3_perf_cpu": 150,
+              "center_3_mem_mem_mb": 450,
+              "center_3_status_status": 600
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -13701,7 +13921,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "name",
@@ -14282,6 +14502,58 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "1_metrics_2_status_3_status_status": 600,
+              "1_name_2_name_3_name_name": 150,
+              "2_status_3_status_status": 150,
+              "2_stats_3_mem_mem_mb": 450,
+              "2_name_3_name_name": 150,
+              "3_status_status": 150,
+              "3_mem_mem_mb": 150,
+              "3_perf_cpu": 300,
+              "3_name_name": 150,
+              "status": 150,
+              "mem_mb": 150,
+              "cpu": 150,
+              "cpu2": 150,
+              "name": 150,
+              "center_1_metrics_center_2_status_center_3_status_status": 600,
+              "center_1_name_center_2_name_center_3_name_name": 150,
+              "center_2_status_center_3_status_status": 150,
+              "center_2_stats_center_3_mem_mem_mb": 450,
+              "center_2_name_center_3_name_name": 150,
+              "center_3_status_status": 150,
+              "center_3_mem_mem_mb": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_name_name": 150
+            },
+            "start": {
+              "1_metrics_2_status_3_status_status": 0,
+              "1_name_2_name_3_name_name": 600,
+              "2_status_3_status_status": 0,
+              "2_stats_3_mem_mem_mb": 150,
+              "2_name_3_name_name": 600,
+              "3_status_status": 0,
+              "3_mem_mem_mb": 150,
+              "3_perf_cpu": 300,
+              "3_name_name": 600,
+              "status": 0,
+              "mem_mb": 150,
+              "cpu": 300,
+              "cpu2": 450,
+              "name": 600,
+              "center_1_metrics_center_2_status_center_3_status_status": 0,
+              "center_1_name_center_2_name_center_3_name_name": 600,
+              "center_2_status_center_3_status_status": 0,
+              "center_2_stats_center_3_mem_mem_mb": 150,
+              "center_2_name_center_3_name_name": 600,
+              "center_3_status_status": 0,
+              "center_3_mem_mem_mb": 150,
+              "center_3_perf_cpu": 300,
+              "center_3_name_name": 600
+            }
+          },
           "rows": {
             "core": {
               "root": [

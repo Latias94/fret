@@ -177,7 +177,13 @@ struct CoreRowsSnapshot {
     row_model: RowModelIdSnapshot,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct HeaderSizingExpect {
+    size: BTreeMap<String, f32>,
+    start: BTreeMap<String, f32>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 struct CoreModelExpect {
     schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
@@ -187,6 +193,7 @@ struct CoreModelExpect {
     left_header_groups: Vec<HeaderGroupSnapshot>,
     center_header_groups: Vec<HeaderGroupSnapshot>,
     right_header_groups: Vec<HeaderGroupSnapshot>,
+    header_sizing: HeaderSizingExpect,
     rows: CoreRowsSnapshot,
     cells: BTreeMap<String, RowCellsSnapshot>,
 }
@@ -313,6 +320,20 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
         left_header_groups: header_groups_to_jsonish(snapshot.left_header_groups),
         center_header_groups: header_groups_to_jsonish(snapshot.center_header_groups),
         right_header_groups: header_groups_to_jsonish(snapshot.right_header_groups),
+        header_sizing: HeaderSizingExpect {
+            size: snapshot
+                .header_sizing
+                .size
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+            start: snapshot
+                .header_sizing
+                .start
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+        },
         rows: CoreRowsSnapshot {
             core: RowModelIdSnapshot {
                 root: snapshot

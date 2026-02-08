@@ -165,7 +165,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -339,6 +339,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -578,7 +590,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -756,6 +768,18 @@
               ]
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 0,
+              "c": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -1000,7 +1024,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -1151,6 +1175,16 @@
               ]
             }
           ],
+          "header_sizing": {
+            "size": {
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "b": 0,
+              "c": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -1383,7 +1417,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -1534,6 +1568,16 @@
               ]
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 120,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "c": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -1768,7 +1812,7 @@
           }
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -1919,6 +1963,16 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "a": 0,
+              "b": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -2175,7 +2229,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -2324,6 +2378,16 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "b": 0,
+              "c": 50
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -2577,7 +2641,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -2751,6 +2815,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -3019,7 +3095,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -3193,6 +3269,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -3463,7 +3551,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -3587,6 +3675,14 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "b": 50
+            },
+            "start": {
+              "b": 0
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -3834,7 +3930,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -4008,6 +4104,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -4282,7 +4390,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -4456,6 +4564,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "c": 0,
+              "a": 25,
+              "b": 125
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -4727,7 +4847,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -4901,6 +5021,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -5177,7 +5309,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -5351,6 +5483,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "c": 0,
+              "a": 25,
+              "b": 125
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -5632,7 +5776,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -5781,6 +5925,16 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "c": 25,
+              "b": 50
+            },
+            "start": {
+              "c": 0,
+              "b": 25
+            }
+          },
           "rows": {
             "core": {
               "root": [
@@ -6034,7 +6188,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 1,
+          "schema_version": 2,
           "column_tree": [
             {
               "id": "a",
@@ -6208,6 +6362,18 @@
               "headers": []
             }
           ],
+          "header_sizing": {
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "a": 0,
+              "b": 100,
+              "c": 150
+            }
+          },
           "rows": {
             "core": {
               "root": [

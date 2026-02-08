@@ -741,6 +741,7 @@ type FixtureSnapshot = {
       right_header_groups: NonNullable<
         NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["right_header_groups"]
       >
+      header_sizing: NonNullable<FixtureSnapshot["expect"]["header_sizing"]>
       rows: {
         core: RowModelSnapshot
         row_model: RowModelSnapshot
@@ -4906,7 +4907,7 @@ function snapshotColumnPinning(
             visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
           },
           core_model: {
-            schema_version: 1,
+            schema_version: 2,
             column_tree: snapshotColumnTree(table.getAllColumns()),
             column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
@@ -4926,6 +4927,7 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -5033,7 +5035,7 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
-            schema_version: 1,
+            schema_version: 2,
             column_tree: snapshotColumnTree(table.getAllColumns()),
             column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
@@ -5053,6 +5055,7 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -5090,7 +5093,7 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
-        schema_version: 1,
+        schema_version: 2,
         column_tree: snapshotColumnTree(table.getAllColumns()),
         flat_columns: {
           all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5112,6 +5115,7 @@ function snapshotColumnPinning(
         left_header_groups,
         center_header_groups,
         right_header_groups,
+        header_sizing: snapshotHeaderSizing(table),
         rows: {
           core: snapshotRowModel(table.getCoreRowModel()),
           row_model: snapshotRowModel(table.getRowModel()),

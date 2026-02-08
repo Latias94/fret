@@ -3049,6 +3049,30 @@ impl<'a, TData> Table<'a, TData> {
         let center_header_groups = self.center_header_groups();
         let right_header_groups = self.right_header_groups();
 
+        let mut header_size: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut header_start: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+
+        for groups in [
+            &header_groups,
+            &left_header_groups,
+            &center_header_groups,
+            &right_header_groups,
+        ] {
+            for g in groups {
+                for h in &g.headers {
+                    let id = h.id.clone();
+                    if let Some(size) = self.header_size(id.as_ref()) {
+                        header_size.insert(id.clone(), size);
+                    }
+                    if let Some(start) = self.header_start(id.as_ref()) {
+                        header_start.insert(id.clone(), start);
+                    }
+                }
+            }
+        }
+
         let core = snapshot_row_model_ids(self.core_row_model());
         let row_model = snapshot_row_model_ids(self.row_model());
 
@@ -3065,7 +3089,7 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         super::CoreModelSnapshot {
-            schema_version: 1,
+            schema_version: 2,
             column_tree,
             column_capabilities,
             leaf_columns: super::LeafColumnsSnapshot {
@@ -3079,6 +3103,10 @@ impl<'a, TData> Table<'a, TData> {
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: super::HeaderSizingSnapshot {
+                size: header_size,
+                start: header_start,
+            },
             rows: super::CoreRowsSnapshot { core, row_model },
             cells,
         }
