@@ -1,4 +1,3 @@
-use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
@@ -19,11 +18,14 @@ use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
+use crate::input::InputStyle as ShadcnInputStyle;
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use crate::tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipProvider, TooltipSide};
+use crate::SeparatorOrientation;
+use crate::{Button, ButtonSize, ButtonVariant, Input};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -47,6 +49,14 @@ fn sidebar_menu_button_h(theme: &Theme, size: SidebarMenuButtonSize) -> Px {
     theme.metric_by_key(key).unwrap_or(fallback)
 }
 
+fn sidebar_menu_affordance_top(size: SidebarMenuButtonSize) -> Px {
+    match size {
+        SidebarMenuButtonSize::Sm => Px(4.0),      // `top-1`
+        SidebarMenuButtonSize::Default => Px(6.0), // `top-1.5`
+        SidebarMenuButtonSize::Lg => Px(10.0),     // `top-2.5`
+    }
+}
+
 fn sidebar_menu_button_collapsed_h(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.sidebar.menu_button.h_collapsed")
@@ -68,83 +78,18 @@ fn sidebar_width_icon(theme: &Theme) -> Px {
 const SIDEBAR_COLLAPSE_OPEN_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
 const SIDEBAR_COLLAPSE_CLOSE_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
 
-#[derive(Default)]
-struct SidebarCollapseMotionState {
-    initialized: bool,
-    last_app_tick: u64,
-    last_frame_tick: u64,
-    tick: u64,
-    timeline: transition_prim::TransitionTimeline,
-}
-
 #[track_caller]
 fn sidebar_collapse_motion<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     collapsed: bool,
 ) -> transition_prim::TransitionOutput {
-    let app_tick = cx.app.tick_id().0;
-    let frame_tick = cx.frame_id.0;
-    let open = !collapsed;
-    let loc = Location::caller();
-    let motion = cx.keyed(
-        (
-            loc.file(),
-            loc.line(),
-            loc.column(),
-            "sidebar-collapse-motion",
-        ),
-        |cx| {
-            cx.with_state(SidebarCollapseMotionState::default, |st| {
-                st.timeline
-                    .set_durations(SIDEBAR_COLLAPSE_OPEN_TICKS, SIDEBAR_COLLAPSE_CLOSE_TICKS);
-
-                if !st.initialized {
-                    st.initialized = true;
-                    st.last_app_tick = app_tick;
-                    st.last_frame_tick = frame_tick;
-
-                    if open {
-                        for _ in 0..=SIDEBAR_COLLAPSE_OPEN_TICKS {
-                            st.tick = st.tick.saturating_add(1);
-                            let seeded = st.timeline.update_with_easing(
-                                true,
-                                st.tick,
-                                overlay_motion::shadcn_ease,
-                            );
-                            if !seeded.animating {
-                                break;
-                            }
-                        }
-                    } else {
-                        let _ = st.timeline.update_with_easing(
-                            false,
-                            st.tick,
-                            overlay_motion::shadcn_ease,
-                        );
-                    }
-
-                    return transition_prim::TransitionOutput {
-                        present: open,
-                        linear: if open { 1.0 } else { 0.0 },
-                        progress: if open { 1.0 } else { 0.0 },
-                        animating: false,
-                    };
-                }
-
-                if st.last_frame_tick != frame_tick {
-                    st.last_frame_tick = frame_tick;
-                    st.tick = st.tick.saturating_add(1);
-                } else if st.last_app_tick != app_tick {
-                    st.last_app_tick = app_tick;
-                    st.tick = st.tick.saturating_add(1);
-                } else {
-                    st.tick = st.tick.saturating_add(1);
-                }
-
-                st.timeline
-                    .update_with_easing(open, st.tick, overlay_motion::shadcn_ease)
-            })
-        },
+    let motion = transition_prim::drive_transition_with_durations_and_easing_with_mount_behavior(
+        cx,
+        !collapsed,
+        SIDEBAR_COLLAPSE_OPEN_TICKS,
+        SIDEBAR_COLLAPSE_CLOSE_TICKS,
+        overlay_motion::shadcn_ease,
+        false,
     );
 
     scheduling::set_continuous_frames(cx, motion.animating);
@@ -440,6 +385,330 @@ impl Sidebar {
 
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
+    }
+}
+
+#[derive(Clone)]
+pub struct SidebarTrigger {
+    on_click: Option<CommandId>,
+    on_activate: Option<OnActivate>,
+    disabled: bool,
+    test_id: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl std::fmt::Debug for SidebarTrigger {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SidebarTrigger")
+            .field("on_click", &self.on_click)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("disabled", &self.disabled)
+            .field("test_id", &self.test_id)
+            .field("chrome", &self.chrome)
+            .field("layout", &self.layout)
+            .finish()
+    }
+}
+
+impl SidebarTrigger {
+    pub fn new() -> Self {
+        Self {
+            on_click: None,
+            on_activate: None,
+            disabled: false,
+            test_id: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.on_click = Some(command.into());
+        self
+    }
+
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let sidebar_ctx = use_sidebar(cx);
+        let user_on_activate = self.on_activate.clone();
+        let toggle_on_activate: Option<OnActivate> =
+            if user_on_activate.is_none() && sidebar_ctx.is_none() {
+                None
+            } else {
+                Some(Arc::new(move |host, action_cx, reason| {
+                    if let Some(on_activate) = user_on_activate.as_ref() {
+                        on_activate(host, action_cx, reason);
+                    }
+
+                    if let Some(ctx) = sidebar_ctx.as_ref() {
+                        let model = if ctx.is_mobile {
+                            ctx.open_mobile.clone()
+                        } else {
+                            ctx.open.clone()
+                        };
+                        let _ = host.models_mut().update(&model, |v| {
+                            *v = !*v;
+                        });
+                    }
+                }))
+            };
+
+        let mut trigger = Button::new("Toggle Sidebar")
+            .variant(ButtonVariant::Ghost)
+            .size(ButtonSize::Icon)
+            .children([decl_icon::icon(cx, IconId::new_static("lucide.panel-left"))])
+            .disabled(self.disabled)
+            .refine_style(self.chrome)
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_px(Px(28.0))
+                    .h_px(Px(28.0))
+                    .merge(self.layout),
+            );
+
+        if let Some(command) = self.on_click {
+            trigger = trigger.on_click(command);
+        }
+        if let Some(on_activate) = toggle_on_activate {
+            trigger = trigger.on_activate(on_activate);
+        }
+        if let Some(test_id) = self.test_id {
+            trigger = trigger.test_id(test_id);
+        }
+
+        trigger.into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarInset {
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl SidebarInset {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        let children = children.into_iter().collect();
+        Self {
+            children,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(theme.color_required("background")))
+            .merge(self.chrome);
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .h_full()
+            .flex_1()
+            .merge(self.layout);
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let children = self.children;
+        shadcn_layout::container_flow(cx, props, children)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarInput {
+    model: Model<String>,
+    a11y_label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
+    disabled: bool,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
+impl SidebarInput {
+    pub fn new(model: Model<String>) -> Self {
+        Self {
+            model,
+            a11y_label: None,
+            placeholder: None,
+            disabled: false,
+            submit_command: None,
+            cancel_command: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn submit_command(mut self, command: impl Into<CommandId>) -> Self {
+        self.submit_command = Some(command.into());
+        self
+    }
+
+    pub fn cancel_command(mut self, command: impl Into<CommandId>) -> Self {
+        self.cancel_command = Some(command.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut input = Input::new(self.model)
+            .disabled(self.disabled)
+            .style(
+                ShadcnInputStyle::default()
+                    .background(ColorRef::Color(theme.color_required("background"))),
+            )
+            .refine_style(self.chrome)
+            .refine_layout(
+                LayoutRefinement::default()
+                    .h_px(Px(32.0))
+                    .w_full()
+                    .merge(self.layout),
+            );
+
+        if let Some(label) = self.a11y_label {
+            input = input.a11y_label(label);
+        }
+        if let Some(placeholder) = self.placeholder {
+            input = input.placeholder(placeholder);
+        }
+        if let Some(command) = self.submit_command {
+            input = input.submit_command(command);
+        }
+        if let Some(command) = self.cancel_command {
+            input = input.cancel_command(command);
+        }
+
+        input.into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarSeparator {
+    orientation: SeparatorOrientation,
+    layout: LayoutRefinement,
+}
+
+impl SidebarSeparator {
+    pub fn new() -> Self {
+        Self {
+            orientation: SeparatorOrientation::Horizontal,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn orientation(mut self, orientation: SeparatorOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let thickness = theme
+            .metric_by_key("component.separator.px")
+            .unwrap_or(Px(1.0));
+        let margin_x = decl_style::space(&theme, Space::N2);
+        let mut layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .mx_px(margin_x)
+                .merge(self.layout),
+        );
+
+        match self.orientation {
+            SeparatorOrientation::Horizontal => {
+                layout.size = fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Fill,
+                    height: fret_ui::element::Length::Px(thickness),
+                    min_height: Some(thickness),
+                    max_height: Some(thickness),
+                    ..layout.size
+                };
+            }
+            SeparatorOrientation::Vertical => {
+                layout.size = fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Px(thickness),
+                    height: fret_ui::element::Length::Fill,
+                    min_width: Some(thickness),
+                    max_width: Some(thickness),
+                    ..layout.size
+                };
+            }
+        }
+
+        cx.container(
+            fret_ui::element::ContainerProps {
+                layout,
+                background: Some(sidebar_border(&theme)),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
     }
 }
 
@@ -971,7 +1240,7 @@ impl SidebarMenuButton {
 mod tests {
     use super::*;
 
-    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+    use crate::shadcn_themes::{apply_shadcn_new_york_v4, ShadcnBaseColor, ShadcnColorScheme};
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
@@ -1325,6 +1594,161 @@ mod tests {
         assert!(
             trigger.described_by.iter().any(|id| *id == tooltip.id),
             "expected sidebar menu button to be described by tooltip content when collapsed"
+        );
+    }
+
+    #[test]
+    fn sidebar_input_and_separator_match_shadcn_base_metrics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-input-separator",
+            |cx| {
+                let input = SidebarInput::new(model.clone())
+                    .a11y_label("Sidebar Search")
+                    .placeholder("Search")
+                    .into_element(cx);
+                let separator = SidebarSeparator::new().into_element(cx);
+                vec![cx.container(ContainerProps::default(), move |_cx| {
+                    vec![input.clone(), separator.clone()]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        let input_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::TextField && n.label.as_deref() == Some("Sidebar Search")
+            })
+            .expect("expected sidebar input semantics node");
+        assert!(
+            (input_node.bounds.size.height.0 - 32.0).abs() <= 1.0,
+            "expected sidebar input height ~32px, got {}",
+            input_node.bounds.size.height.0
+        );
+
+        let sep_node = *ui.children(root).first().expect("wrapper node");
+        let sep_node = *ui.children(sep_node).get(1).expect("separator node");
+        let sep_bounds = ui.debug_node_bounds(sep_node).expect("separator bounds");
+        assert!(
+            (sep_bounds.size.height.0 - 1.0).abs() <= 1.0,
+            "expected sidebar separator thickness ~1px, got {}",
+            sep_bounds.size.height.0
+        );
+    }
+
+    #[test]
+    fn sidebar_trigger_toggles_provider_open_model_on_activate() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(true);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-trigger-toggle",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let trigger = SidebarTrigger::new()
+                            .test_id("sidebar-trigger")
+                            .into_element(cx);
+                        vec![trigger]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-trigger"))
+            .expect("expected sidebar trigger semantics node");
+
+        let center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+                is_click: true,
+            }),
+        );
+
+        let open_now = app
+            .models()
+            .get_copied(&open_model)
+            .expect("sidebar open model");
+        assert!(
+            !open_now,
+            "expected sidebar trigger to toggle open model to false"
         );
     }
 }
