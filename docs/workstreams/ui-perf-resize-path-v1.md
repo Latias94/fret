@@ -72,6 +72,10 @@ From the resize probe runs recorded in the perf log (see the entries around `202
   - This is “flow subtree request/build” overhead (walking nodes, setting styles/children, stable identity).
 - `top_layout_engine_solve_time_us` can be `~2.2ms` (worst frames) for the drag-jitter probe.
   - This includes `TextService::measure` costs for wrapped text.
+- View-cache reuse attribution matters: it is possible for `top_view_cache_roots_total > 0` while
+  `top_view_cache_roots_reused == 0` because the observed roots were not marked as reuse roots
+  (`top_view_cache_roots_not_marked_reuse_root`), even when there is no cache-key mismatch.
+  - This is a key diagnostic for whether “multiple viewport solves” are expected or accidental.
 
 The next step is to reduce the sum of:
 
@@ -139,4 +143,3 @@ Deliverable:
 - ADR update/new ADR + alignment entry.
 
 This prevents “fearless refactors” from silently breaking UX expectations.
-
