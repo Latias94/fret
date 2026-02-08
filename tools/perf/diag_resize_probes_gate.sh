@@ -110,7 +110,7 @@ if [[ -z "$baseline" ]]; then
       baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
       ;;
     ui-code-editor-resize-probes)
-      baseline="docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json"
+      baseline="docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json"
       ;;
     *)
       echo "error: unknown --suite '$suite' (provide --baseline explicitly)" >&2
