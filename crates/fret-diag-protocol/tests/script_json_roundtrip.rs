@@ -62,3 +62,20 @@ fn transport_message_roundtrip_envelope() {
 
     assert_eq!(value_1, value_2);
 }
+
+#[test]
+fn script_v2_roundtrip_click_modifiers() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "table_header_name" },
+      "button": "left",
+      "modifiers": { "shift": true }
+    }
+  ]
+}"#,
+    );
+}

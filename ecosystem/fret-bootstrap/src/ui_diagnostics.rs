@@ -1181,7 +1181,11 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
-            UiActionStepV2::Click { target, button } => {
+            UiActionStepV2::Click {
+                target,
+                button,
+                modifiers,
+            } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics");
@@ -1234,7 +1238,10 @@ impl UiDiagnosticsService {
                     node,
                 );
                 let pos = center_of_rect_clamped_to_rect(bounds, window_bounds);
-                output.events.extend(click_events(pos, button));
+                let modifiers = core_modifiers_from_ui(modifiers);
+                output
+                    .events
+                    .extend(click_events_with_modifiers(pos, button, modifiers));
 
                 active.wait_until = None;
                 active.screenshot_wait = None;
@@ -1247,10 +1254,12 @@ impl UiDiagnosticsService {
             UiActionStepV2::ClickStable {
                 target,
                 button,
+                modifiers,
                 stable_frames,
                 max_move_px,
                 timeout_frames,
             } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
                 active.wait_until = None;
                 active.screenshot_wait = None;
 
@@ -1572,8 +1581,16 @@ impl UiDiagnosticsService {
                                         "diag click_stable resolved hit-test"
                                     );
                                 }
-                                output.events.push(pointer_down_event(center, button));
-                                output.events.push(pointer_up_event(center, button));
+                                output.events.push(pointer_down_event(
+                                    center,
+                                    button,
+                                    click_modifiers,
+                                ));
+                                output.events.push(pointer_up_event(
+                                    center,
+                                    button,
+                                    click_modifiers,
+                                ));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
                                 output.request_redraw = true;
@@ -10839,8 +10856,15 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
 }
 
 fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
+    click_events_with_modifiers(position, button, Modifiers::default())
+}
+
+fn click_events_with_modifiers(
+    position: Point,
+    button: UiMouseButtonV1,
+    modifiers: Modifiers,
+) -> [Event; 3] {
     let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
 
     let move_event = Event::Pointer(PointerEvent::Move {
@@ -10850,15 +10874,14 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
         modifiers,
         pointer_type,
     });
-    let down = pointer_down_event(position, button);
-    let up = pointer_up_event(position, button);
+    let down = pointer_down_event(position, button, modifiers);
+    let up = pointer_up_event(position, button, modifiers);
 
     [move_event, down, up]
 }
 
-fn pointer_down_event(position: Point, button: UiMouseButtonV1) -> Event {
+fn pointer_down_event(position: Point, button: UiMouseButtonV1, modifiers: Modifiers) -> Event {
     let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
     let button = match button {
         UiMouseButtonV1::Left => MouseButton::Left,
@@ -10875,9 +10898,8 @@ fn pointer_down_event(position: Point, button: UiMouseButtonV1) -> Event {
     })
 }
 
-fn pointer_up_event(position: Point, button: UiMouseButtonV1) -> Event {
+fn pointer_up_event(position: Point, button: UiMouseButtonV1, modifiers: Modifiers) -> Event {
     let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
     let button = match button {
         UiMouseButtonV1::Left => MouseButton::Left,
@@ -11074,13 +11096,7 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
 }
 
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
-    let modifiers = Modifiers {
-        shift: modifiers.shift,
-        ctrl: modifiers.ctrl,
-        alt: modifiers.alt,
-        meta: modifiers.meta,
-        ..Modifiers::default()
-    };
+    let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
         key,
         modifiers,
@@ -11088,6 +11104,17 @@ fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> 
     };
     let up = Event::KeyUp { key, modifiers };
     [down, up]
+}
+
+fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
+    let modifiers = modifiers.unwrap_or_default();
+    Modifiers {
+        shift: modifiers.shift,
+        ctrl: modifiers.ctrl,
+        alt: modifiers.alt,
+        meta: modifiers.meta,
+        ..Modifiers::default()
+    }
 }
 
 fn parse_shortcut(shortcut: &str) -> Result<(KeyCode, UiKeyModifiersV1), String> {
