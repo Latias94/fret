@@ -86,9 +86,11 @@ pub use elements::{
     SchemaDisplayParameter, SchemaDisplayParameters, SchemaDisplayPath, SchemaDisplayProperty,
     SchemaDisplayRequest, SchemaDisplayResponse, SchemaParameter, SchemaParameterLocation,
     SchemaProperty, Snippet, SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock,
-    StackFrame, StackTrace, StackTraceCopyButton, StackTraceFrames, Tool, ToolCallBlock,
-    ToolContent, ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
-    parse_stack_trace,
+    StackFrame, StackTrace, StackTraceCopyButton, StackTraceFrames, Test, TestError,
+    TestErrorMessage, TestErrorStack, TestResults, TestResultsContent, TestResultsDuration,
+    TestResultsHeader, TestResultsProgress, TestResultsSummary, TestResultsSummaryData,
+    TestStatusKind, TestSuite, TestSuiteContent, TestSuiteName, Tool, ToolCallBlock, ToolContent,
+    ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus, parse_stack_trace,
 };
 pub use export::messages_to_markdown;
 pub use model::{

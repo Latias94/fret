@@ -665,6 +665,25 @@ use fret_ui_ai::{StackTrace, StackTraceFrames, StackTraceCopyButton, parse_stack
 ```
 "#;
 
+pub(crate) const DOC_AI_TEST_RESULTS_DEMO: &str = r#"
+## AI test results (demo)
+
+This page is a small demo for the AI Elements-aligned `TestResults` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- summary (passed/failed/skipped + duration),
+- progress bar outcomes,
+- suite Collapsible composition (`TestSuite`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_TEST_RESULTS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{TestResults, TestSuite, Test, TestError, TestStatusKind, TestResultsSummaryData};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

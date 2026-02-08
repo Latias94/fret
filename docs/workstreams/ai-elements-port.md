@@ -78,6 +78,7 @@ an interactive chat demo:
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
 - `StackTrace`: AI Elements-aligned stack trace disclosure surface (copy + parsed frames).
+- `TestResults`: AI Elements-aligned test results surfaces (summary + suite disclosure + errors).
 - `SchemaDisplay`: AI Elements-aligned schema viewer surface (parameters + request/response property trees).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
@@ -99,6 +100,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json`
   - `AI stack trace (demo)` (`ai_stack_trace_demo`): `StackTrace` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
+  - `AI test results (demo)` (`ai_test_results_demo`): `TestResults` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
   - `AI schema display (demo)` (`ai_schema_display_demo`): `SchemaDisplay` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-schema-display-demo.json`
 
@@ -571,7 +574,7 @@ Legend:
 | `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
 | `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Defer | Needs webview/viewport integration. |
 | `sandbox.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sandbox.rs` | Defer | Depends on execution sandbox and policies. |
-| `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Defer | Only if tied to a concrete workflow. |
+| `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Done | Test results surfaces + suite disclosure + UI Gallery demo + diag gate. |
 | `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Defer | Workflow-specific; not core chat UI. |
 | `queue.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Defer | Workflow-specific. |
 | `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Defer | Workflow-specific. |

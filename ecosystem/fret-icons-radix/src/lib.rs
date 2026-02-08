@@ -76,7 +76,7 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
         let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("radix.cross-circled"));
         let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("radix.circle"));
-        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.clock"));
+        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("radix.dot-filled"));
         let _ = reg.alias(
             ids::ui::STATUS_SUCCEEDED,
             IconId::new("radix.check-circled"),

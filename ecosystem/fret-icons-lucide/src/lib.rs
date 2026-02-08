@@ -86,7 +86,7 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
         let _ = reg.alias(ids::ui::STATUS_FAILED, IconId::new("lucide.circle-x"));
         let _ = reg.alias(ids::ui::STATUS_PENDING, IconId::new("lucide.circle"));
-        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("lucide.clock"));
+        let _ = reg.alias(ids::ui::STATUS_RUNNING, IconId::new("lucide.circle-dot"));
         let _ = reg.alias(
             ids::ui::STATUS_SUCCEEDED,
             IconId::new("lucide.circle-check"),

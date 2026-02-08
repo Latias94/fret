@@ -18,6 +18,7 @@ mod schema_display;
 mod snippet;
 mod sources_block;
 mod stack_trace;
+mod test_results;
 mod tool;
 mod tool_call_block;
 
@@ -41,5 +42,6 @@ pub use schema_display::*;
 pub use snippet::*;
 pub use sources_block::*;
 pub use stack_trace::*;
+pub use test_results::*;
 pub use tool::*;
 pub use tool_call_block::*;

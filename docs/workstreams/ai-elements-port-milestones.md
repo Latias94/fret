@@ -88,6 +88,7 @@ Notes:
 - `CodeBlock` / `Snippet` v0 are ported with a UI Gallery demo + diag gate (`ui-gallery-ai-code-block-demo-copy.json`).
 - `Commit` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-commit-demo-copy.json`).
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
+- `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).
 - `SchemaDisplay` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-schema-display-demo.json`).
 - Remaining work in this milestone focuses on `CodeBlock` / `Snippet` parity and a large-tree
   strategy (likely via UI Kit primitives + virtualization).

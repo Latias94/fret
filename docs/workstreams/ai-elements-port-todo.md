@@ -74,7 +74,7 @@ Status legend:
 | `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
 | `schema-display` | Prototype | `fret-ui-ai` | Schema viewer surface (`SchemaDisplay*`) + UI Gallery demo + diag gate exist. |
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
-| `test-results` | Not started | `fret-ui-ai` | Optional; can be app-level initially. |
+| `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
 | `web-preview` | Not started | n/a | Needs embedded webview; out of scope unless there is a host. |
 | `artifact` / `agent` / `sandbox` / `package-info` / `environment-variables` / `stack-trace` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
@@ -139,6 +139,10 @@ Existing gates (UI Gallery `ai_stack_trace_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-stack-trace-demo-copy.json`
 
+Existing gates (UI Gallery `ai_test_results_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-test-results-demo-toggle.json`
+
 Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
@@ -162,7 +166,7 @@ Prioritize thin adapters over new engines:
 - [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
   - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
-  - `TestResults` is still pending.
+  - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
 
 ### M4 — Workflow surfaces (optional; reuse existing ecosystem)

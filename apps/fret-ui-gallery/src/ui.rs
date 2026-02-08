@@ -709,6 +709,7 @@ fn page_preview(
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
         PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -18036,6 +18037,112 @@ fn preview_ai_stack_trace_demo(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("StackTrace (AI Elements)"), stack_trace],
+    )]
+}
+
+fn preview_ai_test_results_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let summary = ui_ai::TestResultsSummaryData::new(8, 1, 2, 11).duration_ms(1234);
+
+    let header = ui_ai::TestResultsHeader::new([
+        ui_ai::TestResultsSummary::new(summary.clone()).into_element(cx),
+        ui_ai::TestResultsDuration::new(summary.clone()).into_element(cx),
+    ])
+    .test_id("ui-ai-test-results-header")
+    .into_element(cx);
+
+    let progress = ui_ai::TestResultsProgress::new(summary.clone())
+        .test_id("ui-ai-test-results-progress")
+        .into_element(cx);
+
+    let passing_suite = ui_ai::TestSuite::new(
+        ui_ai::TestSuiteName::new("core::math", ui_ai::TestStatusKind::Passed)
+            .stats(3, 0, 0)
+            .test_id("ui-ai-test-suite-0-trigger"),
+        ui_ai::TestSuiteContent::new([
+            ui_ai::Test::new("adds numbers", ui_ai::TestStatusKind::Passed)
+                .duration_ms(3)
+                .test_id("ui-ai-test-0-0")
+                .into_element(cx),
+            ui_ai::Test::new("subtracts numbers", ui_ai::TestStatusKind::Passed)
+                .duration_ms(2)
+                .test_id("ui-ai-test-0-1")
+                .into_element(cx),
+            ui_ai::Test::new("multiplies numbers", ui_ai::TestStatusKind::Passed)
+                .duration_ms(4)
+                .test_id("ui-ai-test-0-2")
+                .into_element(cx),
+        ])
+        .test_id("ui-ai-test-suite-0-content"),
+    )
+    .default_open(false)
+    .into_element(cx);
+
+    let failing_test = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2),
+        move |cx| {
+            vec![
+                ui_ai::Test::new("parses input file", ui_ai::TestStatusKind::Failed)
+                    .duration_ms(12)
+                    .test_id("ui-ai-test-1-0")
+                    .into_element(cx),
+                ui_ai::TestError::new([
+                    ui_ai::TestErrorMessage::new("Expected 2 files, got 1").into_element(cx),
+                    ui_ai::TestErrorStack::new(
+                        "at parseFile (src/parser.ts:42:13)\n\
+                         at runSuite (src/suite.ts:10:1)\n\
+                         at Object.<anonymous> (node:internal/modules/cjs/loader:1234:14)\n",
+                    )
+                    .max_height(fret_core::Px(120.0))
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ]
+        },
+    );
+
+    let failing_suite = ui_ai::TestSuite::new(
+        ui_ai::TestSuiteName::new("io::parser", ui_ai::TestStatusKind::Failed)
+            .stats(5, 1, 2)
+            .test_id("ui-ai-test-suite-1-trigger"),
+        ui_ai::TestSuiteContent::new([
+            failing_test,
+            ui_ai::Test::new("handles empty input", ui_ai::TestStatusKind::Skipped)
+                .duration_ms(0)
+                .test_id("ui-ai-test-1-1")
+                .into_element(cx),
+            ui_ai::Test::new("streams output", ui_ai::TestStatusKind::Running)
+                .test_id("ui-ai-test-1-2")
+                .into_element(cx),
+        ])
+        .test_id("ui-ai-test-suite-1-content"),
+    )
+    .default_open(false)
+    .into_element(cx);
+
+    let content = ui_ai::TestResultsContent::new([progress, passing_suite, failing_suite])
+        .test_id("ui-ai-test-results-content")
+        .into_element(cx);
+
+    let results = ui_ai::TestResults::new()
+        .children([header, content])
+        .test_id_root("ui-ai-test-results-root")
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("TestResults (AI Elements)"), results],
     )]
 }
 
