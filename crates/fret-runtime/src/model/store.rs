@@ -993,6 +993,82 @@ mod tests {
     }
 
     #[test]
+    fn update_does_not_hold_store_lock_while_running_user_code() {
+        #[derive(Clone)]
+        struct Outer {
+            inner: Model<u32>,
+            touched: u32,
+        }
+
+        let mut store = ModelStore::default();
+        let store_probe = store.clone();
+        let inner = store.insert(123_u32);
+        let outer = store.insert(Outer {
+            inner: inner.clone(),
+            touched: 0,
+        });
+
+        store
+            .update(&outer, |outer| {
+                assert!(
+                    !store_probe.state_lock_is_held_for_tests(),
+                    "ModelStore::update must not hold a store borrow while running user closures"
+                );
+
+                // Re-enter the store while `update` is executing user code to ensure lock/borrow
+                // discipline remains correct.
+                assert_eq!(store_probe.get_copied(&outer.inner), Some(123_u32));
+
+                outer.touched += 1;
+            })
+            .expect("outer model should be updatable");
+
+        let touched = store
+            .read(&outer, |outer| outer.touched)
+            .expect("outer readable");
+        assert_eq!(touched, 1);
+    }
+
+    #[test]
+    fn update_any_does_not_hold_store_lock_while_running_user_code() {
+        #[derive(Clone)]
+        struct Outer {
+            inner: Model<u32>,
+            touched: u32,
+        }
+
+        let mut store = ModelStore::default();
+        let store_probe = store.clone();
+        let inner = store.insert(123_u32);
+        let outer = store.insert(Outer {
+            inner: inner.clone(),
+            touched: 0,
+        });
+
+        store
+            .update_any(outer.id(), |any| {
+                assert!(
+                    !store_probe.state_lock_is_held_for_tests(),
+                    "ModelStore::update_any must not hold a store borrow while running user closures"
+                );
+
+                let outer = any.downcast_mut::<Outer>().expect("stored type should match");
+
+                // Re-enter the store while `update_any` is executing user code to ensure
+                // lock/borrow discipline remains correct.
+                assert_eq!(store_probe.get_copied(&outer.inner), Some(123_u32));
+
+                outer.touched += 1;
+            })
+            .expect("update_any should succeed");
+
+        let touched = store
+            .read(&outer, |outer| outer.touched)
+            .expect("outer readable");
+        assert_eq!(touched, 1);
+    }
+
+    #[test]
     fn update_any_updates_value_and_bumps_revision() {
         let mut store = ModelStore::default();
         let model = store.insert(1_u32);

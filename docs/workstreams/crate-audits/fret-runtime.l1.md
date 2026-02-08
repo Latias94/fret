@@ -27,6 +27,11 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
     - `crates/fret-runtime/tests/fixtures/menubar/v2-patch.json`
     - `crates/fret-runtime/tests/fixtures/menubar/v2-invalid-both.json`
 
+- Added regression gates for `ModelStore` re-entrancy/borrow discipline during `update` and `update_any`.
+  - Evidence:
+    - `crates/fret-runtime/src/model/store.rs` (`update_does_not_hold_store_lock_while_running_user_code`)
+    - `crates/fret-runtime/src/model/store.rs` (`update_any_does_not_hold_store_lock_while_running_user_code`)
+
 ## Hazards (top)
 
 - Accidental wire format drift (field rename/default behavior changes) breaking user configs.
@@ -43,4 +48,3 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 1. Extend fixture set with version-mismatch cases (explicit failure modes) for keymap + menubar.
 2. Add a dedicated “identifier contract” test for `WhenExpr` to prevent silent additions/removals.
 3. Continue L1 on `model::store` hot path: lease invariants + re-entrancy hazards.
-
