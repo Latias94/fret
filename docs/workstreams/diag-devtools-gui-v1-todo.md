@@ -107,7 +107,7 @@ Conventions:
   - [ ] perf thresholds,
   - [ ] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
-  - [x] hover events (`inspect.hover`) with node id + selector JSON,
+  - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
   - [x] focus events (`inspect.focus`) with summary + path (best-effort),
   - [ ] hovered node bounds + viewport overlay hooks,
   - [ ] overlay barrier root id + blocking roots summary.
