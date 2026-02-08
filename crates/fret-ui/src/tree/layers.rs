@@ -23,15 +23,6 @@ pub(super) struct UiLayer {
 }
 
 impl<H: UiHost> UiTree<H> {
-    pub(super) fn rebuild_visible_layers_scratch(&mut self) {
-        self.scratch_visible_layers.clear();
-        for &layer_id in &self.layer_order {
-            if self.layers.get(layer_id).is_some_and(|layer| layer.visible) {
-                self.scratch_visible_layers.push(layer_id);
-            }
-        }
-    }
-
     pub fn base_root(&self) -> Option<NodeId> {
         self.base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root))

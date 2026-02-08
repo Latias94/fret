@@ -1,0 +1,97 @@
+{
+  "generated_unix_ms": 1770510241012,
+  "headroom_pct": 20,
+  "kind": "perf_baseline",
+  "out_path": "/Users/frankorz/codes/rust/fret/target/fret-diag-baseline-select-ui-code-editor-resize-probes-v1b/candidate-1.baseline.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 0,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "run_paint_cache_hit_test_only_replay_allowed_max": 0,
+        "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "top_layout_engine_solve_time_us": 483,
+        "top_layout_time_us": 2195,
+        "top_total_time_us": 43412
+      },
+      "measured_p90": {
+        "top_layout_engine_solve_time_us": 481,
+        "top_layout_time_us": 2190,
+        "top_total_time_us": 43299
+      },
+      "measured_p95": {
+        "top_layout_engine_solve_time_us": 482,
+        "top_layout_time_us": 2192,
+        "top_total_time_us": 43356
+      },
+      "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+      "threshold_seed": {
+        "top_layout_engine_solve_time_us": 482,
+        "top_layout_time_us": 2192,
+        "top_total_time_us": 43356
+      },
+      "threshold_seed_source": {
+        "top_layout_engine_solve_time_us": "p95",
+        "top_layout_time_us": "p95",
+        "top_total_time_us": "p95"
+      },
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 0,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 0,
+        "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": 0,
+        "max_top_layout_us": 2632,
+        "max_top_solve_us": 580,
+        "max_top_total_us": 52028,
+        "min_run_paint_cache_hit_test_only_replay_allowed_max": 0
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "threshold_seed_policy": {
+    "default_seed": "max",
+    "rules": [
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      },
+      {
+        "metric": "top_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        "seed": "p95",
+        "source": "default"
+      },
+      {
+        "metric": "top_total_time_us",
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_layout_time_us",
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      },
+      {
+        "metric": "top_layout_engine_solve_time_us",
+        "script": "tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json",
+        "seed": "p95",
+        "source": "preset"
+      }
+    ],
+    "schema_version": 1
+  },
+  "warmup_frames": 5
+}

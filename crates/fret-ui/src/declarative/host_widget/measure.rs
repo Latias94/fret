@@ -410,6 +410,9 @@ impl ElementHostWidget {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
@@ -430,6 +433,9 @@ impl ElementHostWidget {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
@@ -450,6 +456,9 @@ impl ElementHostWidget {
         let theme = cx.theme().snapshot();
         let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
+        let max_width = cx
+            .tree
+            .maybe_bucket_text_wrap_max_width(props.wrap, max_width);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
