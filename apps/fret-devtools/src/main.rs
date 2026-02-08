@@ -85,12 +85,19 @@ struct State {
     script_selector_element_id: Model<String>,
     script_predicate_kind: Model<Option<Arc<str>>>,
     script_predicate_kind_open: Model<bool>,
+    script_predicate_other_selector_json: Model<String>,
     script_predicate_role: Model<String>,
     script_predicate_checked: Model<bool>,
     script_predicate_padding_px: Model<String>,
     script_predicate_eps_px: Model<String>,
     script_predicate_min_w_px: Model<String>,
     script_predicate_min_h_px: Model<String>,
+    script_predicate_barrier_root: Model<Option<Arc<str>>>,
+    script_predicate_barrier_root_open: Model<bool>,
+    script_predicate_focus_barrier_root: Model<Option<Arc<str>>>,
+    script_predicate_focus_barrier_root_open: Model<bool>,
+    script_predicate_require_equal: Model<Option<Arc<str>>>,
+    script_predicate_require_equal_open: Model<bool>,
 
     script_last_stage: Model<Option<UiScriptStageV1>>,
     script_last_step_index: Model<Option<u32>>,
@@ -221,12 +228,20 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let script_selector_element_id = app.models_mut().insert("0".to_string());
     let script_predicate_kind = app.models_mut().insert(Some(Arc::<str>::from("exists")));
     let script_predicate_kind_open = app.models_mut().insert(false);
+    let script_predicate_other_selector_json = app.models_mut().insert(String::new());
     let script_predicate_role = app.models_mut().insert("button".to_string());
     let script_predicate_checked = app.models_mut().insert(false);
     let script_predicate_padding_px = app.models_mut().insert("0".to_string());
     let script_predicate_eps_px = app.models_mut().insert("0".to_string());
     let script_predicate_min_w_px = app.models_mut().insert("0".to_string());
     let script_predicate_min_h_px = app.models_mut().insert("0".to_string());
+    let script_predicate_barrier_root = app.models_mut().insert(Some(Arc::<str>::from("any")));
+    let script_predicate_barrier_root_open = app.models_mut().insert(false);
+    let script_predicate_focus_barrier_root =
+        app.models_mut().insert(Some(Arc::<str>::from("any")));
+    let script_predicate_focus_barrier_root_open = app.models_mut().insert(false);
+    let script_predicate_require_equal = app.models_mut().insert(Some(Arc::<str>::from("unset")));
+    let script_predicate_require_equal_open = app.models_mut().insert(false);
 
     let script_text = app.models_mut().insert(String::new());
     let script_last_stage = app.models_mut().insert(None::<UiScriptStageV1>);
@@ -327,12 +342,19 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         script_selector_element_id,
         script_predicate_kind,
         script_predicate_kind_open,
+        script_predicate_other_selector_json,
         script_predicate_role,
         script_predicate_checked,
         script_predicate_padding_px,
         script_predicate_eps_px,
         script_predicate_min_w_px,
         script_predicate_min_h_px,
+        script_predicate_barrier_root,
+        script_predicate_barrier_root_open,
+        script_predicate_focus_barrier_root,
+        script_predicate_focus_barrier_root_open,
+        script_predicate_require_equal,
+        script_predicate_require_equal_open,
         script_last_stage,
         script_last_step_index,
         script_last_reason,
@@ -427,12 +449,25 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.script_selector_element_id, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_kind, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_kind_open, Invalidation::Paint);
+    cx.observe_model(
+        &st.script_predicate_other_selector_json,
+        Invalidation::Paint,
+    );
     cx.observe_model(&st.script_predicate_role, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_checked, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_padding_px, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_eps_px, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_min_w_px, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_min_h_px, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_barrier_root, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_barrier_root_open, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_focus_barrier_root, Invalidation::Paint);
+    cx.observe_model(
+        &st.script_predicate_focus_barrier_root_open,
+        Invalidation::Paint,
+    );
+    cx.observe_model(&st.script_predicate_require_equal, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_require_equal_open, Invalidation::Paint);
     cx.observe_model(&st.script_last_stage, Invalidation::Paint);
     cx.observe_model(&st.script_last_step_index, Invalidation::Paint);
     cx.observe_model(&st.script_last_reason, Invalidation::Paint);
@@ -1299,6 +1334,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     .into_element(cx);
 
     let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
+    let pointer_candidates = script_studio::collect_common_json_pointers(&script_text);
 
     let step_index_input = shadcn::Input::new(st.script_step_insert_index.clone())
         .a11y_label("Step insert index")
@@ -1309,6 +1345,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     for t in step_templates_for_schema(script_schema_version) {
         let script_text_model = st.script_text.clone();
         let insert_index_model = st.script_step_insert_index.clone();
+        let pointer_model = st.script_apply_pointer.clone();
         let log_lines = st.log_lines.clone();
         let step_value = t.step.clone();
         let label = t.label;
@@ -1327,6 +1364,10 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                 .ok()
                 .unwrap_or_default();
 
+            let len_before = script_steps_len(&current).unwrap_or(0);
+            let insert_at = index.unwrap_or(len_before);
+            let inserted_index = insert_at.min(len_before);
+
             let updated = match index {
                 Some(i) => script_studio::insert_step_json(&current, i, step_value.clone()),
                 None => script_studio::append_step_json(&current, step_value.clone()),
@@ -1335,6 +1376,10 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
             match updated {
                 Ok(text) => {
                     let _ = host.models_mut().update(&script_text_model, |v| *v = text);
+                    if let Some(suffix) = primary_pointer_suffix_for_step_json(&step_value) {
+                        let ptr = format!("/steps/{inserted_index}{suffix}");
+                        let _ = host.models_mut().update(&pointer_model, |v| *v = ptr);
+                    }
                 }
                 Err(err) => {
                     let _ = host.models_mut().update(&log_lines, |v| {
@@ -1373,6 +1418,30 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
             out.push(cx.text(format!("Schema v{script_schema_version} step palette")));
             out.push(step_index_input);
             out.extend(step_buttons);
+            if !pointer_candidates.is_empty() {
+                out.push(cx.text("Pointer candidates:"));
+                for p in pointer_candidates.iter().take(64) {
+                    let pointer_model = st.script_apply_pointer.clone();
+                    let p_value = p.clone();
+                    let p_label = p.clone();
+                    let on_activate: fret_ui::action::OnActivate =
+                        Arc::new(move |host, action_cx, _reason| {
+                            let _ = host
+                                .models_mut()
+                                .update(&pointer_model, |v| *v = p_value.clone());
+                            host.request_redraw(action_cx.window);
+                            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+                        });
+                    out.push(
+                        shadcn::Button::new(p_label)
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(on_activate)
+                            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    );
+                }
+            }
             out
         },
     )])
@@ -1507,9 +1576,14 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
         shadcn::SelectItem::new("role_is", "role_is"),
         shadcn::SelectItem::new("checked_is", "checked_is"),
         shadcn::SelectItem::new("checked_is_none", "checked_is_none"),
+        shadcn::SelectItem::new("barrier_roots", "barrier_roots"),
         shadcn::SelectItem::new("visible_in_window", "visible_in_window"),
         shadcn::SelectItem::new("bounds_within_window", "bounds_within_window"),
         shadcn::SelectItem::new("bounds_min_size", "bounds_min_size"),
+        shadcn::SelectItem::new("bounds_non_overlapping", "bounds_non_overlapping"),
+        shadcn::SelectItem::new("bounds_overlapping", "bounds_overlapping"),
+        shadcn::SelectItem::new("bounds_overlapping_x", "bounds_overlapping_x"),
+        shadcn::SelectItem::new("bounds_overlapping_y", "bounds_overlapping_y"),
     ];
     let predicate_kind_select = shadcn::Select::new(
         st.script_predicate_kind.clone(),
@@ -2352,6 +2426,36 @@ fn placeholder_predicate_value() -> serde_json::Value {
     })
 }
 
+fn primary_pointer_suffix_for_step_json(step: &serde_json::Value) -> Option<&'static str> {
+    let obj = step.as_object()?;
+    let has = |k: &str| obj.contains_key(k);
+    if has("target") {
+        return Some("/target");
+    }
+    if has("predicate") {
+        return Some("/predicate");
+    }
+    if has("container") {
+        return Some("/container");
+    }
+    if has("from") {
+        return Some("/from");
+    }
+    if has("to") {
+        return Some("/to");
+    }
+    if has("menu") {
+        return Some("/menu");
+    }
+    if has("item") {
+        return Some("/item");
+    }
+    if has("path") {
+        return Some("/path/0");
+    }
+    None
+}
+
 fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
     let target = placeholder_selector_value();
     let predicate = placeholder_predicate_value();
@@ -2723,6 +2827,64 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
     match kind {
         "role_is" => role,
         "checked_is" => checked,
+        "barrier_roots" => {
+            let barrier_root_items = [
+                shadcn::SelectItem::new("any", "any"),
+                shadcn::SelectItem::new("none", "none"),
+                shadcn::SelectItem::new("some", "some"),
+            ];
+            let focus_root_items = [
+                shadcn::SelectItem::new("any", "any"),
+                shadcn::SelectItem::new("none", "none"),
+                shadcn::SelectItem::new("some", "some"),
+            ];
+            let require_items = [
+                shadcn::SelectItem::new("unset", "unset"),
+                shadcn::SelectItem::new("true", "true"),
+                shadcn::SelectItem::new("false", "false"),
+            ];
+
+            let barrier_root = shadcn::Select::new(
+                st.script_predicate_barrier_root.clone(),
+                st.script_predicate_barrier_root_open.clone(),
+            )
+            .placeholder("barrier_root")
+            .items(barrier_root_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
+
+            let focus_root = shadcn::Select::new(
+                st.script_predicate_focus_barrier_root.clone(),
+                st.script_predicate_focus_barrier_root_open.clone(),
+            )
+            .placeholder("focus_barrier_root")
+            .items(focus_root_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
+
+            let require_equal = shadcn::Select::new(
+                st.script_predicate_require_equal.clone(),
+                st.script_predicate_require_equal_open.clone(),
+            )
+            .placeholder("require_equal")
+            .items(require_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
+
+            let other_selector =
+                shadcn::Textarea::new(st.script_predicate_other_selector_json.clone())
+                    .a11y_label("other selector (optional)")
+                    .min_height(Px(96.0))
+                    .into_element(cx);
+
+            fret_ui_kit::declarative::stack::vstack(
+                cx,
+                fret_ui_kit::declarative::stack::VStackProps::default()
+                    .gap_y(fret_ui_kit::Space::N1)
+                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                |_cx| [barrier_root, focus_root, require_equal, other_selector],
+            )
+        }
         "bounds_within_window" => fret_ui_kit::declarative::stack::vstack(
             cx,
             fret_ui_kit::declarative::stack::VStackProps::default()
@@ -2737,6 +2899,23 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
                 .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
             |_cx| [min_w, min_h, eps],
         ),
+        "bounds_non_overlapping"
+        | "bounds_overlapping"
+        | "bounds_overlapping_x"
+        | "bounds_overlapping_y" => {
+            let other_selector =
+                shadcn::Textarea::new(st.script_predicate_other_selector_json.clone())
+                    .a11y_label("selector B (JSON)")
+                    .min_height(Px(120.0))
+                    .into_element(cx);
+            fret_ui_kit::declarative::stack::vstack(
+                cx,
+                fret_ui_kit::declarative::stack::VStackProps::default()
+                    .gap_y(fret_ui_kit::Space::N1)
+                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                |_cx| [eps, other_selector],
+            )
+        }
         _ => cx.text(""),
     }
 }
@@ -2752,6 +2931,11 @@ fn predicate_value_from_models(
         .models()
         .read(&st.script_predicate_role, |v| v.clone())
         .unwrap_or_default();
+    let other_selector_json = cx
+        .app
+        .models()
+        .read(&st.script_predicate_other_selector_json, |v| v.clone())
+        .unwrap_or_default();
     let checked = cx
         .app
         .models()
@@ -2761,6 +2945,10 @@ fn predicate_value_from_models(
     let eps_px = parse_f32_model(cx, &st.script_predicate_eps_px);
     let min_w_px = parse_f32_model(cx, &st.script_predicate_min_w_px);
     let min_h_px = parse_f32_model(cx, &st.script_predicate_min_h_px);
+
+    let other_selector = serde_json::from_str::<serde_json::Value>(&other_selector_json)
+        .ok()
+        .unwrap_or_else(placeholder_selector_value);
 
     match kind {
         "exists" => serde_json::json!({
@@ -2789,6 +2977,49 @@ fn predicate_value_from_models(
             "kind": "checked_is_none",
             "target": selector,
         }),
+        "barrier_roots" => {
+            let barrier_root = cx
+                .app
+                .models()
+                .read(&st.script_predicate_barrier_root, |v| v.clone())
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| Arc::<str>::from("any"));
+            let focus_barrier_root = cx
+                .app
+                .models()
+                .read(&st.script_predicate_focus_barrier_root, |v| v.clone())
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| Arc::<str>::from("any"));
+            let require_equal = cx
+                .app
+                .models()
+                .read(&st.script_predicate_require_equal, |v| v.clone())
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| Arc::<str>::from("unset"));
+
+            let mut obj = serde_json::Map::new();
+            obj.insert(
+                "kind".to_string(),
+                serde_json::Value::String("barrier_roots".to_string()),
+            );
+            obj.insert(
+                "barrier_root".to_string(),
+                serde_json::Value::String(barrier_root.to_string()),
+            );
+            obj.insert(
+                "focus_barrier_root".to_string(),
+                serde_json::Value::String(focus_barrier_root.to_string()),
+            );
+            if require_equal.as_ref() == "true" {
+                obj.insert("require_equal".to_string(), serde_json::Value::Bool(true));
+            } else if require_equal.as_ref() == "false" {
+                obj.insert("require_equal".to_string(), serde_json::Value::Bool(false));
+            }
+            serde_json::Value::Object(obj)
+        }
         "visible_in_window" => serde_json::json!({
             "kind": "visible_in_window",
             "target": selector,
@@ -2804,6 +3035,30 @@ fn predicate_value_from_models(
             "target": selector,
             "min_w_px": min_w_px,
             "min_h_px": min_h_px,
+            "eps_px": eps_px,
+        }),
+        "bounds_non_overlapping" => serde_json::json!({
+            "kind": "bounds_non_overlapping",
+            "a": selector,
+            "b": other_selector,
+            "eps_px": eps_px,
+        }),
+        "bounds_overlapping" => serde_json::json!({
+            "kind": "bounds_overlapping",
+            "a": selector,
+            "b": other_selector,
+            "eps_px": eps_px,
+        }),
+        "bounds_overlapping_x" => serde_json::json!({
+            "kind": "bounds_overlapping_x",
+            "a": selector,
+            "b": other_selector,
+            "eps_px": eps_px,
+        }),
+        "bounds_overlapping_y" => serde_json::json!({
+            "kind": "bounds_overlapping_y",
+            "a": selector,
+            "b": other_selector,
             "eps_px": eps_px,
         }),
         _ => placeholder_predicate_value(),
