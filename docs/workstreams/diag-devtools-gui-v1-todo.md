@@ -53,7 +53,7 @@ Conventions:
   - [x] Run (run a script; show progress + failures),
   - [x] Artifacts (latest bundle dump payload),
   - [x] Scripts (browse `tools/diag-scripts` + open editor).
-  - [x] Semantics tree (MVP: capped, non-virtualized; raw selected-node JSON).
+  - [x] Semantics tree (virtualized via `VirtualList`; keep selection visible; selected-node inspector).
   - [x] WS message tail (basic event log).
 - [ ] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
   - [ ] auto-refresh latest bundle,
@@ -73,21 +73,22 @@ Conventions:
 
 ### M4: WebSocket transport (enables web runner)
 
-- [ ] Implement WS server (DevTools side):
+- [x] Implement WS server (DevTools side):
   - [x] binds to `127.0.0.1`,
   - [x] requires a capability token,
   - [x] supports multiple clients (session ids).
-- [ ] Implement WS client bridge in diagnostics service:
+- [x] Implement WS client bridge in diagnostics service:
   - [x] add `FRET_DEVTOOLS_WS=ws://127.0.0.1:<port>` (name TBD) to enable it,
   - [x] wasm32 client via `web_sys::WebSocket`,
   - [x] native client via a non-blocking reader thread + queue (avoid blocking the frame loop).
   - [x] web runner config: support query string and/or `window.__FRET_DEVTOOLS_WS` globals (name TBD).
- - [ ] Map protocol commands to existing in-app operations:
+- [x] Map protocol commands to existing in-app operations:
   - [x] inspect config updates,
   - [x] pick arm + pick result,
   - [x] script push + script progress + script result,
   - [x] bundle dump,
   - [x] screenshot request.
+  - [x] semantics node details on-demand (`semantics.node.get` / `semantics.node.get_ack`).
 
 ### M5: Artifacts for web runner
 
