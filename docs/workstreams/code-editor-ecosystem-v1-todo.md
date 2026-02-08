@@ -318,6 +318,7 @@ Markdown Editor v0”).
   - UI: `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-markdown-editor-mode-disabled`).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-baseline.json`.
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits`).
+    - Asserts: no buffer mutations, and the disabled editor is not focused with no composition.
 
 ### M10.2 — Soft-wrap + selection/navigation consistency
 
