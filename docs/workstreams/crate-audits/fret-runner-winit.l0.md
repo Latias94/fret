@@ -52,7 +52,8 @@ Evidence anchors:
 - Window-side state (cursor + IME request dedupe)
   - Files: `crates/fret-runner-winit/src/state/window.rs`
 - Accessibility (AccessKit integration)
-  - Files: `crates/fret-runner-winit/src/accessibility.rs`, `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs`
+  - Files: `crates/fret-runner-winit/src/accessibility.rs`
+  - Note: `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs` is intentionally disabled while we are on `winit` beta and waiting for `accesskit_winit` compatibility.
 - External drag/drop glue
   - Files: `crates/fret-runner-winit/src/external_drag.rs`
 - Window registry/bookkeeping
