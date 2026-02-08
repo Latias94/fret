@@ -18,7 +18,7 @@ use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 use time::Date;
@@ -674,6 +674,9 @@ fn page_preview(
             code_editor_folds,
             code_editor_inlays,
         ),
+        PAGE_MARKDOWN_EDITOR_SOURCE => {
+            preview_markdown_editor_source(cx, theme, code_editor_soft_wrap)
+        }
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
@@ -3466,6 +3469,8 @@ fn preview_code_editor_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
         move |cx| {
+            let header_handle_controls = header_handle.clone();
+            let header_handle_mode = header_handle.clone();
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
@@ -3506,9 +3511,9 @@ fn preview_code_editor_torture(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
-                        let reset_handle = header_handle.clone();
-                        let preedit_handle = header_handle.clone();
-                        let clear_preedit_handle = header_handle.clone();
+                        let reset_handle = header_handle_controls.clone();
+                        let preedit_handle = header_handle_controls.clone();
+                        let clear_preedit_handle = header_handle_controls.clone();
                         vec![
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -3611,6 +3616,61 @@ fn preview_code_editor_torture(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let mode_handle = header_handle_mode.clone();
+                        let edit_handle = header_handle_mode.clone();
+                        let read_only_handle = header_handle_mode.clone();
+                        let disabled_handle = header_handle_mode.clone();
+
+                        let mode = mode_handle.interaction();
+                        let mode_label = if !mode.enabled {
+                            "disabled"
+                        } else if !mode.editable {
+                            "read-only"
+                        } else {
+                            "edit"
+                        };
+
+                        vec![
+                            shadcn::Button::new("Mode: edit")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-mode-edit")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    edit_handle.set_interaction(code_editor::CodeEditorInteractionOptions::editor());
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: read-only")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-mode-read-only")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    read_only_handle
+                                        .set_interaction(code_editor::CodeEditorInteractionOptions::read_only());
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: disabled")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-mode-disabled")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    disabled_handle
+                                        .set_interaction(code_editor::CodeEditorInteractionOptions::disabled());
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            cx.text(format!("Interaction: {mode_label}")),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -3651,6 +3711,320 @@ fn preview_code_editor_torture(
     );
 
     vec![header, panel]
+}
+
+fn markdown_editor_source_text() -> Arc<str> {
+    static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            Arc::<str>::from(
+                "\
+# Markdown Editor v0 (source mode)
+
+This page is a contract milestone for `fret-code-editor`:
+
+- editable vs read-only interaction control
+- soft wrap stability
+- Markdown syntax highlighting (best-effort)
+
+## Fenced code block
+
+```rust
+fn main() {
+    println!(\"hello\");
+}
+```
+
+## List
+
+- item one
+- item two
+
+## Inline code
+
+Use `CodeEditorInteractionOptions::read_only()` for viewers.
+",
+            )
+        })
+        .clone()
+}
+
+fn preview_markdown_editor_source(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    soft_wrap: Model<bool>,
+) -> Vec<AnyElement> {
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(markdown_editor_source_text().as_ref().to_string()),
+        |h| h.clone(),
+    );
+    // Best-effort: only takes effect when `fret-code-editor` is built with `syntax` features.
+    handle.set_language(Some("markdown"));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    cx.app.with_global_mut(
+        crate::harness::UiGalleryMarkdownEditorHandlesStore::default,
+        |store, _app| {
+            store.per_window.insert(cx.window, handle.clone());
+        },
+    );
+
+    let header_handle = handle.clone();
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        move |cx| {
+            let mode_handle = header_handle.clone();
+            let edit_handle = header_handle.clone();
+            let read_only_handle = header_handle.clone();
+
+            let mode = mode_handle.interaction();
+            let mode_label = if !mode.enabled {
+                "disabled"
+            } else if !mode.editable {
+                "read-only"
+            } else {
+                "edit"
+            };
+
+            vec![
+                cx.text("Goal: validate a minimal Markdown source editor milestone."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let set_soft_wrap_on = soft_wrap.clone();
+                        let set_soft_wrap_off = soft_wrap.clone();
+                        vec![
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .test_id("ui-gallery-markdown-editor-soft-wrap")
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            shadcn::Button::new("Wrap: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-soft-wrap-set-off")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&set_soft_wrap_off, |v| *v = false);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Wrap: 80")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-soft-wrap-set-on")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    let _ =
+                                        host.models_mut().update(&set_soft_wrap_on, |v| *v = true);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let inject = {
+                            let handle = header_handle.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      action_cx: fret_ui::action::ActionCx,
+                                      _up: fret_ui::action::PointerUpCx| {
+                                    const COMPOSITION_CARET: usize = 2;
+                                    handle.set_caret(COMPOSITION_CARET);
+                                    handle.set_preedit_debug("ab", None);
+                                    if let Some(region_id) = handle.region_id() {
+                                        host.request_focus(region_id);
+                                    }
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                    true
+                                },
+                            )
+                        };
+
+                        let clear = {
+                            let handle = header_handle.clone();
+                            Arc::new(
+                                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                      action_cx: fret_ui::action::ActionCx,
+                                      _up: fret_ui::action::PointerUpCx| {
+                                    const COMPOSITION_CARET: usize = 2;
+                                    handle.set_caret(COMPOSITION_CARET);
+                                    handle.set_preedit_debug("", None);
+                                    if let Some(region_id) = handle.region_id() {
+                                        host.request_focus(region_id);
+                                    }
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                    true
+                                },
+                            )
+                        };
+
+                        let inject = cx
+                            .pointer_region(
+                                fret_ui::element::PointerRegionProps::default(),
+                                move |cx| {
+                                    cx.pointer_region_on_pointer_down(Arc::new(
+                                        |host, _cx, _down| {
+                                            host.prevent_default(
+                                                fret_runtime::DefaultAction::FocusOnPointerDown,
+                                            );
+                                            true
+                                        },
+                                    ));
+                                    cx.pointer_region_on_pointer_up(inject.clone());
+                                    vec![cx.text("Preedit: inject")]
+                                },
+                            )
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(fret_core::SemanticsRole::Button)
+                                    .test_id("ui-gallery-markdown-editor-inject-preedit")
+                                    .label("Inject preedit"),
+                            );
+
+                        let clear = cx
+                            .pointer_region(
+                                fret_ui::element::PointerRegionProps::default(),
+                                move |cx| {
+                                    cx.pointer_region_on_pointer_down(Arc::new(
+                                        |host, _cx, _down| {
+                                            host.prevent_default(
+                                                fret_runtime::DefaultAction::FocusOnPointerDown,
+                                            );
+                                            true
+                                        },
+                                    ));
+                                    cx.pointer_region_on_pointer_up(clear.clone());
+                                    vec![cx.text("Preedit: clear")]
+                                },
+                            )
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(fret_core::SemanticsRole::Button)
+                                    .test_id("ui-gallery-markdown-editor-clear-preedit")
+                                    .label("Clear preedit"),
+                            );
+
+                        vec![
+                            shadcn::Button::new("Mode: edit")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-mode-edit")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    edit_handle.set_interaction(
+                                        code_editor::CodeEditorInteractionOptions::editor(),
+                                    );
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: read-only")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-mode-read-only")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    read_only_handle.set_interaction(
+                                        code_editor::CodeEditorInteractionOptions::read_only(),
+                                    );
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            inject,
+                            clear,
+                            cx.text(format!("Interaction: {mode_label}")),
+                        ]
+                    },
+                ),
+            ]
+        },
+    );
+
+    let editor = code_editor::CodeEditor::new(handle.clone())
+        .overscan(64)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
+        .a11y_label("Markdown editor")
+        .viewport_test_id("ui-gallery-markdown-editor-viewport")
+        .into_element(cx);
+
+    let preview_cache = cx.with_state(
+        || Rc::new(RefCell::new((0u64, Arc::<str>::from("")))),
+        |v| v.clone(),
+    );
+    let rev = handle.buffer_revision().0 as u64;
+    let preview_source = {
+        let mut cached = preview_cache.borrow_mut();
+        if cached.0 != rev {
+            cached.0 = rev;
+            cached.1 = handle.with_buffer(|b| Arc::<str>::from(b.text_string()));
+        }
+        cached.1.clone()
+    };
+    let preview = markdown::Markdown::new(preview_source).into_element(cx);
+
+    let editor_panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let preview_panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![preview],
+    );
+
+    let body = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N4),
+        |_cx| vec![editor_panel, preview_panel],
+    );
+
+    let body = body.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-markdown-editor-root"),
+    );
+
+    vec![header, body]
 }
 
 fn selection_perf_source() -> Arc<str> {

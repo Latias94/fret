@@ -218,6 +218,26 @@ let editor = CodeEditor::new(handle)
 ```
 "#;
 
+pub(crate) const DOC_MARKDOWN_EDITOR_SOURCE: &str = r#"
+## Markdown editor (source mode)
+
+This page is a v0 **source-mode** Markdown editor milestone:
+
+- edit Markdown as plain text (no WYSIWYG),
+- validate `fret-code-editor` interaction control (edit vs read-only),
+- validate Markdown syntax highlighting (best-effort) and wrap stability,
+- optionally validate a live preview rendered by `fret-markdown`.
+"#;
+
+pub(crate) const USAGE_MARKDOWN_EDITOR_SOURCE: &str = r##"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("# Hello\n\n- Item\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"##;
+
 pub(crate) const DOC_TEXT_SELECTION_PERF: &str = r#"
 ## Text selection (perf diagnostics)
 

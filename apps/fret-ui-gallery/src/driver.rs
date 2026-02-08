@@ -43,6 +43,7 @@ use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+    UiGalleryMarkdownEditorHandlesStore,
 };
 use crate::spec::*;
 use crate::ui;
@@ -2349,6 +2350,8 @@ pub fn build_app() -> App {
                         let caret = selection.caret().min(text.len()) as u64;
                         let stats = handle.cache_stats();
                         let preedit_active = handle.preedit_active();
+                        let interaction = handle.interaction();
+                        let buffer_revision = handle.buffer_revision().0 as u64;
                         let fold_placeholder_present = handle
                             .debug_decorated_line_text(0)
                             .is_some_and(|t| t.contains('…'));
@@ -2359,6 +2362,13 @@ pub fn build_app() -> App {
                             "schema_version": 1,
                             "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                             "preedit_active": preedit_active,
+                            "interaction": {
+                                "enabled": interaction.enabled,
+                                "focusable": interaction.focusable,
+                                "selectable": interaction.selectable,
+                                "editable": interaction.editable,
+                            },
+                            "buffer_revision": buffer_revision,
                             "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
                             "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                             "text_len_bytes": text.len() as u64,
@@ -2381,6 +2391,30 @@ pub fn build_app() -> App {
                         })
                     });
 
+                let markdown_editor_source = app
+                    .global::<UiGalleryMarkdownEditorHandlesStore>()
+                    .and_then(|store| store.per_window.get(&window))
+                    .map(|handle| {
+                        let text = handle.with_buffer(|b| b.text_string());
+                        let selection = handle.selection();
+                        let anchor = selection.anchor.min(text.len()) as u64;
+                        let caret = selection.caret().min(text.len()) as u64;
+                        let interaction = handle.interaction();
+                        let buffer_revision = handle.buffer_revision().0 as u64;
+                        serde_json::json!({
+                            "schema_version": 1,
+                            "interaction": {
+                                "enabled": interaction.enabled,
+                                "focusable": interaction.focusable,
+                                "selectable": interaction.selectable,
+                                "editable": interaction.editable,
+                            },
+                            "buffer_revision": buffer_revision,
+                            "text_len_bytes": text.len() as u64,
+                            "selection": { "anchor": anchor, "caret": caret },
+                        })
+                    });
+
                 let mut out = serde_json::Map::new();
                 out.insert("schema_version".to_string(), serde_json::json!(1));
                 out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
@@ -2397,6 +2431,7 @@ pub fn build_app() -> App {
                         "folds_fixture": folds,
                         "inlays_fixture": inlays,
                         "torture": torture,
+                        "markdown_editor_source": markdown_editor_source,
                     }),
                 );
                 out.insert(
