@@ -251,8 +251,24 @@ Evidence anchors:
     - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json`
     - `apps/fret-ui-gallery/src/ui.rs` (wrap gate viewports + preedit inject/clear buttons)
     - `apps/fretboard/src/diag/stats.rs` (wrap gate checkers + evidence JSON)
-- [ ] Fold regions + placeholders without breaking caret/selection.
-- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+- [~] Fold regions + placeholders without breaking caret/selection.
+  - [x] Unwrapped baseline: materialize per-line fold placeholders and map caret/selection/hit-test between buffer-local and display-local indices.
+  - [x] Add a UI Gallery fixture toggle and a bundle gate that asserts the fold placeholder is observed at least once:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present`)
+  - [x] Add a soft-wrap gate that asserts fold placeholders are disabled under soft wrap in v1:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-disabled-under-soft-wrap-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap`)
+  - [ ] Follow-up: decide how folds interact with soft-wrap + inline preedit (v1 currently disables fold placeholders under wrap/preedit).
+- [~] Inlays (injected display fragments) without mutating the underlying buffer.
+  - [x] Unwrapped baseline: inject per-line inlay text and include it in the same buffer↔display mapping used by caret/selection/hit-test.
+  - [x] Add a UI Gallery fixture toggle and a bundle gate that asserts the inlay fixture is observed at least once:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present`)
+  - [x] Add a soft-wrap gate that asserts inlays are disabled under soft wrap in v1:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-disabled-under-soft-wrap-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap`)
+  - [ ] Follow-up: decide how inlays interact with soft-wrap + inline preedit (v1 currently disables inlays under wrap/preedit).
 
 ---
 

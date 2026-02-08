@@ -8,6 +8,8 @@ Recent changes (2026-02-07):
 - Diagnostics: add a strict (0-allowed) soft-wrap geometry fallback gate for the code editor torture harness, covering pointer hit-testing, caret rects, and vertical caret moves.
 - Editor paint: when caret stops are unavailable, prefer renderer-provided `TextService::caret_x` over the monospace `cell_w` heuristic (keeps caret X pixel-aligned with shaped glyph runs).
 - Editor perf/correctness: shift the per-row geometry cache across single-line edits in soft-wrap mode (reduces “first paint” geometry churn and avoids unnecessary fallback spikes).
+- Display map: start scaffolding fold placeholder materialization in the unwrapped baseline and add a UI Gallery + fretboard diag gate to keep buffer↔display mapping regression-testable.
+- Display map: add an unwrapped inlay fixture + gate so “injected display fragments” can evolve without silently breaking caret/selection/hit-test mapping.
 
 Recent changes (2026-02-04):
 
