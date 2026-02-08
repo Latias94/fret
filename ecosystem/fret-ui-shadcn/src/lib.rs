@@ -241,8 +241,12 @@ pub use sheet::{
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
-    Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
-    SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, use_sidebar,
+    Sidebar, SidebarCollapsible, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction,
+    SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInput, SidebarInset, SidebarMenu,
+    SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
+    SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
+    SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
+    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
