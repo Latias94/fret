@@ -73,6 +73,24 @@ struct State {
     loaded_script_path: Model<Option<Arc<str>>>,
     script_apply_pointer: Model<String>,
     script_text: Model<String>,
+    script_studio_helper_tab: Model<Option<Arc<str>>>,
+    script_step_insert_index: Model<String>,
+    script_selector_kind: Model<Option<Arc<str>>>,
+    script_selector_kind_open: Model<bool>,
+    script_selector_test_id: Model<String>,
+    script_selector_role: Model<String>,
+    script_selector_name: Model<String>,
+    script_selector_ancestors: Model<String>,
+    script_selector_node_id: Model<String>,
+    script_selector_element_id: Model<String>,
+    script_predicate_kind: Model<Option<Arc<str>>>,
+    script_predicate_kind_open: Model<bool>,
+    script_predicate_role: Model<String>,
+    script_predicate_checked: Model<bool>,
+    script_predicate_padding_px: Model<String>,
+    script_predicate_eps_px: Model<String>,
+    script_predicate_min_w_px: Model<String>,
+    script_predicate_min_h_px: Model<String>,
 
     script_last_stage: Model<Option<UiScriptStageV1>>,
     script_last_step_index: Model<Option<u32>>,
@@ -191,6 +209,24 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let loaded_script_origin = app.models_mut().insert(None::<script_studio::ScriptOrigin>);
     let loaded_script_path = app.models_mut().insert(None::<Arc<str>>);
     let script_apply_pointer = app.models_mut().insert("/steps/0/target".to_string());
+    let script_studio_helper_tab = app.models_mut().insert(Some(Arc::<str>::from("steps")));
+    let script_step_insert_index = app.models_mut().insert(String::new());
+    let script_selector_kind = app.models_mut().insert(Some(Arc::<str>::from("test_id")));
+    let script_selector_kind_open = app.models_mut().insert(false);
+    let script_selector_test_id = app.models_mut().insert("TODO".to_string());
+    let script_selector_role = app.models_mut().insert("button".to_string());
+    let script_selector_name = app.models_mut().insert("TODO".to_string());
+    let script_selector_ancestors = app.models_mut().insert(String::new());
+    let script_selector_node_id = app.models_mut().insert("0".to_string());
+    let script_selector_element_id = app.models_mut().insert("0".to_string());
+    let script_predicate_kind = app.models_mut().insert(Some(Arc::<str>::from("exists")));
+    let script_predicate_kind_open = app.models_mut().insert(false);
+    let script_predicate_role = app.models_mut().insert("button".to_string());
+    let script_predicate_checked = app.models_mut().insert(false);
+    let script_predicate_padding_px = app.models_mut().insert("0".to_string());
+    let script_predicate_eps_px = app.models_mut().insert("0".to_string());
+    let script_predicate_min_w_px = app.models_mut().insert("0".to_string());
+    let script_predicate_min_h_px = app.models_mut().insert("0".to_string());
 
     let script_text = app.models_mut().insert(String::new());
     let script_last_stage = app.models_mut().insert(None::<UiScriptStageV1>);
@@ -279,6 +315,24 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         loaded_script_path,
         script_apply_pointer,
         script_text,
+        script_studio_helper_tab,
+        script_step_insert_index,
+        script_selector_kind,
+        script_selector_kind_open,
+        script_selector_test_id,
+        script_selector_role,
+        script_selector_name,
+        script_selector_ancestors,
+        script_selector_node_id,
+        script_selector_element_id,
+        script_predicate_kind,
+        script_predicate_kind_open,
+        script_predicate_role,
+        script_predicate_checked,
+        script_predicate_padding_px,
+        script_predicate_eps_px,
+        script_predicate_min_w_px,
+        script_predicate_min_h_px,
         script_last_stage,
         script_last_step_index,
         script_last_reason,
@@ -361,6 +415,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.loaded_script_path, Invalidation::Paint);
     cx.observe_model(&st.script_apply_pointer, Invalidation::Paint);
     cx.observe_model(&st.script_text, Invalidation::Paint);
+    cx.observe_model(&st.script_studio_helper_tab, Invalidation::Paint);
+    cx.observe_model(&st.script_step_insert_index, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_kind, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_kind_open, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_test_id, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_role, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_name, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_ancestors, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_node_id, Invalidation::Paint);
+    cx.observe_model(&st.script_selector_element_id, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_kind, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_kind_open, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_role, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_checked, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_padding_px, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_eps_px, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_min_w_px, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_min_h_px, Invalidation::Paint);
     cx.observe_model(&st.script_last_stage, Invalidation::Paint);
     cx.observe_model(&st.script_last_step_index, Invalidation::Paint);
     cx.observe_model(&st.script_last_reason, Invalidation::Paint);
@@ -1226,6 +1298,344 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     )])
     .into_element(cx);
 
+    let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
+
+    let step_index_input = shadcn::Input::new(st.script_step_insert_index.clone())
+        .a11y_label("Step insert index")
+        .placeholder("(append)")
+        .into_element(cx);
+
+    let mut step_buttons: Vec<AnyElement> = Vec::new();
+    for t in step_templates_for_schema(script_schema_version) {
+        let script_text_model = st.script_text.clone();
+        let insert_index_model = st.script_step_insert_index.clone();
+        let log_lines = st.log_lines.clone();
+        let step_value = t.step.clone();
+        let label = t.label;
+
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let index_text = host
+                .models_mut()
+                .read(&insert_index_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+            let index = index_text.trim().parse::<usize>().ok();
+
+            let current = host
+                .models_mut()
+                .read(&script_text_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+
+            let updated = match index {
+                Some(i) => script_studio::insert_step_json(&current, i, step_value.clone()),
+                None => script_studio::append_step_json(&current, step_value.clone()),
+            };
+
+            match updated {
+                Ok(text) => {
+                    let _ = host.models_mut().update(&script_text_model, |v| *v = text);
+                }
+                Err(err) => {
+                    let _ = host.models_mut().update(&log_lines, |v| {
+                        v.push(Arc::<str>::from(format!(
+                            "insert step failed ({label}): {err}"
+                        )));
+                        if v.len() > 2000 {
+                            let drain = v.len().saturating_sub(2000);
+                            v.drain(0..drain);
+                        }
+                    });
+                }
+            }
+
+            host.request_redraw(action_cx.window);
+            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+        });
+
+        step_buttons.push(
+            shadcn::Button::new(t.label)
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .on_activate(on_activate)
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx),
+        );
+    }
+
+    let steps_tab = shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+        |cx| {
+            let mut out: Vec<AnyElement> = Vec::new();
+            out.push(cx.text(format!("Schema v{script_schema_version} step palette")));
+            out.push(step_index_input);
+            out.extend(step_buttons);
+            out
+        },
+    )])
+    .into_element(cx);
+
+    let selector_kind_items = [
+        shadcn::SelectItem::new("test_id", "test_id"),
+        shadcn::SelectItem::new("role_and_name", "role_and_name"),
+        shadcn::SelectItem::new("role_and_path", "role_and_path"),
+        shadcn::SelectItem::new("node_id", "node_id"),
+        shadcn::SelectItem::new("global_element_id", "global_element_id"),
+    ];
+    let selector_kind_select = shadcn::Select::new(
+        st.script_selector_kind.clone(),
+        st.script_selector_kind_open.clone(),
+    )
+    .placeholder("selector kind")
+    .items(selector_kind_items)
+    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    let selector_kind = cx
+        .app
+        .models()
+        .read(&st.script_selector_kind, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("test_id"));
+    let selector_value = selector_value_from_models(cx, st, selector_kind.as_ref());
+    let selector_json =
+        serde_json::to_string_pretty(&selector_value).unwrap_or_else(|_| "{}".to_string());
+
+    let selector_apply = {
+        let script_text_model = st.script_text.clone();
+        let pointer_model = st.script_apply_pointer.clone();
+        let log_lines = st.log_lines.clone();
+        let selector_value = selector_value.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let pointer = host
+                .models_mut()
+                .read(&pointer_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+            if pointer.trim().is_empty() {
+                let _ = host.models_mut().update(&log_lines, |v| {
+                    v.push(Arc::<str>::from(
+                        "apply selector refused (empty json pointer)",
+                    ));
+                });
+                host.request_redraw(action_cx.window);
+                return;
+            }
+
+            let current = host
+                .models_mut()
+                .read(&script_text_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+            match script_studio::apply_json_value_to_json_pointer(
+                &current,
+                &pointer,
+                selector_value.clone(),
+            ) {
+                Ok(updated) => {
+                    let _ = host
+                        .models_mut()
+                        .update(&script_text_model, |v| *v = updated);
+                }
+                Err(err) => {
+                    let _ = host.models_mut().update(&log_lines, |v| {
+                        v.push(Arc::<str>::from(format!("apply selector failed: {err}")));
+                    });
+                }
+            }
+            host.request_redraw(action_cx.window);
+            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+        });
+        on_activate
+    };
+
+    let selector_copy = {
+        let selector_json = selector_json.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            host.push_effect(Effect::ClipboardSetText {
+                text: selector_json.clone(),
+            });
+            host.request_redraw(action_cx.window);
+        });
+        on_activate
+    };
+
+    let selector_tab = fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+        |cx| {
+            let fields = selector_fields(cx, st, selector_kind.as_ref());
+            let preview = text_blob(cx, selector_json.clone());
+            [
+                selector_kind_select,
+                fields,
+                fret_ui_kit::declarative::stack::hstack(
+                    cx,
+                    fret_ui_kit::declarative::stack::HStackProps::default()
+                        .gap_x(fret_ui_kit::Space::N2)
+                        .items_center(),
+                    |cx| {
+                        [
+                            shadcn::Button::new("Apply to pointer")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(selector_apply)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy JSON")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(selector_copy)
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                preview,
+            ]
+        },
+    );
+
+    let predicate_kind_items = [
+        shadcn::SelectItem::new("exists", "exists"),
+        shadcn::SelectItem::new("not_exists", "not_exists"),
+        shadcn::SelectItem::new("focus_is", "focus_is"),
+        shadcn::SelectItem::new("role_is", "role_is"),
+        shadcn::SelectItem::new("checked_is", "checked_is"),
+        shadcn::SelectItem::new("checked_is_none", "checked_is_none"),
+        shadcn::SelectItem::new("visible_in_window", "visible_in_window"),
+        shadcn::SelectItem::new("bounds_within_window", "bounds_within_window"),
+        shadcn::SelectItem::new("bounds_min_size", "bounds_min_size"),
+    ];
+    let predicate_kind_select = shadcn::Select::new(
+        st.script_predicate_kind.clone(),
+        st.script_predicate_kind_open.clone(),
+    )
+    .placeholder("predicate kind")
+    .items(predicate_kind_items)
+    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
+
+    let predicate_kind = cx
+        .app
+        .models()
+        .read(&st.script_predicate_kind, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("exists"));
+    let predicate_value =
+        predicate_value_from_models(cx, st, predicate_kind.as_ref(), selector_value.clone());
+    let predicate_json =
+        serde_json::to_string_pretty(&predicate_value).unwrap_or_else(|_| "{}".to_string());
+
+    let predicate_apply = {
+        let script_text_model = st.script_text.clone();
+        let pointer_model = st.script_apply_pointer.clone();
+        let log_lines = st.log_lines.clone();
+        let predicate_value = predicate_value.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let pointer = host
+                .models_mut()
+                .read(&pointer_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+            if pointer.trim().is_empty() {
+                let _ = host.models_mut().update(&log_lines, |v| {
+                    v.push(Arc::<str>::from(
+                        "apply predicate refused (empty json pointer)",
+                    ));
+                });
+                host.request_redraw(action_cx.window);
+                return;
+            }
+
+            let current = host
+                .models_mut()
+                .read(&script_text_model, |v: &String| v.clone())
+                .ok()
+                .unwrap_or_default();
+            match script_studio::apply_json_value_to_json_pointer(
+                &current,
+                &pointer,
+                predicate_value.clone(),
+            ) {
+                Ok(updated) => {
+                    let _ = host
+                        .models_mut()
+                        .update(&script_text_model, |v| *v = updated);
+                }
+                Err(err) => {
+                    let _ = host.models_mut().update(&log_lines, |v| {
+                        v.push(Arc::<str>::from(format!("apply predicate failed: {err}")));
+                    });
+                }
+            }
+            host.request_redraw(action_cx.window);
+            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+        });
+        on_activate
+    };
+
+    let predicate_copy = {
+        let predicate_json = predicate_json.clone();
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            host.push_effect(Effect::ClipboardSetText {
+                text: predicate_json.clone(),
+            });
+            host.request_redraw(action_cx.window);
+        });
+        on_activate
+    };
+
+    let predicate_tab = fret_ui_kit::declarative::stack::vstack(
+        cx,
+        fret_ui_kit::declarative::stack::VStackProps::default()
+            .gap_y(fret_ui_kit::Space::N2)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+        |cx| {
+            let fields = predicate_fields(cx, st, predicate_kind.as_ref());
+            let preview = text_blob(cx, predicate_json.clone());
+            [
+                predicate_kind_select,
+                fields,
+                fret_ui_kit::declarative::stack::hstack(
+                    cx,
+                    fret_ui_kit::declarative::stack::HStackProps::default()
+                        .gap_x(fret_ui_kit::Space::N2)
+                        .items_center(),
+                    |cx| {
+                        [
+                            shadcn::Button::new("Apply to pointer")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(predicate_apply)
+                                .into_element(cx),
+                            shadcn::Button::new("Copy JSON")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(predicate_copy)
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                preview,
+            ]
+        },
+    );
+
+    let helpers_tabs = shadcn::Tabs::new(st.script_studio_helper_tab.clone())
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .items([
+            shadcn::TabsItem::new("steps", "Steps", [steps_tab]),
+            shadcn::TabsItem::new("selector", "Selector", [selector_tab]),
+            shadcn::TabsItem::new("predicate", "Predicate", [predicate_tab]),
+        ])
+        .into_element(cx);
+
     let split = fret_ui_kit::declarative::stack::hstack(
         cx,
         fret_ui_kit::declarative::stack::HStackProps::default()
@@ -1254,6 +1664,16 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                             .h_full(),
                     ),
                     |_cx| [textarea],
+                ),
+                cx.container(
+                    fret_ui_kit::declarative::style::container_props(
+                        theme,
+                        fret_ui_kit::ChromeRefinement::default(),
+                        fret_ui_kit::LayoutRefinement::default()
+                            .w_px(Px(320.0))
+                            .h_full(),
+                    ),
+                    |_cx| [helpers_tabs],
                 ),
             ]
         },
@@ -1904,6 +2324,522 @@ fn validate_script_json_value(script: &serde_json::Value) -> Result<u32, String>
         }
         other => Err(format!("unsupported schema_version: {other}")),
     }
+}
+
+#[derive(Clone)]
+struct StepTemplate {
+    label: &'static str,
+    step: serde_json::Value,
+}
+
+fn infer_script_schema_version(script_text: &str) -> Option<u32> {
+    let v: serde_json::Value = serde_json::from_str(script_text).ok()?;
+    let schema = v.get("schema_version").and_then(|v| v.as_u64())?;
+    Some(schema.min(u32::MAX as u64) as u32)
+}
+
+fn placeholder_selector_value() -> serde_json::Value {
+    serde_json::json!({
+        "kind": "test_id",
+        "id": "TODO",
+    })
+}
+
+fn placeholder_predicate_value() -> serde_json::Value {
+    serde_json::json!({
+        "kind": "exists",
+        "target": placeholder_selector_value(),
+    })
+}
+
+fn step_templates_for_schema(schema_version: u32) -> Vec<StepTemplate> {
+    let target = placeholder_selector_value();
+    let predicate = placeholder_predicate_value();
+
+    let v1 = vec![
+        StepTemplate {
+            label: "click",
+            step: serde_json::json!({
+                "type": "click",
+                "target": target,
+                "button": "left",
+            }),
+        },
+        StepTemplate {
+            label: "move_pointer",
+            step: serde_json::json!({
+                "type": "move_pointer",
+                "target": placeholder_selector_value(),
+            }),
+        },
+        StepTemplate {
+            label: "wheel",
+            step: serde_json::json!({
+                "type": "wheel",
+                "target": placeholder_selector_value(),
+                "delta_x": 0.0,
+                "delta_y": -120.0,
+            }),
+        },
+        StepTemplate {
+            label: "press_key",
+            step: serde_json::json!({
+                "type": "press_key",
+                "key": "Enter",
+                "modifiers": { "shift": false, "ctrl": false, "alt": false, "meta": false },
+                "repeat": false,
+            }),
+        },
+        StepTemplate {
+            label: "type_text",
+            step: serde_json::json!({
+                "type": "type_text",
+                "text": "TODO",
+            }),
+        },
+        StepTemplate {
+            label: "wait_frames",
+            step: serde_json::json!({
+                "type": "wait_frames",
+                "n": 30,
+            }),
+        },
+        StepTemplate {
+            label: "wait_until",
+            step: serde_json::json!({
+                "type": "wait_until",
+                "predicate": predicate,
+                "timeout_frames": 180,
+            }),
+        },
+        StepTemplate {
+            label: "assert",
+            step: serde_json::json!({
+                "type": "assert",
+                "predicate": placeholder_predicate_value(),
+            }),
+        },
+        StepTemplate {
+            label: "capture_bundle",
+            step: serde_json::json!({
+                "type": "capture_bundle",
+                "label": "devtools",
+            }),
+        },
+        StepTemplate {
+            label: "capture_screenshot",
+            step: serde_json::json!({
+                "type": "capture_screenshot",
+                "label": "devtools",
+                "timeout_frames": 300,
+            }),
+        },
+        StepTemplate {
+            label: "reset_diagnostics",
+            step: serde_json::json!({
+                "type": "reset_diagnostics",
+            }),
+        },
+    ];
+
+    if schema_version <= 1 {
+        return v1;
+    }
+
+    let mut v2 = Vec::new();
+    v2.extend(v1);
+    v2.push(StepTemplate {
+        label: "press_shortcut",
+        step: serde_json::json!({
+            "type": "press_shortcut",
+            "shortcut": "Ctrl+P",
+            "repeat": false,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "move_pointer_sweep",
+        step: serde_json::json!({
+            "type": "move_pointer_sweep",
+            "target": placeholder_selector_value(),
+            "delta_x": 0.0,
+            "delta_y": 40.0,
+            "steps": 8,
+            "frames_per_step": 1,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "click_stable",
+        step: serde_json::json!({
+            "type": "click_stable",
+            "target": placeholder_selector_value(),
+            "button": "left",
+            "stable_frames": 2,
+            "max_move_px": 1.0,
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "ensure_visible",
+        step: serde_json::json!({
+            "type": "ensure_visible",
+            "target": placeholder_selector_value(),
+            "within_window": true,
+            "padding_px": 0.0,
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "scroll_into_view",
+        step: serde_json::json!({
+            "type": "scroll_into_view",
+            "container": placeholder_selector_value(),
+            "target": placeholder_selector_value(),
+            "delta_x": 0.0,
+            "delta_y": -120.0,
+            "require_fully_within_container": false,
+            "require_fully_within_window": false,
+            "padding_px": 0.0,
+            "padding_insets_px": null,
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "type_text_into",
+        step: serde_json::json!({
+            "type": "type_text_into",
+            "target": placeholder_selector_value(),
+            "text": "TODO",
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "menu_select",
+        step: serde_json::json!({
+            "type": "menu_select",
+            "menu": placeholder_selector_value(),
+            "item": placeholder_selector_value(),
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "menu_select_path",
+        step: serde_json::json!({
+            "type": "menu_select_path",
+            "path": [placeholder_selector_value()],
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "drag_to",
+        step: serde_json::json!({
+            "type": "drag_to",
+            "from": placeholder_selector_value(),
+            "to": placeholder_selector_value(),
+            "button": "left",
+            "steps": 8,
+            "timeout_frames": 180,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "set_slider_value",
+        step: serde_json::json!({
+            "type": "set_slider_value",
+            "target": placeholder_selector_value(),
+            "value": 50.0,
+            "min": 0.0,
+            "max": 100.0,
+            "epsilon": 0.5,
+            "timeout_frames": 180,
+            "drag_steps": 8,
+        }),
+    });
+    v2.push(StepTemplate {
+        label: "set_window_inner_size",
+        step: serde_json::json!({
+            "type": "set_window_inner_size",
+            "width_px": 1280.0,
+            "height_px": 720.0,
+        }),
+    });
+
+    v2
+}
+
+fn selector_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) -> AnyElement {
+    let test_id = shadcn::Input::new(st.script_selector_test_id.clone())
+        .a11y_label("test_id")
+        .placeholder("button.ok")
+        .into_element(cx);
+    let role = shadcn::Input::new(st.script_selector_role.clone())
+        .a11y_label("role")
+        .placeholder("button")
+        .into_element(cx);
+    let name = shadcn::Input::new(st.script_selector_name.clone())
+        .a11y_label("name")
+        .placeholder("OK")
+        .into_element(cx);
+    let ancestors = shadcn::Textarea::new(st.script_selector_ancestors.clone())
+        .a11y_label("ancestors (role:name per line)")
+        .min_height(Px(120.0))
+        .into_element(cx);
+    let node_id = shadcn::Input::new(st.script_selector_node_id.clone())
+        .a11y_label("node_id")
+        .placeholder("123")
+        .into_element(cx);
+    let element_id = shadcn::Input::new(st.script_selector_element_id.clone())
+        .a11y_label("global_element_id")
+        .placeholder("123")
+        .into_element(cx);
+
+    match kind {
+        "test_id" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [test_id],
+        ),
+        "role_and_name" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [role, name],
+        ),
+        "role_and_path" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [role, name, ancestors],
+        ),
+        "node_id" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [node_id],
+        ),
+        "global_element_id" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [element_id],
+        ),
+        _ => cx.text("unknown selector kind"),
+    }
+}
+
+fn selector_value_from_models(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+    kind: &str,
+) -> serde_json::Value {
+    let test_id = cx
+        .app
+        .models()
+        .read(&st.script_selector_test_id, |v| v.clone())
+        .unwrap_or_default();
+    let role = cx
+        .app
+        .models()
+        .read(&st.script_selector_role, |v| v.clone())
+        .unwrap_or_default();
+    let name = cx
+        .app
+        .models()
+        .read(&st.script_selector_name, |v| v.clone())
+        .unwrap_or_default();
+    let ancestors_text = cx
+        .app
+        .models()
+        .read(&st.script_selector_ancestors, |v| v.clone())
+        .unwrap_or_default();
+    let node_id = cx
+        .app
+        .models()
+        .read(&st.script_selector_node_id, |v| v.clone())
+        .unwrap_or_default();
+    let element_id = cx
+        .app
+        .models()
+        .read(&st.script_selector_element_id, |v| v.clone())
+        .unwrap_or_default();
+
+    match kind {
+        "test_id" => serde_json::json!({
+            "kind": "test_id",
+            "id": test_id.trim(),
+        }),
+        "role_and_name" => serde_json::json!({
+            "kind": "role_and_name",
+            "role": role.trim(),
+            "name": name.trim(),
+        }),
+        "role_and_path" => serde_json::json!({
+            "kind": "role_and_path",
+            "role": role.trim(),
+            "name": name.trim(),
+            "ancestors": parse_ancestors_lines(&ancestors_text),
+        }),
+        "node_id" => serde_json::json!({
+            "kind": "node_id",
+            "node": node_id.trim().parse::<u64>().unwrap_or(0),
+        }),
+        "global_element_id" => serde_json::json!({
+            "kind": "global_element_id",
+            "element": element_id.trim().parse::<u64>().unwrap_or(0),
+        }),
+        _ => placeholder_selector_value(),
+    }
+}
+
+fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) -> AnyElement {
+    let role = shadcn::Input::new(st.script_predicate_role.clone())
+        .a11y_label("role")
+        .placeholder("button")
+        .into_element(cx);
+    let checked = shadcn::Checkbox::new(st.script_predicate_checked.clone())
+        .a11y_label("checked")
+        .into_element(cx);
+    let padding = shadcn::Input::new(st.script_predicate_padding_px.clone())
+        .a11y_label("padding_px")
+        .placeholder("0")
+        .into_element(cx);
+    let eps = shadcn::Input::new(st.script_predicate_eps_px.clone())
+        .a11y_label("eps_px")
+        .placeholder("0")
+        .into_element(cx);
+    let min_w = shadcn::Input::new(st.script_predicate_min_w_px.clone())
+        .a11y_label("min_w_px")
+        .placeholder("0")
+        .into_element(cx);
+    let min_h = shadcn::Input::new(st.script_predicate_min_h_px.clone())
+        .a11y_label("min_h_px")
+        .placeholder("0")
+        .into_element(cx);
+
+    match kind {
+        "role_is" => role,
+        "checked_is" => checked,
+        "bounds_within_window" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [padding, eps],
+        ),
+        "bounds_min_size" => fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap_y(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+            |_cx| [min_w, min_h, eps],
+        ),
+        _ => cx.text(""),
+    }
+}
+
+fn predicate_value_from_models(
+    cx: &mut ElementContext<'_, App>,
+    st: &State,
+    kind: &str,
+    selector: serde_json::Value,
+) -> serde_json::Value {
+    let role = cx
+        .app
+        .models()
+        .read(&st.script_predicate_role, |v| v.clone())
+        .unwrap_or_default();
+    let checked = cx
+        .app
+        .models()
+        .read(&st.script_predicate_checked, |v| *v)
+        .unwrap_or(false);
+    let padding_px = parse_f32_model(cx, &st.script_predicate_padding_px);
+    let eps_px = parse_f32_model(cx, &st.script_predicate_eps_px);
+    let min_w_px = parse_f32_model(cx, &st.script_predicate_min_w_px);
+    let min_h_px = parse_f32_model(cx, &st.script_predicate_min_h_px);
+
+    match kind {
+        "exists" => serde_json::json!({
+            "kind": "exists",
+            "target": selector,
+        }),
+        "not_exists" => serde_json::json!({
+            "kind": "not_exists",
+            "target": selector,
+        }),
+        "focus_is" => serde_json::json!({
+            "kind": "focus_is",
+            "target": selector,
+        }),
+        "role_is" => serde_json::json!({
+            "kind": "role_is",
+            "target": selector,
+            "role": role.trim(),
+        }),
+        "checked_is" => serde_json::json!({
+            "kind": "checked_is",
+            "target": selector,
+            "checked": checked,
+        }),
+        "checked_is_none" => serde_json::json!({
+            "kind": "checked_is_none",
+            "target": selector,
+        }),
+        "visible_in_window" => serde_json::json!({
+            "kind": "visible_in_window",
+            "target": selector,
+        }),
+        "bounds_within_window" => serde_json::json!({
+            "kind": "bounds_within_window",
+            "target": selector,
+            "padding_px": padding_px,
+            "eps_px": eps_px,
+        }),
+        "bounds_min_size" => serde_json::json!({
+            "kind": "bounds_min_size",
+            "target": selector,
+            "min_w_px": min_w_px,
+            "min_h_px": min_h_px,
+            "eps_px": eps_px,
+        }),
+        _ => placeholder_predicate_value(),
+    }
+}
+
+fn parse_f32_model(cx: &mut ElementContext<'_, App>, m: &Model<String>) -> f32 {
+    cx.app
+        .models()
+        .read(m, |v| v.trim().parse::<f32>().ok())
+        .ok()
+        .flatten()
+        .unwrap_or(0.0)
+}
+
+fn parse_ancestors_lines(text: &str) -> Vec<serde_json::Value> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let Some((role, name)) = line.split_once(':') else {
+            continue;
+        };
+        let role = role.trim();
+        let name = name.trim();
+        if role.is_empty() || name.is_empty() {
+            continue;
+        }
+        out.push(serde_json::json!({
+            "role": role,
+            "name": name,
+        }));
+    }
+    out
 }
 
 fn is_abs_path(s: &str) -> bool {

@@ -152,6 +152,62 @@ pub fn apply_pick_to_json_pointer(
     serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
 }
 
+pub fn apply_json_value_to_json_pointer(
+    script_text: &str,
+    pointer: &str,
+    value: serde_json::Value,
+) -> Result<String, String> {
+    let mut script: serde_json::Value =
+        serde_json::from_str(script_text).map_err(|e| format!("script json parse failed: {e}"))?;
+
+    if pointer.trim().is_empty() {
+        return Err("json pointer is empty".to_string());
+    }
+    if !pointer.starts_with('/') {
+        return Err("json pointer must start with '/'".to_string());
+    }
+
+    let Some(slot) = script.pointer_mut(pointer) else {
+        return Err("json pointer not found in script".to_string());
+    };
+    *slot = value;
+
+    serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
+}
+
+pub fn append_step_json(script_text: &str, step: serde_json::Value) -> Result<String, String> {
+    insert_step_json(script_text, usize::MAX, step)
+}
+
+pub fn insert_step_json(
+    script_text: &str,
+    index: usize,
+    step: serde_json::Value,
+) -> Result<String, String> {
+    let mut script: serde_json::Value =
+        serde_json::from_str(script_text).map_err(|e| format!("script json parse failed: {e}"))?;
+
+    let Some(obj) = script.as_object_mut() else {
+        return Err("script root must be an object".to_string());
+    };
+    if !obj.contains_key("steps") {
+        obj.insert("steps".to_string(), serde_json::Value::Array(Vec::new()));
+    }
+
+    let steps = obj
+        .get_mut("steps")
+        .and_then(|v| v.as_array_mut())
+        .ok_or_else(|| "script.steps must be an array".to_string())?;
+
+    if index >= steps.len() {
+        steps.push(step);
+    } else {
+        steps.insert(index, step);
+    }
+
+    serde_json::to_string_pretty(&script).map_err(|e| e.to_string())
+}
+
 fn best_selector_value_from_pick_payload(
     pick_payload: &serde_json::Value,
 ) -> Option<serde_json::Value> {
