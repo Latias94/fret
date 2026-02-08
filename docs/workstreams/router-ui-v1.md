@@ -103,6 +103,16 @@ As an incremental step, `fret-router-ui` may expose a small data helper:
   - `RouterUiStore::navigate_link_on_activate(link)` provides a component-owned activation hook
     that performs navigation and updates snapshot/intents models
 
+To support TanStack-style "prefetch on hover" without forcing a query client, the router core can
+expose a pure API:
+
+- `Router::prefetch_intents_for_location(&RouteLocation)` -> `Vec<RoutePrefetchIntent<R>>`
+
+Then `fret-router-ui` can wire this into a convenience helper:
+
+- `RouterUiStore::prefetch_link_on_hover_change(link)` -> `OnHoverChange` (updates the intents model)
+- `router_link(cx, &store, link, children)` -> `AnyElement` (pressable wrapper; no shadcn dependency)
+
 ### 4) Command integration
 
 Provide recommended commands (not forced):

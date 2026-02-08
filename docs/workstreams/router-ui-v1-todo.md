@@ -49,6 +49,10 @@ Status legend:
   - provide desktop affordance hook (`copy_href_on_activate`)
 - `[x]` Add a navigation activation hook:
   - `RouterUiStore::navigate_link_on_activate(link)` updates router + snapshot + intents
+- `[x]` Add hover prefetch intent wiring:
+  - `Router::prefetch_intents_for_location(...)` (router core; no navigation)
+  - `RouterUiStore::prefetch_link_on_hover_change(link)` updates intents model on hover
+- `[x]` Add a low-level `router_link(...)` pressable helper (no shadcn dependency)
 - `[ ]` Add `RouterLink` element:
   - computes `href` using `Router::href_to(...)`
   - on press, performs guard-aware navigation
