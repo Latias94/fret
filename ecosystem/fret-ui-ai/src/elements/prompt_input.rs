@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::Px;
+use fret_core::{Axis, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{Justify, LayoutRefinement, Space};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, InputGroup};
 
@@ -185,12 +185,17 @@ impl PromptInput {
             btn.into_element(cx)
         });
 
-        let actions = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .justify(Justify::End),
+        let gap = MetricRef::space(Space::N2).resolve(&theme);
+        let actions = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                direction: Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::End,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
             |_cx| {
                 let mut out = Vec::new();
                 if let Some(stop_button) = stop_button {

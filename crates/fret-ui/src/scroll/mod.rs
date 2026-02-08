@@ -74,6 +74,7 @@ impl ScrollHandle {
         )
     }
 
+    #[track_caller]
     pub fn set_offset(&self, offset: Point) {
         let clamped = self.clamp_offset(offset);
         let mut state = self.state.borrow_mut();
@@ -81,6 +82,24 @@ impl ScrollHandle {
             && (state.offset.y.0 - clamped.y.0).abs() <= 0.01
         {
             return;
+        }
+        if std::env::var_os("FRET_DEBUG_SCROLL_HANDLE_SET_OFFSET")
+            .is_some_and(|v| !v.is_empty() && v != "0")
+            && state.offset.y.0 > 0.01
+            && clamped.y.0 <= 0.01
+        {
+            let loc = std::panic::Location::caller();
+            eprintln!(
+                "scroll_handle.set_offset -> clamped_to_top handle_key={} prev=({:.3},{:.3}) next=({:.3},{:.3}) caller={}::{}:{}",
+                self.binding_key(),
+                state.offset.x.0,
+                state.offset.y.0,
+                clamped.x.0,
+                clamped.y.0,
+                loc.file(),
+                loc.line(),
+                loc.column(),
+            );
         }
         state.offset = clamped;
         state.revision = state.revision.saturating_add(1);
