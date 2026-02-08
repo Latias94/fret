@@ -75,6 +75,8 @@ Status legend:
 - `[x]` Add update-scoped helpers:
   - `Router::navigate_with_prefetch_intents`
   - `Router::sync_with_prefetch_intents`
+- `[x]` Support initial load prefetch without navigation:
+  - `Router::init_with_prefetch_intents`
 - `[x]` Add race/cancellation tests for rapid route changes.
 
 ## Phase 5 - App adoption

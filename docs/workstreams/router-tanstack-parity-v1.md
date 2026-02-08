@@ -135,11 +135,13 @@ string assembly logic. In v1, prefer a lightweight helper that:
 
 Standardize a transition snapshot (portable; diagnostics-friendly):
 
-- `cause`: `RouterTransitionCause` (`Navigate { action }`, `Redirect { action }`, `Sync`)
+- `cause`: `RouterTransitionCause` (`Init`, `Navigate { action }`, `Redirect { action }`, `Sync`)
 - `from` / `to`: canonical locations
 - `redirect_chain`: attempted locations (0..N, excludes the final `to`; capped with a hop limit)
 - `blocked_by`: optional guard reason
 - `RouterUpdate`: `navigate` / `sync` returns a structured “changed vs no-op” result
+- `Router::init_with_prefetch_intents`: collect loader intents for the current location even when
+  there is no navigation (useful for initial app boot and deep links)
 - `RouterEvent`: a deterministic event stream (`Router::take_events()`) for diagnostics and tests
 - `guard`: optional app/ecosystem policy hook:
   - `Push`/`Replace`: pre-guard (can `Allow`/`Block`/`Redirect`)
