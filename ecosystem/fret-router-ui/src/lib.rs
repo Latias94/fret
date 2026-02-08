@@ -15,6 +15,8 @@ use fret_router::{
     RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents,
 };
 use fret_runtime::Model;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
 pub struct RouterUiSnapshot<R> {
@@ -36,6 +38,14 @@ where
             last_transition: state.last_transition.clone(),
         }
     }
+
+    pub fn leaf_match(&self) -> Option<&RouteMatchSnapshot<R>> {
+        self.matches.last()
+    }
+
+    pub fn leaf_route(&self) -> Option<&R> {
+        self.leaf_match().map(|m| &m.route)
+    }
 }
 
 pub struct RouterUiStore<R, H>
@@ -43,6 +53,7 @@ where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter,
 {
+    window: AppWindowId,
     router: Router<R, H>,
     snapshot: Model<RouterUiSnapshot<R>>,
 }
@@ -52,10 +63,14 @@ where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter,
 {
-    pub fn new(app: &mut App, _window: AppWindowId, router: Router<R, H>) -> Self {
+    pub fn new(app: &mut App, window: AppWindowId, router: Router<R, H>) -> Self {
         let snapshot = RouterUiSnapshot::from_state(router.state());
         let snapshot = app.models_mut().insert(snapshot);
-        Self { router, snapshot }
+        Self {
+            window,
+            router,
+            snapshot,
+        }
     }
 
     pub fn snapshot_model(&self) -> Model<RouterUiSnapshot<R>> {
@@ -70,6 +85,18 @@ where
         &mut self.router
     }
 
+    pub fn state(&self) -> &fret_router::RouterState<R> {
+        self.router.state()
+    }
+
+    pub fn history(&self) -> &H {
+        self.router.history()
+    }
+
+    pub fn history_mut(&mut self) -> &mut H {
+        self.router.history_mut()
+    }
+
     pub fn take_events(&mut self) -> Vec<RouterEvent<R>> {
         self.router.take_events()
     }
@@ -81,6 +108,7 @@ where
 
         let next = RouterUiSnapshot::from_state(self.router.state());
         let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
+        app.request_redraw(self.window);
     }
 
     pub fn navigate(
@@ -124,12 +152,27 @@ where
     }
 }
 
+pub fn router_outlet<R>(
+    cx: &mut ElementContext<'_, App>,
+    snapshot: &Model<RouterUiSnapshot<R>>,
+    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+) -> AnyElement
+where
+    R: Clone + 'static,
+{
+    let snap = cx
+        .get_model_cloned(snapshot, Invalidation::Layout)
+        .expect("router snapshot model should be readable");
+    render(cx, &snap)
+}
+
 #[cfg(test)]
 mod tests {
     use super::RouterUiStore;
     use fret_app::App;
     use fret_router::{
-        MemoryHistory, RouteLocation, RouteNode, RouteSearchTable, RouteTree, Router,
+        MemoryHistory, RouteHooks, RouteLocation, RouteNode, RoutePrefetchIntent, RouteSearchTable,
+        RouteTree, Router,
     };
     use std::sync::Arc;
 
@@ -168,6 +211,61 @@ mod tests {
             )
             .expect("navigate should succeed");
         assert!(update.changed());
+
+        let snapshot = app
+            .models()
+            .get_cloned(&store.snapshot_model())
+            .expect("snapshot should be readable");
+        assert_eq!(snapshot.location.to_url(), "/settings");
+        assert_eq!(snapshot.matches.len(), 2);
+    }
+
+    #[test]
+    fn router_ui_store_init_returns_prefetch_intents() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/settings"));
+        let mut router = Router::new(
+            tree,
+            search_table,
+            fret_router::SearchValidationMode::Strict,
+            history,
+        )
+        .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(|ctx| {
+                    vec![RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "fret-router-ui.tests.init_prefetch",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let mut app = App::new();
+        let window = fret_core::AppWindowId::default();
+        let mut store = RouterUiStore::new(&mut app, window, router);
+
+        let update = store
+            .init_with_prefetch_intents(&mut app)
+            .expect("init should succeed");
+        assert_eq!(update.intents.len(), 1);
 
         let snapshot = app
             .models()

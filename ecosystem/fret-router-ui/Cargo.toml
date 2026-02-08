@@ -16,6 +16,6 @@ default = []
 [dependencies]
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-router = { path = "../fret-router" }
-
