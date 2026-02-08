@@ -10,7 +10,7 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 
 - Largest files:
   - `crates/fret-runtime/src/model/store.rs`
-  - `crates/fret-runtime/src/keymap/mod.rs`
+  - `crates/fret-runtime/src/keymap/types.rs`
   - `crates/fret-runtime/src/menu/wire.rs`
   - `crates/fret-runtime/src/window_command_gating.rs`
   - `crates/fret-runtime/src/capabilities.rs`

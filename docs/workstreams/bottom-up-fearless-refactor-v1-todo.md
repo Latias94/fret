@@ -175,6 +175,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/src/model/debug.rs`
     - `crates/fret-runtime/src/model/error.rs`
 
+- [x] BU-FR-core-029 Split `fret-runtime` keymap logic into focused submodules.
+  - Goal: keep `keymap/mod.rs` as a small facade and isolate loading, matching, conflicts, and display logic.
+  - Evidence:
+    - `crates/fret-runtime/src/keymap/mod.rs`
+    - `crates/fret-runtime/src/keymap/load.rs`
+    - `crates/fret-runtime/src/keymap/ops.rs`
+    - `crates/fret-runtime/src/keymap/conflicts.rs`
+    - `crates/fret-runtime/src/keymap/display.rs`
+    - `crates/fret-runtime/src/keymap/types.rs`
+    - `crates/fret-runtime/src/keymap/wire.rs`
+    - `crates/fret-runtime/src/keymap/error.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
