@@ -180,19 +180,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     let nav_state = cx
         .watch_model(nav_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
     let page_state = cx
         .watch_model(page_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
 
     let prefetch_log = cx
         .watch_model(&st.prefetch_log)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
 
     let status_badge = |cx: &mut ElementContext<'_, App>, status: QueryStatus| {
         let label = match status {
@@ -525,7 +522,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn on_command(
