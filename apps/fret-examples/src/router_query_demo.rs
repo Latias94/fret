@@ -381,9 +381,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                         "hover intents: <nonempty>",
                     )
                 };
-                ui::raw_text(cx, label)
-                    .into_element(cx)
-                    .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+                ui::raw_text(cx, label).into_element(cx).test_id(test_id)
             },
             RouterOutlet::new(snapshot_model.clone())
                 .test_id("router-query-demo-outlet-status")

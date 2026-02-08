@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
-use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui::element::AnyElement;
+use fret_ui_kit::declarative::AnyElementSemanticsExt;
 
 pub(crate) fn attach_test_id(el: AnyElement, test_id: Arc<str>) -> AnyElement {
-    el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    el.test_id(test_id)
 }
 
 pub(crate) fn attach_test_id_suffix(
