@@ -7,6 +7,7 @@
 //! Policy-heavy behavior remains in apps and higher-level ecosystem crates.
 
 use std::hash::Hash;
+use std::sync::Arc;
 
 use fret_app::App;
 use fret_core::AppWindowId;
@@ -15,6 +16,8 @@ use fret_router::{
     RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents,
 };
 use fret_runtime::Model;
+use fret_runtime::{CommandId, Effect};
+use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Invalidation};
 
@@ -149,6 +152,55 @@ where
         let update = self.router.init_with_prefetch_intents()?;
         self.apply_update(app, &update.update);
         Ok(update)
+    }
+
+    pub fn link_to(
+        &self,
+        action: NavigationAction,
+        route: &R,
+        params: &[fret_router::PathParam],
+        search: fret_router::SearchMap,
+        fragment: Option<String>,
+    ) -> Result<RouterLink, fret_router::RouterBuildLocationError> {
+        let to = self
+            .router
+            .build_location(route, params, search, fragment)?;
+        let href: Arc<str> = Arc::from(to.to_url());
+        Ok(RouterLink { action, href, to })
+    }
+
+    pub fn link_to_location(&self, action: NavigationAction, mut to: RouteLocation) -> RouterLink {
+        to.canonicalize();
+        let href: Arc<str> = Arc::from(to.to_url());
+        RouterLink { action, href, to }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RouterLink {
+    pub action: NavigationAction,
+    pub href: Arc<str>,
+    pub to: RouteLocation,
+}
+
+impl RouterLink {
+    pub fn copy_href_on_activate(href: impl Into<Arc<str>>) -> OnActivate {
+        let href: Arc<str> = href.into();
+        Arc::new(move |host, _cx, _reason| {
+            host.push_effect(Effect::ClipboardSetText {
+                text: href.to_string(),
+            });
+        })
+    }
+
+    pub fn dispatch_command_on_activate(
+        window: Option<AppWindowId>,
+        command: impl Into<CommandId>,
+    ) -> OnActivate {
+        let command = command.into();
+        Arc::new(move |host, _cx, _reason| {
+            host.dispatch_command(window, command.clone());
+        })
     }
 }
 
