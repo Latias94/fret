@@ -15,7 +15,7 @@ use std::sync::Arc;
 use fret_diag_protocol::{
     DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiInspectConfigV1,
     UiKeyModifiersV1, UiMouseButtonV1, UiOptionalRootStateV1, UiPredicateV1, UiRoleAndNameV1,
-    UiScriptResultV1, UiScriptStageV1, UiSelectorV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 
 #[path = "ui_diagnostics_ws_bridge.rs"]
@@ -237,6 +237,7 @@ pub struct UiDiagnosticsService {
     active_scripts: HashMap<AppWindowId, ActiveScript>,
     pending_devtools_screenshot: Option<PendingDevtoolsScreenshotRequest>,
     devtools_screenshot_wait: Option<DevtoolsScreenshotWaitState>,
+    pending_devtools_semantics_node_get: HashMap<u64, PendingDevtoolsSemanticsNodeGet>,
     pending_force_dump_label: Option<String>,
     last_dump_dir: Option<PathBuf>,
     last_script_run_id: u64,
@@ -258,6 +259,12 @@ pub struct UiDiagnosticsService {
     pending_pick: Option<PendingPick>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PendingDevtoolsSemanticsNodeGet {
+    transport_request_id: Option<u64>,
+    node_id: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -319,6 +326,13 @@ impl UiDiagnosticsService {
         }
 
         if self.pending_script.is_some() {
+            return true;
+        }
+
+        if self
+            .pending_devtools_semantics_node_get
+            .contains_key(&window.data().as_ffi())
+        {
             return true;
         }
 
@@ -2817,6 +2831,12 @@ impl UiDiagnosticsService {
             )
         });
 
+        self.drive_devtools_semantics_node_get_for_window(
+            window.data().as_ffi(),
+            raw_semantics,
+            semantics_fingerprint,
+        );
+
         if self.inspect_enabled {
             let hovered = last_pointer_position.and_then(|pos| {
                 raw_semantics.and_then(|snap| {
@@ -3332,8 +3352,146 @@ impl UiDiagnosticsService {
                         .map(|p| display_path(&self.cfg.out_dir, p)),
                 });
             }
+            "semantics.node.get" => {
+                let parsed = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload.clone())
+                    .ok()
+                    .filter(|v| v.schema_version == 1);
+
+                let window_ffi = parsed
+                    .as_ref()
+                    .map(|v| v.window)
+                    .or_else(|| msg.payload.get("window").and_then(|v| v.as_u64()))
+                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
+                let node_id = parsed
+                    .as_ref()
+                    .map(|v| v.node_id)
+                    .or_else(|| msg.payload.get("node_id").and_then(|v| v.as_u64()))
+                    .or_else(|| msg.payload.get("node").and_then(|v| v.as_u64()));
+
+                let (Some(window_ffi), Some(node_id)) = (window_ffi, node_id) else {
+                    return;
+                };
+
+                self.pending_devtools_semantics_node_get.insert(
+                    window_ffi,
+                    PendingDevtoolsSemanticsNodeGet {
+                        transport_request_id: msg.request_id,
+                        node_id,
+                    },
+                );
+            }
             _ => {}
         }
+    }
+
+    fn drive_devtools_semantics_node_get_for_window(
+        &mut self,
+        window_ffi: u64,
+        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        semantics_fingerprint: Option<u64>,
+    ) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let Some(pending) = self.pending_devtools_semantics_node_get.remove(&window_ffi) else {
+            return;
+        };
+
+        let Some(semantics_snapshot) = semantics_snapshot else {
+            self.ws_bridge.send(
+                self.cfg.devtools_ws_url.as_deref(),
+                self.cfg.devtools_token.as_deref(),
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "semantics.node.get_ack".to_string(),
+                    session_id: None,
+                    request_id: pending.transport_request_id,
+                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "no_semantics".to_string(),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        window: window_ffi,
+                        node_id: pending.node_id,
+                        semantics_fingerprint,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null),
+                },
+            );
+            return;
+        };
+
+        let node = semantics_snapshot
+            .nodes
+            .iter()
+            .find(|n| key_to_u64(n.id) == pending.node_id);
+
+        let Some(node) = node else {
+            self.ws_bridge.send(
+                self.cfg.devtools_ws_url.as_deref(),
+                self.cfg.devtools_token.as_deref(),
+                DiagTransportMessageV1 {
+                    schema_version: 1,
+                    r#type: "semantics.node.get_ack".to_string(),
+                    session_id: None,
+                    request_id: pending.transport_request_id,
+                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                        schema_version: 1,
+                        status: "not_found".to_string(),
+                        reason: Some("node_not_found".to_string()),
+                        window: window_ffi,
+                        node_id: pending.node_id,
+                        semantics_fingerprint,
+                        node: None,
+                        children: Vec::new(),
+                        captured_unix_ms: Some(unix_ms_now()),
+                    })
+                    .unwrap_or(serde_json::Value::Null),
+                },
+            );
+            return;
+        };
+
+        let ui_node = UiSemanticsNodeV1::from_node(
+            node,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+        );
+        let children = semantics_snapshot
+            .nodes
+            .iter()
+            .filter_map(|n| {
+                n.parent
+                    .filter(|p| key_to_u64(*p) == pending.node_id)
+                    .map(|_| key_to_u64(n.id))
+            })
+            .collect::<Vec<_>>();
+
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "semantics.node.get_ack".to_string(),
+                session_id: None,
+                request_id: pending.transport_request_id,
+                payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
+                    schema_version: 1,
+                    status: "ok".to_string(),
+                    reason: None,
+                    window: window_ffi,
+                    node_id: pending.node_id,
+                    semantics_fingerprint,
+                    node: serde_json::to_value(ui_node).ok(),
+                    children,
+                    captured_unix_ms: Some(unix_ms_now()),
+                })
+                .unwrap_or(serde_json::Value::Null),
+            },
+        );
     }
 
     fn drive_devtools_screenshot_for_window(

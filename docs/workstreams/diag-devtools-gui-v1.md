@@ -303,6 +303,7 @@ These commands must map directly to existing in-app operations (no new semantics
 - `script.push` / `script.run` -> emits `script.progress` events + final `script.result`
 - `bundle.dump` -> emits `bundle.dumped` event (includes bundle id/path/handle)
 - `screenshot.request` -> emits `screenshot.result` event
+- `semantics.node.get` -> emits `semantics.node.get_ack` (on-demand node details from the latest semantics snapshot)
 
 #### `screenshot.request` / `screenshot.result` (v1)
 
@@ -319,6 +320,20 @@ This is a convenience command for capturing a renderer screenshot outside of a s
 
 Web runner note: as of 2026-02-07, screenshot readback is runner-owned and only implemented for the native runner.
 On wasm/web targets, `screenshot.result` returns `status=unsupported` with `reason=screenshots_not_supported_wasm`.
+
+#### `semantics.node.get` / `semantics.node.get_ack` (v1)
+
+This is a low-traffic, on-demand detail fetch for a single semantics node. It is intended to back
+the DevTools inspector without requiring frequent full bundle dumps.
+
+- Request payload:
+  - `window`: app window ffi id.
+  - `node_id`: semantics node id (ffi).
+- Response event (`semantics.node.get_ack`):
+  - `status`: `ok` | `not_found` | `no_semantics`
+  - `semantics_fingerprint`: best-effort fingerprint of the semantics snapshot used.
+  - `node`: JSON object for the selected node (shape is the in-app `UiSemanticsNodeV1`).
+  - `children`: child node ids (best-effort)
 
 Tooling-side-only operations (do not require app support):
 

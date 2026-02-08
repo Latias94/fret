@@ -520,6 +520,31 @@ pub struct UiRoleAndNameV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsNodeGetV1 {
+    pub schema_version: u32,
+    pub window: u64,
+    pub node_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiSemanticsNodeGetAckV1 {
+    pub schema_version: u32,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    pub window: u64,
+    pub node_id: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics_fingerprint: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node: Option<serde_json::Value>,
+    #[serde(default)]
+    pub children: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_unix_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInspectConfigV1 {
     pub schema_version: u32,
     pub enabled: bool,
