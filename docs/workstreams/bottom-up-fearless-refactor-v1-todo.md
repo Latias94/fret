@@ -207,6 +207,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/src/menu/wire/config_v1.rs`
     - `crates/fret-runtime/src/menu/wire/config_v2.rs`
 
+- [x] BU-FR-core-032 Convert `fret-runtime` platform capabilities to a directory subsystem (`capabilities/mod.rs`).
+  - Goal: keep capability keys/kinds/quality enums and aggregation logic in focused submodules without changing re-exports.
+  - Evidence:
+    - `crates/fret-runtime/src/capabilities/mod.rs`
+    - `crates/fret-runtime/src/capabilities/kind.rs`
+    - `crates/fret-runtime/src/capabilities/exec.rs`
+    - `crates/fret-runtime/src/capabilities/qualities.rs`
+    - `crates/fret-runtime/src/capabilities/leaf.rs`
+    - `crates/fret-runtime/src/capabilities/platform.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.

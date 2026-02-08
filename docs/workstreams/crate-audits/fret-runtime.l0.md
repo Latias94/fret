@@ -10,11 +10,12 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 
 - Largest files:
   - `crates/fret-runtime/src/model/store.rs`
-  - `crates/fret-runtime/src/capabilities.rs`
   - `crates/fret-runtime/src/when_expr.rs`
   - `crates/fret-runtime/src/window_command_gating/tests.rs`
   - `crates/fret-runtime/src/input.rs`
+  - `crates/fret-runtime/src/menu/apply.rs`
   - `crates/fret-runtime/src/keymap/tests.rs`
+  - `crates/fret-runtime/src/menu/tests.rs`
   - `crates/fret-runtime/src/menu/wire/patch_v2.rs`
 - Direct deps (workspace): `fret-core`, `fret-i18n`
 - Direct deps (external): `serde`, `serde_json`, `slotmap`, `thiserror`
@@ -33,4 +34,6 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
    - Evidence: `crates/fret-runtime/src/model/mod.rs`
 2. (Done) Split menubar wire formats into focused submodules (`menu/wire/*`) for v1/v2 + patch/config decoding.
    - Evidence: `crates/fret-runtime/src/menu/wire/mod.rs`
-3. Add a v1 “serialization stability checklist” item for `fret-runtime` config surfaces (ties to `BU-FR-core-014`).
+3. (Done) Convert platform capability vocabulary into a directory subsystem (`capabilities/mod.rs`).
+   - Evidence: `crates/fret-runtime/src/capabilities/mod.rs`
+4. Add a v1 “serialization stability checklist” item for `fret-runtime` config surfaces (ties to `BU-FR-core-014`).
