@@ -302,8 +302,24 @@ impl SourcesBlock {
         let collapsible = Collapsible::uncontrolled(default_open).into_element_with_open_model(
             cx,
             move |cx, open_model, is_open| {
-                let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
-                    let _ = host.models_mut().update(&open_model, |v| *v = !*v);
+                let debug_toggle = std::env::var_os("FRET_DIAG_DEBUG_AI_SOURCES_TOGGLE")
+                    .is_some_and(|v| !v.is_empty() && v != "0");
+                let debug_test_id = trigger_test_id.clone();
+                let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
+                    let store = host.models_mut();
+                    let prev = store.get_copied(&open_model).unwrap_or(false);
+                    let _ = store.update(&open_model, |v| *v = !*v);
+                    let next = store.get_copied(&open_model).unwrap_or(!prev);
+
+                    if debug_toggle {
+                        eprintln!(
+                            "ai sources toggle activated test_id={} prev={} next={} reason={reason:?}",
+                            debug_test_id.as_deref().unwrap_or("<none>"),
+                            prev,
+                            next
+                        );
+                    }
+                    host.notify(cx);
                 });
 
                 let label = cx.text(format!("Used {count} sources"));

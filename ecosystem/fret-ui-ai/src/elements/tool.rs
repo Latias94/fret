@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::Color;
 use fret_core::{SemanticsRole, TextOverflow, TextWrap};
 use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
@@ -20,52 +21,93 @@ use crate::model::{ToolCallPayload, ToolCallState};
 /// - components emit intents via action hooks (e.g. Collapsible triggers).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ToolStatus {
-    Pending,
-    Running,
-    Succeeded,
-    Failed,
-    Cancelled,
+    ApprovalRequested,
+    ApprovalResponded,
+    InputAvailable,
+    InputStreaming,
+    OutputAvailable,
+    OutputDenied,
+    OutputError,
 }
 
 impl ToolStatus {
     pub fn from_tool_call_state(state: ToolCallState) -> Self {
         match state {
-            ToolCallState::Pending => Self::Pending,
-            ToolCallState::Running => Self::Running,
-            ToolCallState::Succeeded => Self::Succeeded,
-            ToolCallState::Failed => Self::Failed,
-            ToolCallState::Cancelled => Self::Cancelled,
+            ToolCallState::ApprovalRequested => Self::ApprovalRequested,
+            ToolCallState::ApprovalResponded => Self::ApprovalResponded,
+            ToolCallState::InputAvailable => Self::InputAvailable,
+            ToolCallState::InputStreaming => Self::InputStreaming,
+            ToolCallState::OutputAvailable => Self::OutputAvailable,
+            ToolCallState::OutputDenied => Self::OutputDenied,
+            ToolCallState::OutputError => Self::OutputError,
         }
     }
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::Pending => "Pending",
-            Self::Running => "Running",
-            Self::Succeeded => "Completed",
-            Self::Failed => "Error",
-            Self::Cancelled => "Cancelled",
+            Self::ApprovalRequested => "Awaiting Approval",
+            Self::ApprovalResponded => "Responded",
+            Self::InputAvailable => "Running",
+            Self::InputStreaming => "Pending",
+            Self::OutputAvailable => "Completed",
+            Self::OutputDenied => "Denied",
+            Self::OutputError => "Error",
         }
     }
 
     pub fn icon_id(self) -> IconId {
         match self {
-            Self::Pending => IconId::new_static("lucide.circle"),
-            Self::Running => IconId::new_static("lucide.clock"),
-            Self::Succeeded => IconId::new_static("lucide.check-circle"),
-            Self::Failed => IconId::new_static("lucide.x-circle"),
-            Self::Cancelled => IconId::new_static("lucide.x-circle"),
+            Self::ApprovalRequested => IconId::new_static("lucide.clock"),
+            Self::ApprovalResponded => IconId::new_static("lucide.check-circle"),
+            Self::InputAvailable => IconId::new_static("lucide.clock"),
+            Self::InputStreaming => IconId::new_static("lucide.circle"),
+            Self::OutputAvailable => IconId::new_static("lucide.check-circle"),
+            Self::OutputDenied => IconId::new_static("lucide.x-circle"),
+            Self::OutputError => IconId::new_static("lucide.x-circle"),
         }
     }
 
     pub fn badge_variant(self) -> BadgeVariant {
         match self {
-            Self::Pending => BadgeVariant::Secondary,
-            Self::Running => BadgeVariant::Secondary,
-            Self::Succeeded => BadgeVariant::Secondary,
-            Self::Failed => BadgeVariant::Secondary,
-            Self::Cancelled => BadgeVariant::Secondary,
+            Self::ApprovalRequested => BadgeVariant::Secondary,
+            Self::ApprovalResponded => BadgeVariant::Secondary,
+            Self::InputAvailable => BadgeVariant::Secondary,
+            Self::InputStreaming => BadgeVariant::Secondary,
+            Self::OutputAvailable => BadgeVariant::Secondary,
+            Self::OutputDenied => BadgeVariant::Secondary,
+            Self::OutputError => BadgeVariant::Secondary,
         }
+    }
+
+    pub fn icon_color(self, theme: &Theme) -> Option<Color> {
+        match self {
+            Self::ApprovalResponded | Self::OutputAvailable => theme
+                .color_by_key("primary")
+                .or_else(|| theme.color_by_key("foreground")),
+            Self::OutputError => theme
+                .color_by_key("destructive")
+                .or_else(|| theme.color_by_key("foreground")),
+            _ => None,
+        }
+    }
+}
+
+fn token_color_with_alpha(
+    theme: &Theme,
+    key: &'static str,
+    fallback_key: &'static str,
+    alpha: f32,
+) -> Color {
+    let base = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key(fallback_key))
+        .unwrap_or_else(|| theme.color_required("foreground"));
+    let alpha = alpha.clamp(0.0, 1.0);
+    Color {
+        r: base.r,
+        g: base.g,
+        b: base.b,
+        a: base.a * alpha,
     }
 }
 
@@ -121,9 +163,15 @@ impl ToolHeader {
         let theme = Theme::global(&*cx.app).clone();
 
         let label = self.title.unwrap_or_else(|| self.name.clone());
+        let status = self.status;
         let badge = Badge::new(self.status.label())
             .variant(self.status.badge_variant())
-            .children([decl_icon::icon(cx, self.status.icon_id())])
+            .children([decl_icon::icon_with(
+                cx,
+                status.icon_id(),
+                None,
+                status.icon_color(&theme).map(ColorRef::Color),
+            )])
             .into_element(cx);
 
         let left = stack::hstack(
@@ -274,15 +322,13 @@ impl ToolInput {
         let title = ToolSectionTitle::new("Parameters").into_element(cx);
 
         let code = MessageResponse::new(payload_to_code_fence(&self.input)).into_element(cx);
+        let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let code = cx.container(
             decl_style::container_props(
                 &theme,
                 ChromeRefinement::default()
                     .rounded_md()
-                    .bg(ColorRef::Token {
-                        key: "muted",
-                        fallback: ColorFallback::ThemeHoverBackground,
-                    })
+                    .bg(ColorRef::Color(bg))
                     .merge(self.chrome),
                 self.layout,
             ),
@@ -346,33 +392,34 @@ impl ToolOutput {
 
         let mut body: Vec<AnyElement> = Vec::new();
         if let Some(error) = self.error_text.clone() {
-            body.push(cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: error,
-                style: None,
-                color: theme.color_by_key("destructive"),
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-            }));
+            body.push(
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: error,
+                    style: None,
+                    color: theme
+                        .color_by_key("destructive")
+                        .or_else(|| theme.color_by_key("foreground")),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                }),
+            );
         }
         if let Some(output) = self.output.as_ref() {
             body.push(MessageResponse::new(payload_to_code_fence(output)).into_element(cx));
         }
 
-        let bg_key = if self.error_text.is_some() {
-            "destructive"
+        let bg = if self.error_text.is_some() {
+            token_color_with_alpha(&theme, "destructive", "accent", 0.1)
         } else {
-            "muted"
+            token_color_with_alpha(&theme, "muted", "accent", 0.5)
         };
         let container = cx.container(
             decl_style::container_props(
                 &theme,
                 ChromeRefinement::default()
                     .rounded_md()
-                    .bg(ColorRef::Token {
-                        key: bg_key,
-                        fallback: ColorFallback::ThemeHoverBackground,
-                    })
+                    .bg(ColorRef::Color(bg))
                     .merge(self.chrome),
                 self.layout,
             ),

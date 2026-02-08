@@ -3080,6 +3080,18 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         scene.clear();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
+        {
+            // Diagnostics scripts select targets by semantics bounds. We must ensure we have a
+            // fresh semantics snapshot for the current frame *before* we drive scripted input;
+            // otherwise, scripts may act on a 1-frame-stale snapshot and mis-predict visibility
+            // in virtualized lists (estimate -> measured jumps).
+            state.ui.request_semantics_snapshot();
+        }
+
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
@@ -3130,16 +3142,23 @@ impl WinitAppDriver for UiGalleryDriver {
             }
         }
 
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.paint_all(scene);
+
         #[cfg(not(target_arch = "wasm32"))]
         {
+            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
+            // VirtualList) have their realized item subtrees available for hit-testing.
             let semantics_snapshot = state.ui.semantics_snapshot();
             let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.drive_script_for_window(
-                    app,
+                    &*app,
                     window,
                     bounds,
                     scale_factor,
+                    &state.ui,
                     semantics_snapshot,
                     element_runtime,
                 )
@@ -3205,26 +3224,8 @@ impl WinitAppDriver for UiGalleryDriver {
                 for effect in deferred_effects {
                     app.push_effect(effect);
                 }
-
-                state.ui.request_semantics_snapshot();
-                let mut frame = fret_ui::UiFrameCx::new(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    scale_factor,
-                );
-                frame.layout_all();
             }
-        }
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        #[cfg(not(target_arch = "wasm32"))]
-        {
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
                 svc.record_snapshot(
