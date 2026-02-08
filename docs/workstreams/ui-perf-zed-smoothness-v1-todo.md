@@ -28,11 +28,15 @@ Conventions:
   bucketed/deferred/cached during live resize, and what must remain exact).
   - Candidates: text wrap width bucketing, measure/shaping caching, released blob retention, and any LOD/deferral.
   - Goal: make future “fearless refactors” safer by pinning what must remain stable.
+  - Companion note: `docs/workstreams/ui-perf-resize-path-v1.md`
 
 - [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - [ ] Explain why `top_layout_engine_solves` is typically > 1 in resize probes, and decide which roots should be
+    solved separately vs batched.
+    - Background: `docs/workstreams/ui-perf-resize-path-v1.md`
   - [x] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
     strict majority pass (keeps the gate strict, but reduces single-run flake).
     - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
