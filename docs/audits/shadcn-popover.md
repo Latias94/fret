@@ -87,6 +87,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   delay controls:
   - `Popover::hover_open_delay_frames(...)`
   - `Popover::hover_close_delay_frames(...)`
+- Pass: Open lifecycle callbacks are available via `Popover::on_open_change` and
+  `Popover::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `forceMount` naming parity is exposed via `Popover::force_mount(...)` as an alias of
   `Popover::keep_mounted(...)`.
 - Pass: Advanced placement knobs are exposed:
@@ -111,6 +113,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
 - Contract test: `popover_modal_mode_alias_sets_expected_mode`
+- Contract test: `popover_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `popover_open_change_events_complete_without_animation`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   popover panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
