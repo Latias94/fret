@@ -7,12 +7,12 @@ use fret_app::{App, CommandId, Effect};
 use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
+use fret_diag::devtools::DevtoolsOps;
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
 };
 use fret_diag_protocol::{
-    DevtoolsSessionDescriptorV1, DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2,
-    UiScriptStageV1,
+    DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiScriptStageV1,
 };
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
@@ -106,10 +106,9 @@ struct State {
     semantics_live_enabled: Model<bool>,
     semantics_live_force_nonce: Model<u64>,
 
-    client: ToolingDiagClient,
+    devtools: DevtoolsOps,
     applied_session_id: Option<Arc<str>>,
 
-    next_transport_request_id: u64,
     live_semantics_last_target: Option<(u64, u64)>,
     live_semantics_last_sent_unix_ms: Option<u64>,
     live_semantics_last_force_nonce: u64,
@@ -230,6 +229,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     ];
     let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(client_cfg))
         .expect("devtools ws client connect must succeed");
+    let devtools = DevtoolsOps::new(client);
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();
 
@@ -279,9 +279,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         semantics_selected_node_live_children,
         semantics_live_enabled,
         semantics_live_force_nonce,
-        client,
+        devtools,
         applied_session_id: None,
-        next_transport_request_id: 1000,
         live_semantics_last_target: None,
         live_semantics_last_sent_unix_ms: None,
         live_semantics_last_force_nonce: 0,
@@ -1535,16 +1534,7 @@ fn on_command(
                 .models()
                 .read(&st.inspect_consume_clicks, |v| *v)
                 .unwrap_or(false);
-            st.client.send(DiagTransportMessageV1 {
-                schema_version: 1,
-                r#type: "inspect.set".to_string(),
-                session_id: None,
-                request_id: None,
-                payload: serde_json::json!({
-                    "enabled": enabled,
-                    "consume_clicks": consume_clicks,
-                }),
-            });
+            st.devtools.inspect_set(None, enabled, consume_clicks);
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_PICK_ARM => {
@@ -1552,8 +1542,7 @@ fn on_command(
                 app.request_redraw(window);
                 return;
             }
-            st.client
-                .send_type_payload("pick.arm", serde_json::json!({}));
+            st.devtools.pick_arm(None);
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_BUNDLE_DUMP => {
@@ -1561,8 +1550,7 @@ fn on_command(
                 app.request_redraw(window);
                 return;
             }
-            st.client
-                .send_type_payload("bundle.dump", serde_json::json!({ "label": "devtools" }));
+            st.devtools.bundle_dump(None, Some("devtools"));
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_SCREENSHOT_REQUEST => {
@@ -1570,10 +1558,9 @@ fn on_command(
                 app.request_redraw(window);
                 return;
             }
-            st.client.send_type_payload(
-                "screenshot.request",
-                serde_json::json!({ "label": "devtools", "timeout_frames": 300 }),
-            );
+            let _ = st
+                .devtools
+                .screenshot_request(None, Some("devtools"), 300, None);
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         CMD_SCRIPTS_REFRESH => {
@@ -1669,12 +1656,10 @@ fn on_command(
             let _ = app
                 .models_mut()
                 .update(&st.script_last_bundle_dir, |v| *v = None);
-            st.client.send_type_payload(
-                ty,
-                serde_json::json!({
-                    "script": script_value,
-                }),
-            );
+            match ty {
+                "script.run" => st.devtools.script_run_value(None, script_value),
+                _ => st.devtools.script_push_value(None, script_value),
+            }
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
         _ => {}
