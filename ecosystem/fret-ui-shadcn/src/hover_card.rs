@@ -3,7 +3,9 @@ use std::sync::Arc;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Px, Size};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
+use fret_ui::action::{
+    ActionCx, PointerCancelCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, HoverRegionProps, Length, Overflow, PointerRegionProps,
 };
@@ -348,7 +350,7 @@ impl HoverCard {
                 );
                 model
             };
-            let pointer_down_on_content_now = cx
+            let mut pointer_down_on_content_now = cx
                 .watch_model(&pointer_down_on_content)
                 .layout()
                 .copied()
@@ -367,6 +369,44 @@ impl HoverCard {
             let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
             let overlay_root_id = fret_ui::elements::global_root(cx.window, &overlay_root_name);
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
+
+            #[derive(Default)]
+            struct HoverCardSelectionPointerState {
+                saw_selection_while_pointer_down: bool,
+            }
+
+            let clear_stale_pointer_down_after_selection = cx.with_state_for(
+                hover_card_id,
+                HoverCardSelectionPointerState::default,
+                |st| {
+                    if pointer_down_on_content_now && has_text_selection {
+                        st.saw_selection_while_pointer_down = true;
+                        return false;
+                    }
+
+                    if pointer_down_on_content_now
+                        && !has_text_selection
+                        && st.saw_selection_while_pointer_down
+                    {
+                        st.saw_selection_while_pointer_down = false;
+                        return true;
+                    }
+
+                    if !pointer_down_on_content_now {
+                        st.saw_selection_while_pointer_down = false;
+                    }
+
+                    false
+                },
+            );
+
+            if clear_stale_pointer_down_after_selection {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&pointer_down_on_content, |v| *v = false);
+                pointer_down_on_content_now = false;
+            }
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = radix_hover_card::hover_card_update_interaction(
@@ -536,6 +576,46 @@ impl HoverCard {
                                         let _ = host
                                             .models_mut()
                                             .update(&pointer_down_model_for_up, |v| *v = false);
+                                        host.request_redraw(cx.window);
+                                        false
+                                    },
+                                ));
+
+                                let pointer_down_model_for_move =
+                                    pointer_down_on_content_model.clone();
+                                cx.pointer_region_on_pointer_move(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          mv: PointerMoveCx| {
+                                        if mv.buttons.left {
+                                            return false;
+                                        }
+                                        let is_down = host
+                                            .models_mut()
+                                            .read(&pointer_down_model_for_move, |v| *v)
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if is_down {
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&pointer_down_model_for_move, |v| {
+                                                    *v = false
+                                                });
+                                            host.request_redraw(cx.window);
+                                        }
+                                        false
+                                    },
+                                ));
+
+                                let pointer_down_model_for_cancel =
+                                    pointer_down_on_content_model.clone();
+                                cx.pointer_region_on_pointer_cancel(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          _cancel: PointerCancelCx| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&pointer_down_model_for_cancel, |v| *v = false);
                                         host.request_redraw(cx.window);
                                         false
                                     },
