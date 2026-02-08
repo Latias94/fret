@@ -644,6 +644,42 @@ impl NavigationMenu {
         self
     }
 
+    /// Sets the hover-open delay window (Base UI `delay`).
+    pub fn delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.delay_duration = duration;
+        self
+    }
+
+    /// Sets the hover-open delay in milliseconds (Base UI `delay`).
+    pub fn delay_ms(mut self, millis: u64) -> Self {
+        self.config.delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
+    /// Sets the delayed-close window (Base UI `closeDelay`).
+    pub fn close_delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.close_delay_duration = duration;
+        self
+    }
+
+    /// Sets the delayed-close window in milliseconds (Base UI `closeDelay`).
+    pub fn close_delay_ms(mut self, millis: u64) -> Self {
+        self.config.close_delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
+    /// Sets the skip-delay window used after close (Base UI `skipDelayDuration`).
+    pub fn skip_delay_duration(mut self, duration: std::time::Duration) -> Self {
+        self.config.skip_delay_duration = duration;
+        self
+    }
+
+    /// Sets the skip-delay window in milliseconds (Base UI `skipDelayDuration`).
+    pub fn skip_delay_ms(mut self, millis: u64) -> Self {
+        self.config.skip_delay_duration = std::time::Duration::from_millis(millis);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -1844,6 +1880,52 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn navigation_menu_delay_aliases_update_config() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model)
+            .delay_ms(120)
+            .close_delay_ms(80)
+            .skip_delay_ms(360);
+
+        assert_eq!(
+            menu.config.delay_duration,
+            std::time::Duration::from_millis(120)
+        );
+        assert_eq!(
+            menu.config.close_delay_duration,
+            std::time::Duration::from_millis(80)
+        );
+        assert_eq!(
+            menu.config.skip_delay_duration,
+            std::time::Duration::from_millis(360)
+        );
+    }
+
+    #[test]
+    fn navigation_menu_duration_aliases_update_config() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model)
+            .delay_duration(std::time::Duration::from_millis(10))
+            .close_delay_duration(std::time::Duration::from_millis(20))
+            .skip_delay_duration(std::time::Duration::from_millis(30));
+
+        assert_eq!(
+            menu.config.delay_duration,
+            std::time::Duration::from_millis(10)
+        );
+        assert_eq!(
+            menu.config.close_delay_duration,
+            std::time::Duration::from_millis(20)
+        );
+        assert_eq!(
+            menu.config.skip_delay_duration,
+            std::time::Duration::from_millis(30)
+        );
     }
 
     #[test]

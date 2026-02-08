@@ -55,6 +55,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   `NavigationMenu::viewport_component(NavigationMenuViewport::enabled(false))`.
 - Pass: Indicator rendering can be disabled via `NavigationMenu::indicator(false)` /
   `NavigationMenu::indicator_component(NavigationMenuIndicator::enabled(false))`.
+- Pass: Base UI timing props are mirrored by shadcn-friendly aliases:
+  `delay_ms`/`delay_duration`, `close_delay_ms`/`close_delay_duration`,
+  and `skip_delay_ms`/`skip_delay_duration`.
 
 ### Open/close & hover behavior (Radix parity)
 
@@ -90,6 +93,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn navigation_menu`
 - `cargo nextest run -p fret-ui-shadcn navigation_menu_viewport_align_start_respects_direction_provider`
+- Contract test: `navigation_menu_delay_aliases_update_config`
+- Contract test: `navigation_menu_duration_aliases_update_config`
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_navigation_menu_open_geometry_matches_fret`).
   - shadcn-web gates:
