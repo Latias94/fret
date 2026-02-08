@@ -136,6 +136,28 @@ fn dispatch_pointer_down(
     );
 }
 
+fn dispatch_pointer_up(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    button: MouseButton,
+    position: Point,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: PointerId(0),
+            position,
+            button,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+}
+
 fn center(bounds: &Rect) -> Point {
     Point::new(
         Px(bounds.origin.x.0 + bounds.size.width.0 / 2.0),
@@ -172,12 +194,20 @@ fn tab_strip_right_and_middle_mouse_down_do_not_steal_focus() {
         .expect("tab node");
 
     assert_eq!(ui.focus(), None);
+    let focus_pos = center(&focus_target_bounds);
     dispatch_pointer_down(
         &mut ui,
         &mut app,
         &mut services,
         MouseButton::Left,
-        center(&focus_target_bounds),
+        focus_pos,
+    );
+    dispatch_pointer_up(
+        &mut ui,
+        &mut app,
+        &mut services,
+        MouseButton::Left,
+        focus_pos,
     );
     assert_eq!(ui.focus(), Some(focus_target_node));
 

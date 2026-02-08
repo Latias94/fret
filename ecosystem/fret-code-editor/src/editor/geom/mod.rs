@@ -24,6 +24,9 @@ pub(super) struct RowGeom {
     pub(super) blob: TextBlobId,
     /// Caret stop table for the displayed row text (byte index -> x offset).
     pub(super) caret_stops: Vec<(usize, Px)>,
+    /// Optional mapping between buffer-local and display-local indices when the row materializes
+    /// fold placeholders (ADR 0200).
+    pub(super) fold_map: Option<RowFoldMap>,
     /// Optional caret rectangle vertical metrics derived from the renderer text system.
     ///
     /// Coordinate space: relative to the row text origin (y=0 at the top of the row text box).
@@ -31,6 +34,65 @@ pub(super) struct RowGeom {
     pub(super) caret_rect_height: Option<Px>,
     /// Mapping needed when the displayed row includes an injected preedit string.
     pub(super) preedit: Option<RowPreeditMapping>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct RowFoldSpan {
+    pub(super) buffer_range: Range<usize>,
+    pub(super) display_range: Range<usize>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(super) struct RowFoldMap {
+    spans: Vec<RowFoldSpan>,
+}
+
+impl RowFoldMap {
+    pub(super) fn new(spans: Vec<RowFoldSpan>) -> Self {
+        Self { spans }
+    }
+
+    pub(super) fn buffer_local_to_display_local(&self, buffer_local: usize) -> usize {
+        let mut removed = 0i64;
+        let mut added = 0i64;
+
+        for span in &self.spans {
+            let start = span.buffer_range.start;
+            let end = span.buffer_range.end.max(start);
+            if buffer_local <= start {
+                break;
+            }
+            if buffer_local < end {
+                return span.display_range.start;
+            }
+            removed += end.saturating_sub(start) as i64;
+            added += span.display_range.len() as i64;
+        }
+
+        let base = buffer_local as i64 + added - removed;
+        base.max(0) as usize
+    }
+
+    pub(super) fn display_local_to_buffer_local(&self, display_local: usize) -> usize {
+        let mut removed = 0i64;
+        let mut added = 0i64;
+
+        for span in &self.spans {
+            let start = span.display_range.start;
+            let end = span.display_range.end.max(start);
+            if display_local < start {
+                break;
+            }
+            if display_local < end {
+                return span.buffer_range.start;
+            }
+            removed += span.buffer_range.len() as i64;
+            added += end.saturating_sub(start) as i64;
+        }
+
+        let base = display_local as i64 + removed - added;
+        base.max(0) as usize
+    }
 }
 
 pub(super) fn caret_x_for_index(stops: &[(usize, Px)], index: usize) -> Px {
@@ -184,7 +246,7 @@ pub(super) fn map_row_local_to_buffer_byte(
 }
 
 pub(super) fn caret_for_pointer(
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row: usize,
     bounds: Rect,
     position: fret_core::Point,
@@ -193,8 +255,14 @@ pub(super) fn caret_for_pointer(
     let local_x = Px(position.x.0 - bounds.origin.x.0);
     if let Some((geom, _)) = st.row_geom_cache.get(&row)
         && !geom.caret_stops.is_empty()
+        && geom.preedit.is_some() == st.preedit.is_some()
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, local_x);
+        let local = geom
+            .fold_map
+            .as_ref()
+            .map(|m| m.display_local_to_buffer_local(local))
+            .unwrap_or(local);
         let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
         return st
             .buffer
@@ -202,6 +270,10 @@ pub(super) fn caret_for_pointer(
     }
 
     // Fallback to the MVP monospace heuristic when geometry hasn't been cached yet.
+    st.cache_stats.geom_pointer_hit_test_fallbacks = st
+        .cache_stats
+        .geom_pointer_hit_test_fallbacks
+        .saturating_add(1);
     let col = if cell_w.0 > 0.0 {
         (local_x.0 / cell_w.0).floor().max(0.0) as usize
     } else {
@@ -212,7 +284,7 @@ pub(super) fn caret_for_pointer(
 }
 
 pub(super) fn caret_rect_for_selection(
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row_h: Px,
     cell_w: Px,
     bounds: Rect,
@@ -240,8 +312,14 @@ pub(super) fn caret_rect_for_selection(
             caret_h = h;
         }
 
-        if !geom.caret_stops.is_empty() && caret >= geom.row_range.start {
+        if !geom.caret_stops.is_empty()
+            && caret >= geom.row_range.start
+            && geom.preedit.is_some() == st.preedit.is_some()
+        {
             let mut local = caret.saturating_sub(geom.row_range.start);
+            if let Some(folds) = geom.fold_map.as_ref() {
+                local = folds.buffer_local_to_display_local(local);
+            }
             if let Some(preedit) = st.preedit.as_ref()
                 && geom.preedit.is_some()
             {
@@ -253,6 +331,8 @@ pub(super) fn caret_rect_for_selection(
     }
 
     let x = x.unwrap_or_else(|| {
+        st.cache_stats.geom_caret_rect_fallbacks =
+            st.cache_stats.geom_caret_rect_fallbacks.saturating_add(1);
         let mut col = pt.col;
         if let Some(preedit) = st.preedit.as_ref() {
             col = col.saturating_add(preedit_cursor_offset_cols(preedit));
@@ -291,11 +371,17 @@ pub(super) fn caret_x_for_buffer_byte_in_row(
     caret: usize,
 ) -> Option<Px> {
     let (geom, _) = st.row_geom_cache.get(&row)?;
-    if geom.caret_stops.is_empty() || caret < geom.row_range.start {
+    if geom.caret_stops.is_empty()
+        || caret < geom.row_range.start
+        || geom.preedit.is_some() != st.preedit.is_some()
+    {
         return None;
     }
 
     let mut local = caret.saturating_sub(geom.row_range.start);
+    if let Some(folds) = geom.fold_map.as_ref() {
+        local = folds.buffer_local_to_display_local(local);
+    }
     if let Some(preedit) = st.preedit.as_ref()
         && geom.preedit.is_some()
     {

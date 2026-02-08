@@ -6,6 +6,12 @@ pub(crate) struct UiGalleryCodeEditorHandlesStore {
     pub per_window: HashMap<AppWindowId, CodeEditorHandle>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Default)]
+pub(crate) struct UiGalleryMarkdownEditorHandlesStore {
+    pub per_window: HashMap<AppWindowId, CodeEditorHandle>,
+}
+
 use std::collections::HashMap;
 
 #[cfg(not(target_arch = "wasm32"))]

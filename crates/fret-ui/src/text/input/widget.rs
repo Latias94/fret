@@ -481,9 +481,21 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
+
+                let mut anchor = *anchor as usize;
+                let mut focus = *focus as usize;
+                if self.is_ime_composing() {
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+                    let preedit_len = self.preedit.len();
+                    anchor =
+                        crate::text_edit::ime::display_to_base_index(caret, preedit_len, anchor);
+                    focus = crate::text_edit::ime::display_to_base_index(caret, preedit_len, focus);
+                }
+
                 let mut edit = self.edit_state();
                 edit.clear_ime_composition();
-                edit.set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
+                edit.set_selection_grapheme_clamped(anchor, focus);
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -904,6 +916,23 @@ impl<H: UiHost> Widget<H> for TextInput {
             "edit.select_all" => "text.select_all",
             other => other,
         };
+
+        // During IME composition the displayed text is base text with a preedit splice at the
+        // caret (ADR 0071). To keep command-driven navigation/editing deterministic, cancel the
+        // inline preedit before applying commands (except copy; clear cancels preedit itself).
+        let is_vertical = matches!(
+            cmd,
+            "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"
+        );
+        if self.is_ime_composing() && is_vertical {
+            return true;
+        }
+        if self.is_ime_composing() && cmd != "text.copy" && cmd != "text.clear" {
+            self.clear_ime_composition();
+            self.mark_text_blobs_dirty();
+            cx.invalidate_self(Invalidation::Layout);
+            cx.request_redraw();
+        }
 
         match cmd {
             "text.clear" => {

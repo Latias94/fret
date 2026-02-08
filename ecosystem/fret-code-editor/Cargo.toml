@@ -15,6 +15,7 @@ default = []
 syntax = ["dep:fret-syntax"]
 syntax-all = ["syntax", "fret-syntax/tree-sitter-languages"]
 syntax-rust = ["syntax", "fret-syntax/lang-rust"]
+syntax-markdown = ["syntax", "fret-syntax/lang-md"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

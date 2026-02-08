@@ -111,6 +111,19 @@ Recommended event strategy (v1):
 - Use `composition*` events for preedit lifecycle, and treat `compositionend` as a commit boundary
   even if browsers also emit an `input` event.
 
+Event ordering and suppression (v1):
+
+- The bridge MUST be robust to browser event ordering differences:
+  - Some browsers can still emit an `input` event even if `beforeinput` was handled with
+    `preventDefault()`.
+  - Some browsers can emit `beforeinput`/`input` around `compositionend` in different orders.
+- The bridge MUST avoid “double insert” outcomes by tracking suppression state across event turns:
+  - If a keystroke resolved to a command binding (shortcut path), DOM mutation MUST be suppressed.
+  - If `compositionend` emitted a commit, any immediate follow-up DOM `input` for the same commit
+    MUST be ignored once.
+  - If `beforeinput` produced a `TextInput` (and prevented default), any immediate follow-up DOM
+    `input` MUST be ignored once.
+
 ### 4) Index representation and UTF-16 ↔ UTF-8 conversion
 
 The bridge MUST preserve the public contract:
@@ -202,6 +215,7 @@ The web runner SHOULD provide lightweight debug counters to explain failures:
 
 - UTF-16 ↔ UTF-8 conversion + clamping: `crates/fret-core/src/utf.rs` (tests included).
 - Hidden textarea bridge + effects mapping: `crates/fret-platform-web/src/wasm.rs` (`WebPlatformServices` handles `Effect::ImeAllow` / `Effect::ImeSetCursorArea`).
+- Command-path suppression + composition/input ordering state: `crates/fret-platform-web/src/ime_dom_state.rs` (`WebImeDomState`).
 - Web harness: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`), `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`).
 
 ## References

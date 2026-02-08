@@ -19,6 +19,7 @@ diagnostics = []
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
+fret-text-nav = { path = "../fret-text-nav" }
 slotmap.workspace = true
 smallvec.workspace = true
 stacksafe.workspace = true

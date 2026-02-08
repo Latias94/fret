@@ -95,6 +95,7 @@ pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
 pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
+pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
 pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
@@ -217,6 +218,8 @@ pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_k
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
 pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
+pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
+    "ui_gallery.nav.select.markdown_editor_source";
 pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
     "ui_gallery.nav.select.text_bidi_rtl_conformance";
@@ -572,6 +575,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_EDITOR_TORTURE,
                 docs::USAGE_CODE_EDITOR_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_MARKDOWN_EDITOR_SOURCE,
+                "Markdown Editor (Source)",
+                "Markdown / Source-mode Editor (v0)",
+                "code-editor ecosystem milestone",
+                CMD_NAV_MARKDOWN_EDITOR_SOURCE,
+                &["markdown", "editor", "source-mode", "preview"],
+                docs::DOC_MARKDOWN_EDITOR_SOURCE,
+                docs::USAGE_MARKDOWN_EDITOR_SOURCE,
             ),
             PageSpec::new(
                 PAGE_TEXT_SELECTION_PERF,
