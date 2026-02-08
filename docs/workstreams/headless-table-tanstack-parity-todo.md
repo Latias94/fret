@@ -280,6 +280,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`.
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`RowModel::{parent_row_ids,leaf_row_ids}`).
 
+- [x] HTP-rowstruct-010 Gate core row structure fields (`id/index/depth/parentId/subRows`).
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json` (`row_structure_detail`).
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Row` arena fields).
+
 ---
 
 ## M2 鈥?State-shape parity + reset semantics

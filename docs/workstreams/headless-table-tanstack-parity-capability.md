@@ -114,7 +114,7 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Partial | row model fixtures across cases |
+| `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 | `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
 | `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Partial | `tanstack_v8_headers_cells_parity.rs` |
 | `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
@@ -837,7 +837,7 @@ and does not need to preserve method names, but the **capability must exist**.
 
 | Upstream (`row.*`) | Fret mapping (capability) | Status | Evidence / gate |
 | --- | --- | --- | --- |
-| `id/index/depth/parentId/subRows` | `Row` snapshot fields via `RowModel::row(..)` (`Row::{id,index,depth,parent,sub_rows}`) | Partial | `row_model` fixtures gate ids/ordering; full per-row structural snapshot not yet fixture-gated |
+| `id/index/depth/parentId/subRows` | `Row` snapshot fields via `RowModel::row(..)` (`Row::{id,index,depth,parent,sub_rows}`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 | `original/originalSubRows` | `Row::original` + `TableBuilder::get_sub_rows` | Partial | N/A |
 | `getValue` | `Table::cell_value(row_key, column_id)` | Partial | behavior gated indirectly by sorting/filtering fixtures |
 | `getAllCells/getVisibleCells/getLeft/Center/RightVisibleCells` | `Table::row_cells(row_key)` (`RowCellsSnapshot`) | Aligned | `headers_cells.json` |

@@ -405,6 +405,18 @@ type RowTraversalDetail = {
   leaf_rows: Record<string, string[]>
 }
 
+type RowStructureDetail = {
+  rows: Record<
+    string,
+    {
+      index: number
+      depth: number
+      parent_id: string | null
+      sub_row_ids: string[]
+    }
+  >
+}
+
 type FilteringHelpersSnapshot = {
   columns: Record<
     string,
@@ -461,6 +473,7 @@ type FixtureSnapshot = {
     is_some_page_rows_selected?: boolean
     row_selection_detail?: RowSelectionDetail
     row_traversal_detail?: RowTraversalDetail
+    row_structure_detail?: RowStructureDetail
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
@@ -2265,6 +2278,29 @@ function snapshotRowTraversalDetail(table: any, rowIds: string[]): RowTraversalD
 
     out.parent_rows[id] = (row.getParentRows?.() ?? []).map((r: any) => String(r.id))
     out.leaf_rows[id] = (row.getLeafRows?.() ?? []).map((r: any) => String(r.id))
+  }
+
+  return out
+}
+
+function snapshotRowStructureDetail(table: any, rowIds: string[]): RowStructureDetail {
+  const out: RowStructureDetail = {
+    rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.rows[id] = { index: -1, depth: -1, parent_id: null, sub_row_ids: [] }
+      continue
+    }
+
+    out.rows[id] = {
+      index: Number(row.index ?? -1),
+      depth: Number(row.depth ?? -1),
+      parent_id: row.parentId != null ? String(row.parentId) : null,
+      sub_row_ids: (row.subRows ?? []).map((r: any) => String(r.id)),
+    }
   }
 
   return out
@@ -4126,6 +4162,7 @@ function snapshotColumnPinning(
           ...baseSnap,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
           row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
@@ -4150,6 +4187,7 @@ function snapshotColumnPinning(
           ...expect,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
           row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
