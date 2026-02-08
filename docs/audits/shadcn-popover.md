@@ -78,6 +78,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Explicit focus target is supported via `Popover::initial_focus(...)`.
 - Pass: A trap-focus-only mode is available via `Popover::modal_trap_focus(true)` (focus trap
   without installing a modal barrier; outside pointer interactions remain enabled).
+- Pass: Base UI modal enum parity is exposed via `Popover::modal_mode(PopoverModalMode::...)`
+  (`NonModal | Modal | TrapFocus`) in addition to boolean/trap convenience methods.
 
 ### Base UI parity extensions
 
@@ -108,6 +110,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
+- Contract test: `popover_modal_mode_alias_sets_expected_mode`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   popover panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

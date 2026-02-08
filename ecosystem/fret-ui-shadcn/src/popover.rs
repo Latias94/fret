@@ -381,6 +381,16 @@ impl Popover {
         self
     }
 
+    /// Sets Base UI-compatible modal mode in one call (`modal` prop parity).
+    ///
+    /// - `PopoverModalMode::NonModal`: outside pointer interaction stays enabled.
+    /// - `PopoverModalMode::Modal`: installs modal barrier + outside pointer disable.
+    /// - `PopoverModalMode::TrapFocus`: traps focus only; outside pointer remains enabled.
+    pub fn modal_mode(mut self, mode: PopoverModalMode) -> Self {
+        self.modal_mode = mode;
+        self
+    }
+
     /// Base UI-style trap-focus mode: trap keyboard focus inside content while leaving outside
     /// pointer interactions enabled.
     ///
@@ -5573,5 +5583,20 @@ mod tests {
         let b = Popover::new(open).shift_cross_axis(false);
         assert_eq!(a.shift_cross_axis.unwrap_or(false), false);
         assert_eq!(b.shift_cross_axis.unwrap_or(false), false);
+    }
+
+    #[test]
+    fn popover_modal_mode_alias_sets_expected_mode() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let non_modal = Popover::new(open.clone()).modal_mode(PopoverModalMode::NonModal);
+        assert_eq!(non_modal.modal_mode, PopoverModalMode::NonModal);
+
+        let modal = Popover::new(open.clone()).modal_mode(PopoverModalMode::Modal);
+        assert_eq!(modal.modal_mode, PopoverModalMode::Modal);
+
+        let trap_focus = Popover::new(open).modal_mode(PopoverModalMode::TrapFocus);
+        assert_eq!(trap_focus.modal_mode, PopoverModalMode::TrapFocus);
     }
 }
