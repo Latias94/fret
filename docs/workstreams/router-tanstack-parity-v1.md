@@ -5,6 +5,7 @@ Status: Draft (design targets; ADRs remain the source of truth)
 Related workstreams:
 
 - `docs/workstreams/router-v1.md` (baseline helpers + Web adapters)
+- `docs/workstreams/router-ui-v1.md` (desktop UI adoption layer: Outlet/Link/store)
 - `docs/workstreams/query-lifecycle-v1.md` (loader/prefetch backend: `fret-query`)
 - `docs/workstreams/state-management-v1.md` (app-owned state + selectors)
 
