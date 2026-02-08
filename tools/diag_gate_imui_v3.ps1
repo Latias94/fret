@@ -22,9 +22,17 @@ $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
 Push-Location $workspaceRoot
 try {
-    $demo = @("cargo", "run", "-j", "1", "-p", "fret-demo", "--bin", "imui_floating_windows_demo")
-    if ($Release) {
-        $demo += "--release"
+    # Build the demo once and launch the produced exe for diag runs. Avoid nested `cargo run` under
+    # `--launch`, which can exceed the script timeout on cold builds.
+    $demoBuild = @("cargo", "build", "-j", "1", "-p", "fret-demo", "--bin", "imui_floating_windows_demo")
+    if ($Release) { $demoBuild += "--release" }
+
+    & $demoBuild
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    $demoExe = if ($Release) { "target/release/imui_floating_windows_demo.exe" } else { "target/debug/imui_floating_windows_demo.exe" }
+    if (!(Test-Path $demoExe)) {
+        throw "imui demo exe not found: $demoExe"
     }
 
     & cargo nextest run -p fret-imui
@@ -50,7 +58,7 @@ try {
             --poll-ms $PollMs `
             --pack `
             --env "FRET_DIAG_SEMANTICS=1" `
-            --launch -- @demo
+            --launch -- $demoExe
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
 
