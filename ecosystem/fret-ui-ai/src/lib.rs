@@ -72,8 +72,8 @@ pub mod model;
 
 pub use elements::{
     AiChat, AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
-    ConversationMessage, ConversationScrollButton, ConversationTranscript, InlineCitation, Message,
-    FileTree, FileTreeFile, FileTreeFolder, FileTreeIcon, FileTreeItem, FileTreeName,
+    ConversationMessage, ConversationScrollButton, ConversationTranscript, FileTree, FileTreeFile,
+    FileTreeFolder, FileTreeIcon, FileTreeItem, FileTreeName, InlineCitation, Message,
     MessageAction, MessageActionTemplate, MessageActions, MessageContent, MessageParts,
     MessageResponse, MessageToolbar, OnFileTreeExpandedChange, OnFileTreeSelect, PromptInput,
     SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,

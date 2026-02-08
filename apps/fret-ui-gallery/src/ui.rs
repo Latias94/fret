@@ -17729,7 +17729,9 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
-            cx.with_state(FileTreeModels::default, |st| st.expanded = Some(model.clone()));
+            cx.with_state(FileTreeModels::default, |st| {
+                st.expanded = Some(model.clone())
+            });
             model
         }
     };
@@ -17739,7 +17741,9 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(FileTreeModels::default, |st| st.selected = Some(model.clone()));
+            cx.with_state(FileTreeModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
             model
         }
     };

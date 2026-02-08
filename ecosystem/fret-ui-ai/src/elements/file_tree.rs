@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{Color, Edges, Point, Px, SemanticsRole, Transform2D};
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
@@ -9,22 +10,19 @@ use fret_ui::element::{
     VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
     ui,
 };
-use fret_icons::ids;
 
-pub type OnFileTreeSelect =
-    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
-pub type OnFileTreeExpandedChange = Arc<
-    dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<[Arc<str>]>) + 'static,
->;
+pub type OnFileTreeSelect = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
+pub type OnFileTreeExpandedChange =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<[Arc<str>]>) + 'static>;
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -173,7 +171,10 @@ impl FileTree {
         self
     }
 
-    fn resolve_expanded_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<HashSet<Arc<str>>> {
+    fn resolve_expanded_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> Model<HashSet<Arc<str>>> {
         #[derive(Default)]
         struct ExpandedState {
             model: Option<Model<HashSet<Arc<str>>>>,
@@ -483,10 +484,8 @@ fn render_folder<H: UiHost + 'static>(
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));
-        chrome.layout = decl_style::layout_style(
-            theme,
-            LayoutRefinement::default().w_full().min_w_0(),
-        );
+        chrome.layout =
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
 
         let chevron_fg = resolve_muted_fg(theme);
         let chevron_rotation = if is_expanded { 90.0 } else { 0.0 };
@@ -654,10 +653,8 @@ fn render_file<H: UiHost + 'static>(
         chrome.background = bg;
         chrome.corner_radii = fret_core::Corners::all(MetricRef::radius(Radius::Sm).resolve(theme));
         chrome.border = Edges::all(Px(0.0));
-        chrome.layout = decl_style::layout_style(
-            theme,
-            LayoutRefinement::default().w_full().min_w_0(),
-        );
+        chrome.layout =
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0());
 
         let spacer = cx.container(
             ContainerProps {
