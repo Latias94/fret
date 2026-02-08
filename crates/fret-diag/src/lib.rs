@@ -12170,7 +12170,7 @@ mod tests {
                             "tick_id": 1,
                             "frame_id": 1,
                             "debug": { "semantics": { "nodes": [
-                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello world", "text_selection": [0,0] },
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello\nworld\n", "text_selection": [0,0] },
                                 { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
                             ] } }
                         },
@@ -12178,7 +12178,7 @@ mod tests {
                             "tick_id": 2,
                             "frame_id": 2,
                             "debug": { "semantics": { "nodes": [
-                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello world", "text_selection": [0,11] },
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello\nworld\n", "text_selection": [0,6] },
                                 { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
                             ] } }
                         }

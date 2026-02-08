@@ -10977,7 +10977,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
     warmup_frames: u64,
 ) -> Result<(), String> {
     const VIEWPORT_TEST_ID: &str = "ui-gallery-markdown-editor-viewport";
-    const EXPECTED_TEXT_LEN_BYTES_FALLBACK: u64 = 11; // "hello world"
+    const EXPECTED_LINE_END_ANY_OF: [u64; 2] = [6, 7]; // "hello\n" (LF) or "hello\r\n" (CRLF)
 
     let windows = bundle
         .get("windows")
@@ -10993,7 +10993,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
 
     // State machine:
     // 0: waiting for caret=0 (collapsed)
-    // 1: waiting for selection=0..text_len_bytes
+    // 1: waiting for selection=0..line_end (including the trailing newline when present)
     // 2: success
     let mut state: u8 = 0;
 
@@ -11075,14 +11075,6 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
 
-            let text_len_bytes = text_field
-                .get("value")
-                .and_then(|v| v.as_str())
-                .and_then(|v| {
-                    parse_redacted_len_bytes(v).or_else(|| Some(v.as_bytes().len() as u64))
-                })
-                .unwrap_or(EXPECTED_TEXT_LEN_BYTES_FALLBACK);
-
             let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
             last_observed = Some(serde_json::json!({
                 "window": window_id,
@@ -11091,7 +11083,6 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
                 "viewport_node": viewport_node_id,
                 "text_field_node": cur,
                 "focused": focused,
-                "text_len_bytes": text_len_bytes,
                 "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
                 "state": state,
             }));
@@ -11112,7 +11103,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
                     }
                 }
                 1 => {
-                    if focused && sel_lo == 0 && sel_hi == text_len_bytes {
+                    if focused && sel_lo == 0 && EXPECTED_LINE_END_ANY_OF.contains(&sel_hi) {
                         state = 2;
                         break;
                     }
@@ -11143,9 +11134,9 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
         "viewport_test_id": VIEWPORT_TEST_ID,
         "expected_sequence_normalized": [
             {"text_selection":[0,0]},
-            {"text_selection":"[0,text_len_bytes]"}
+            {"text_selection_any_of":[[0,6],[0,7]]}
         ],
-        "expected_text_len_bytes_fallback": EXPECTED_TEXT_LEN_BYTES_FALLBACK,
+        "expected_line_end_any_of": EXPECTED_LINE_END_ANY_OF,
     });
     write_json_value(&evidence_path, &payload)?;
 
@@ -11162,7 +11153,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_t
     }
 
     Err(format!(
-        "ui-gallery markdown editor line-boundary (triple-click) gate failed (expected selection to expand 0..text_len_bytes)\n  bundle: {}\n  evidence: {}",
+        "ui-gallery markdown editor line-boundary (triple-click) gate failed (expected selection to expand 0..line_end including trailing newline)\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))

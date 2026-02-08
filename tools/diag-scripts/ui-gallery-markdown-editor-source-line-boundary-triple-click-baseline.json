@@ -48,7 +48,10 @@
     },
 
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "type_text", "text": "hello world" },
+    { "type": "type_text", "text": "hello" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "type_text", "text": "world" },
+    { "type": "press_key", "key": "enter" },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "press_key", "key": "home", "modifiers": { "ctrl": true } },
