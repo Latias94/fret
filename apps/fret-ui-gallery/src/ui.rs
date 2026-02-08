@@ -3507,6 +3507,8 @@ fn preview_code_editor_torture(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         let reset_handle = header_handle.clone();
+                        let preedit_handle = header_handle.clone();
+                        let clear_preedit_handle = header_handle.clone();
                         vec![
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -3544,6 +3546,26 @@ fn preview_code_editor_torture(
                             } else {
                                 "Soft wrap: off"
                             }),
+                            shadcn::Button::new("Preedit: inject")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-inject-preedit")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    preedit_handle.set_preedit_debug("ab", None);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Preedit: clear")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-clear-preedit")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    clear_preedit_handle.set_preedit_debug("", None);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")
                                 .a11y_label("Toggle fold fixture on line 0")

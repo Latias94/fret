@@ -2348,6 +2348,7 @@ pub fn build_app() -> App {
                         let anchor = selection.anchor.min(text.len()) as u64;
                         let caret = selection.caret().min(text.len()) as u64;
                         let stats = handle.cache_stats();
+                        let preedit_active = handle.preedit_active();
                         let fold_placeholder_present = handle
                             .debug_decorated_line_text(0)
                             .is_some_and(|t| t.contains('…'));
@@ -2357,6 +2358,7 @@ pub fn build_app() -> App {
                         serde_json::json!({
                             "schema_version": 1,
                             "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                            "preedit_active": preedit_active,
                             "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
                             "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                             "text_len_bytes": text.len() as u64,

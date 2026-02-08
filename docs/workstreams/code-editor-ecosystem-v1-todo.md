@@ -259,7 +259,10 @@ Evidence anchors:
   - [x] Add a soft-wrap gate that asserts fold placeholders are visible under soft wrap:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json`
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap`)
-  - [ ] Follow-up: decide how folds interact with soft-wrap + inline preedit (v1 currently disables fold placeholders under inline preedit).
+  - [x] Define v1 behavior for inline preedit: suppress fold placeholders while inline preedit is active, and lock it with a regression gate:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit`)
+  - [ ] Follow-up: decide whether v2 should compose fold placeholders with inline preedit (and how that affects mapping).
 - [~] Inlays (injected display fragments) without mutating the underlying buffer.
   - [x] Unwrapped baseline: inject per-line inlay text and include it in the same buffer↔display mapping used by caret/selection/hit-test.
   - [x] Add a UI Gallery fixture toggle and a bundle gate that asserts the inlay fixture is observed at least once:
@@ -268,7 +271,10 @@ Evidence anchors:
   - [x] Add a soft-wrap gate that asserts inlays are visible under soft wrap:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json`
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap`)
-  - [ ] Follow-up: decide how inlays interact with soft-wrap + inline preedit (v1 currently disables inlays under inline preedit).
+  - [x] Define v1 behavior for inline preedit: suppress inlays while inline preedit is active, and lock it with a regression gate:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit`)
+  - [ ] Follow-up: decide whether v2 should compose inlays with inline preedit (and how that affects mapping).
 
 ---
 
