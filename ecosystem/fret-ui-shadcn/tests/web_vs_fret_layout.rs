@@ -62,6 +62,22 @@ struct LayoutTriggerHeightCase {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutDatePickerTriggerRecipe {
+    DatePicker,
+    DatePickerWithPresets,
+    DateRangePicker,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutDatePickerTriggerCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutDatePickerTriggerRecipe,
+    label: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
 }
@@ -25336,165 +25352,124 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
 }
 
 #[test]
-fn web_vs_fret_layout_date_picker_demo_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-demo");
-    let theme = web_theme(&web);
-    let web_button =
-        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
+fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_date_picker_trigger_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutDatePickerTriggerCase> =
+        serde_json::from_str(raw).expect("layout date picker fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
+    for case in suite.cases {
+        eprintln!("layout date picker trigger case={}", case.id);
+        let web = read_web_golden(&case.web_name);
+        let theme = web_theme(&web);
 
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::Month;
+        let web_button = match case.recipe {
+            LayoutDatePickerTriggerRecipe::DateRangePicker => find_first(&theme.root, &|n| {
+                n.tag == "button" && contains_id(n, "date")
+            })
+            .expect("web button"),
+            LayoutDatePickerTriggerRecipe::DatePicker
+            | LayoutDatePickerTriggerRecipe::DatePickerWithPresets => {
+                web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button")
+            }
+        };
 
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2026, Month::January));
-        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+        );
 
-        vec![
-            fret_ui_shadcn::DatePicker::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
+        let snap = match case.recipe {
+            LayoutDatePickerTriggerRecipe::DatePicker => run_fret_root(bounds, |cx| {
+                use fret_ui_headless::calendar::CalendarMonth;
+                use time::Month;
 
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret date-picker trigger button");
+                let open: Model<bool> = cx.app.models_mut().insert(false);
+                let month: Model<CalendarMonth> = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
-    assert_close_px(
-        "date-picker-demo trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-demo trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
+                vec![
+                    fret_ui_shadcn::DatePicker::new(open, month, selected)
+                        .refine_layout(
+                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                        )
+                        .into_element(cx),
+                ]
+            }),
+            LayoutDatePickerTriggerRecipe::DatePickerWithPresets => run_fret_root(bounds, |cx| {
+                use fret_ui_headless::calendar::CalendarMonth;
+                use time::Month;
 
-#[test]
-fn web_vs_fret_layout_date_picker_with_presets_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-with-presets");
-    let theme = web_theme(&web);
-    let web_button =
-        web_find_by_tag_and_text(&theme.root, "button", "Pick a date").expect("web button");
+                let open: Model<bool> = cx.app.models_mut().insert(false);
+                let month: Model<CalendarMonth> = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
+                vec![
+                    fret_ui_shadcn::DatePickerWithPresets::new(open, month, selected)
+                        .refine_layout(
+                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                        )
+                        .into_element(cx),
+                ]
+            }),
+            LayoutDatePickerTriggerRecipe::DateRangePicker => run_fret_root(bounds, |cx| {
+                use fret_ui_headless::calendar::CalendarMonth;
+                use time::{Date, Month};
 
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::Month;
+                let open: Model<bool> = cx.app.models_mut().insert(false);
+                let month: Model<CalendarMonth> = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2022, Month::January));
+                let selected: Model<fret_ui_headless::calendar::DateRangeSelection> = cx
+                    .app
+                    .models_mut()
+                    .insert(fret_ui_headless::calendar::DateRangeSelection {
+                        from: Some(
+                            Date::from_calendar_date(2022, Month::January, 20).expect("from date"),
+                        ),
+                        to: Some(
+                            Date::from_calendar_date(2022, Month::February, 9).expect("to date"),
+                        ),
+                    });
 
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2026, Month::January));
-        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+                vec![
+                    fret_ui_shadcn::DateRangePicker::new(open, month, selected)
+                        .refine_layout(
+                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
+                        )
+                        .into_element(cx),
+                ]
+            }),
+        };
 
-        vec![
-            fret_ui_shadcn::DatePickerWithPresets::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
+        let button = find_semantics(&snap, SemanticsRole::Button, Some(&case.label))
+            .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+            .expect("fret date-picker trigger button");
 
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Pick a date"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret date-picker trigger button");
-
-    assert_close_px(
-        "date-picker-with-presets trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-with-presets trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_date_picker_with_range_trigger_geometry_matches_web() {
-    let web = read_web_golden("date-picker-with-range");
-    let theme = web_theme(&web);
-    let web_button = find_first(&theme.root, &|n| {
-        n.tag == "button" && contains_id(n, "date")
-    })
-    .expect("web button");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use time::{Date, Month};
-
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        let month: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(2022, Month::January));
-        let selected: Model<fret_ui_headless::calendar::DateRangeSelection> = cx
-            .app
-            .models_mut()
-            .insert(fret_ui_headless::calendar::DateRangeSelection {
-                from: Some(Date::from_calendar_date(2022, Month::January, 20).expect("from date")),
-                to: Some(Date::from_calendar_date(2022, Month::February, 9).expect("to date")),
-            });
-
-        vec![
-            fret_ui_shadcn::DateRangePicker::new(open, month, selected)
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
-                )
-                .into_element(cx),
-        ]
-    });
-
-    let button = find_semantics(
-        &snap,
-        SemanticsRole::Button,
-        Some("Jan 20, 2022 - Feb 09, 2022"),
-    )
-    .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-    .expect("fret date-range trigger button");
-
-    assert_close_px(
-        "date-picker-with-range trigger w",
-        button.bounds.size.width,
-        web_button.rect.w,
-        1.0,
-    );
-    assert_close_px(
-        "date-picker-with-range trigger h",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
+        assert_close_px(
+            &format!("{} trigger w", case.web_name),
+            button.bounds.size.width,
+            web_button.rect.w,
+            1.0,
+        );
+        assert_close_px(
+            &format!("{} trigger h", case.web_name),
+            button.bounds.size.height,
+            web_button.rect.h,
+            1.0,
+        );
+    }
 }
 
 #[test]
