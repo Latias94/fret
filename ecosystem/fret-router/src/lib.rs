@@ -54,7 +54,8 @@ pub use router_state::{
     RouterUpdateWithPrefetchIntents,
 };
 pub use search::{
-    RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,
+    RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, SearchValue,
+    ValidateSearchFn,
 };
 #[cfg(all(target_arch = "wasm32", feature = "hash-routing"))]
 pub use web_adapters::HashHistoryAdapter;
