@@ -17,7 +17,7 @@ use fret_router::{
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
 use fret_runtime::{CommandId, CommandMeta, CommandRegistry, CommandScope, Effect};
-use fret_runtime::{Model, WeakModel};
+use fret_runtime::{Model, WeakModel, WhenExpr, WindowCommandAvailabilityService};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableProps, SemanticsDecoration};
@@ -97,6 +97,7 @@ pub fn register_router_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Back")
             .with_category("Router")
             .with_description("Navigate back in router history.")
+            .with_when(WhenExpr::parse("router.can_back").expect("when expr should parse"))
             .with_scope(CommandScope::Window),
     );
     registry.register(
@@ -104,6 +105,7 @@ pub fn register_router_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Forward")
             .with_category("Router")
             .with_description("Navigate forward in router history.")
+            .with_when(WhenExpr::parse("router.can_forward").expect("when expr should parse"))
             .with_scope(CommandScope::Window),
     );
 }
@@ -234,15 +236,22 @@ where
             return;
         }
 
-        let next = app
+        let (next, can_back, can_forward) = app
             .models()
             .read(&self.router, |router| {
-                RouterUiSnapshot::from_state(router.state())
+                let next = RouterUiSnapshot::from_state(router.state());
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                (next, can_back, can_forward)
             })
             .expect("router model should be readable");
         let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
         let intents = intents.to_vec();
         let _ = app.models_mut().update(&self.intents, |v| *v = intents);
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_router_availability(self.window, can_back, can_forward);
+        });
         app.request_redraw(self.window);
     }
 
@@ -322,13 +331,16 @@ where
             let result = host.models_mut().update(&router, |router| {
                 let update = router.navigate_with_prefetch_intents(action, Some(to))?;
                 let snapshot = RouterUiSnapshot::from_state(router.state());
-                Ok::<_, RouteSearchValidationFailure>((update, snapshot))
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                Ok::<_, RouteSearchValidationFailure>((update, snapshot, can_back, can_forward))
             });
 
             let Ok(result) = result else {
                 return;
             };
-            let Ok((update, next_snapshot)) = result else {
+            let Ok((update, next_snapshot, can_back, can_forward)) = result else {
                 host.request_redraw(window);
                 return;
             };
@@ -341,6 +353,7 @@ where
             let _ = host
                 .models_mut()
                 .update(&intents_model, |v| *v = update.intents.clone());
+            host.set_router_command_availability(window, can_back, can_forward);
             host.request_redraw(window);
         })
     }
