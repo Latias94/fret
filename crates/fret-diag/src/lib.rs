@@ -7439,6 +7439,7 @@ fn ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
     matches!(
         name,
         "ui-gallery-markdown-editor-source-disabled-baseline.json"
+            | "ui-gallery-markdown-editor-source-disabled-inject-preedit-baseline.json"
     )
 }
 
