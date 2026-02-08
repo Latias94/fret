@@ -435,7 +435,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] BU-FR-eco-041 Map ecosystem crates into “headless → kit → shadcn → specialized” lanes and mark ownership boundaries.
   - Start from: `docs/repo-structure.md`, `docs/workstreams/ecosystem-status.md`
 
-- [ ] BU-FR-eco-042 L0 audit `fret-ui-kit` and capture the top refactor hazards and seams.
+- [x] BU-FR-eco-042 L0 audit `fret-ui-kit` and capture the top refactor hazards and seams.
   - Goal: identify which policy belongs in `fret-ui-kit` vs `fret-ui-shadcn` vs apps, and establish initial gates.
   - Evidence:
     - `docs/workstreams/crate-audits/fret-ui-kit.l0.md`
