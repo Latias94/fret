@@ -305,12 +305,26 @@ struct BaselineMeasureCache {
 
 impl CodeEditorState {
     fn refresh_display_map(&mut self) {
-        self.display_map = DisplayMap::new_with_decorations(
-            &self.buffer,
-            self.display_wrap_cols,
-            &self.line_folds,
-            &self.line_inlays,
-        );
+        // v1 contract: inline IME preedit is modeled as a paint-time injection. While preedit is
+        // active, we suppress fold placeholders and inlays to keep buffer↔display mapping stable.
+        self.display_map = if self.preedit.is_some() {
+            DisplayMap::new(&self.buffer, self.display_wrap_cols)
+        } else {
+            DisplayMap::new_with_decorations(
+                &self.buffer,
+                self.display_wrap_cols,
+                &self.line_folds,
+                &self.line_inlays,
+            )
+        };
+    }
+
+    fn set_preedit(&mut self, preedit: Option<PreeditState>) {
+        if self.preedit == preedit {
+            return;
+        }
+        self.preedit = preedit;
+        self.refresh_display_map();
     }
 }
 
@@ -408,7 +422,7 @@ impl CodeEditorHandle {
         let anchor = selection.anchor.min(max);
         let focus = selection.focus.min(max);
         st.selection = Selection { anchor, focus };
-        st.preedit = None;
+        st.set_preedit(None);
         st.caret_preferred_x = None;
         st.undo_group = None;
         st.dragging = false;
@@ -426,12 +440,13 @@ impl CodeEditorHandle {
     pub fn set_preedit_debug(&self, text: impl Into<String>, cursor: Option<(usize, usize)>) {
         let text = text.into();
         let mut st = self.state.borrow_mut();
-        if text.is_empty() {
-            st.preedit = None;
-        } else {
-            st.preedit = Some(PreeditState { text, cursor });
-        }
+        let preedit = (!text.is_empty()).then_some(PreeditState { text, cursor });
+        st.set_preedit(preedit);
         st.caret_preferred_x = None;
+    }
+
+    pub fn preedit_active(&self) -> bool {
+        self.state.borrow().preedit.is_some()
     }
 
     pub fn region_id(&self) -> Option<fret_ui::GlobalElementId> {
@@ -1047,7 +1062,7 @@ impl CodeEditor {
                                         anchor: 0,
                                         focus: end,
                                     };
-                                    st.preedit = None;
+                                    st.set_preedit(None);
                                     st.undo_group = None;
                                     did = true;
                                 }
@@ -1065,19 +1080,19 @@ impl CodeEditor {
                                     did = true;
                                 }
                                 "text.move_word_left" => {
-                                    st.preedit = None;
+                                    st.set_preedit(None);
                                     did = input::move_word(&mut st, -1, false);
                                 }
                                 "text.move_word_right" => {
-                                    st.preedit = None;
+                                    st.set_preedit(None);
                                     did = input::move_word(&mut st, 1, false);
                                 }
                                 "text.select_word_left" => {
-                                    st.preedit = None;
+                                    st.set_preedit(None);
                                     did = input::move_word(&mut st, -1, true);
                                 }
                                 "text.select_word_right" => {
-                                    st.preedit = None;
+                                    st.set_preedit(None);
                                     did = input::move_word(&mut st, 1, true);
                                 }
                                 _ => return false,
@@ -1403,7 +1418,7 @@ impl CodeEditor {
                 cx.text_input_region_on_text_input(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, text: &str| {
                         let mut st = text_state.borrow_mut();
-                        st.preedit = None;
+                        st.set_preedit(None);
                         if input::insert_text(&mut st, text).is_some() {
                             input::scroll_caret_into_view(&st, row_h, &text_scroll);
                             input::push_caret_rect_effect(
@@ -1433,7 +1448,7 @@ impl CodeEditor {
                         match ime {
                             fret_core::ImeEvent::Enabled => return false,
                             fret_core::ImeEvent::Disabled => {
-                                st.preedit = None;
+                                st.set_preedit(None);
                             }
                             fret_core::ImeEvent::Commit(text) => {
                                 let _ = input::insert_text_with_kind(
@@ -1441,17 +1456,14 @@ impl CodeEditor {
                                     text.as_str(),
                                     UndoGroupKind::Typing,
                                 );
-                                st.preedit = None;
+                                st.set_preedit(None);
                             }
                             fret_core::ImeEvent::Preedit { text, cursor } => {
-                                if text.is_empty() {
-                                    st.preedit = None;
-                                } else {
-                                    st.preedit = Some(PreeditState {
-                                        text: text.clone(),
-                                        cursor: *cursor,
-                                    });
-                                }
+                                let preedit = (!text.is_empty()).then_some(PreeditState {
+                                    text: text.clone(),
+                                    cursor: *cursor,
+                                });
+                                st.set_preedit(preedit);
                             }
                             fret_core::ImeEvent::DeleteSurrounding {
                                 before_bytes,
@@ -1546,7 +1558,7 @@ impl CodeEditor {
                             )
                         };
 
-                        st.preedit = None;
+                        st.set_preedit(None);
 
                         st.selection = Selection {
                             anchor: new_anchor,

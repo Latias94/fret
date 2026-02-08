@@ -89,7 +89,7 @@ pub(super) fn apply_pointer_down_selection(
     click_count: u8,
     shift: bool,
 ) {
-    st.preedit = None;
+    st.set_preedit(None);
 
     let caret = st
         .buffer
@@ -164,7 +164,7 @@ pub(super) fn handle_key_down(
             _ => false,
         };
         if cancel_preedit {
-            st.preedit = None;
+            st.set_preedit(None);
         }
     }
 
@@ -602,7 +602,7 @@ pub(super) fn apply_and_record_edit(
         });
     }
 
-    st.preedit = None;
+    st.set_preedit(None);
     let delta = {
         let group = st.undo_group.as_mut().expect("undo group must exist");
         st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?
@@ -871,7 +871,7 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
             focus: next,
         };
     }
-    st.preedit = None;
+    st.set_preedit(None);
     true
 }
 
