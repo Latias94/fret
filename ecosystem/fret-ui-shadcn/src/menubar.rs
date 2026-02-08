@@ -920,67 +920,69 @@ impl Menubar {
                 })
                 .collect();
 
-            cx.semantics(
-                SemanticsProps {
-                    layout: LayoutStyle::default(),
-                    role: SemanticsRole::MenuBar,
-                    disabled,
-                    ..Default::default()
-                },
-                |cx| {
-                    vec![cx.container(
-                        ContainerProps {
-                            layout,
-                            padding: Edges {
-                                top: pad_top,
-                                right: pad_right,
-                                bottom: pad_bottom,
-                                left: pad_left,
+            with_menubar_provider_state(cx, disabled, |cx| {
+                cx.semantics(
+                    SemanticsProps {
+                        layout: LayoutStyle::default(),
+                        role: SemanticsRole::MenuBar,
+                        disabled,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout,
+                                padding: Edges {
+                                    top: pad_top,
+                                    right: pad_right,
+                                    bottom: pad_bottom,
+                                    left: pad_left,
+                                },
+                                background: Some(bg),
+                                shadow: Some(shadow),
+                                border: Edges::all(border_width),
+                                border_color: Some(border),
+                                corner_radii: Corners::all(radius),
+                                ..Default::default()
                             },
-                            background: Some(bg),
-                            shadow: Some(shadow),
-                            border: Edges::all(border_width),
-                            border_color: Some(border),
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![roving_focus_group::roving_focus_group_apg(
-                                cx,
-                                RovingFlexProps {
-                                    flex: FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
+                            move |cx| {
+                                vec![roving_focus_group::roving_focus_group_apg(
+                                    cx,
+                                    RovingFlexProps {
+                                        flex: FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap,
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        roving: RovingFocusProps {
+                                            enabled: !disabled,
+                                            wrap: true,
+                                            disabled: trigger_disabled.clone(),
+                                        },
                                     },
-                                    roving: RovingFocusProps {
-                                        enabled: !disabled,
-                                        wrap: true,
-                                        disabled: trigger_disabled.clone(),
+                                    roving_focus_group::TypeaheadPolicy::Prefix {
+                                        labels: trigger_labels.clone(),
+                                        timeout_ticks: typeahead_timeout_ticks,
                                     },
-                                },
-                                roving_focus_group::TypeaheadPolicy::Prefix {
-                                    labels: trigger_labels.clone(),
-                                    timeout_ticks: typeahead_timeout_ticks,
-                                },
-                                move |cx| {
-                                    menus
-                                        .into_iter()
-                                        .map(|m| {
-                                            m.align_leading_icons(align_leading_icons)
-                                                .into_element(cx)
-                                        })
-                                        .collect::<Vec<_>>()
-                                },
-                            )]
-                        },
-                    )]
-                },
-            )
+                                    move |cx| {
+                                        menus
+                                            .into_iter()
+                                            .map(|m| {
+                                                m.align_leading_icons(align_leading_icons)
+                                                    .into_element(cx)
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
+                                )]
+                            },
+                        )]
+                    },
+                )
+            })
         })
     }
 }
@@ -990,6 +992,34 @@ struct MenubarMenuState {
     open: Option<Model<bool>>,
     close_prevent_auto_focus: Option<Model<bool>>,
     keyboard_focus_last_on_open: Option<Model<bool>>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct MenubarProviderState {
+    disabled: bool,
+}
+
+fn menubar_disabled_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
+    cx.inherited_state_where::<MenubarProviderState>(|st| st.disabled)
+        .is_some_and(|st| st.disabled)
+}
+
+#[track_caller]
+fn with_menubar_provider_state<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    disabled: bool,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MenubarProviderState::default, |st| {
+        let prev = st.disabled;
+        st.disabled = disabled;
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MenubarProviderState::default, |st| {
+        st.disabled = prev;
+    });
+    out
 }
 
 #[derive(Clone)]
@@ -1154,7 +1184,7 @@ impl MenubarMenuEntries {
             };
 
             let theme = Theme::global(&*cx.app).clone();
-            let enabled = !self.menu.disabled;
+            let enabled = !(self.menu.disabled || menubar_disabled_in_scope(cx));
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
@@ -1264,7 +1294,11 @@ impl MenubarMenuEntries {
                     patient_click_timer,
                 ));
 
-                let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+                let model_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+                if !enabled && model_open {
+                    let _ = cx.app.models_mut().update(&open, |v| *v = false);
+                }
+                let is_open = model_open && enabled;
                 let keyboard_focus_last_on_open_now = cx
                     .watch_model(&keyboard_focus_last_on_open)
                     .layout()
@@ -3510,12 +3544,23 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
     ) {
+        render_frame_with_disabled(ui, app, services, window, bounds, false);
+    }
+
+    fn render_frame_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        disabled: bool,
+    ) {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
         OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
-                vec![menubar(cx, |_cx| {
-                    vec![
+                vec![
+                    Menubar::new(vec![
                         MenubarMenu::new("File").entries(vec![
                             MenubarEntry::Item(MenubarItem::new("New")),
                             MenubarEntry::Separator,
@@ -3527,8 +3572,10 @@ mod tests {
                             MenubarEntry::Separator,
                             MenubarEntry::Item(MenubarItem::new("Redo")),
                         ]),
-                    ]
-                })]
+                    ])
+                    .disabled(disabled)
+                    .into_element(cx),
+                ]
             });
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
@@ -3946,6 +3993,80 @@ mod tests {
         let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!menu_trigger_expanded(snap3, "File"));
         assert!(menu_trigger_expanded(snap3, "Edit"));
+    }
+
+    #[test]
+    fn menubar_disabled_hides_content_even_when_menu_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        // Open one menu first (open model = true in component state), then switch root to disabled.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, false);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, false);
+        let opened = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            menu_trigger_expanded(opened, "File"),
+            "baseline: menu should be open before disabling root"
+        );
+
+        // Disabled root should immediately gate expanded semantics, while content can still be
+        // present for one close-transition frame.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !menu_trigger_expanded(&snap, "File") && !menu_trigger_expanded(&snap, "Edit"),
+            "disabled menubar should not expose expanded trigger semantics"
+        );
+
+        // Next frame: close transition settles and menu content should no longer be exposed.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(|n| {
+                !(n.role == SemanticsRole::MenuItem
+                    && matches!(
+                        n.label.as_deref(),
+                        Some("New") | Some("Open") | Some("Exit") | Some("Undo") | Some("Redo")
+                    ))
+            }),
+            "disabled menubar should keep menu content hidden"
+        );
     }
 
     #[test]
