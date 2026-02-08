@@ -343,7 +343,8 @@ unsafe fn append_menu_item(
         MenuItem::Label { title } => {
             let item = NSMenuItem::new(nil).autorelease();
             let _: () = msg_send![item, setTitle: ns_string(title)];
-            item.setEnabled_(false);
+            // Avoid relying on deprecated cocoa trait surface; send the selector directly.
+            let _: () = msg_send![item, setEnabled: false];
             menu.addItem_(item);
         }
         MenuItem::Submenu { title, items, .. } => {

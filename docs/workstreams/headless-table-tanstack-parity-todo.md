@@ -233,10 +233,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ## M1 鈥?Core types (columns/headers/rows/cells)
 
-- [~] HTP-core-010 Add TanStack-like column tree representation (nested columns).
+- [x] HTP-core-010 Add TanStack-like column tree representation (nested columns).
   - Done (scaffolding): grouped column defs via `ColumnDef::columns(...)` and leaf flattening.
     - Evidence: `ecosystem/fret-ui-headless/src/table/column.rs` (`ColumnDef.columns`)
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (stores `column_tree` + leaf flatten)
+  - Done (parity-gated): column tree / flat column inventory helpers match upstream outcomes for deep nesting + visibility.
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`
 - [x] HTP-core-020 Implement header group generation (including placeholder headers).
   - Done (parity-gated): `getHeaderGroups` + pin-family variants + placeholder headers.
     - Evidence: `ecosystem/fret-ui-headless/src/table/headers.rs`
@@ -255,10 +260,26 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): initial core snapshot schema (column tree + leaf sets + header groups + row ids + cell ids).
     - Evidence: `ecosystem/fret-ui-headless/src/table/core_model.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::core_model_snapshot`)
-  - Remaining: extend the snapshot with a consumer-facing capability inventory (so UI code doesn't re-implement
-    TanStack policies) and version the schema when we add more fields.
-    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (expects `core_model`)
-    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
+  - Update (parity-gated): bump core snapshot to `schema_version: 2` and add `column_capabilities`
+    inventory for leaf columns:
+    `getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Update (parity-gated): core snapshot cell inventory now includes grouping flags:
+    `cell.getIsGrouped/getIsPlaceholder/getIsAggregated` across `all/visible/left/center/right` splits.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Update (parity-gated): add `header_sizing` inventory keyed by header id:
+    `header.getSize/getStart` (including pin-family header groups) to avoid UI-side recompute drift.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Remaining: broaden schema to include a fuller column/header/cell capability inventory (and keep versioning strict).
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
   - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
@@ -268,6 +289,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
   - Evidence (engine surfaces): `ecosystem/fret-ui-headless/src/table/row_model.rs`
     (`Table::{flat_headers,leaf_headers,footer_groups}` + pin-family variants).
+
+- [x] HTP-rowtrav-010 Gate row traversal helpers (`row.getParentRows` / `row.getLeafRows`) for nested `subRows`.
+  - Parity-gated (ordering semantics): parent chain order + DFS preorder flattening of descendants.
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json` (`row_traversal_detail`).
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`RowModel::{parent_row_ids,leaf_row_ids}`).
+
+- [x] HTP-rowstruct-010 Gate core row structure fields (`id/index/depth/parentId/subRows`).
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json` (`row_structure_detail`).
+  - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Row` arena fields).
 
 ---
 
@@ -554,6 +586,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     (including sorted grouped roots) and is parity-asserted by fixture snapshots.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::center_row_keys`),
       `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` (`row_id_for_key`, row pinning assertions).
+  - Update: `row_pinning.can_pin/pin_position/pinned_index` inventories now include grouped row ids
+    (e.g. `role:1`) under grouping, and are fixture-gated.
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -677,6 +715,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Hardened gate coverage: column pinning fixtures now also assert per-row pinned cell splits
     (`getLeftVisibleCells`/`getCenterVisibleCells`/`getRightVisibleCells`).
     - Evidence: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` (`expect.cells`)
+  - Update: visibility × pinning semantics are now fixture-gated:
+    - Leaf-column splits (`getLeft/Center/RightLeafColumns`) ignore visibility, matching TanStack.
+    - Visible cell splits (`getLeft/Center/RightVisibleCells`) filter hidden pinned columns.
+    - Fixture snapshots:
+      - `column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells`
+      - `column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells`
 - [x] HTP-colpin-020 Align `resetColumnPinning(defaultState?)` semantics.
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`
@@ -693,6 +737,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
+  - Covered: `getAllFlatColumns/getVisibleFlatColumns` inventory surface (including group column visibility semantics).
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::{all_flat_columns,visible_flat_columns,is_column_visible}`).
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` (`core_model.flat_columns`).
   - Covered: controlled-hook noop semantics (`onColumnVisibilityChange` ignores updater).
     - Fixture snapshots: `visord_toggle_column_a_off_on_column_visibility_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnVisibilityChange`)
@@ -706,6 +753,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Covered: controlled-hook noop semantics (`onColumnOrderChange` ignores updater).
     - Fixture snapshots: `visord_set_column_order_on_column_order_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnOrderChange`)
+- [x] HTP-corecol-010 Align core column inventory helpers:
+  - `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn/getVisibleFlatColumns`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    (`Table::{column_tree,column_tree_snapshot,column_any,column_node_snapshot,all_flat_columns,visible_flat_columns,ordered_columns}`).
+  - Gates:
+    - `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`
 
 ### UI integration notes (workstream hygiene)
 

@@ -702,6 +702,9 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = cx
+                    .tree
+                    .maybe_bucket_text_wrap_width(props.wrap, measure_width);
                 let constraints = TextConstraints {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
@@ -766,6 +769,9 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = cx
+                    .tree
+                    .maybe_bucket_text_wrap_width(props.wrap, measure_width);
                 let constraints = TextConstraints {
                     max_width: Some(measure_width),
                     wrap: props.wrap,
@@ -839,6 +845,9 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = cx
+                    .tree
+                    .maybe_bucket_text_wrap_width(props.wrap, measure_width);
                 let constraints = TextConstraints {
                     max_width: Some(measure_width),
                     wrap: props.wrap,

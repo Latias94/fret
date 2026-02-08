@@ -711,6 +711,200 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_alignment_gate_header_matches_rows_under_overflow_and_variable_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 3;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32];
+        let columns = vec![
+            {
+                let mut col = ColumnDef::new("name");
+                col.size = 220.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("status");
+                col.size = 140.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("cpu%");
+                col.size = 90.0;
+                col
+            },
+            {
+                let mut col = ColumnDef::new("mem_mb");
+                col.size = 110.0;
+                col
+            },
+        ];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let mut props = TableViewProps::default();
+        props.draw_frame = false;
+        props.row_measure_mode = TableRowMeasureMode::Measured;
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, col, _sort| {
+                        let test_id = Arc::<str>::from(format!("table-align-header-{}", col.id));
+                        let label = Arc::<str>::from(col.id.as_ref());
+                        let header = cx.semantics(
+                            SemanticsProps {
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| {
+                                vec![_cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![crate::ui::text(cx, label.as_ref()).into_element(cx)],
+                                )]
+                            },
+                        );
+                        [header]
+                    },
+                    |cx, row, col| {
+                        let test_id =
+                            Arc::<str>::from(format!("table-align-cell-r{}-{}", row.index, col.id));
+                        let text = match col.id.as_ref() {
+                            "name" => {
+                                if row.index == 1 {
+                                    format!("Row {} (details)\nMore text to force wrap", row.index)
+                                } else {
+                                    format!("Row {}", row.index)
+                                }
+                            }
+                            "status" => "Running".to_string(),
+                            "cpu%" => "42%".to_string(),
+                            "mem_mb" => "256 MB".to_string(),
+                            _ => "?".to_string(),
+                        };
+                        let cell = crate::ui::text(cx, text).wrap(TextWrap::Grapheme);
+                        let cell = cx.semantics(
+                            SemanticsProps {
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| {
+                                vec![_cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            size: fret_ui::element::SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cell.clone().into_element(cx)],
+                                )]
+                            },
+                        );
+                        [cell]
+                    },
+                    None,
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+
+        let find_bounds = |id: &str| -> Rect {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("expected to find {id}"))
+        };
+
+        // `table_virtualized` composes header/body content under slightly different chrome
+        // (e.g. grid line dividers vs resize handles). We want a strict gate for x alignment
+        // (columns must not shift across rows), while allowing a small tolerance for the
+        // content-box width when borders are involved.
+        let eps_x = 0.5;
+        let eps_w = 1.0;
+        let col_ids = ["name", "status", "cpu%", "mem_mb"];
+        for col_id in col_ids {
+            let header = find_bounds(&format!("table-align-header-{col_id}"));
+            for row in 0..3 {
+                let cell = find_bounds(&format!("table-align-cell-r{row}-{col_id}"));
+                assert!(
+                    (cell.origin.x.0 - header.origin.x.0).abs() <= eps_x,
+                    "expected header/cell x alignment for col={col_id} row={row} (header_x={:.2}px cell_x={:.2}px)",
+                    header.origin.x.0,
+                    cell.origin.x.0
+                );
+                assert!(
+                    (cell.size.width.0 - header.size.width.0).abs() <= eps_w,
+                    "expected header/cell width alignment for col={col_id} row={row} (header_w={:.2}px cell_w={:.2}px)",
+                    header.size.width.0,
+                    cell.size.width.0
+                );
+            }
+        }
+    }
+
+    #[test]
     fn table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4008,19 +4202,8 @@ where
                                                                 vec![cx.container(
                                                                     ContainerProps {
                                                                         background: bg,
-                                                                        border: if is_active {
-                                                                            Edges {
-                                                                                left: Px(2.0),
-                                                                                ..Default::default()
-                                                                            }
-                                                                        } else {
-                                                                            Edges::default()
-                                                                        },
-                                                                        border_color: if is_active {
-                                                                            Some(ring)
-                                                                        } else {
-                                                                            None
-                                                                        },
+                                                                        border: Edges::default(),
+                                                                        border_color: None,
                                                                     layout: LayoutStyle {
                                                                         size:
                                                                             fret_ui::element::SizeStyle {
@@ -4354,7 +4537,34 @@ where
                                                                                 }
                                                                             };
 
-                                                                        vec![stack::hstack(
+                                                                        let mut out: Vec<AnyElement> = Vec::new();
+                                                                        if is_active {
+                                                                            out.push(cx.container(
+                                                                                ContainerProps {
+                                                                                    background: Some(ring),
+                                                                                    layout: LayoutStyle {
+                                                                                        size: fret_ui::element::SizeStyle {
+                                                                                            width: Length::Px(Px(2.0)),
+                                                                                            height: Length::Fill,
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        position:
+                                                                                            fret_ui::element::PositionStyle::Absolute,
+                                                                                        inset: fret_ui::element::InsetStyle {
+                                                                                            top: Some(Px(0.0)),
+                                                                                            bottom: Some(Px(0.0)),
+                                                                                            left: Some(Px(0.0)),
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                |_| Vec::new(),
+                                                                            ));
+                                                                        }
+
+                                                                        out.push(stack::hstack(
                                                                             cx,
                                                                             stack::HStackProps::default()
                                                                                 .gap_x(Space::N0)
@@ -4441,7 +4651,8 @@ where
 
                                                                                 vec![left, center, right]
                                                                             },
-                                                                        )]
+                                                                        ));
+                                                                        out
                                                                     },
                                                                 )]
                                                             },
@@ -4542,19 +4753,8 @@ where
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 background: bg,
-                                                                border: if is_active {
-                                                                Edges {
-                                                                    left: Px(2.0),
-                                                                    ..Default::default()
-                                                                }
-                                                            } else {
-                                                                Edges::default()
-                                                            },
-                                                            border_color: if is_active {
-                                                                Some(ring)
-                                                                } else {
-                                                                    None
-                                                                },
+                                                                border: Edges::default(),
+                                                                border_color: None,
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
                                                                         width: Length::Fill,
@@ -4794,7 +4994,34 @@ where
                                                                     }
                                                                 };
 
-                                                            vec![stack::hstack(
+                                                            let mut out: Vec<AnyElement> = Vec::new();
+                                                            if is_active {
+                                                                out.push(cx.container(
+                                                                    ContainerProps {
+                                                                        background: Some(ring),
+                                                                        layout: LayoutStyle {
+                                                                            size: fret_ui::element::SizeStyle {
+                                                                                width: Length::Px(Px(2.0)),
+                                                                                height: Length::Fill,
+                                                                                ..Default::default()
+                                                                            },
+                                                                            position:
+                                                                                fret_ui::element::PositionStyle::Absolute,
+                                                                            inset: fret_ui::element::InsetStyle {
+                                                                                top: Some(Px(0.0)),
+                                                                                bottom: Some(Px(0.0)),
+                                                                                left: Some(Px(0.0)),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_| Vec::new(),
+                                                                ));
+                                                            }
+
+                                                            out.push(stack::hstack(
                                                                 cx,
                                                                 stack::HStackProps::default()
                                                                     .gap_x(Space::N0)
@@ -4868,7 +5095,8 @@ where
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
                                                                 },
-                                                            )]
+                                                            ));
+                                                            out
                                                         },
                                                     )]
                                                 },

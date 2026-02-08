@@ -195,6 +195,13 @@
             "4"
           ]
         },
+        "page_count": 1,
+        "row_count": 4,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -397,6 +404,13 @@
             "4"
           ]
         },
+        "page_count": 1,
+        "row_count": 6,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -602,6 +616,13 @@
             "4"
           ]
         },
+        "page_count": 1,
+        "row_count": 6,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -793,6 +814,13 @@
             "4"
           ]
         },
+        "page_count": 1,
+        "row_count": 4,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1075,6 +1103,13 @@
             "4"
           ]
         },
+        "page_count": 1,
+        "row_count": 4,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []

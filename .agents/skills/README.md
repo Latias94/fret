@@ -40,6 +40,7 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - State stack defaults (typed routing + selector + query): `fret-app-architecture-and-effects` + `fret-component-authoring`
 - Align behavior with shadcn/Radix: `fret-shadcn-source-alignment` (then add invariant tests + `fretboard diag` repros)
 - Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
+- Profile + gate performance (numbers/baselines): `fret-perf-workflow` (resize/scroll/pointer-move probes, baseline selection, perf log evidence)
 - Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
 
 ## Skills
@@ -57,5 +58,6 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - `fret-animation-and-scheduling`: Runner-owned scheduling, continuous frames leases, and transition/presence helpers (RAF/timers).
 - `fret-docking-and-viewports`: Docking/multi-window/viewport concepts and conformance harness entry points.
 - `fret-diag-workflow`: Use `fretboard diag` + `tools/diag-scripts/*.json` to reproduce UI issues, capture bundles/screenshots, triage regressions, and turn bugs into stable repro gates.
+- `fret-perf-workflow`: Profile and gate performance with `fretboard diag perf` + baselines + `tools/perf/*` helpers, and record commit-addressable evidence in workstreams logs.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source (optional local pinned snapshots under `repo-ref/`) and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-shadcn-app-recipes`: Build good-looking apps with `fret-ui-shadcn` by translating shadcn/Tailwind mental models into Fret patterns, and pairing recipes with tests + `fretboard diag` scripts to avoid regressions.

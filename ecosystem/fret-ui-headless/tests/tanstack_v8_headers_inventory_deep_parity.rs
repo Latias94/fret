@@ -76,10 +76,29 @@ fn headers_to_jsonish(
     headers.into_iter().map(header_to_jsonish).collect()
 }
 
+fn column_node_to_jsonish(n: fret_ui_headless::table::ColumnNodeSnapshot) -> ColumnNodeSnapshot {
+    ColumnNodeSnapshot {
+        id: n.id.as_ref().to_string(),
+        depth: n.depth,
+        parent_id: n.parent_id.as_ref().map(|s| s.as_ref().to_string()),
+        child_ids: n
+            .child_ids
+            .into_iter()
+            .map(|s| s.as_ref().to_string())
+            .collect(),
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CellSnapshot {
     id: String,
     column_id: String,
+    #[serde(default)]
+    is_grouped: bool,
+    #[serde(default)]
+    is_placeholder: bool,
+    #[serde(default)]
+    is_aggregated: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -130,6 +149,23 @@ struct LeafColumnsSnapshot {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum ColumnPinPosition {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct ColumnCapabilitySnapshot {
+    can_hide: bool,
+    can_pin: bool,
+    pin_position: Option<ColumnPinPosition>,
+    pinned_index: i32,
+    can_resize: bool,
+    is_visible: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct RowModelIdSnapshot {
     root: Vec<String>,
     flat: Vec<String>,
@@ -141,21 +177,38 @@ struct CoreRowsSnapshot {
     row_model: RowModelIdSnapshot,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct HeaderSizingExpect {
+    size: BTreeMap<String, f32>,
+    start: BTreeMap<String, f32>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 struct CoreModelExpect {
+    schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
+    column_capabilities: BTreeMap<String, ColumnCapabilitySnapshot>,
     leaf_columns: LeafColumnsSnapshot,
     header_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
     center_header_groups: Vec<HeaderGroupSnapshot>,
     right_header_groups: Vec<HeaderGroupSnapshot>,
+    header_sizing: HeaderSizingExpect,
     rows: CoreRowsSnapshot,
     cells: BTreeMap<String, RowCellsSnapshot>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct FlatColumnsExpect {
+    all: Vec<String>,
+    visible: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     headers_cells: HeadersCellsExpect,
+    #[serde(default)]
+    flat_columns: Option<FlatColumnsExpect>,
     core_model: CoreModelExpect,
 }
 
@@ -179,6 +232,9 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
     let conv = |c: fret_ui_headless::table::CellSnapshot| CellSnapshot {
         id: c.id.as_ref().to_string(),
         column_id: c.column_id.as_ref().to_string(),
+        is_grouped: c.is_grouped,
+        is_placeholder: c.is_placeholder,
+        is_aggregated: c.is_aggregated,
     };
     RowCellsSnapshot {
         all: cells.all.into_iter().map(conv).collect(),
@@ -190,7 +246,13 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
 }
 
 fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -> CoreModelExpect {
+    let conv_pin = |p: fret_ui_headless::table::ColumnPinPosition| match p {
+        fret_ui_headless::table::ColumnPinPosition::Left => ColumnPinPosition::Left,
+        fret_ui_headless::table::ColumnPinPosition::Right => ColumnPinPosition::Right,
+    };
+
     CoreModelExpect {
+        schema_version: snapshot.schema_version,
         column_tree: snapshot
             .column_tree
             .into_iter()
@@ -203,6 +265,23 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                     .into_iter()
                     .map(|s| s.as_ref().to_string())
                     .collect(),
+            })
+            .collect(),
+        column_capabilities: snapshot
+            .column_capabilities
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.as_ref().to_string(),
+                    ColumnCapabilitySnapshot {
+                        can_hide: v.can_hide,
+                        can_pin: v.can_pin,
+                        pin_position: v.pin_position.map(conv_pin),
+                        pinned_index: v.pinned_index,
+                        can_resize: v.can_resize,
+                        is_visible: v.is_visible,
+                    },
+                )
             })
             .collect(),
         leaf_columns: LeafColumnsSnapshot {
@@ -241,6 +320,20 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
         left_header_groups: header_groups_to_jsonish(snapshot.left_header_groups),
         center_header_groups: header_groups_to_jsonish(snapshot.center_header_groups),
         right_header_groups: header_groups_to_jsonish(snapshot.right_header_groups),
+        header_sizing: HeaderSizingExpect {
+            size: snapshot
+                .header_sizing
+                .size
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+            start: snapshot
+                .header_sizing
+                .start
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+        },
         rows: CoreRowsSnapshot {
             core: RowModelIdSnapshot {
                 root: snapshot
@@ -437,6 +530,39 @@ fn tanstack_v8_headers_inventory_deep_parity() {
                 "snapshot {} cells mismatch for row {}",
                 snap.id,
                 row_id
+            );
+        }
+
+        if let Some(expected) = snap.expect.flat_columns.as_ref() {
+            let all: Vec<String> = table
+                .all_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+            let visible: Vec<String> = table
+                .visible_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+
+            assert_eq!(
+                FlatColumnsExpect { all, visible },
+                expected.clone(),
+                "snapshot {} flat_columns mismatch",
+                snap.id
+            );
+        }
+
+        for expected in &snap.expect.core_model.column_tree {
+            let got = table
+                .column_node_snapshot(expected.id.as_str())
+                .unwrap_or_else(|| panic!("unknown column id: {}", expected.id));
+            assert_eq!(
+                column_node_to_jsonish(got),
+                expected.clone(),
+                "snapshot {} column_node_snapshot({}) mismatch",
+                snap.id,
+                expected.id
             );
         }
 

@@ -246,6 +246,95 @@ def _derive_pointer_move_metrics_from_bundle(
     }
 
 
+def _derive_worst_frame_text_prepare_metrics_from_bundle(
+    *,
+    bundle_path: Path,
+    repo_root: Path,
+) -> Optional[Dict[str, Any]]:
+    try:
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return None
+
+    worst_total_us = 0
+    worst_frame_id: Optional[int] = None
+    worst_snapshot: Optional[Dict[str, Any]] = None
+
+    for w in bundle.get("windows", []) or []:
+        if not isinstance(w, dict):
+            continue
+        for s in w.get("snapshots", []) or []:
+            if not isinstance(s, dict):
+                continue
+            debug = s.get("debug")
+            if not isinstance(debug, dict):
+                continue
+            stats = debug.get("stats")
+            if not isinstance(stats, dict):
+                continue
+
+            total_us = stats.get("total_time_us")
+            if not isinstance(total_us, int):
+                # Some bundles do not include a monolithic `total_time_us` inside debug stats.
+                # Approximate a “total” by summing the high-level phase timers.
+                layout_us = stats.get("layout_time_us")
+                prepaint_us = stats.get("prepaint_time_us")
+                paint_us = stats.get("paint_time_us")
+                dispatch_us = stats.get("dispatch_time_us")
+                hit_test_us = stats.get("hit_test_time_us")
+                if not all(
+                    isinstance(v, int)
+                    for v in [layout_us, prepaint_us, paint_us, dispatch_us, hit_test_us]
+                ):
+                    continue
+                total_us = (
+                    int(layout_us)
+                    + int(prepaint_us)
+                    + int(paint_us)
+                    + int(dispatch_us)
+                    + int(hit_test_us)
+                )
+
+            if total_us >= worst_total_us:
+                worst_total_us = int(total_us)
+                frame_id = s.get("frame_id")
+                worst_frame_id = int(frame_id) if isinstance(frame_id, int) else None
+                worst_snapshot = s
+
+    if not worst_snapshot:
+        return None
+
+    stats = (worst_snapshot.get("debug") or {}).get("stats") or {}
+    if not isinstance(stats, dict):
+        return None
+
+    def get_int(name: str) -> int:
+        v = stats.get(name)
+        return int(v) if isinstance(v, int) else 0
+
+    return {
+        "worst_total_time_us": int(worst_total_us),
+        "worst_frame_id": worst_frame_id,
+        "paint_text_prepare_time_us": get_int("paint_text_prepare_time_us"),
+        "paint_text_prepare_calls": get_int("paint_text_prepare_calls"),
+        "paint_text_prepare_reason_width_changed": get_int(
+            "paint_text_prepare_reason_width_changed"
+        ),
+        "paint_text_prepare_reason_wrap_changed": get_int("paint_text_prepare_reason_wrap_changed"),
+        "paint_text_prepare_reason_scale_changed": get_int(
+            "paint_text_prepare_reason_scale_changed"
+        ),
+        "paint_text_prepare_reason_style_changed": get_int(
+            "paint_text_prepare_reason_style_changed"
+        ),
+        "paint_text_prepare_reason_font_stack_changed": get_int(
+            "paint_text_prepare_reason_font_stack_changed"
+        ),
+        "paint_text_prepare_reason_text_changed": get_int("paint_text_prepare_reason_text_changed"),
+        "bundle": _rel_script_path(str(bundle_path), repo_root),
+    }
+
+
 def _format_entry_markdown(
     *,
     timestamp: str,
@@ -362,6 +451,62 @@ def _format_entry_markdown(
         lines.append(f"  - Worst hit-test bundle: `{worst_hit_test.get('bundle','')}`")
         lines.append("")
         break
+
+    # Derived “text prepare” cost + reason counters on the per-bundle worst frame. This is
+    # particularly important for resize-drag probes where width jitter can trigger expensive wrap
+    # recompute even when most UI chrome is cached.
+    lines.append("Text prepare signals (worst frame in each bundle; p95/max):")
+    lines.append(
+        "| script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |"
+    )
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for r in rows:
+        bundles = r.get("bundles") or []
+        if not bundles:
+            continue
+
+        derived: List[Dict[str, Any]] = []
+        for b in bundles[:20]:
+            try:
+                bp = Path(b)
+                if not bp.is_absolute():
+                    bp = repo_root / bp
+            except Exception:
+                continue
+            m = _derive_worst_frame_text_prepare_metrics_from_bundle(
+                bundle_path=bp, repo_root=repo_root
+            )
+            if m:
+                derived.append(m)
+
+        if not derived:
+            continue
+
+        prepare_maxes = [int(x.get("paint_text_prepare_time_us", 0) or 0) for x in derived]
+        width_changed = [
+            int(x.get("paint_text_prepare_reason_width_changed", 0) or 0) for x in derived
+        ]
+        calls = [int(x.get("paint_text_prepare_calls", 0) or 0) for x in derived]
+
+        _p50_p, p95_p, max_p = _p50_p95_max(prepare_maxes)
+        _p50_w, p95_w, max_w = _p50_p95_max(width_changed)
+        _p50_c, p95_c, max_c = _p50_p95_max(calls)
+
+        lines.append(
+            (
+                "| {script} | {p95_prepare} | {max_prepare} | {p95_width} | {max_width} | "
+                "{p95_calls} | {max_calls} |"
+            ).format(
+                script=r["script"],
+                p95_prepare=p95_p,
+                max_prepare=max_p,
+                p95_width=p95_w,
+                max_width=max_w,
+                p95_calls=p95_c,
+                max_calls=max_c,
+            )
+        )
+    lines.append("")
 
     lines.append("Churn signals (top frame; p95/max):")
     lines.append(

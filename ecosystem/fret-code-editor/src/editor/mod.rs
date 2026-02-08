@@ -200,7 +200,6 @@ struct RowTextCacheEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 struct BaselineMeasureCache {
-    max_width: Px,
     row_h: Px,
     scale_bits: u32,
     text_style: TextStyle,

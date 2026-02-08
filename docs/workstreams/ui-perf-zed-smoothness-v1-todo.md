@@ -23,6 +23,15 @@ Conventions:
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
+  - [x] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
+    strict majority pass (keeps the gate strict, but reduces single-run flake).
+    - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
+    - Implementation: commit `4755aa087`
+  - [ ] Stabilize `ui-resize-probes` `drag-jitter` tail behavior on macOS M4 (avoid intermittent gate failures).
+    - Evidence: perf log entry `2026-02-08 12:20:46` (attempts=3; 0/3 pass; one near-threshold run and one outlier).
+    - Candidate actions:
+      - Cut a new baseline (v4) with more candidates/validation runs on an idle machine.
+      - If it remains flaky, revisit the metric/seed/headroom contract for `drag-jitter` (keep “no hitch” intent).
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
@@ -31,14 +40,71 @@ Conventions:
     - Evidence: perf log entry `2026-02-07 11:50`.
   - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
     - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+  - [x] Re-validate both resize gates on the current head (no-code-change evidence snapshot).
+    - Evidence: perf log entry `2026-02-08 12:20:46` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - [x] Track an “interactive resize” window in the UI tree to enable guarded LOD/deferral experiments (commit `34bac1b78`).
+    - Evidence: perf log entry `2026-02-07 21:23` (`target/fret-diag-resize-probes-gate-r24/summary.json`).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
     identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
-  - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
+  - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
+    - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
+    - Knob: `FRET_TEXT_WORD_WRAP_SHAPE_ONCE` (`1`/`0`) overrides the default threshold behavior.
+    - Evidence: perf log entries appended for the A/B run and the default behavior (2026-02-07, `ui-resize-probes`).
+  - [x] Add a default small-step wrap-width bucketing policy during interactive resize to reduce text wrap churn under
+    `drag-jitter`-style width jitter.
+    - Default: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX=32` (set to `0`/`1` to disable).
+    - Applies only when:
+      - interactive resize is active, and
+      - the window width delta is small (jitter-class, not stress-class).
+    - Keep the old knob for global experiments:
+      - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
+  - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
+    - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
+    - Evidence: perf log entry `2026-02-08` (editor resize gate delta).
+  - [x] Normalize Canvas hosted/shared text fingerprints to ignore `max_width` for nowrap+non-ellipsis.
+    - Implementation: `perf(fret-ui): normalize nowrap canvas text keys` (commit `667d8317b`).
+    - Evidence: perf log entry `2026-02-08` (editor resize jitter drops to ~13ms worst-frame).
+  - [x] Avoid code editor baseline text measurement churn during resize by making baseline alignment caching
+    independent of the row `max_width`.
+    - Implementation: `perf(fret-code-editor): avoid baseline measure churn on resize` (commit `dd2da2ada`).
+    - Evidence: perf log entry `2026-02-08` (`ui-code-editor-resize-probes` p95 total ~11.8ms).
+  - [x] Add an experimental interactive-resize wrapped-text width cache to reduce `Text::prepare` churn when
+    dragging back-and-forth across wrap-width buckets.
+    - Implementation: `feat(fret-ui): add interactive-resize wrapped text width cache knob` (commit `2e479fc2f`).
+    - Knob: `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES` (default: `0`/off; try `4`).
+    - Evidence: perf log entries `2026-02-08` (A/B: off vs `ENTRIES=4`).
+  - [x] Bucket wrapped-text **measure** widths during interactive resize in the host-widget layout path to reduce
+    measure churn and align layout/paint wrap widths.
+    - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
+    - Evidence: perf log entries `2026-02-08` (`ui-code-editor-resize-probes` and P0 `ui-resize-probes` sanity).
+- [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
+  “paint-only” frames under small-step resize/scroll.
+  - Primary probes:
+    - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  - Work items (fearless refactor allowed; log every perf-affecting change):
+    - [ ] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
+      “we are rebuilding 500+ ops/frame” vs “we are replaying”.
+    - [ ] Decide the replay boundary:
+      - Option A (component-level): `fret-code-editor` caches per-row paint ops and replays when inputs unchanged.
+      - Option B (mechanism-level): add a general `CanvasPainter` op cache (keyed, bounded, frame-aware) that any
+        component can use.
+    - [ ] Ensure replay is correctness-safe:
+      - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
+        geometry dependencies.
+      - replayed ops preserve hit-testing / selection rect correctness (or explicitly opt-out).
+    - [ ] Add a “canvas replay hit rate” counter to `fretboard diag perf --json` output for the editor probes.
+    - [ ] Tighten the `ui-code-editor-resize-probes` baseline once replay is real and stable.
+  - Acceptance (initial):
+    - `ui-code-editor-resize-probes` stays PASS (no regressions in P0 `ui-resize-probes`).
+    - In the editor probes, `paint_widget_hotspots` no longer shows the editor `Canvas` dominating p95 paint.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
+  - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
+    - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
 
 ## Milestones
 
@@ -92,6 +158,11 @@ Execution plan:
   - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
+- [x] Add an editor-grade resize jitter probe suite (so resize work stays bounded on text-heavy surfaces).
+  - Suite: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
+  - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
+  - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
+  - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:
@@ -105,7 +176,7 @@ Execution plan:
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 - [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
-  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 - [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
@@ -628,6 +699,8 @@ Perf acceptance:
   - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
   - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 10:10.
+  - Follow-up: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json` bumps micro headroom for
+    `ui-gallery-menubar-keyboard-nav-steady` `solve/layout` to avoid 1–30us flake (see 2026-02-08 log).
 
 - [x] Stabilize resize perf scripts and refresh the P0 resize probes baseline + default gate pointer.
   - Scripts:
