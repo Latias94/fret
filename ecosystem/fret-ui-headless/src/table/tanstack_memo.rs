@@ -8,6 +8,17 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TanStackFilteredFlatRowOrderDeps {
+    pub items_revision: u64,
+    pub data_len: usize,
+    pub column_filters: super::ColumnFiltersState,
+    pub global_filter: GlobalFilterState,
+    pub options: TableOptions,
+    pub global_filter_fn: FilteringFnSpec,
+    pub has_get_column_can_global_filter: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct TanStackSortedFlatRowOrderDeps {
     pub items_revision: u64,
     pub data_len: usize,
@@ -27,14 +38,20 @@ pub struct FlatRowOrderEntry {
 
 #[derive(Default)]
 pub struct TanStackSortedFlatRowOrderCache {
-    memo: Memo<(u64, TanStackSortedFlatRowOrderDeps), Arc<[FlatRowOrderEntry]>>,
+    filtered_memo: Memo<(u64, TanStackFilteredFlatRowOrderDeps), Arc<[FlatRowOrderEntry]>>,
+    sorted_memo: Memo<(u64, TanStackSortedFlatRowOrderDeps, u64), Arc<[FlatRowOrderEntry]>>,
     columns_signature: u64,
     recompute_count: u64,
+    filtered_recompute_count: u64,
 }
 
 impl TanStackSortedFlatRowOrderCache {
     pub fn recompute_count(&self) -> u64 {
         self.recompute_count
+    }
+
+    pub fn filtered_recompute_count(&self) -> u64 {
+        self.filtered_recompute_count
     }
 
     /// Returns a stable, memoized ordering of the root row list after filtering + sorting.
@@ -64,19 +81,48 @@ impl TanStackSortedFlatRowOrderCache {
         let signature = columns_signature(columns);
         if signature != self.columns_signature {
             self.columns_signature = signature;
-            self.memo.reset();
+            self.filtered_memo.reset();
+            self.sorted_memo.reset();
         }
 
-        let sig_and_deps = (signature, deps.clone());
-        let (value, recomputed) = self.memo.get_or_compute(sig_and_deps, || {
-            compute_sorted_order(
+        let filtered_deps = TanStackFilteredFlatRowOrderDeps {
+            items_revision: deps.items_revision,
+            data_len: deps.data_len,
+            column_filters: deps.column_filters.clone(),
+            global_filter: deps.global_filter.clone(),
+            options: deps.options,
+            global_filter_fn: deps.global_filter_fn.clone(),
+            has_get_column_can_global_filter: deps.has_get_column_can_global_filter,
+        };
+
+        let (filtered_order, filtered_recomputed) =
+            self.filtered_memo
+                .get_or_compute((signature, filtered_deps.clone()), || {
+                    compute_filtered_order(
+                        data,
+                        columns,
+                        get_row_key,
+                        filter_fns,
+                        get_column_can_global_filter,
+                        &filtered_deps,
+                    )
+                });
+        if filtered_recomputed {
+            self.filtered_recompute_count = self.filtered_recompute_count.saturating_add(1);
+        }
+
+        let filtered_sig = flat_row_order_signature(filtered_order);
+        let sig_and_deps = (signature, deps.clone(), filtered_sig);
+        let filtered_for_sort = filtered_order.clone();
+
+        let (value, recomputed) = self.sorted_memo.get_or_compute(sig_and_deps, || {
+            compute_sorted_order_from_filtered(
                 data,
                 columns,
                 get_row_key,
-                filter_fns,
                 sorting_fns,
-                get_column_can_global_filter,
                 &deps,
+                filtered_for_sort,
             )
         });
         if recomputed {
@@ -105,6 +151,19 @@ fn columns_signature<TData>(columns: &[ColumnDef<TData>]) -> u64 {
         col.enable_global_filter.hash(&mut hasher);
         col.invert_sorting.hash(&mut hasher);
         col.sort_desc_first.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
+fn flat_row_order_signature(order: &[FlatRowOrderEntry]) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    order.len().hash(&mut hasher);
+    for e in order {
+        e.index.hash(&mut hasher);
+        e.key.hash(&mut hasher);
     }
     hasher.finish()
 }
@@ -148,14 +207,13 @@ fn build_flat_core_row_model<'a, TData>(
     }
 }
 
-fn compute_sorted_order<'a, TData>(
+fn compute_filtered_order<'a, TData>(
     data: &'a [TData],
     columns: &[ColumnDef<TData>],
     get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
     filter_fns: &HashMap<Arc<str>, FilterFnDef>,
-    sorting_fns: &HashMap<Arc<str>, SortingFnDef<TData>>,
     get_column_can_global_filter: Option<&dyn Fn(&ColumnDef<TData>, &TData) -> bool>,
-    deps: &TanStackSortedFlatRowOrderDeps,
+    deps: &TanStackFilteredFlatRowOrderDeps,
 ) -> Arc<[FlatRowOrderEntry]> {
     let core = build_flat_core_row_model(data, get_row_key);
 
@@ -174,11 +232,41 @@ fn compute_sorted_order<'a, TData>(
         )
     };
 
-    let sorted = if deps.options.manual_sorting {
-        filtered
-    } else {
-        sort_row_model(&filtered, columns, &deps.sorting, sorting_fns)
-    };
+    let mut out: Vec<FlatRowOrderEntry> = Vec::with_capacity(filtered.root_rows().len());
+    for &i in filtered.root_rows() {
+        let Some(r) = filtered.row(i) else {
+            continue;
+        };
+        out.push(FlatRowOrderEntry {
+            index: r.index,
+            key: r.key,
+        });
+    }
+    Arc::from(out.into_boxed_slice())
+}
+
+fn compute_sorted_order_from_filtered<'a, TData>(
+    data: &'a [TData],
+    columns: &[ColumnDef<TData>],
+    get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
+    sorting_fns: &HashMap<Arc<str>, SortingFnDef<TData>>,
+    deps: &TanStackSortedFlatRowOrderDeps,
+    filtered: Arc<[FlatRowOrderEntry]>,
+) -> Arc<[FlatRowOrderEntry]> {
+    if deps.options.manual_sorting || deps.sorting.is_empty() {
+        return filtered;
+    }
+
+    let core = build_flat_core_row_model(data, get_row_key);
+
+    // For the flat core row model, `RowIndex` equals the original data index. We can use the
+    // filtered ordering as an index view without re-evaluating filters.
+    let indices: Vec<RowIndex> = filtered.iter().map(|e| e.index).collect();
+    let mut view = core;
+    view.root_rows = indices.clone();
+    view.flat_rows = indices;
+
+    let sorted = sort_row_model(&view, columns, &deps.sorting, sorting_fns);
 
     let mut out: Vec<FlatRowOrderEntry> = Vec::with_capacity(sorted.root_rows().len());
     for &i in sorted.root_rows() {
@@ -269,6 +357,7 @@ mod tests {
         };
         assert!(recomputed1);
         assert_eq!(cache.recompute_count(), 1);
+        assert_eq!(cache.filtered_recompute_count(), 1);
         assert_eq!(
             &*order1,
             &[
@@ -297,7 +386,68 @@ mod tests {
         };
         assert!(!recomputed2);
         assert_eq!(cache.recompute_count(), 1);
+        assert_eq!(cache.filtered_recompute_count(), 1);
         assert!(Arc::ptr_eq(&order1, &order2));
+    }
+
+    #[test]
+    fn sorted_flat_row_order_cache_reuses_filtered_step_when_only_sorting_changes() {
+        let data = [
+            Row { id: 2, name: "b" },
+            Row { id: 1, name: "a" },
+            Row { id: 3, name: "c" },
+        ];
+        let columns = vec![col_name()];
+
+        let mut cache = TanStackSortedFlatRowOrderCache::default();
+        let filter_fns = HashMap::new();
+        let sorting_fns = HashMap::new();
+
+        let deps_asc = deps_for(
+            &data,
+            vec![crate::table::SortSpec {
+                column: "name".into(),
+                desc: false,
+            }],
+            Vec::new(),
+            None,
+        );
+        let (_order1, recomputed1) = cache.sorted_order(
+            &data,
+            &columns,
+            &|row: &Row, _idx, _parent| RowKey(row.id),
+            &filter_fns,
+            &sorting_fns,
+            None,
+            deps_asc,
+        );
+        assert!(recomputed1);
+        assert_eq!(cache.filtered_recompute_count(), 1);
+        assert_eq!(cache.recompute_count(), 1);
+
+        let deps_desc = deps_for(
+            &data,
+            vec![crate::table::SortSpec {
+                column: "name".into(),
+                desc: true,
+            }],
+            Vec::new(),
+            None,
+        );
+        let (_order2, recomputed2) = cache.sorted_order(
+            &data,
+            &columns,
+            &|row: &Row, _idx, _parent| RowKey(row.id),
+            &filter_fns,
+            &sorting_fns,
+            None,
+            deps_desc,
+        );
+        assert!(recomputed2);
+
+        // Only the sorted step should recompute when sorting changes.
+        assert_eq!(cache.filtered_recompute_count(), 1);
+        assert_eq!(cache.recompute_count(), 2);
     }
 
     #[test]
@@ -330,6 +480,7 @@ mod tests {
         );
         assert!(recomputed1);
         assert_eq!(cache.recompute_count(), 1);
+        assert_eq!(cache.filtered_recompute_count(), 1);
 
         let deps2 = deps_for(&data, Vec::new(), Vec::new(), Some(json!("alp")));
         let (_order2, recomputed2) = cache.sorted_order(
@@ -343,5 +494,6 @@ mod tests {
         );
         assert!(recomputed2);
         assert_eq!(cache.recompute_count(), 2);
+        assert_eq!(cache.filtered_recompute_count(), 2);
     }
 }

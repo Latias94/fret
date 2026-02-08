@@ -19,10 +19,18 @@ fn col_name() -> ColumnDef<Row> {
 fn tanstack_v8_memo_rebuild_each_frame_sorted_flat_row_order_cache_is_reused() {
     let data = vec![Row { name: "b" }, Row { name: "a" }, Row { name: "c" }];
 
-    let state = TableState {
+    let state_asc = TableState {
         sorting: vec![SortSpec {
             column: "name".into(),
             desc: false,
+        }],
+        ..TableState::default()
+    };
+
+    let state_desc = TableState {
+        sorting: vec![SortSpec {
+            column: "name".into(),
+            desc: true,
         }],
         ..TableState::default()
     };
@@ -33,7 +41,7 @@ fn tanstack_v8_memo_rebuild_each_frame_sorted_flat_row_order_cache_is_reused() {
     for _frame in 0..8 {
         let table = Table::builder(&data)
             .columns(vec![col_name()])
-            .state(state.clone())
+            .state(state_asc.clone())
             .build();
         let (_order, recomputed) = table.tanstack_sorted_flat_row_order_with_cache(1, &mut cache);
         recompute_flags.push(recomputed);
@@ -47,12 +55,39 @@ fn tanstack_v8_memo_rebuild_each_frame_sorted_flat_row_order_cache_is_reused() {
             .all(|&recomputed| !recomputed)
     );
     assert_eq!(cache.recompute_count(), 1);
+    assert_eq!(cache.filtered_recompute_count(), 1);
 
     let table = Table::builder(&data)
         .columns(vec![col_name()])
-        .state(state)
+        .state(state_desc.clone())
+        .build();
+    let (_order, recomputed) = table.tanstack_sorted_flat_row_order_with_cache(1, &mut cache);
+    assert!(recomputed);
+    assert_eq!(cache.recompute_count(), 2);
+    assert_eq!(cache.filtered_recompute_count(), 1);
+
+    // Sorting-only changes should not invalidate the filtered step.
+    let table = Table::builder(&data)
+        .columns(vec![col_name()])
+        .state(state_desc)
+        .build();
+    let (_order, recomputed) = table.tanstack_sorted_flat_row_order_with_cache(1, &mut cache);
+    assert!(!recomputed);
+    assert_eq!(cache.recompute_count(), 2);
+    assert_eq!(cache.filtered_recompute_count(), 1);
+
+    let table = Table::builder(&data)
+        .columns(vec![col_name()])
+        .state(TableState {
+            sorting: vec![SortSpec {
+                column: "name".into(),
+                desc: true,
+            }],
+            ..TableState::default()
+        })
         .build();
     let (_order, recomputed) = table.tanstack_sorted_flat_row_order_with_cache(2, &mut cache);
     assert!(recomputed);
-    assert_eq!(cache.recompute_count(), 2);
+    assert_eq!(cache.recompute_count(), 3);
+    assert_eq!(cache.filtered_recompute_count(), 2);
 }
