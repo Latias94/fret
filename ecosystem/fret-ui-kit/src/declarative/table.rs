@@ -192,9 +192,10 @@ pub struct TableViewProps {
     pub optimize_grid_lines: bool,
     /// Grouped-mode row pinning display policy.
     ///
-    /// TanStack-style grouped tables keep pinned leaf rows in their group subtrees and do not
-    /// promote them into dedicated top/bottom visual bands. `PreserveHierarchy` matches that
-    /// behavior and is the default.
+    /// TanStack `table-core` exposes pinning via `getTopRows/getCenterRows/getBottomRows`, and the
+    /// most common UI recipe is to render pinned rows in dedicated top/bottom bands (removing them
+    /// from the paged center rows). `PromotePinnedRows` matches that TanStack-typical behavior and
+    /// is the default.
     pub grouped_row_pinning_policy: GroupedRowPinningPolicy,
 }
 
@@ -209,11 +210,12 @@ pub enum TableRowMeasureMode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroupedRowPinningPolicy {
-    /// Keep pinned leaf rows inside their grouped hierarchy (TanStack-style default behavior).
-    #[default]
-    PreserveHierarchy,
     /// Promote pinned rows into top/bottom bands and remove duplicates from the paged center rows.
+    #[default]
     PromotePinnedRows,
+    /// Keep pinned leaf rows inside their grouped hierarchy and keep the paged center rows
+    /// unchanged (no promotion).
+    PreserveHierarchy,
 }
 
 impl Default for TableViewProps {
@@ -237,7 +239,7 @@ impl Default for TableViewProps {
             draw_frame: true,
             optimize_paint_order: false,
             optimize_grid_lines: false,
-            grouped_row_pinning_policy: GroupedRowPinningPolicy::PreserveHierarchy,
+            grouped_row_pinning_policy: GroupedRowPinningPolicy::PromotePinnedRows,
         }
     }
 }

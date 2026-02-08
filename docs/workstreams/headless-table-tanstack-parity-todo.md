@@ -483,6 +483,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Update: added explicit descending and datetime toggle coverage.
     - Snapshots: `sorting_fns_builtin_basic_desc`, `sorting_fns_builtin_datetime_desc`, `sorting_fns_toggle_dt_auto_first`
   - Remaining: broader edge-case coverage (mixed types / nullish behaviors).
+- [ ] HTP-sort-060 Expand sorting edge-case fixture coverage (capability parity hardening).
+  - Target: ensure we are not weaker than TanStack across mixed-type/nullish datasets and grouped sorting interactions.
+  - Evidence target: a dedicated fixture + parity gate (e.g. `sorting_edge_cases.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_edge_cases_parity.rs`).
 - [x] HTP-sort-050 Align manual sorting semantics:
   - Done (parity-gated): `manualSorting=true` returns `pre_sorted` row model.
   - Done (parity-gated): `getSortedRowModel` override to `pre_sorted` matches upstream behavior.
@@ -535,6 +539,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       (info+sizing stay unchanged due to upstream `newColumnSizing` computation placement).
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
+- [ ] HTP-size-060 Expand column sizing capability coverage across feature interactions.
+  - Target: ensure sizing offsets + `columnSizingInfo` remain correct under:
+    - pinning/visibility/ordering changes, and
+    - grouped header resize fan-out + manualSizing overrides.
+  - Evidence target: extend `column_sizing.json` (or add a new interaction fixture + parity gate).
 
 ---
 
@@ -691,6 +700,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Covered: `pageCount`/`rowCount`/page bounds derived from `getPrePaginationRowModel()` under
     `paginateExpandedRows` true/false (fixture asserts `page_count`, `row_count`, `can_next_page`,
     `page_options`).
+- [ ] HTP-page-040 Expand auto-reset trigger coverage and queue coalescing semantics.
+  - Target: ensure we are not weaker than TanStack for `autoReset*` under broader triggers:
+    - columnFilters/globalFilter/pagination-affecting option changes,
+    - data updates (row identity-preserving and identity-changing),
+    - and coalescing behavior when multiple resets are queued in one logical tick.
+  - Evidence target: extend `auto_reset.json` or add a new fixture + parity gate.
 - [x] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).
@@ -798,14 +813,14 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
      `top + center(page slice) + bottom`.
      - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
 - [x] HTP-ui-rowpin-020 Decide grouped-mode pinning policy and align remaining semantics.
-  - Done: grouped-mode default policy is now `PreserveHierarchy` (TanStack-style), so pinned leaf rows
-    stay in grouped subtrees and are not lifted into synthetic top/bottom display bands.
-    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-      (`GroupedRowPinningPolicy`, `apply_grouped_row_pinning_policy`)
-  - Done: legacy compatibility path is retained as an explicit opt-in (`PromotePinnedRows`) for callers
-    that still want the previous `top + center + bottom` promoted rendering behavior.
+  - Done: grouped-mode default policy is now `PromotePinnedRows` (TanStack-typical),
+    so pinned rows are promoted into top/bottom display bands and removed from the paged center rows.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
       (`grouped_row_pinning_policy_promote_pinned_rows_matches_legacy_behavior`)
+  - Done: a hierarchy-preserving alternative is retained as an explicit opt-in (`PreserveHierarchy`) for
+    callers that want pinned leaf rows to remain inside grouped subtrees (no promotion).
+    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+      (`grouped_row_pinning_policy_preserve_hierarchy_keeps_page_rows_center_unchanged`)
   - Done: policy-level regression gates added for grouped display composition.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
       (`grouped_row_pinning_policy_preserve_hierarchy_keeps_page_rows_center_unchanged`)
