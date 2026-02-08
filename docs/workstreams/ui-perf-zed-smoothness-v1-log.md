@@ -8109,3 +8109,56 @@ Artifacts:
 
 Results:
 - PASS (failures=0).
+
+## 2026-02-08 23:44:01 (commit `f2c08b806`)
+
+Change:
+- Stabilize `TextService::measure` wrapped-text shaping reuse under interactive resize by:
+  - increasing the shaping cache working-set size (default: 4096),
+  - pre-reserving the cache to avoid rehash spikes, and
+  - skipping cache insertion for short labels to avoid steady-suite cache pollution.
+
+Suites:
+- `ui-code-editor-resize-probes` gate: PASS (passes=2/3; required=2).
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+- `ui-gallery-steady` (baseline v25): PASS (failures=0).
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800
+
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/perf-gates/ui-gallery-steady.measurecache-default.20260208-234600 `
+  --timeout-ms 600000 --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/summary.json`
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/summary.json`
+- `ui-gallery-steady`: `target/perf-gates/ui-gallery-steady.measurecache-default.20260208-234600/check.perf_thresholds.json`
+
+Results (us; selected pass attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 13360 | 13814 | 13814 | 1905 | 327 | 12343 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18439 | 18579 | 18579 | 9630 | 2218 | 8950 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16024 | 16291 | 16291 | 9612 | 2229 | 6549 |
+
+Worst bundles (for tail attribution):
+- Editor resize jitter:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.measurecache-default.20260208-230800/attempt-1/1770562400418-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- Window resize drag jitter:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564174496-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Window resize stress:
+  - `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.measurecache-default.attempts5.20260208-232020/attempt-2/1770564003407-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- The `ui-resize-probes` `drag-jitter` script can still produce rare, near-threshold tail attempts on a busy system.
+  For “do-not-regress” gating, prefer `--attempts 5` until we eliminate the underlying hitch class and can tighten
+  the baseline again.

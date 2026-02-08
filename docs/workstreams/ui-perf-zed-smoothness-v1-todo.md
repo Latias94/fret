@@ -112,6 +112,13 @@ Conventions:
     measure churn and align layout/paint wrap widths.
     - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
     - Evidence: perf log entries `2026-02-08` (`ui-code-editor-resize-probes` and P0 `ui-resize-probes` sanity).
+  - [x] Stabilize `TextService::measure` shaping reuse working-set to reduce `layout_engine_solve` tail outliers
+    (avoid occasional “measure reshaping thrash” during interactive resize).
+    - Implementation: `perf(fret-render): stabilize measure shaping cache tail` (commit `f2c08b806`).
+    - Knobs:
+      - `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES` (default: `4096`; clamp: `64..=65536`)
+      - `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES` (default: `128`; cache only long paragraphs)
+    - Evidence: perf log entry `2026-02-08 23:44:01` (`ui-code-editor-resize-probes`, `ui-resize-probes`, `ui-gallery-steady`).
 - [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
   “paint-only” frames under small-step resize/scroll.
   - Primary probes:

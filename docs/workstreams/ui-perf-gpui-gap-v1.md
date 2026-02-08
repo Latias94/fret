@@ -161,6 +161,13 @@ Baseline fact (quick reference):
      - Implemented probe: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
    - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
      long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
+   - Recent win: stabilize `TextService::measure` wrapped-text shaping reuse working-set to reduce rare
+     `layout_engine_solve_time_us` tail spikes during interactive resize (commit `f2c08b806`).
+     - Default: `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES=4096`
+     - Short-label avoidance: `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES=128`
+     - This is still a FIFO, process-global cache; a more GPUI-like end state likely involves a length-bucketed
+       or LRU policy and/or “visible window aware” caching so long-lived steady suites don't accumulate
+       low-value entries.
    - Fret stopgap (default-on for jitter-class interactive resize):
      - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
      - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.

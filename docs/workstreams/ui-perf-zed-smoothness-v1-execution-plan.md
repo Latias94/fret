@@ -32,6 +32,9 @@ The intent is to stop drifting into “endless experiments” by pinning:
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
 - Editor resize jitter baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
 - Seed policy preset (editor resize probes): `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
+- Text measure/shaping stability knobs (to reduce resize-tail solve outliers; recorded in the perf log):
+  - `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES` (default: `4096`)
+  - `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES` (default: `128`)
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
   - Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
