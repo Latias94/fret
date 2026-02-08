@@ -102,6 +102,8 @@ type SnapshotId =
   | "colsize_resize_on_end_move_no_sizing"
   | "colsize_resize_on_end_end_writes"
   | "colsize_resize_rtl_move_flips"
+  | "colsize_resize_on_end_rtl_move_flips"
+  | "colsize_resize_on_end_rtl_end_writes"
   | "colsize_enable_column_resizing_false_noops"
   | "colsize_reset_column_size_removes_override"
   | "colsize_reset_column_sizing_default_true_clears"
@@ -112,14 +114,22 @@ type SnapshotId =
   | "colsize_hook_noop_info_move_keeps_info_and_sizing"
   | "colsize_hook_noop_info_reset_header_size_info_keeps_state"
   | "colsize_interactions_pin_vis_order_then_resize_group_on_change"
+  | "colsize_interactions_pin_vis_order_then_resize_group_on_change_rtl"
   | "colsize_interactions_manual_sizing_pins_visibility"
   | "colsize_interactions_group_resize_on_end_writes_with_pins"
+  | "colsize_interactions_group_resize_on_end_rtl_writes_with_pins"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
   | "group_resize_pinned_on_change_move_updates"
   | "group_resize_pinned_on_change_end_resets"
   | "group_resize_pinned_on_end_end_writes"
+  | "group_resize_on_change_rtl_move_updates"
+  | "group_resize_on_change_rtl_end_resets"
+  | "group_resize_on_end_rtl_end_writes"
+  | "group_resize_pinned_on_change_rtl_move_updates"
+  | "group_resize_pinned_on_change_rtl_end_resets"
+  | "group_resize_pinned_on_end_rtl_end_writes"
   | "sorting_fns_builtin_basic"
   | "sorting_fns_builtin_datetime"
   | "sorting_fns_builtin_text"
@@ -6773,6 +6783,58 @@ function snapshotColumnPinning(
           ],
         ),
       },
+      {
+        id: "colsize_resize_on_end_rtl_move_flips",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onEnd",
+            columnResizeDirection: "rtl",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+          ],
+        ),
+      },
+      {
+        id: "colsize_resize_on_end_rtl_end_writes",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onEnd",
+            columnResizeDirection: "rtl",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+            { type: "columnResizeEnd", client_x: 35 },
+          ],
+        ),
+      },
     ]
   } else if (case_id === "column_sizing_interactions") {
     const baseOptions: TanStackOptions = {
@@ -6825,6 +6887,22 @@ function snapshotColumnPinning(
         ],
       ),
       mkActions(
+        "colsize_interactions_pin_vis_order_then_resize_group_on_change_rtl",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        baseState,
+        [
+          { type: "toggleColumnVisibility", column_id: "b", value: false },
+          { type: "setColumnOrder", order: ["c", "a", "b"] },
+          { type: "pinColumn", column_id: "c", position: "right" },
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
         "colsize_interactions_manual_sizing_pins_visibility",
         baseOptions,
         {
@@ -6841,6 +6919,25 @@ function snapshotColumnPinning(
           ...baseOptions,
           columnResizeMode: "onEnd",
           columnResizeDirection: "ltr",
+        },
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 120, b: 60, c: 40 },
+        },
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "colsize_interactions_group_resize_on_end_rtl_writes_with_pins",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
         },
         {
           ...baseState,
@@ -6962,6 +7059,88 @@ function snapshotColumnPinning(
           ...baseOptions,
           columnResizeMode: "onEnd",
           columnResizeDirection: "ltr",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_change_rtl_move_updates",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_change_rtl_end_resets",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_on_end_rtl_end_writes",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
+        },
+        {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_rtl_move_updates",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_rtl_end_resets",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "rtl",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_end_rtl_end_writes",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "rtl",
         },
         pinnedState,
         [

@@ -387,7 +387,7 @@ Source of truth:
 | Column visibility state + toggle + reset | `Table::{column_visibility,is_column_visible,toggled_column_visibility,toggled_all_columns_visible,reset_column_visibility}` | Aligned | `visibility_ordering.json`, `resets.json` |
 | Visible ordered columns | `Table::{ordered_columns,visible_columns,pinned_visible_columns}` | Partial | visibility+ordering+pinning are fixture-gated; expand API inventory as needed |
 | Column sizing totals + start/after offsets | `Table::{total_size,left_total_size,center_total_size,right_total_size,column_start,column_after}` | Aligned | `column_sizing.json`, `visibility_ordering.json` |
-| Resize lifecycle (`onChange`/`onEnd`, RTL) | `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `columnSizingInfo` state | Partial | `column_sizing.json`, `column_resizing_group_headers.json` |
+| Resize lifecycle (`onChange`/`onEnd`, RTL) | `Table::{started_column_resize,dragged_column_resize,ended_column_resize}` + `columnSizingInfo` state | Aligned | `column_sizing.json`, `column_sizing_interactions.json`, `column_resizing_group_headers.json` |
 
 ---
 
