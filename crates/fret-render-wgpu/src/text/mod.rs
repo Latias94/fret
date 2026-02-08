@@ -326,7 +326,12 @@ impl TextBlobKey {
         constraints: TextConstraints,
         font_stack_key: u64,
     ) -> Self {
-        let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
+        let max_width_bits = match constraints.wrap {
+            // `TextWrap::None` does not change shaping results based on width unless we need to
+            // materialize an overflow policy (ellipsis). Callers clip at higher levels.
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            _ => constraints.max_width.map(|w| w.0.to_bits()),
+        };
         Self {
             text: Arc::<str>::from(text),
             spans_shaping_key: 0,

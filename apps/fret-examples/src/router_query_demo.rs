@@ -9,8 +9,9 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
-use fret_router_ui::{RouterLink, RouterUiStore, router_outlet};
+use fret_router_ui::{RouterLink, RouterUiStore, router_link_with_test_id, router_outlet};
 use fret_ui::Invalidation;
+use fret_ui::element::SemanticsDecoration;
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
 const ROUTER_QUERY_DEMO_PAGE_NS: &str = "fret-examples.router_query_demo.page_content.v1";
@@ -274,6 +275,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .into_element(cx);
 
     let header_lines = ui::v_flex(cx, |cx| {
+        let settings_link = st
+            .router
+            .link_to_location(NavigationAction::Push, RouteLocation::parse("/settings"));
+        let hover_intents = cx
+            .get_model_cloned(&st.router.intents_model(), Invalidation::Layout)
+            .expect("router intents model should be readable");
         [
             ui::h_flex(cx, |cx| {
                 [
@@ -296,19 +303,64 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
                     router_outlet(cx, &snapshot_model, |cx, snap| {
-                        let label = match snap.leaf_route().copied() {
-                            Some(RouteId::Root) => "Root",
-                            Some(RouteId::Settings) => "Settings",
-                            Some(RouteId::User) => "User",
-                            None => "<none>",
-                        };
-                        shadcn::Badge::new(label).into_element(cx)
+                        match snap.leaf_route().copied() {
+                            Some(RouteId::Root) => shadcn::Badge::new("Root")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-root"),
+                                ),
+                            Some(RouteId::Settings) => shadcn::Badge::new("Settings")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-settings"),
+                                ),
+                            Some(RouteId::User) => shadcn::Badge::new("User")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-user"),
+                                ),
+                            None => shadcn::Badge::new("<none>")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-none"),
+                                ),
+                        }
                     }),
                 ]
             })
             .gap(Space::N2)
             .items_center()
             .into_element(cx),
+            {
+                let label = ui::raw_text(cx, "router_link: /settings").into_element(cx);
+                router_link_with_test_id(
+                    cx,
+                    &st.router,
+                    settings_link,
+                    "router-query-demo-link-settings",
+                    [label],
+                )
+            },
+            {
+                let (test_id, label) = if hover_intents.is_empty() {
+                    (
+                        "router-query-demo-hover-intents-empty",
+                        "hover intents: <empty>",
+                    )
+                } else {
+                    (
+                        "router-query-demo-hover-intents-nonempty",
+                        "hover intents: <nonempty>",
+                    )
+                };
+                ui::raw_text(cx, label)
+                    .into_element(cx)
+                    .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            },
         ]
     })
     .gap(Space::N1)
@@ -395,6 +447,7 @@ fn on_command(
             let link = st
                 .router
                 .link_to(
+                    app,
                     NavigationAction::Push,
                     &RouteId::User,
                     &[PathParam {

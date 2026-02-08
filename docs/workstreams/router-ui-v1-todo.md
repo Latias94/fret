@@ -47,6 +47,12 @@ Status legend:
 - `[x]` Add `RouterLink` helper:
   - compute canonical `RouteLocation` + `href` (`RouterUiStore::link_to`)
   - provide desktop affordance hook (`copy_href_on_activate`)
+- `[x]` Add a navigation activation hook:
+  - `RouterUiStore::navigate_link_on_activate(link)` updates router + snapshot + intents
+- `[x]` Add hover prefetch intent wiring:
+  - `Router::prefetch_intents_for_location(...)` (router core; no navigation)
+  - `RouterUiStore::prefetch_link_on_hover_change(link)` updates intents model on hover
+- `[x]` Add a low-level `router_link(...)` pressable helper (no shadcn dependency)
 - `[ ]` Add `RouterLink` element:
   - computes `href` using `Router::href_to(...)`
   - on press, performs guard-aware navigation
@@ -59,4 +65,4 @@ Status legend:
 - `[x]` Adopt in one desktop app:
   - show match-driven outlet rendering
   - show typed navigation via `navigate_to_*` + typed search helpers
-- `[ ]` Add a `fretboard diag` script for a basic navigation flow.
+- `[x]` Add a `fretboard diag` script for a basic navigation flow (`tools/diag-scripts/router-query-demo-basic-nav.json`).

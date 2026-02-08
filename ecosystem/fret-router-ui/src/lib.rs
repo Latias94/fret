@@ -12,13 +12,15 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_core::AppWindowId;
 use fret_router::{
-    HistoryAdapter, NavigationAction, RouteLocation, RouteMatchSnapshot, Router, RouterEvent,
-    RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents,
+    HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
+    RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
+    RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
-use fret_runtime::Model;
 use fret_runtime::{CommandId, Effect};
-use fret_ui::action::OnActivate;
+use fret_runtime::{Model, WeakModel};
+use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
+use fret_ui::element::PressableProps;
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -54,25 +56,29 @@ where
 pub struct RouterUiStore<R, H>
 where
     R: Clone + Eq + Hash + 'static,
-    H: HistoryAdapter,
+    H: HistoryAdapter + 'static,
 {
     window: AppWindowId,
-    router: Router<R, H>,
+    router: Model<Router<R, H>>,
     snapshot: Model<RouterUiSnapshot<R>>,
+    intents: Model<Vec<RoutePrefetchIntent<R>>>,
 }
 
 impl<R, H> RouterUiStore<R, H>
 where
     R: Clone + Eq + Hash + 'static,
-    H: HistoryAdapter,
+    H: HistoryAdapter + 'static,
 {
     pub fn new(app: &mut App, window: AppWindowId, router: Router<R, H>) -> Self {
         let snapshot = RouterUiSnapshot::from_state(router.state());
+        let router = app.models_mut().insert(router);
         let snapshot = app.models_mut().insert(snapshot);
+        let intents = app.models_mut().insert(Vec::new());
         Self {
             window,
             router,
             snapshot,
+            intents,
         }
     }
 
@@ -80,99 +86,222 @@ where
         self.snapshot.clone()
     }
 
-    pub fn router(&self) -> &Router<R, H> {
-        &self.router
+    pub fn router_model(&self) -> Model<Router<R, H>> {
+        self.router.clone()
     }
 
-    pub fn router_mut(&mut self) -> &mut Router<R, H> {
-        &mut self.router
+    pub fn intents_model(&self) -> Model<Vec<RoutePrefetchIntent<R>>> {
+        self.intents.clone()
     }
 
-    pub fn state(&self) -> &fret_router::RouterState<R> {
-        self.router.state()
+    pub fn build_location(
+        &self,
+        app: &App,
+        route: &R,
+        params: &[PathParam],
+        search: SearchMap,
+        fragment: Option<String>,
+    ) -> Result<RouteLocation, RouterBuildLocationError> {
+        app.models()
+            .read(&self.router, |router| {
+                router.build_location(route, params, search, fragment)
+            })
+            .expect("router model should be readable")
     }
 
-    pub fn history(&self) -> &H {
-        self.router.history()
-    }
-
-    pub fn history_mut(&mut self) -> &mut H {
-        self.router.history_mut()
-    }
-
-    pub fn take_events(&mut self) -> Vec<RouterEvent<R>> {
-        self.router.take_events()
-    }
-
-    pub fn apply_update(&mut self, app: &mut App, update: &RouterUpdate) {
-        if !update.changed() {
-            return;
-        }
-
-        let next = RouterUiSnapshot::from_state(self.router.state());
-        let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
-        app.request_redraw(self.window);
-    }
-
-    pub fn navigate(
-        &mut self,
-        app: &mut App,
-        action: NavigationAction,
-        target: Option<RouteLocation>,
-    ) -> Result<RouterUpdate, fret_router::RouteSearchValidationFailure> {
-        let update = self.router.navigate(action, target)?;
-        self.apply_update(app, &update);
-        Ok(update)
-    }
-
-    pub fn navigate_with_prefetch_intents(
-        &mut self,
-        app: &mut App,
-        action: NavigationAction,
-        target: Option<RouteLocation>,
-    ) -> Result<RouterUpdateWithPrefetchIntents<R>, fret_router::RouteSearchValidationFailure> {
-        let update = self.router.navigate_with_prefetch_intents(action, target)?;
-        self.apply_update(app, &update.update);
-        Ok(update)
-    }
-
-    pub fn sync_with_prefetch_intents(
-        &mut self,
-        app: &mut App,
-    ) -> Result<RouterUpdateWithPrefetchIntents<R>, fret_router::RouteSearchValidationFailure> {
-        let update = self.router.sync_with_prefetch_intents()?;
-        self.apply_update(app, &update.update);
-        Ok(update)
-    }
-
-    pub fn init_with_prefetch_intents(
-        &mut self,
-        app: &mut App,
-    ) -> Result<RouterUpdateWithPrefetchIntents<R>, fret_router::RouteSearchValidationFailure> {
-        let update = self.router.init_with_prefetch_intents()?;
-        self.apply_update(app, &update.update);
-        Ok(update)
+    pub fn href_to(
+        &self,
+        app: &App,
+        route: &R,
+        params: &[PathParam],
+        search: SearchMap,
+        fragment: Option<String>,
+    ) -> Result<String, RouterBuildLocationError> {
+        app.models()
+            .read(&self.router, |router| {
+                router.href_to(route, params, search, fragment)
+            })
+            .expect("router model should be readable")
     }
 
     pub fn link_to(
         &self,
+        app: &App,
         action: NavigationAction,
         route: &R,
-        params: &[fret_router::PathParam],
-        search: fret_router::SearchMap,
+        params: &[PathParam],
+        search: SearchMap,
         fragment: Option<String>,
-    ) -> Result<RouterLink, fret_router::RouterBuildLocationError> {
-        let to = self
-            .router
-            .build_location(route, params, search, fragment)?;
-        let href: Arc<str> = Arc::from(to.to_url());
-        Ok(RouterLink { action, href, to })
+    ) -> Result<RouterLink, RouterBuildLocationError> {
+        let to = self.build_location(app, route, params, search, fragment)?;
+        Ok(self.link_to_location(action, to))
     }
 
     pub fn link_to_location(&self, action: NavigationAction, mut to: RouteLocation) -> RouterLink {
         to.canonicalize();
         let href: Arc<str> = Arc::from(to.to_url());
         RouterLink { action, href, to }
+    }
+
+    pub fn take_events(&self, app: &mut App) -> Vec<RouterEvent<R>> {
+        app.models_mut()
+            .update(&self.router, |router| router.take_events())
+            .expect("router model should be updatable")
+    }
+
+    fn apply_update(
+        &self,
+        app: &mut App,
+        update: &RouterUpdate,
+        intents: &[RoutePrefetchIntent<R>],
+    ) {
+        if !update.changed() {
+            return;
+        }
+
+        let next = app
+            .models()
+            .read(&self.router, |router| {
+                RouterUiSnapshot::from_state(router.state())
+            })
+            .expect("router model should be readable");
+        let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
+        let intents = intents.to_vec();
+        let _ = app.models_mut().update(&self.intents, |v| *v = intents);
+        app.request_redraw(self.window);
+    }
+
+    pub fn navigate(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        target: Option<RouteLocation>,
+    ) -> Result<RouterUpdate, RouteSearchValidationFailure> {
+        let update = app
+            .models_mut()
+            .update(&self.router, |router| router.navigate(action, target))
+            .expect("router model should be updatable")?;
+        self.apply_update(app, &update, &[]);
+        Ok(update)
+    }
+
+    pub fn navigate_with_prefetch_intents(
+        &self,
+        app: &mut App,
+        action: NavigationAction,
+        target: Option<RouteLocation>,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        let update = app
+            .models_mut()
+            .update(&self.router, |router| {
+                router.navigate_with_prefetch_intents(action, target)
+            })
+            .expect("router model should be updatable")?;
+        self.apply_update(app, &update.update, &update.intents);
+        Ok(update)
+    }
+
+    pub fn sync_with_prefetch_intents(
+        &self,
+        app: &mut App,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        let update = app
+            .models_mut()
+            .update(&self.router, |router| router.sync_with_prefetch_intents())
+            .expect("router model should be updatable")?;
+        self.apply_update(app, &update.update, &update.intents);
+        Ok(update)
+    }
+
+    pub fn init_with_prefetch_intents(
+        &self,
+        app: &mut App,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        let update = app
+            .models_mut()
+            .update(&self.router, |router| router.init_with_prefetch_intents())
+            .expect("router model should be updatable")?;
+        self.apply_update(app, &update.update, &update.intents);
+        Ok(update)
+    }
+
+    pub fn navigate_link_on_activate(&self, link: RouterLink) -> OnActivate {
+        let window = self.window;
+        let router: WeakModel<Router<R, H>> = self.router.downgrade();
+        let snapshot: WeakModel<RouterUiSnapshot<R>> = self.snapshot.downgrade();
+        let intents: WeakModel<Vec<RoutePrefetchIntent<R>>> = self.intents.downgrade();
+        Arc::new(move |host, _cx, _reason| {
+            let Some(router) = router.upgrade() else {
+                return;
+            };
+            let Some(snapshot) = snapshot.upgrade() else {
+                return;
+            };
+            let Some(intents_model) = intents.upgrade() else {
+                return;
+            };
+
+            let action = link.action;
+            let to = link.to.clone();
+
+            let result = host.models_mut().update(&router, |router| {
+                let update = router.navigate_with_prefetch_intents(action, Some(to))?;
+                let snapshot = RouterUiSnapshot::from_state(router.state());
+                Ok::<_, RouteSearchValidationFailure>((update, snapshot))
+            });
+
+            let Ok(result) = result else {
+                return;
+            };
+            let Ok((update, next_snapshot)) = result else {
+                host.request_redraw(window);
+                return;
+            };
+
+            if !update.update.changed() {
+                return;
+            }
+
+            let _ = host.models_mut().update(&snapshot, |v| *v = next_snapshot);
+            let _ = host
+                .models_mut()
+                .update(&intents_model, |v| *v = update.intents.clone());
+            host.request_redraw(window);
+        })
+    }
+
+    pub fn prefetch_link_on_hover_change(&self, link: RouterLink) -> OnHoverChange {
+        let window = self.window;
+        let router: WeakModel<Router<R, H>> = self.router.downgrade();
+        let intents: WeakModel<Vec<RoutePrefetchIntent<R>>> = self.intents.downgrade();
+        Arc::new(move |host, _cx, hovered| {
+            if !hovered {
+                return;
+            }
+
+            let Some(router) = router.upgrade() else {
+                return;
+            };
+            let Some(intents_model) = intents.upgrade() else {
+                return;
+            };
+
+            let to = link.to.clone();
+            let result = host
+                .models_mut()
+                .update(&router, |router| router.prefetch_intents_for_location(&to));
+
+            let Ok(result) = result else {
+                return;
+            };
+            let Ok(intents) = result else {
+                host.request_redraw(window);
+                return;
+            };
+
+            let _ = host.models_mut().update(&intents_model, |v| *v = intents);
+            host.request_redraw(window);
+        })
     }
 }
 
@@ -218,6 +347,65 @@ where
     render(cx, &snap)
 }
 
+pub fn router_link<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    router_link_with_props(cx, store, link, PressableProps::default(), children)
+}
+
+/// Build a low-level router link pressable with explicit `PressableProps`.
+///
+/// The pressable:
+/// - navigates on `pressable_on_activate`
+/// - computes prefetch intents on hover and stores them in `RouterUiStore::intents_model()`
+pub fn router_link_with_props<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    props: PressableProps,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let on_activate = store.navigate_link_on_activate(link.clone());
+    let on_hover = store.prefetch_link_on_hover_change(link);
+    let children: Vec<AnyElement> = children.into_iter().collect();
+
+    cx.pressable_with_id_props(|cx, _state, _id| {
+        cx.pressable_on_activate(on_activate);
+        cx.pressable_on_hover_change(on_hover);
+        (props, children)
+    })
+}
+
+/// Build a router link pressable and stamp a diagnostics `test_id`.
+///
+/// Prefer this in demos and automated `fretboard diag` scripts.
+pub fn router_link_with_test_id<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let mut props = PressableProps::default();
+    props.a11y.test_id = Some(test_id.into());
+    router_link_with_props(cx, store, link, props, children)
+}
+
 #[cfg(test)]
 mod tests {
     use super::RouterUiStore;
@@ -253,7 +441,7 @@ mod tests {
 
         let mut app = App::new();
         let window = fret_core::AppWindowId::default();
-        let mut store = RouterUiStore::new(&mut app, window, router);
+        let store = RouterUiStore::new(&mut app, window, router);
 
         let update = store
             .navigate(
@@ -312,7 +500,7 @@ mod tests {
 
         let mut app = App::new();
         let window = fret_core::AppWindowId::default();
-        let mut store = RouterUiStore::new(&mut app, window, router);
+        let store = RouterUiStore::new(&mut app, window, router);
 
         let update = store
             .init_with_prefetch_intents(&mut app)

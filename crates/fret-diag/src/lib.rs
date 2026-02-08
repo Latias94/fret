@@ -106,6 +106,9 @@ const PERF_SUITE_UI_RESIZE_PROBES_SCRIPTS: &[&str] = &[
     "tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json",
 ];
 
+const PERF_SUITE_UI_CODE_EDITOR_RESIZE_PROBES_SCRIPTS: &[&str] =
+    &["tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json"];
+
 pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -3437,6 +3440,12 @@ See: `docs/tracy.md`.\n";
                     .iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-code-editor-resize-probes" {
+                perf_suite_labels.push("ui-code-editor-resize-probes");
+                PERF_SUITE_UI_CODE_EDITOR_RESIZE_PROBES_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -3493,6 +3502,7 @@ See: `docs/tracy.md`.\n";
             let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
+            let mut exit_code: i32 = 0;
 
             if let Some(baseline) = perf_baseline.as_ref() {
                 for src in &scripts {
@@ -5142,7 +5152,9 @@ See: `docs/tracy.md`.\n";
                         perf_threshold_failures.len(),
                         out_path.display()
                     );
-                    std::process::exit(1);
+                    // Do not exit early: still print the `--json` payload so perf runs remain
+                    // loggable and diagnosable even when thresholds fail.
+                    exit_code = 1;
                 }
             }
 
@@ -5174,7 +5186,7 @@ See: `docs/tracy.md`.\n";
                 );
             }
 
-            std::process::exit(0);
+            std::process::exit(exit_code);
         }
         "stats" => {
             let Some(src) = rest.first().cloned() else {
@@ -7879,6 +7891,7 @@ fn perf_suite_scripts_by_name(name: &str) -> Option<&'static [&'static str]> {
         "ui-gallery" => Some(PERF_SUITE_UI_GALLERY_SCRIPTS),
         "ui-gallery-steady" => Some(PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS),
         "ui-resize-probes" => Some(PERF_SUITE_UI_RESIZE_PROBES_SCRIPTS),
+        "ui-code-editor-resize-probes" => Some(PERF_SUITE_UI_CODE_EDITOR_RESIZE_PROBES_SCRIPTS),
         _ => None,
     }
 }
@@ -8136,7 +8149,7 @@ fn parse_perf_baseline_seed_rule_spec_with_source(
     } else if scope == "this-suite" {
         if active_suites.is_empty() {
             return Err(
-                "invalid --perf-baseline-seed scope `this-suite` (requires a named perf suite such as `ui-gallery`, `ui-gallery-steady`, or `ui-resize-probes`)".to_string(),
+                "invalid --perf-baseline-seed scope `this-suite` (requires a named perf suite such as `ui-gallery`, `ui-gallery-steady`, `ui-resize-probes`, or `ui-code-editor-resize-probes`)".to_string(),
             );
         }
         for suite in active_suites {
@@ -8153,7 +8166,7 @@ fn parse_perf_baseline_seed_rule_spec_with_source(
         let scope_suite = scope_suite.trim();
         let Some(scripts) = perf_suite_scripts_by_name(scope_suite) else {
             return Err(format!(
-                "unknown --perf-baseline-seed suite `{scope_suite}` (expected one of: ui-gallery, ui-gallery-steady, ui-resize-probes)"
+                "unknown --perf-baseline-seed suite `{scope_suite}` (expected one of: ui-gallery, ui-gallery-steady, ui-resize-probes, ui-code-editor-resize-probes)"
             ));
         };
         for script in scripts {

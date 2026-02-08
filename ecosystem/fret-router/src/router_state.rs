@@ -100,6 +100,7 @@ pub enum RouterTransitionCause {
     Navigate { action: NavigationAction },
     Redirect { action: NavigationAction },
     Sync,
+    Prefetch,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -290,6 +291,7 @@ impl RouterTransition {
             RouterTransitionCause::Navigate { action } => Some(action),
             RouterTransitionCause::Redirect { action } => Some(action),
             RouterTransitionCause::Sync => None,
+            RouterTransitionCause::Prefetch => None,
         }
     }
 }
@@ -813,6 +815,50 @@ where
         std::mem::take(&mut self.prefetch_intents)
     }
 
+    pub fn prefetch_intents_for_location(
+        &self,
+        location: &RouteLocation,
+    ) -> Result<Vec<RoutePrefetchIntent<R>>, RouteSearchValidationFailure> {
+        let result =
+            self.tree
+                .match_routes_with_search(location, &self.search_table, self.search_mode)?;
+        let next_state = RouterState::from_match_result(result);
+
+        let transition = RouterTransition {
+            cause: RouterTransitionCause::Prefetch,
+            from: self.state.location.clone(),
+            to: next_state.location.clone(),
+            redirect_chain: Vec::new(),
+            blocked_by: None,
+        };
+
+        let to = &transition.to;
+        let mut out: Vec<RoutePrefetchIntent<R>> = Vec::new();
+
+        for (match_index, matched) in next_state.matches.iter().enumerate() {
+            let Some(hooks) = self.route_hooks.hooks_for(&matched.route) else {
+                continue;
+            };
+
+            let Some(loader) = hooks.loader.as_ref() else {
+                continue;
+            };
+
+            let ctx = RouteHookContext {
+                cause: transition.cause,
+                from: &transition.from,
+                to,
+                from_state: &self.state,
+                next_state: &next_state,
+                match_index,
+                matched,
+            };
+            out.extend(loader(&ctx));
+        }
+
+        Ok(out)
+    }
+
     pub fn sync_with_prefetch_intents(
         &mut self,
     ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
@@ -1245,8 +1291,8 @@ mod tests {
         RouterUpdate, RouterUpdateWithPrefetchIntents,
     };
     use crate::{
-        MemoryHistory, NavigationAction, PathParam, RouteLocation, RouteNode, RouteSearchTable,
-        RouteTree, SearchMap, SearchValidationError, SearchValidationMode,
+        MemoryHistory, NavigationAction, PathParam, RouteLocation, RouteNode, RoutePrefetchIntent,
+        RouteSearchTable, RouteTree, SearchMap, SearchValidationError, SearchValidationMode,
     };
     use std::sync::{Arc, Mutex};
 
@@ -1724,6 +1770,48 @@ mod tests {
             router.prefetch_intents.is_empty(),
             "expected navigate_with_prefetch_intents() to drain stale intents on failure"
         );
+    }
+
+    #[test]
+    fn prefetch_intents_for_location_does_not_navigate() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router =
+            Router::new(tree, search_table, SearchValidationMode::Strict, history).expect("router");
+
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(|ctx| {
+                    vec![RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "fret-router.tests.prefetch",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let intents = router
+            .prefetch_intents_for_location(&RouteLocation::parse("/settings"))
+            .expect("prefetch should succeed");
+        assert_eq!(intents.len(), 1);
+        assert_eq!(router.state().location.to_url(), "/");
+        assert_eq!(router.history().current().to_url(), "/");
+        assert!(router.take_prefetch_intents().is_empty());
     }
 
     #[test]

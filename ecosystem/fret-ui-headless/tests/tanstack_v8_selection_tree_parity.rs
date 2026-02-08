@@ -35,6 +35,25 @@ struct RowSelectionDetail {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct RowTraversalDetail {
+    parent_rows: BTreeMap<String, Vec<String>>,
+    leaf_rows: BTreeMap<String, Vec<String>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RowStructureRow {
+    index: i64,
+    depth: i64,
+    parent_id: Option<String>,
+    sub_row_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RowStructureDetail {
+    rows: BTreeMap<String, RowStructureRow>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     core: RowModelSnapshot,
     filtered: RowModelSnapshot,
@@ -50,6 +69,10 @@ struct FixtureExpect {
     grouped_selected: Option<RowModelSnapshot>,
     #[serde(default)]
     row_selection_detail: Option<RowSelectionDetail>,
+    #[serde(default)]
+    row_traversal_detail: Option<RowTraversalDetail>,
+    #[serde(default)]
+    row_structure_detail: Option<RowStructureDetail>,
     #[serde(default)]
     is_all_rows_selected: Option<bool>,
     #[serde(default)]
@@ -448,6 +471,92 @@ fn tanstack_v8_selection_tree_parity() {
                     "snapshot {} can_select_sub_rows[{}] mismatch",
                     snap.id,
                     row_id
+                );
+            }
+        }
+
+        if let Some(expected) = snap.expect.row_traversal_detail.as_ref() {
+            let model = table.pre_pagination_row_model();
+
+            for (row_id, expected_parent_ids) in &expected.parent_rows {
+                let actual = model
+                    .row_by_id(row_id)
+                    .map(|idx| {
+                        model
+                            .parent_row_ids(idx)
+                            .into_iter()
+                            .map(|id| id.as_str().to_string())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+
+                assert_eq!(
+                    &actual, expected_parent_ids,
+                    "snapshot {} parent_rows[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+
+            for (row_id, expected_leaf_ids) in &expected.leaf_rows {
+                let actual = model
+                    .row_by_id(row_id)
+                    .map(|idx| {
+                        model
+                            .leaf_row_ids(idx)
+                            .into_iter()
+                            .map(|id| id.as_str().to_string())
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
+
+                assert_eq!(
+                    &actual, expected_leaf_ids,
+                    "snapshot {} leaf_rows[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+        }
+
+        if let Some(expected) = snap.expect.row_structure_detail.as_ref() {
+            let model = table.pre_pagination_row_model();
+
+            for (row_id, expected_row) in &expected.rows {
+                let Some(idx) = model.row_by_id(row_id) else {
+                    panic!("snapshot {} missing row id {row_id}", snap.id);
+                };
+                let row = model
+                    .row(idx)
+                    .unwrap_or_else(|| panic!("snapshot {} missing row index {idx}", snap.id));
+
+                assert_eq!(
+                    row.index as i64, expected_row.index,
+                    "snapshot {} row_structure.index[{}] mismatch",
+                    snap.id, row_id
+                );
+                assert_eq!(
+                    row.depth as i64, expected_row.depth,
+                    "snapshot {} row_structure.depth[{}] mismatch",
+                    snap.id, row_id
+                );
+
+                let actual_parent_id = row
+                    .parent
+                    .and_then(|p| model.row(p).map(|r| r.id.as_str().to_string()));
+                assert_eq!(
+                    actual_parent_id, expected_row.parent_id,
+                    "snapshot {} row_structure.parent_id[{}] mismatch",
+                    snap.id, row_id
+                );
+
+                let actual_sub_ids: Vec<String> = row
+                    .sub_rows
+                    .iter()
+                    .filter_map(|&child| model.row(child).map(|r| r.id.as_str().to_string()))
+                    .collect();
+                assert_eq!(
+                    actual_sub_ids, expected_row.sub_row_ids,
+                    "snapshot {} row_structure.sub_row_ids[{}] mismatch",
+                    snap.id, row_id
                 );
             }
         }

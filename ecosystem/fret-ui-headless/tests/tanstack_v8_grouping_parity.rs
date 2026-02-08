@@ -541,11 +541,9 @@ fn tanstack_v8_grouping_parity() {
             );
 
             for (row_id, expected_can_pin) in &expected.can_pin {
-                let row_key = RowKey(
-                    row_id
-                        .parse::<u64>()
-                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
-                );
+                let row_key = table
+                    .row_key_for_id(row_id.as_str(), true)
+                    .unwrap_or_else(|| panic!("unknown row id: {row_id}"));
                 let can_pin = table
                     .row_can_pin(row_key)
                     .unwrap_or_else(|| panic!("unknown row: {row_id}"));
@@ -557,11 +555,9 @@ fn tanstack_v8_grouping_parity() {
             }
 
             for (row_id, expected_pos) in &expected.pin_position {
-                let row_key = RowKey(
-                    row_id
-                        .parse::<u64>()
-                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
-                );
+                let row_key = table
+                    .row_key_for_id(row_id.as_str(), true)
+                    .unwrap_or_else(|| panic!("unknown row id: {row_id}"));
                 let pos = table.row_is_pinned(row_key).map(|p| match p {
                     RowPinPosition::Top => "top",
                     RowPinPosition::Bottom => "bottom",
@@ -576,11 +572,9 @@ fn tanstack_v8_grouping_parity() {
             }
 
             for (row_id, expected_index) in &expected.pinned_index {
-                let row_key = RowKey(
-                    row_id
-                        .parse::<u64>()
-                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
-                );
+                let row_key = table
+                    .row_key_for_id(row_id.as_str(), true)
+                    .unwrap_or_else(|| panic!("unknown row id: {row_id}"));
                 let index = table
                     .row_pinned_index(row_key)
                     .unwrap_or_else(|| panic!("unknown row: {row_id}"));

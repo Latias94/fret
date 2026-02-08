@@ -2,6 +2,7 @@ use super::super::frame::*;
 use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
+use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
 use std::time::Instant;
 
 impl ElementHostWidget {
@@ -320,6 +321,7 @@ impl ElementHostWidget {
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
                     crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -330,6 +332,16 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let text_changed = self.text_cache.last_text.as_ref() != Some(&props.text);
@@ -339,7 +351,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || text_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || text_changed
                     || style_changed
@@ -357,23 +378,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        text_changed,
-                        false,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            text_changed,
+                            false,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
@@ -435,6 +502,7 @@ impl ElementHostWidget {
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
                     crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -445,6 +513,16 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -454,7 +532,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || rich_changed
                     || style_changed
@@ -472,23 +559,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        false,
-                        rich_changed,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            false,
+                            rich_changed,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
@@ -551,6 +684,7 @@ impl ElementHostWidget {
                     .unwrap_or(cx.theme().colors.text_primary);
                 let max_width =
                     crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
+                let max_width = cx.tree.maybe_bucket_text_wrap_width(props.wrap, max_width);
                 let constraints = TextConstraints {
                     max_width: Some(max_width),
                     wrap: props.wrap,
@@ -561,6 +695,16 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
+                let width_cache_entries = if cx.tree.interactive_resize_active()
+                    && !matches!(props.wrap, fret_core::TextWrap::None)
+                {
+                    interactive_resize_text_width_cache_entries()
+                } else {
+                    0
+                };
+                if width_cache_entries <= 1 {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
                 let blob_missing = self.text_cache.blob.is_none();
                 let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
                 let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
@@ -570,7 +714,16 @@ impl ElementHostWidget {
                 let width_changed = self.text_cache.last_width != Some(max_width);
                 let font_stack_changed =
                     self.text_cache.last_font_stack_key != Some(font_stack_key);
-                let needs_prepare = blob_missing
+                let signature_changed = scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || font_stack_changed;
+                if signature_changed {
+                    self.text_cache.release_prepared_by_width(cx.services);
+                }
+                let mut needs_prepare = blob_missing
                     || scale_changed
                     || rich_changed
                     || style_changed
@@ -588,23 +741,69 @@ impl ElementHostWidget {
                     | ((width_changed as u16) << 7)
                     | ((font_stack_changed as u16) << 8);
 
-                if needs_prepare && cx.tree.debug_enabled() {
-                    cx.tree.debug_record_paint_text_prepare_reasons(
-                        blob_missing,
-                        scale_changed,
-                        false,
-                        rich_changed,
-                        style_changed,
-                        wrap_changed,
-                        overflow_changed,
-                        width_changed,
-                        font_stack_changed,
-                    );
+                if needs_prepare
+                    && width_cache_entries > 1
+                    && width_changed
+                    && !signature_changed
+                    && !blob_missing
+                    && let Some(cached) = self.text_cache.take_prepared_for_width(max_width)
+                {
+                    if let Some(prev_width) = self.text_cache.last_width
+                        && prev_width != max_width
+                        && let (Some(prev_blob), Some(prev_metrics)) =
+                            (self.text_cache.blob.take(), self.text_cache.metrics.take())
+                    {
+                        self.text_cache.push_prepared_for_width(
+                            cx.services,
+                            width_cache_entries,
+                            CachedPreparedTextByWidth {
+                                width: prev_width,
+                                blob: prev_blob,
+                                metrics: prev_metrics,
+                            },
+                        );
+                    }
+                    self.text_cache.blob = Some(cached.blob);
+                    self.text_cache.metrics = Some(cached.metrics);
+                    self.text_cache.last_width = Some(max_width);
+                    needs_prepare = false;
                 }
 
                 if needs_prepare {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_paint_text_prepare_reasons(
+                            blob_missing,
+                            scale_changed,
+                            false,
+                            rich_changed,
+                            style_changed,
+                            wrap_changed,
+                            overflow_changed,
+                            width_changed,
+                            font_stack_changed,
+                        );
+                    }
+
                     if let Some(blob) = self.text_cache.blob.take() {
-                        cx.services.text().release(blob);
+                        if width_cache_entries > 1
+                            && width_changed
+                            && !signature_changed
+                            && let Some(prev_width) = self.text_cache.last_width
+                            && prev_width != max_width
+                            && let Some(prev_metrics) = self.text_cache.metrics.take()
+                        {
+                            self.text_cache.push_prepared_for_width(
+                                cx.services,
+                                width_cache_entries,
+                                CachedPreparedTextByWidth {
+                                    width: prev_width,
+                                    blob,
+                                    metrics: prev_metrics,
+                                },
+                            );
+                        } else {
+                            cx.services.text().release(blob);
+                        }
                     }
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
