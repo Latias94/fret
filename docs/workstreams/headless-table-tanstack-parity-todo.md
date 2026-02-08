@@ -857,7 +857,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
         (`Table::tanstack_ungrouped_row_model_order_with_cache`)
       - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_memo_rebuild_each_frame_expanded_paginated_gate.rs`
-    - [ ] HTP-memo-014 Add broader guardrail gates for rebuild-each-frame callers (recompute-count expectations).
+    - [x] HTP-memo-014 Add broader guardrail gates for rebuild-each-frame callers (recompute-count expectations).
+      - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_memo_rebuild_each_frame_guardrail_gate.rs`
 - [x] HTP-memo-020 Provide an integration pattern for 鈥渞ebuild each frame鈥?while retaining memo cache.
   - Done: `Table::tanstack_sorted_flat_row_order_with_cache(items_revision, cache)` integrates a persistent
     memo cache with ephemeral `Table` rebuilds.
