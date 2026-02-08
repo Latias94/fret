@@ -923,11 +923,15 @@ Next UI parity targets (capability, not exact DOM behavior):
           - Gallery: `apps/fret-ui-gallery/src/ui.rs` wires a `Status` dropdown (column id `status`) and a stable
             status row (`StatusFilter: ...`) for assertions.
           - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`.
-        - [ ] HTP-ui-dt-024 Add a “Reset filters” affordance (clears global + column filters and resets `page_index`).
+        - [x] HTP-ui-dt-024 Add a “Reset filters” affordance (clears global + column filters and resets `page_index`).
+          - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`Reset` button updates both `TableState` and
+            the internal input/checkbox models so the toolbar remains the source of truth).
+          - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json`.
       - Gates:
         - `tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json`
         - `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
         - `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
+        - `tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json`
     - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
       - Scope note: sticky rendering + split layout are already wired in `table_virtualized` (HTP-ui-colpin-010).
         This milestone focuses on *UI entrypoints* that let users drive `TableState.column_pinning`.

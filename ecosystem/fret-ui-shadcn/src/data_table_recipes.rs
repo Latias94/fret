@@ -662,7 +662,7 @@ impl<TData> DataTableToolbar<TData> {
             })
             .collect();
 
-        let cols_menu = DropdownMenu::new(columns_open).into_element(
+        let cols_menu = DropdownMenu::new(columns_open.clone()).into_element(
             cx,
             |cx| {
                 Button::new("Columns")
@@ -705,7 +705,7 @@ impl<TData> DataTableToolbar<TData> {
             pin_items.pop();
         }
 
-        let pin_menu = DropdownMenu::new(pinning_open).into_element(
+        let pin_menu = DropdownMenu::new(pinning_open.clone()).into_element(
             cx,
             |cx| {
                 Button::new("Pin")
@@ -744,17 +744,67 @@ impl<TData> DataTableToolbar<TData> {
                 )
             });
 
-        let global_filter = Input::new(filter_model)
+        let global_filter = Input::new(filter_model.clone())
             .a11y_label("Global filter")
             .a11y_role(SemanticsRole::TextField)
             .placeholder(self.filter_placeholder.clone())
             .into_element(cx);
 
-        let column_filter = column_filter_model.map(|m| {
-            Input::new(m)
+        let column_filter = column_filter_model.as_ref().map(|m| {
+            Input::new(m.clone())
                 .a11y_label(self.column_filter_a11y_label.clone())
                 .a11y_role(SemanticsRole::TextField)
                 .placeholder(self.column_filter_placeholder.clone())
+                .into_element(cx)
+        });
+
+        let reset_filters = cx
+            .app
+            .models()
+            .read(&self.state, |st| {
+                st.global_filter.is_some() || !st.column_filters.is_empty()
+            })
+            .ok()
+            .unwrap_or(false);
+        let reset_button = reset_filters.then(|| {
+            let state = self.state.clone();
+            let filter_model = filter_model.clone();
+            let column_filter_model = column_filter_model.clone();
+            let columns_open = columns_open.clone();
+            let pinning_open = pinning_open.clone();
+            let faceted_open = faceted_open.clone();
+            let faceted_models: Vec<Model<bool>> =
+                faceted_items.iter().map(|it| it.model.clone()).collect();
+
+            let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
+                let _ = host.models_mut().update(&state, |st| {
+                    st.global_filter = None;
+                    st.column_filters.clear();
+                    st.pagination.page_index = 0;
+                });
+
+                let _ = host.models_mut().update(&filter_model, |s| s.clear());
+                if let Some(model) = column_filter_model.as_ref() {
+                    let _ = host.models_mut().update(model, |s| s.clear());
+                }
+                for model in faceted_models.iter() {
+                    let _ = host.models_mut().update(model, |v| *v = false);
+                }
+
+                let _ = host.models_mut().update(&columns_open, |v| *v = false);
+                let _ = host.models_mut().update(&pinning_open, |v| *v = false);
+                if let Some(open) = faceted_open.as_ref() {
+                    let _ = host.models_mut().update(open, |v| *v = false);
+                }
+
+                host.notify(acx);
+            });
+
+            Button::new("Reset")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .test_id("data-table-toolbar-reset-filters")
+                .on_activate(on_activate)
                 .into_element(cx)
         });
 
@@ -784,6 +834,9 @@ impl<TData> DataTableToolbar<TData> {
                 }
                 children.push(cols_menu);
                 children.push(pin_menu);
+                if let Some(btn) = reset_button.clone() {
+                    children.push(btn);
+                }
                 if let Some(sel) = selected_text.clone() {
                     children.push(sel);
                 }
