@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::move_ops::*;
 
 pub(super) fn plan_ops(
     g: &Graph,

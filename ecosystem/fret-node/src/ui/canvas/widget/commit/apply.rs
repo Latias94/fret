@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn apply_transaction_result<H: UiHost>(

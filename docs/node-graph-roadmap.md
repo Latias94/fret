@@ -175,6 +175,7 @@ Legend:
   - ADR: `docs/adr/0197-subgraph-graph-references-and-cycle-safe-import.md`
   - Core closure + tests: `ecosystem/fret-node/src/core/imports.rs`, `ecosystem/fret-node/src/core/tests.rs`
   - Subgraph node contract + binding tests: `ecosystem/fret-node/src/core/subgraph.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Copy/paste includes referenced imports for subgraph nodes and preserves `graph_id` targets after paste: `ecosystem/fret-node/src/ops/fragment.rs`, `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
   - Import edit ops (Add/Remove/Alias): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Blackboard variables + typed symbol references (domain-ready).
@@ -185,10 +186,11 @@ Legend:
     - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
     - Tests: `ecosystem/fret-node/src/core/tests.rs`
     - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
+    - Copy/paste remaps symbol-ref targets to pasted symbol IDs (no source-graph ID leakage): `ecosystem/fret-node/src/ops/tests.rs` (`fragment_paste_transaction_remaps_symbol_ref_targets_to_pasted_symbols`)
   - UI overlays (editor affordances):
     - Blackboard (symbols) overlay: `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
       - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
-      - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, and graph edits are deferred until confirm.
+      - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, Enter-without-change is no-op, and graph edits are deferred until confirm.
     - Symbol rename overlay (TextInput-hosted): `ecosystem/fret-node/src/ui/overlays/group_rename.rs` (`SymbolRenameOverlay`)
       - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
       - Gates: Enter commit, Escape cancel + focus restore, and Enter no-op when text is unchanged.
@@ -196,6 +198,10 @@ Legend:
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
+  - [x] Culling metrics gate: node candidate/visible counts are exported from render-data collection and tested to decrease under `only_render_visible_elements=true`.
+    - Metrics plumbing: `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/types.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
+    - Test hook + shared cull-rect helper: `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
+    - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
 - [x] Deterministic graph diff/patch set for collaboration (MVP).
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)

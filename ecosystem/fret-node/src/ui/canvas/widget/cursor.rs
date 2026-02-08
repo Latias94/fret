@@ -1,8 +1,8 @@
 use fret_core::{CursorIcon, Point};
 use fret_ui::UiHost;
 
-use super::super::state::{NodeResizeHandle, ViewSnapshot};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{NodeResizeHandle, ViewSnapshot};
 
 pub(super) fn update_cursors<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

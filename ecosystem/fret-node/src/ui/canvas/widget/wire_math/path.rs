@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 use fret_core::PathCommand;
 
 pub(super) fn wire_distance2_path(p: Point, commands: &[PathCommand], bezier_steps: usize) -> f32 {

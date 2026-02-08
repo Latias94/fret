@@ -6,8 +6,8 @@ use fret_ui::UiHost;
 use crate::ops::GraphOp;
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 
-use super::super::state::{ViewSnapshot, WireDragKind};
 use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{ViewSnapshot, WireDragKind};
 
 pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

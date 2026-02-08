@@ -6,11 +6,12 @@ use fret_core::{
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::io::NodeGraphViewState;
 use crate::ui::style::{NodeGraphBackgroundPattern, NodeGraphBackgroundStyle};
 use crate::ui::{NodeGraphCanvas, NodeGraphColorMode, NodeGraphStyle};
 
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -52,10 +53,8 @@ fn paint_once(
 
 #[test]
 fn background_style_updates_do_not_rebuild_canvas_derived_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let style = NodeGraphStyle::default();
     let mut canvas = NodeGraphCanvas::new(graph, view).with_style(style);
@@ -109,10 +108,8 @@ fn background_style_updates_do_not_rebuild_canvas_derived_geometry() {
 
 #[test]
 fn background_style_override_survives_color_mode_theme_sync() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let background = NodeGraphBackgroundStyle {
         background: Color {

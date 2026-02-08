@@ -17,7 +17,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 zoom_bits: zoom.to_bits(),
                 node_origin_x_bits: node_origin.x.to_bits(),
                 node_origin_y_bits: node_origin.y.to_bits(),
-                draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
+                draw_order: Self::draw_order_fingerprint(&snapshot.draw_order),
                 presenter_rev,
                 edge_types_rev,
             },

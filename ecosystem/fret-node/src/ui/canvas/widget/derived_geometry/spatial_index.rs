@@ -1,20 +1,6 @@
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    fn spatial_index_key(
-        snapshot: &ViewSnapshot,
-        geom_key: GeometryCacheKey,
-        pad_screen_px: f32,
-    ) -> SpatialIndexCacheKey {
-        let tuning = snapshot.interaction.spatial_index;
-        SpatialIndexCacheKey {
-            geom: geom_key,
-            cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
-            min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
-            edge_aabb_pad_screen_bits: pad_screen_px.to_bits(),
-        }
-    }
-
     fn spatial_edge_aabb_pad_screen_px(&self, snapshot: &ViewSnapshot) -> f32 {
         let tuning = snapshot.interaction.spatial_index;
         let mut pad = tuning.edge_aabb_pad_screen_px;
@@ -23,7 +9,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         if pad.is_finite() { pad.max(0.0) } else { 0.0 }
     }
 
-    fn spatial_index_params(&self, snapshot: &ViewSnapshot) -> SpatialIndexParams {
+    fn spatial_index_plan(
+        &self,
+        snapshot: &ViewSnapshot,
+        geom_key: GeometryCacheKey,
+    ) -> SpatialIndexPlan {
         let zoom = snapshot.zoom;
         let pad_screen_px = self.spatial_edge_aabb_pad_screen_px(snapshot);
         let z = zoom.max(1.0e-6);
@@ -32,8 +22,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .max(tuning.min_cell_size_screen_px / z)
             .max(1.0);
         let max_hit_pad_canvas = (pad_screen_px / z).max(0.0);
-        SpatialIndexParams {
-            pad_screen_px,
+
+        let key = SpatialIndexCacheKey {
+            geom: geom_key,
+            cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
+            min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
+            edge_aabb_pad_screen_bits: pad_screen_px.to_bits(),
+        };
+
+        SpatialIndexPlan {
+            key,
             cell_size_canvas,
             max_hit_pad_canvas,
         }
@@ -45,7 +43,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
         edge_ctx: EdgePathContext<'_>,
         max_hit_pad_canvas: f32,
-        index: &mut CanvasSpatialIndex,
+        index: &mut CanvasSpatialDerived,
     ) {
         if !edge_ctx.has_custom_paths() {
             return;
@@ -115,11 +113,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
         geom_key: GeometryCacheKey,
         geom: &Arc<CanvasGeometry>,
-    ) -> Arc<CanvasSpatialIndex> {
+    ) -> Arc<CanvasSpatialDerived> {
         let zoom = snapshot.zoom;
-        let params = self.spatial_index_params(snapshot);
-        let index_key = Self::spatial_index_key(snapshot, geom_key, params.pad_screen_px);
-        if self.geometry.ensure_index_key(index_key) {
+        let plan = self.spatial_index_plan(snapshot, geom_key);
+        if self.geometry.ensure_index_key(plan.key) {
             let style = self.style.clone();
             let edge_types = self.edge_types.as_ref();
             let presenter: &dyn NodeGraphPresenter = &*self.presenter;
@@ -128,12 +125,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let index = self
                 .graph
                 .read_ref(host, |graph| {
-                    let mut index = CanvasSpatialIndex::build(
+                    let mut index = CanvasSpatialDerived::build(
                         graph,
                         geom,
                         zoom,
-                        params.max_hit_pad_canvas,
-                        params.cell_size_canvas,
+                        plan.max_hit_pad_canvas,
+                        plan.cell_size_canvas,
                     );
 
                     // Stage 2 `edgeTypes`: custom edge paths may exceed the default conservative
@@ -144,7 +141,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             geom,
                             zoom,
                             edge_ctx,
-                            params.max_hit_pad_canvas,
+                            plan.max_hit_pad_canvas,
                             &mut index,
                         );
                     }
@@ -152,7 +149,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     index
                 })
                 .ok()
-                .unwrap_or_else(CanvasSpatialIndex::empty);
+                .unwrap_or_else(CanvasSpatialDerived::empty);
 
             self.geometry.index = Arc::new(index);
         }
@@ -162,8 +159,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct SpatialIndexParams {
-    pad_screen_px: f32,
+struct SpatialIndexPlan {
+    key: SpatialIndexCacheKey,
     cell_size_canvas: f32,
     max_hit_pad_canvas: f32,
 }

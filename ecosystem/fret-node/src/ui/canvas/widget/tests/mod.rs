@@ -1,20 +1,3 @@
-use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
-    TextBlobId,
-};
-use fret_runtime::ui_host::{
-    CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
-};
-use fret_runtime::{
-    ClipboardToken, CommandId, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect,
-    FrameId, ModelHost, ModelStore, TickId, TimerToken,
-};
-use fret_ui::retained_bridge::Widget as _;
-use serde_json::Value;
-use std::any::{Any, TypeId};
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
-
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -27,6 +10,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
 };
+use fret_core::{
+    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
+};
+use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
+use fret_ui::retained_bridge::Widget as _;
+use serde_json::Value;
+use std::time::Instant;
 
 mod a11y_active_descendant_conformance;
 mod background_style_conformance;
@@ -60,6 +50,7 @@ mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod group_preview_conformance;
+mod harness;
 mod hit_testing_conformance;
 mod hit_testing_semantic_zoom_conformance;
 mod hot_state_invalidation_conformance;
@@ -94,6 +85,7 @@ mod portal_measured_geometry_conformance;
 mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
+mod render_culling_metrics_conformance;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;
@@ -104,8 +96,14 @@ mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
 
-use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
+use harness::{
+    NullServices, TestUiHostImpl, command_cx, event_cx, insert_graph_view, insert_view,
+    make_host_graph_view, make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    read_node_pos,
+};
+
+use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
 
 #[test]
 fn inflate_rect_expands_by_margin() {
@@ -141,8 +139,7 @@ fn edge_bounds_rect_applies_padding() {
 fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let bounds = Rect::new(
@@ -197,8 +194,7 @@ fn middle_mouse_panning_tracks_screen_delta_under_render_transform() {
 fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let bounds = Rect::new(
@@ -306,8 +302,7 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
 fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.space_to_pan = true;
@@ -369,8 +364,7 @@ fn pan_activation_key_code_must_match_to_enable_space_to_pan() {
 fn pan_activation_key_code_none_disables_space_to_pan_activation() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.space_to_pan = true;
@@ -411,8 +405,7 @@ fn pan_activation_key_code_none_disables_space_to_pan_activation() {
 fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = true;
@@ -467,8 +460,7 @@ fn pan_on_scroll_mode_horizontal_ignores_vertical_wheel_delta() {
 fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = true;
@@ -514,8 +506,7 @@ fn pan_on_scroll_shift_maps_vertical_wheel_to_horizontal_on_windows() {
 fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_scroll = false;
@@ -581,8 +572,7 @@ fn space_enables_pan_on_scroll_even_when_pan_on_scroll_is_disabled() {
 fn pinch_gesture_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_pinch = true;
@@ -629,8 +619,7 @@ fn pinch_gesture_zooms_in_about_pointer() {
 fn pinch_gesture_respects_toggle() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_pinch = false;
@@ -670,8 +659,7 @@ fn pinch_gesture_respects_toggle() {
 fn wheel_zoom_zooms_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_scroll = true;
@@ -715,8 +703,7 @@ fn wheel_zoom_zooms_about_pointer() {
 fn delete_key_defaults_to_backspace() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let bounds = Rect::new(
@@ -779,8 +766,7 @@ fn delete_key_defaults_to_backspace() {
 fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.disable_keyboard_a11y = true;
@@ -827,8 +813,7 @@ fn disable_keyboard_a11y_does_not_block_delete_shortcut() {
 fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.disable_keyboard_a11y = true;
@@ -870,8 +855,7 @@ fn disable_keyboard_a11y_blocks_tab_focus_traversal() {
 fn double_click_background_zooms_in_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
@@ -920,8 +904,7 @@ fn double_click_background_zooms_in_about_pointer() {
 fn shift_double_click_background_zooms_out_about_pointer() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
@@ -1032,8 +1015,7 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
         super::insert_node_drag::InsertNodeDragPayload { candidate },
     ));
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     let bounds = Rect::new(
@@ -1851,8 +1833,7 @@ fn should_add_bundle_port_requires_same_side_and_dedupes() {
 fn node_drag_records_single_history_entry_for_multi_node_move() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2012,8 +1993,7 @@ fn connect_bundle_records_single_history_entry() {
         },
     );
 
-    let graph_model = host.models.insert(graph);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph_model, view) = insert_graph_view(&mut host, graph);
 
     let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
     let snapshot: ViewSnapshot = canvas.sync_view_state(&mut host);
@@ -2063,8 +2043,7 @@ fn connect_bundle_records_single_history_entry() {
 fn nudge_moves_selection_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2098,8 +2077,7 @@ fn nudge_moves_selection_and_records_history_entry() {
 fn nudge_multi_selection_respects_node_extent_by_selection_bounds() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2165,8 +2143,7 @@ fn nudge_respects_per_node_extent_rect() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2311,8 +2288,7 @@ fn select_all_selects_nodes_groups_and_edges_and_respects_edge_selectable() {
         },
     );
 
-    let graph = host.models.insert(graph);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -2372,8 +2348,7 @@ fn delete_selection_respects_node_deletable_and_keeps_undeletable_selected() {
         .get_mut(&a)
         .expect("node must exist")
         .deletable = Some(false);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2428,8 +2403,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2460,8 +2434,7 @@ fn delete_selection_respects_edge_deletable_and_keeps_undeletable_selected() {
 fn align_left_moves_selected_nodes_and_records_history_entry() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2555,8 +2528,7 @@ fn align_right_respects_per_node_extent_rect() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2632,8 +2604,7 @@ fn align_center_x_preserves_alignment_under_node_extent_bounds() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2772,8 +2743,7 @@ fn distribute_x_clamps_nodes_to_node_extent_rect_like_xyflow() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -2903,8 +2873,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_like_xyflow()
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -3051,8 +3020,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
     canvas.sync_view_state(&mut host);
@@ -3085,8 +3053,7 @@ fn distribute_x_clamps_selected_group_children_to_node_extent_rect_from_node_ext
 fn focus_next_cycles_nodes_and_updates_selection() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3140,8 +3107,7 @@ fn focus_next_skips_unselectable_nodes() {
         .expect("node exists")
         .selectable = Some(false);
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3170,8 +3136,7 @@ fn focus_next_skips_unselectable_nodes() {
 fn focus_next_port_cycles_ports_within_focused_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3209,8 +3174,7 @@ fn focus_next_port_cycles_ports_within_focused_node() {
 fn focus_next_port_filters_by_wire_direction() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3242,8 +3206,7 @@ fn focus_next_port_filters_by_wire_direction() {
 fn activate_starts_and_commits_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
-    let graph_model = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph_model, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph_model.clone(), view);
     canvas.sync_view_state(&mut host);
@@ -3279,8 +3242,7 @@ fn focus_port_right_moves_to_neighbor_node() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);
@@ -3302,8 +3264,7 @@ fn focus_port_left_moves_back() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);

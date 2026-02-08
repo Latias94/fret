@@ -1,5 +1,5 @@
-use super::super::paint_render_data::EdgeRender;
-use super::super::*;
+use crate::ui::canvas::widget::paint_render_data::EdgeRender;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges_cached_budgeted<H: UiHost>(
