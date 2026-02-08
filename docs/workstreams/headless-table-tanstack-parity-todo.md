@@ -291,9 +291,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Update (parity-gated): flat-column inventories (`table.getAllFlatColumns/getVisibleFlatColumns`)
     are fixture-asserted so consumers can rely on TanStack’s pre-order DFS flattening semantics.
     - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
-      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
-      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
   - Remaining: broaden schema to include a fuller column/header/cell capability inventory (and keep versioning strict).
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.

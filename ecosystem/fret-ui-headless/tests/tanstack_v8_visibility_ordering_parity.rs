@@ -681,15 +681,17 @@ fn tanstack_v8_visibility_ordering_parity() {
         }
 
         if let Some(expected) = snap.expect.core_model.flat_columns.as_ref() {
-            let all_flat: Vec<String> = table
-                .all_flat_columns()
-                .into_iter()
-                .map(|c| c.id.to_string())
+            let all_flat: Vec<String> = model
+                .flat_columns
+                .all
+                .iter()
+                .map(|s| s.to_string())
                 .collect();
-            let visible_flat: Vec<String> = table
-                .visible_flat_columns()
-                .into_iter()
-                .map(|c| c.id.to_string())
+            let visible_flat: Vec<String> = model
+                .flat_columns
+                .visible
+                .iter()
+                .map(|s| s.to_string())
                 .collect();
 
             assert_eq!(
