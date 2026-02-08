@@ -1117,10 +1117,11 @@ pub fn render<H: UiHost + 'static>(
         let from_producer = hover_request_ids.contains(&req.id);
         seen_hover_overlays.insert(req.id);
 
-        // Hover overlays (e.g. HoverCard) can remain mounted during close transitions. When the
-        // producer marks them interactive, keep them hit-testable for the entire mounted
-        // lifetime to avoid “visible but click-through” behavior.
-        let interactive = req.interactive;
+        // Hover overlays (e.g. HoverCard) can remain mounted during close transitions. During
+        // those transitions (`open=false`, `present=true`), they must become pointer-transparent
+        // to avoid blocking underlay interactions while they animate out.
+        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let interactive = req.interactive && open_now;
         let root = fret_ui::declarative::render_dismissible_root_with_hooks(
             ui,
             app,
