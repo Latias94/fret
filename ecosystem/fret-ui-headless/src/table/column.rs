@@ -10,6 +10,7 @@ pub type ColumnId = Arc<str>;
 pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
 pub type SortIsUndefinedFn<TData> = Arc<dyn Fn(&TData) -> bool>;
 pub type SortValueFn<TData> = Arc<dyn Fn(&TData) -> TanStackValue>;
+pub type UniqueValuesFn<TData> = Arc<dyn Fn(&TData, usize) -> Vec<TanStackValue>>;
 pub type FilterFn<TData> = Arc<dyn Fn(&TData, &Value) -> bool>;
 pub type FilterFnWithMeta<TData> = Arc<dyn Fn(&TData, &Value, &mut dyn FnMut(Value)) -> bool>;
 pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
@@ -103,6 +104,7 @@ pub struct ColumnDef<TData> {
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
     pub value_u64_fn: Option<ValueU64Fn<TData>>,
+    pub unique_values_fn: Option<UniqueValuesFn<TData>>,
     pub invert_sorting: bool,
     pub sort_desc_first: Option<bool>,
     pub enable_sorting: bool,
@@ -137,6 +139,7 @@ impl<TData> Clone for ColumnDef<TData> {
             facet_key_fn: self.facet_key_fn.clone(),
             facet_str_fn: self.facet_str_fn.clone(),
             value_u64_fn: self.value_u64_fn.clone(),
+            unique_values_fn: self.unique_values_fn.clone(),
             invert_sorting: self.invert_sorting,
             sort_desc_first: self.sort_desc_first,
             enable_sorting: self.enable_sorting,
@@ -181,6 +184,7 @@ impl<TData> ColumnDef<TData> {
             facet_key_fn: None,
             facet_str_fn: None,
             value_u64_fn: None,
+            unique_values_fn: None,
             invert_sorting: false,
             sort_desc_first: None,
             enable_sorting: true,
@@ -214,6 +218,15 @@ impl<TData> ColumnDef<TData> {
     /// Provide a TanStack-like `getValue(columnId)` accessor for built-in sortingFn behaviors.
     pub fn sort_value_by(mut self, get_value: impl Fn(&TData) -> TanStackValue + 'static) -> Self {
         self.sort_value = Some(Arc::new(get_value));
+        self
+    }
+
+    /// TanStack-aligned: configure `columnDef.getUniqueValues` for `row.getUniqueValues(columnId)`.
+    pub fn unique_values_by(
+        mut self,
+        get_unique_values: impl Fn(&TData, usize) -> Vec<TanStackValue> + 'static,
+    ) -> Self {
+        self.unique_values_fn = Some(Arc::new(get_unique_values));
         self
     }
 

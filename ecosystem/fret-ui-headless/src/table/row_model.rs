@@ -788,6 +788,39 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// TanStack-aligned: `row.getUniqueValues(columnId)` for a leaf row in the core row model.
+    ///
+    /// Notes:
+    ///
+    /// - If `column.unique_values_fn` is configured, it is used (matches TanStack
+    ///   `columnDef.getUniqueValues`).
+    /// - Otherwise, returns a single-element array containing `getValue(columnId)`.
+    /// - If the column has no value source in the Rust engine, this returns `None`.
+    pub fn row_unique_values(
+        &self,
+        row_key: RowKey,
+        column_id: &str,
+    ) -> Option<Vec<super::TanStackValue>> {
+        let col = self.column(column_id)?;
+        let core = self.core_row_model();
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+
+        if let Some(get_unique_values) = col.unique_values_fn.as_ref() {
+            return Some(get_unique_values(row.original, row.index));
+        }
+
+        let has_value_source = col.sort_value.is_some()
+            || col.value_u64_fn.is_some()
+            || col.facet_key_fn.is_some()
+            || col.facet_str_fn.is_some();
+        if !has_value_source {
+            return None;
+        }
+
+        Some(vec![self.tanstack_value_for_item(col, row.original)])
+    }
+
     fn column_index(&self, id: &str) -> Option<usize> {
         self.columns.iter().position(|c| c.id.as_ref() == id)
     }
@@ -4487,7 +4520,7 @@ mod tests {
     use crate::table::is_column_visible;
     use crate::table::{
         ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, ColumnSizingRegion, PaginationState,
-        SortSpec, TableOptions, TableState, create_column_helper,
+        SortSpec, TableOptions, TableState, TanStackValue, create_column_helper,
     };
     use std::sync::Arc;
 
@@ -4595,6 +4628,66 @@ mod tests {
 
         assert_eq!(keys, vec![1, 0, 2]);
         assert!(std::ptr::eq(sorted, table.sorted_row_model()));
+    }
+
+    #[test]
+    fn row_unique_values_uses_column_hook_or_falls_back_to_single_get_value() {
+        #[derive(Debug, Clone)]
+        struct UniqueItem {
+            tags: Vec<&'static str>,
+        }
+
+        let data = vec![UniqueItem {
+            tags: vec!["a", "b"],
+        }];
+
+        let col = ColumnDef::new("tags")
+            .sort_value_by(|it: &UniqueItem| {
+                TanStackValue::Array(
+                    it.tags
+                        .iter()
+                        .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                        .collect(),
+                )
+            })
+            .unique_values_by(|it: &UniqueItem, _index| {
+                it.tags
+                    .iter()
+                    .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                    .collect()
+            });
+
+        let table = Table::builder(&data).columns(vec![col]).build();
+        let row_key = RowKey::from_index(0);
+        assert_eq!(
+            table.row_unique_values(row_key, "tags").unwrap(),
+            vec![
+                TanStackValue::String(Arc::<str>::from("a")),
+                TanStackValue::String(Arc::<str>::from("b")),
+            ]
+        );
+
+        let col = ColumnDef::new("tags").sort_value_by(|it: &UniqueItem| {
+            TanStackValue::Array(
+                it.tags
+                    .iter()
+                    .map(|s| TanStackValue::String(Arc::<str>::from(*s)))
+                    .collect(),
+            )
+        });
+
+        let table = Table::builder(&data).columns(vec![col]).build();
+        assert_eq!(
+            table.row_unique_values(row_key, "tags").unwrap(),
+            vec![TanStackValue::Array(vec![
+                TanStackValue::String(Arc::<str>::from("a")),
+                TanStackValue::String(Arc::<str>::from("b")),
+            ])]
+        );
+
+        let col = ColumnDef::<UniqueItem>::new("missing_accessor");
+        let table = Table::builder(&data).columns(vec![col]).build();
+        assert_eq!(table.row_unique_values(row_key, "missing_accessor"), None);
     }
 
     #[test]
