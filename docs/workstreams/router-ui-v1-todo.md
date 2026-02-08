@@ -35,12 +35,12 @@ Status legend:
 - `[x]` Add match-chain helpers on `RouterUiSnapshot`:
   - `leaf_match()` / `leaf_route()`
 - `[x]` Add an outlet-style helper (`router_outlet`) for reading the snapshot model with deterministic invalidation.
-- `[ ]` Add a `RouterOutlet` element wrapper (optional sugar):
+- `[x]` Add a `RouterOutlet` element wrapper (optional sugar):
   - renders by leaf route id (match chain)
   - supports a `NotFound` fallback
-- `[ ]` Add diagnostics hooks:
-  - optional `test_id`
-  - surface last transition for debug panels
+- `[x]` Add diagnostics hooks:
+  - optional `test_id` (`router_outlet_with_test_id`, `RouterOutlet::test_id`, `router_link_with_test_id`)
+  - last transition is surfaced via `RouterUiSnapshot::last_transition`
 
 ## Phase 3 - Link helpers (desktop)
 
@@ -53,10 +53,10 @@ Status legend:
   - `Router::prefetch_intents_for_location(...)` (router core; no navigation)
   - `RouterUiStore::prefetch_link_on_hover_change(link)` updates intents model on hover
 - `[x]` Add a low-level `router_link(...)` pressable helper (no shadcn dependency)
-- `[ ]` Add `RouterLink` element:
-  - computes `href` using `Router::href_to(...)`
-  - on press, performs guard-aware navigation
-- `[ ]` Add optional context menu actions:
+- `[x]` Add `RouterLink` element helpers:
+  - build a link via `RouterUiStore::link_to(...)` and render it as a pressable
+  - on activate, performs guard-aware navigation
+- `[x]` Add optional context menu action descriptors:
   - copy link
   - open in new window (app-owned policy)
 

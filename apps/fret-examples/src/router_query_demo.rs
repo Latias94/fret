@@ -9,7 +9,7 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
-use fret_router_ui::{RouterLink, RouterUiStore, router_link_with_test_id, router_outlet};
+use fret_router_ui::{RouterLink, RouterUiStore, router_link_to_with_test_id, router_outlet};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 
@@ -275,9 +275,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .into_element(cx);
 
     let header_lines = ui::v_flex(cx, |cx| {
-        let settings_link = st
-            .router
-            .link_to_location(NavigationAction::Push, RouteLocation::parse("/settings"));
         let hover_intents = cx
             .get_model_cloned(&st.router.intents_model(), Invalidation::Layout)
             .expect("router intents model should be readable");
@@ -337,13 +334,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
             .into_element(cx),
             {
                 let label = ui::raw_text(cx, "router_link: /settings").into_element(cx);
-                router_link_with_test_id(
+                router_link_to_with_test_id(
                     cx,
                     &st.router,
-                    settings_link,
+                    NavigationAction::Push,
+                    &RouteId::Settings,
+                    &[],
+                    SearchMap::new(),
+                    None,
                     "router-query-demo-link-settings",
                     [label],
                 )
+                .expect("settings link should build")
             },
             {
                 let (test_id, label) = if hover_intents.is_empty() {
