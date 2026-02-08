@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "form_rhf_demo", "web_name": "form-rhf-demo" },
+    { "id": "form_tanstack_demo", "web_name": "form-tanstack-demo" }
+  ]
+}

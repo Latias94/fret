@@ -170,6 +170,12 @@ struct LayoutChartScaffoldCase {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct LayoutBugReportFormDemoCase {
+    id: String,
+    web_name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum LayoutRadioGroupRecipe {
     RowGeometry,
@@ -15555,13 +15561,23 @@ fn assert_single_field_form_card_geometry_matches_web(
 }
 
 #[test]
-fn web_vs_fret_layout_form_rhf_demo_geometry_matches_web() {
-    assert_bug_report_form_demo_geometry_matches_web("form-rhf-demo");
-}
+fn web_vs_fret_layout_form_bug_report_demo_geometry_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_form_bug_report_demo_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutBugReportFormDemoCase> =
+        serde_json::from_str(raw).expect("layout bug report form demo fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-#[test]
-fn web_vs_fret_layout_form_tanstack_demo_geometry_matches_web() {
-    assert_bug_report_form_demo_geometry_matches_web("form-tanstack-demo");
+    for case in suite.cases {
+        eprintln!(
+            "layout bug report form demo case={} web_name={}",
+            case.id, case.web_name
+        );
+        assert_bug_report_form_demo_geometry_matches_web(&case.web_name);
+    }
 }
 
 #[test]
