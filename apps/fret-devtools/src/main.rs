@@ -115,6 +115,8 @@ struct State {
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
+    last_inspect_hover_json: Model<String>,
+    last_inspect_focus_json: Model<String>,
     last_script_result_json: Model<String>,
     last_bundle_json: Model<String>,
     last_screenshot_json: Model<String>,
@@ -262,6 +264,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let pack_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
+    let last_inspect_hover_json = app.models_mut().insert(String::new());
+    let last_inspect_focus_json = app.models_mut().insert(String::new());
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
     let last_screenshot_json = app.models_mut().insert(String::new());
@@ -369,6 +373,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         pack_last_error,
         viewer_url,
         last_pick_json,
+        last_inspect_hover_json,
+        last_inspect_focus_json,
         last_script_result_json,
         last_bundle_json,
         last_screenshot_json,
@@ -482,6 +488,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.pack_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
+    cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
+    cx.observe_model(&st.last_inspect_focus_json, Invalidation::Paint);
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
@@ -1789,6 +1797,16 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .models()
         .read(&st.last_pick_json, |v| v.clone())
         .unwrap_or_default();
+    let inspect_hover = cx
+        .app
+        .models()
+        .read(&st.last_inspect_hover_json, |v| v.clone())
+        .unwrap_or_default();
+    let inspect_focus = cx
+        .app
+        .models()
+        .read(&st.last_inspect_focus_json, |v| v.clone())
+        .unwrap_or_default();
     let script = cx
         .app
         .models()
@@ -1806,9 +1824,16 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .unwrap_or_default();
     let semantics_node = sem_node_panel(cx, st);
 
+    let inspect = if inspect_hover.trim().is_empty() && inspect_focus.trim().is_empty() {
+        String::new()
+    } else {
+        format!("hover:\n{inspect_hover}\n\nfocus:\n{inspect_focus}")
+    };
+
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items([
+            shadcn::TabsItem::new("inspect", "Inspect", [text_blob(cx, inspect)]),
             shadcn::TabsItem::new("pick", "Pick", [text_blob(cx, pick)]),
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
