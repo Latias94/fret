@@ -107,6 +107,7 @@ Strategy summary:
 - A single `version_group = "fret-0-1"` keeps all published crates on one version line.
 - `release_always = false` to publish only when release PR merge semantics are satisfied.
 - `release` and `release-pr` are split into separate jobs in CI.
+- Changelog policy is repository-level (`CHANGELOG.md`) plus GitHub Release notes (no per-crate changelog files in v0.1).
 
 ## CI / secrets requirements
 
