@@ -645,6 +645,56 @@ fn ctrl_page_down_bubbles_and_keeps_preedit() {
 }
 
 #[test]
+fn read_only_allows_navigation_but_blocks_edits() {
+    let handle = CodeEditorHandle::new("hello");
+    handle.set_caret(5);
+    handle.set_interaction(CodeEditorInteractionOptions::read_only());
+
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let cell_w = Cell::new(Px(10.0));
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::Backspace,
+        Modifiers::default(),
+    );
+    assert!(handled);
+    assert_eq!(handle.with_buffer(|b| b.text_string()), "hello");
+    assert_eq!(handle.selection().caret(), 5);
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::ArrowLeft,
+        Modifiers::default(),
+    );
+    assert!(handled);
+    assert_eq!(handle.selection().caret(), 4);
+
+    {
+        let mut st = handle.state.borrow_mut();
+        assert!(input::insert_text(&mut st, "x").is_none());
+        assert!(!input::undo(&mut st));
+        assert!(!input::redo(&mut st));
+    }
+    assert_eq!(handle.with_buffer(|b| b.text_string()), "hello");
+}
+
+#[test]
 fn caret_rect_offsets_for_preedit_cursor() {
     let handle = CodeEditorHandle::new("hello");
     let preedit = PreeditState {

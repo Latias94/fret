@@ -143,6 +143,9 @@ pub(super) fn handle_key_down(
     modifiers: Modifiers,
 ) -> bool {
     let mut st = state.borrow_mut();
+    if !st.interaction.enabled || !st.interaction.focusable || !st.interaction.selectable {
+        return false;
+    }
     let shift = modifiers.shift;
     let ctrl_or_meta = modifiers.ctrl || modifiers.meta;
     let word = modifiers.ctrl || modifiers.alt;
@@ -229,6 +232,11 @@ pub(super) fn handle_key_down(
             st.undo_group = None;
         }
         KeyCode::Backspace => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             if word {
                 delete_word_backward(&mut st);
             } else {
@@ -236,6 +244,11 @@ pub(super) fn handle_key_down(
             }
         }
         KeyCode::Delete => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             if word {
                 delete_word_forward(&mut st);
             } else {
@@ -243,13 +256,30 @@ pub(super) fn handle_key_down(
             }
         }
         KeyCode::Enter => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             let _ = insert_text(&mut st, "\n");
         }
         KeyCode::Tab => {
+            if !st.interaction.editable {
+                st.set_preedit(None);
+                st.undo_group = None;
+                return true;
+            }
             let _ = insert_text(&mut st, "\t");
         }
         KeyCode::KeyC if ctrl_or_meta => copy_selection(host, &st),
-        KeyCode::KeyV if ctrl_or_meta => request_paste(host, action_cx),
+        KeyCode::KeyV if ctrl_or_meta => {
+            if st.interaction.editable {
+                request_paste(host, action_cx);
+            } else {
+                st.set_preedit(None);
+                st.undo_group = None;
+            }
+        }
         _ => return false,
     }
 
@@ -582,6 +612,9 @@ pub(super) fn apply_and_record_edit(
     edit: Edit,
     next_selection: Selection,
 ) -> Option<()> {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return None;
+    }
     let (edit_start, edit_old_end, edit_byte_delta, edit_is_single_line) =
         edit_cache_shift_params(&st.buffer, &edit);
     let before_wrap_cols = st.display_wrap_cols;
@@ -758,6 +791,9 @@ fn shift_range_for_single_line_edit(
 }
 
 pub(super) fn undo(st: &mut CodeEditorState) -> bool {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return false;
+    }
     st.undo_group = None;
     st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (
@@ -797,6 +833,9 @@ pub(super) fn undo(st: &mut CodeEditorState) -> bool {
 }
 
 pub(super) fn redo(st: &mut CodeEditorState) -> bool {
+    if !st.interaction.enabled || !st.interaction.editable {
+        return false;
+    }
     st.undo_group = None;
     st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (

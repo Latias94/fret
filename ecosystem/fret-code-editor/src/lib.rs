@@ -8,5 +8,6 @@
 mod editor;
 
 pub use editor::{
-    CodeEditor, CodeEditorCacheStats, CodeEditorHandle, CodeEditorTorture, PreeditState, Selection,
+    CodeEditor, CodeEditorCacheStats, CodeEditorHandle, CodeEditorInteractionOptions,
+    CodeEditorTorture, PreeditState, Selection,
 };

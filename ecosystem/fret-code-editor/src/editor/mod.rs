@@ -153,6 +153,52 @@ pub struct PreeditState {
     pub cursor: Option<(usize, usize)>,
 }
 
+/// Controls how the code editor surface participates in focus, selection, and editing.
+///
+/// This is intentionally an ecosystem-layer policy surface (ADR 0066).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorInteractionOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub selectable: bool,
+    pub editable: bool,
+}
+
+impl CodeEditorInteractionOptions {
+    pub fn editor() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            selectable: true,
+            editable: true,
+        }
+    }
+
+    pub fn read_only() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            selectable: true,
+            editable: false,
+        }
+    }
+
+    pub fn disabled() -> Self {
+        Self {
+            enabled: false,
+            focusable: false,
+            selectable: false,
+            editable: false,
+        }
+    }
+}
+
+impl Default for CodeEditorInteractionOptions {
+    fn default() -> Self {
+        Self::editor()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct CodeEditorTx {
     buffer_tx: TextBufferTx,
@@ -238,6 +284,7 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    interaction: CodeEditorInteractionOptions,
     region_id: Option<fret_ui::GlobalElementId>,
     text_boundary_mode_override: Option<TextBoundaryMode>,
     active_text_boundary_mode: TextBoundaryMode,
@@ -326,6 +373,25 @@ impl CodeEditorState {
         self.preedit = preedit;
         self.refresh_display_map();
     }
+
+    fn set_interaction(&mut self, interaction: CodeEditorInteractionOptions) {
+        if self.interaction == interaction {
+            return;
+        }
+        self.interaction = interaction;
+
+        if !interaction.editable {
+            self.undo_group = None;
+            self.set_preedit(None);
+        }
+
+        if !interaction.enabled || !interaction.selectable {
+            self.dragging = false;
+            self.drag_pointer = None;
+            self.drag_autoscroll_viewport_pos = None;
+            // Keep any timer token so the next timer tick can self-cancel.
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -345,6 +411,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                interaction: CodeEditorInteractionOptions::default(),
                 region_id: None,
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
                 active_text_boundary_mode: TextBoundaryMode::Identifier,
@@ -410,6 +477,18 @@ impl CodeEditorHandle {
         {
             let _ = language;
         }
+    }
+
+    pub fn interaction(&self) -> CodeEditorInteractionOptions {
+        self.state.borrow().interaction
+    }
+
+    pub fn set_interaction(&self, interaction: CodeEditorInteractionOptions) {
+        self.state.borrow_mut().set_interaction(interaction);
+    }
+
+    pub fn buffer_revision(&self) -> fret_code_editor_buffer::Revision {
+        self.state.borrow().buffer.revision()
     }
 
     pub fn selection(&self) -> Selection {
@@ -676,6 +755,7 @@ pub struct CodeEditor {
     overscan: usize,
     torture: Option<CodeEditorTorture>,
     soft_wrap_cols: Option<usize>,
+    interaction: Option<CodeEditorInteractionOptions>,
     key: u64,
     a11y_label: Option<Arc<str>>,
     viewport_test_id: Option<Arc<str>>,
@@ -707,6 +787,7 @@ impl CodeEditor {
             overscan: 16,
             torture: None,
             soft_wrap_cols: None,
+            interaction: None,
             key: 0,
             a11y_label: None,
             viewport_test_id: None,
@@ -737,6 +818,11 @@ impl CodeEditor {
         self
     }
 
+    pub fn interaction(mut self, interaction: CodeEditorInteractionOptions) -> Self {
+        self.interaction = Some(interaction);
+        self
+    }
+
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());
         self
@@ -757,11 +843,13 @@ impl CodeEditor {
         let overscan = self.overscan;
         let torture = self.torture;
         let soft_wrap_cols = self.soft_wrap_cols;
+        let interaction = self.interaction;
         let key = self.key;
         let viewport_test_id = self.viewport_test_id;
         let a11y_label: Arc<str> = self.a11y_label.unwrap_or_else(|| Arc::from("Code editor"));
 
         cx.keyed(("code-editor", key), move |cx| {
+            let active_interaction = interaction.unwrap_or_else(|| editor_state.borrow().interaction);
             let theme = cx.theme().clone();
 
             let row_h = theme.metric_required("metric.font.mono_line_height");
@@ -785,6 +873,9 @@ impl CodeEditor {
                 a11y_text_composition,
             ) = {
                 handle.set_soft_wrap_cols(soft_wrap_cols);
+                if let Some(interaction) = interaction {
+                    handle.set_interaction(interaction);
+                }
                 let mut st = editor_state.borrow_mut();
                 let content_len = st.display_map.row_count();
                 let inherited_mode = cx
@@ -817,7 +908,7 @@ impl CodeEditor {
 
             let region_props = TextInputRegionProps {
                 layout: region_layout,
-                enabled: true,
+                enabled: active_interaction.enabled && active_interaction.focusable,
                 text_boundary_mode_override: boundary_mode,
                 a11y_label: Some(Arc::clone(&a11y_label)),
                 a11y_value,
@@ -828,6 +919,7 @@ impl CodeEditor {
             let mut pointer_props = PointerRegionProps::default();
             pointer_props.layout.size.width = Length::Fill;
             pointer_props.layout.size.height = Length::Fill;
+            pointer_props.enabled = active_interaction.enabled && active_interaction.selectable;
 
             let mut surface_props = WindowedRowsSurfaceProps::default();
             surface_props.scroll.layout.size.width = Length::Fill;
@@ -1048,15 +1140,27 @@ impl CodeEditor {
                               action_cx: ActionCx,
                               command| {
                             let mut st = cmd_state.borrow_mut();
+                            if !st.interaction.enabled || !st.interaction.focusable {
+                                return false;
+                            }
                             let mut did = false;
                             match command.as_str() {
                                 "edit.undo" => {
+                                    if !st.interaction.editable {
+                                        return true;
+                                    }
                                     did = input::undo(&mut st);
                                 }
                                 "edit.redo" => {
+                                    if !st.interaction.editable {
+                                        return true;
+                                    }
                                     did = input::redo(&mut st);
                                 }
                                 "text.select_all" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     let end = st.buffer.len_bytes();
                                     st.selection = Selection {
                                         anchor: 0,
@@ -1067,31 +1171,52 @@ impl CodeEditor {
                                     did = true;
                                 }
                                 "text.copy" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     input::copy_selection(host, &st);
                                     did = true;
                                 }
                                 "text.cut" => {
+                                    if !st.interaction.editable {
+                                        return true;
+                                    }
                                     if input::cut_selection(host, &mut st) {
                                         did = true;
                                     }
                                 }
                                 "text.paste" => {
+                                    if !st.interaction.editable {
+                                        return true;
+                                    }
                                     input::request_paste(host, action_cx);
                                     did = true;
                                 }
                                 "text.move_word_left" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     st.set_preedit(None);
                                     did = input::move_word(&mut st, -1, false);
                                 }
                                 "text.move_word_right" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     st.set_preedit(None);
                                     did = input::move_word(&mut st, 1, false);
                                 }
                                 "text.select_word_left" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     st.set_preedit(None);
                                     did = input::move_word(&mut st, -1, true);
                                 }
                                 "text.select_word_right" => {
+                                    if !st.interaction.selectable {
+                                        return true;
+                                    }
                                     st.set_preedit(None);
                                     did = input::move_word(&mut st, 1, true);
                                 }
@@ -1121,19 +1246,24 @@ impl CodeEditor {
                 let on_pointer_down_scroll = scroll_handle.clone();
                 let on_pointer_down: OnWindowedRowsPointerDown = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, down| {
+                        let mut st = on_pointer_down_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.selectable {
+                            return false;
+                        }
                         if down.button != MouseButton::Left {
                             return false;
                         }
 
                         host.set_cursor_icon(CursorIcon::Text);
-                        host.request_focus(region_id);
+                        if st.interaction.focusable {
+                            host.request_focus(region_id);
+                        }
                         host.capture_pointer();
 
                         let bounds = host.bounds();
                         let cell_w = on_pointer_down_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
 
-                        let mut st = on_pointer_down_state.borrow_mut();
                         st.last_bounds = Some(bounds);
                         st.dragging = true;
                         st.drag_pointer = Some(down.pointer_id);
@@ -1184,6 +1314,9 @@ impl CodeEditor {
                             return false;
                         }
                         let mut st = on_pointer_move_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.selectable {
+                            return false;
+                        }
                         if !st.dragging {
                             return false;
                         }
@@ -1280,6 +1413,9 @@ impl CodeEditor {
                             return false;
                         }
                         let mut st = on_pointer_up_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.selectable {
+                            return false;
+                        }
                         st.dragging = false;
                         st.drag_pointer = None;
                         st.undo_group = None;
@@ -1298,6 +1434,9 @@ impl CodeEditor {
                 let on_pointer_cancel: OnWindowedRowsPointerCancel = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, cancel| {
                         let mut st = on_pointer_cancel_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.selectable {
+                            return false;
+                        }
                         if st.drag_pointer == Some(cancel.pointer_id) {
                             st.dragging = false;
                             st.drag_pointer = None;
@@ -1418,6 +1557,13 @@ impl CodeEditor {
                 cx.text_input_region_on_text_input(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, text: &str| {
                         let mut st = text_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.editable {
+                            st.set_preedit(None);
+                            st.undo_group = None;
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            return true;
+                        }
                         st.set_preedit(None);
                         if input::insert_text(&mut st, text).is_some() {
                             input::scroll_caret_into_view(&st, row_h, &text_scroll);
@@ -1445,6 +1591,21 @@ impl CodeEditor {
                           action_cx: ActionCx,
                           ime: &fret_core::ImeEvent| {
                         let mut st = ime_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.editable {
+                            match ime {
+                                fret_core::ImeEvent::Enabled => return false,
+                                fret_core::ImeEvent::Disabled => {
+                                    st.set_preedit(None);
+                                }
+                                _ => {
+                                    st.set_preedit(None);
+                                    st.undo_group = None;
+                                }
+                            }
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            return true;
+                        }
                         match ime {
                             fret_core::ImeEvent::Enabled => return false,
                             fret_core::ImeEvent::Disabled => {
@@ -1590,6 +1751,13 @@ impl CodeEditor {
                           _token: ClipboardToken,
                           text: &str| {
                         let mut st = clipboard_state.borrow_mut();
+                        if !st.interaction.enabled || !st.interaction.editable {
+                            st.set_preedit(None);
+                            st.undo_group = None;
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            return true;
+                        }
                         let _ = input::insert_text_with_kind(&mut st, text, UndoGroupKind::Paste);
                         input::scroll_caret_into_view(&st, row_h, &clipboard_scroll);
                         input::push_caret_rect_effect(
