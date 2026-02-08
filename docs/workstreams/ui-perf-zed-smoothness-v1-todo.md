@@ -57,6 +57,9 @@ Conventions:
       - the window width delta is small (jitter-class, not stress-class).
     - Keep the old knob for global experiments:
       - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
+  - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
+    - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
+    - Evidence: perf log entry `2026-02-08` (editor resize gate delta).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
@@ -131,7 +134,7 @@ Execution plan:
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 - [ ] Keep the canonical steady baseline up to date when diagnostics instrumentation changes (avoid "false regressions").
-  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
+  - Current: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 - [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
@@ -654,6 +657,8 @@ Perf acceptance:
   - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v22.json`.
   - Selection summary: `target/fret-diag-baseline-select-ui-gallery-steady-v22/selection-summary.json`.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 10:10.
+  - Follow-up: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json` bumps micro headroom for
+    `ui-gallery-menubar-keyboard-nav-steady` `solve/layout` to avoid 1–30us flake (see 2026-02-08 log).
 
 - [x] Stabilize resize perf scripts and refresh the P0 resize probes baseline + default gate pointer.
   - Scripts:
