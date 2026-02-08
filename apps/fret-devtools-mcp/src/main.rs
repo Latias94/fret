@@ -600,12 +600,147 @@ impl FretDevtoolsMcp {
             .await
     }
 
+    #[tool(
+        description = "Run a list of scripts (by file name/relative path, or via a simple '*' wildcard pattern) and return a structured summary."
+    )]
+    async fn fret_diag_run(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RunScriptsRequestV1>,
+    ) -> Result<Json<RunScriptsResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+
+        let stop_on_failure = params.0.stop_on_failure.unwrap_or(true);
+        let timeout_ms_per_script = params.0.timeout_ms_per_script.unwrap_or(120_000);
+
+        let mut scripts: Vec<String> = Vec::new();
+        if let Some(list) = params.0.scripts.clone() {
+            scripts.extend(list.into_iter().filter(|s| !s.trim().is_empty()));
+        } else if let Some(glob) = params
+            .0
+            .glob
+            .as_deref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+        {
+            scripts.extend(resolve_scripts_by_glob(
+                &repo_root,
+                glob,
+                params.0.include_user.unwrap_or(true),
+            ));
+        } else {
+            return Err("missing scripts or glob (use fret_diag_scripts_list)".to_string());
+        }
+
+        if scripts.is_empty() {
+            return Err("no scripts selected to run".to_string());
+        }
+
+        let started_unix_ms = unix_ms_now();
+        let started = tokio::time::Instant::now();
+
+        let mut entries: Vec<RunScriptsEntryV1> = Vec::new();
+        let mut passed = 0u32;
+        let mut failed = 0u32;
+
+        for spec in scripts {
+            let script_path = resolve_script_path(&repo_root, &spec)?;
+            let rel_path = script_path
+                .strip_prefix(&repo_root)
+                .ok()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| script_path.to_string_lossy().to_string());
+
+            let script_text = std::fs::read_to_string(&script_path).map_err(|e| e.to_string())?;
+            let script_value: serde_json::Value =
+                serde_json::from_str(&script_text).map_err(|e| e.to_string())?;
+
+            let result = self
+                .run_script_value_and_wait_parsed(&session_id, script_value, timeout_ms_per_script)
+                .await;
+
+            match result {
+                Ok(parsed) => {
+                    let stage = format!("{:?}", parsed.stage);
+                    if matches!(parsed.stage, UiScriptStageV1::Passed) {
+                        passed = passed.saturating_add(1);
+                    } else if matches!(parsed.stage, UiScriptStageV1::Failed) {
+                        failed = failed.saturating_add(1);
+                    }
+                    let ok = matches!(parsed.stage, UiScriptStageV1::Passed);
+                    entries.push(RunScriptsEntryV1 {
+                        script: rel_path,
+                        ok,
+                        stage,
+                        run_id: parsed.run_id,
+                        step_index: parsed.step_index,
+                        reason: parsed.reason,
+                        last_bundle_dir: parsed.last_bundle_dir,
+                        updated_unix_ms: parsed.updated_unix_ms,
+                    });
+                    if stop_on_failure && !ok {
+                        break;
+                    }
+                }
+                Err(err) => {
+                    failed = failed.saturating_add(1);
+                    entries.push(RunScriptsEntryV1 {
+                        script: rel_path,
+                        ok: false,
+                        stage: "Error".to_string(),
+                        run_id: 0,
+                        step_index: None,
+                        reason: Some(err),
+                        last_bundle_dir: None,
+                        updated_unix_ms: unix_ms_now(),
+                    });
+                    if stop_on_failure {
+                        break;
+                    }
+                }
+            }
+        }
+
+        let ran = entries.len() as u32;
+        let ok = failed == 0 && ran > 0;
+
+        Ok(Json(RunScriptsResultV1 {
+            schema_version: 1,
+            ok,
+            started_unix_ms,
+            elapsed_ms: started.elapsed().as_millis().min(u128::from(u64::MAX)) as u64,
+            ran,
+            passed,
+            failed,
+            entries,
+        }))
+    }
+
     async fn run_script_value_and_wait(
         &self,
         session_id: &str,
         script: serde_json::Value,
         timeout_ms: u64,
     ) -> Result<String, String> {
+        let parsed = self
+            .run_script_value_and_wait_parsed(session_id, script, timeout_ms)
+            .await?;
+        Ok(serde_json::to_string_pretty(&parsed).unwrap_or_else(|_| "{}".to_string()))
+    }
+
+    async fn run_script_value_and_wait_parsed(
+        &self,
+        session_id: &str,
+        script: serde_json::Value,
+        timeout_ms: u64,
+    ) -> Result<UiScriptResultV1, String> {
+        // Avoid picking up stale script.result messages from a previous run.
+        self.drain_inbox_type_for_session("script.result", session_id)
+            .await;
+
         self.client_tx
             .send(ClientCommand::Send(DiagTransportMessageV1 {
                 schema_version: 1,
@@ -617,6 +752,7 @@ impl FretDevtoolsMcp {
             .map_err(|_| "client task is not running".to_string())?;
 
         let start = tokio::time::Instant::now();
+        let mut expected_run_id: Option<u64> = None;
         loop {
             if start.elapsed() > Duration::from_millis(timeout_ms) {
                 return Err("timeout waiting for script.result".to_string());
@@ -628,10 +764,15 @@ impl FretDevtoolsMcp {
             {
                 if let Ok(parsed) = serde_json::from_value::<UiScriptResultV1>(msg.payload.clone())
                 {
+                    if expected_run_id.is_none() {
+                        expected_run_id = Some(parsed.run_id);
+                    }
+                    if expected_run_id != Some(parsed.run_id) {
+                        continue;
+                    }
                     match parsed.stage {
                         UiScriptStageV1::Passed | UiScriptStageV1::Failed => {
-                            return Ok(serde_json::to_string_pretty(&parsed)
-                                .unwrap_or_else(|_| "{}".to_string()));
+                            return Ok(parsed);
                         }
                         _ => {}
                     }
@@ -692,6 +833,11 @@ impl FretDevtoolsMcp {
             .iter()
             .position(|m| m.r#type == ty && m.session_id.as_deref() == Some(session_id))?;
         Some(inbox.remove(pos)?)
+    }
+
+    async fn drain_inbox_type_for_session(&self, ty: &str, session_id: &str) {
+        let mut inbox = self.inbox.lock().await;
+        inbox.retain(|m| !(m.r#type == ty && m.session_id.as_deref() == Some(session_id)));
     }
 
     async fn pop_next_of_type_session_request_id(
@@ -936,6 +1082,54 @@ struct RunScriptFileRequestV1 {
     /// File name (e.g. `todo-baseline.json`) or repo-relative path under tools/diag-scripts or .fret/diag/scripts.
     script: String,
     timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RunScriptsRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    /// Explicit list of scripts (file names or repo-relative paths). Mutually exclusive with `glob`.
+    #[serde(default)]
+    scripts: Option<Vec<String>>,
+    /// Simple wildcard pattern using `*` to match file names or repo-relative paths (e.g. `ui-gallery-*.json`).
+    #[serde(default)]
+    glob: Option<String>,
+    /// When true (default), includes `.fret/diag/scripts` in addition to `tools/diag-scripts` for `glob` resolution.
+    #[serde(default)]
+    include_user: Option<bool>,
+    /// When true (default), stops after the first failed script.
+    #[serde(default)]
+    stop_on_failure: Option<bool>,
+    /// Timeout per script (default 120_000ms).
+    #[serde(default)]
+    timeout_ms_per_script: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RunScriptsEntryV1 {
+    script: String,
+    ok: bool,
+    stage: String,
+    run_id: u64,
+    #[serde(default)]
+    step_index: Option<u32>,
+    #[serde(default)]
+    reason: Option<String>,
+    #[serde(default)]
+    last_bundle_dir: Option<String>,
+    updated_unix_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RunScriptsResultV1 {
+    schema_version: u32,
+    ok: bool,
+    started_unix_ms: u64,
+    elapsed_ms: u64,
+    ran: u32,
+    passed: u32,
+    failed: u32,
+    entries: Vec<RunScriptsEntryV1>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1225,6 +1419,69 @@ fn scan_scripts_dir(repo_root: &Path, dir: &Path, origin: &str) -> Vec<ScriptDes
         });
     }
     out
+}
+
+fn resolve_scripts_by_glob(repo_root: &Path, glob: &str, include_user: bool) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let glob = glob.trim();
+    if glob.is_empty() {
+        return out;
+    }
+
+    let mut all = Vec::<ScriptDescriptorV1>::new();
+    all.extend(scan_scripts_dir(
+        repo_root,
+        &repo_root.join("tools").join("diag-scripts"),
+        "workspace",
+    ));
+    if include_user {
+        all.extend(scan_scripts_dir(
+            repo_root,
+            &repo_root.join(".fret").join("diag").join("scripts"),
+            "user",
+        ));
+    }
+
+    for s in all {
+        if wildcard_match(glob, &s.name) || wildcard_match(glob, &s.rel_path) {
+            out.push(s.rel_path);
+        }
+    }
+    out
+}
+
+fn wildcard_match(pattern: &str, text: &str) -> bool {
+    let pattern = pattern.trim();
+    if pattern == "*" {
+        return true;
+    }
+    let parts: Vec<&str> = pattern.split('*').collect();
+    if parts.len() == 1 {
+        return pattern == text;
+    }
+
+    let mut pos = 0usize;
+    let mut first = true;
+    for part in parts.iter().copied() {
+        if part.is_empty() {
+            continue;
+        }
+        if let Some(idx) = text[pos..].find(part) {
+            if first && !pattern.starts_with('*') && idx != 0 {
+                return false;
+            }
+            pos += idx + part.len();
+        } else {
+            return false;
+        }
+        first = false;
+    }
+    if !pattern.ends_with('*') {
+        if let Some(last) = parts.iter().rev().find(|p| !p.is_empty()) {
+            return text.ends_with(last);
+        }
+    }
+    true
 }
 
 fn resolve_script_path(repo_root: &Path, script: &str) -> Result<PathBuf, String> {

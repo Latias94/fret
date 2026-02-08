@@ -126,7 +126,7 @@ Conventions:
   - [x] `fret_diag_pick` (arm + wait + return selector JSON),
   - [x] `fret_diag_scripts_list` (list `tools/diag-scripts` and `.fret/diag/scripts`),
   - [x] `fret_diag_run_script_file` (run a script by file name or relative path),
-  - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),
+  - [x] `fret_diag_run` (run multiple scripts with list/glob; returns structured summary),
   - [x] `fret_diag_run_script_json` (minimal: run a v1/v2 script JSON and wait for pass/fail),
   - [x] `fret_diag_pack_last_bundle` (dump + pack into zip),
   - [x] `fret_diag_pack_last_bundle_zip_bytes` (dump + pack bundle.json zip bytes as base64),
