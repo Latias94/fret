@@ -109,6 +109,11 @@ Execution plan:
   - Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
+- [x] Add an editor-grade resize jitter probe suite (so resize work stays bounded on text-heavy surfaces).
+  - Suite: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
+  - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json`.
+  - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
+  - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:

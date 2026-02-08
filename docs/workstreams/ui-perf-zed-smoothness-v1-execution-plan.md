@@ -30,6 +30,8 @@ The intent is to stop drifting into “endless experiments” by pinning:
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
 - P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
+- Editor resize jitter baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json`.
+- Seed policy preset (editor resize probes): `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
   - Evidence: see log entry `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` dated `2026-02-07 10:10`.
@@ -68,6 +70,9 @@ Every perf-affecting change must:
    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
    - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
    - Gate runner: `tools/perf/diag_resize_probes_gate.sh` (suite: `ui-resize-probes`)
+2.5. If the change touches text layout / wrap behavior, also **not regress the editor resize jitter suite**:
+   - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+   - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`
 3. **Not regress at least one input hot-path probe**:
    - pointer-move gate (bounds-tree / dispatch): `ui-gallery-hit-test-torture-*move-sweep*`
 4. If the change touches renderer/text caches, also run one GPU/churn probe:

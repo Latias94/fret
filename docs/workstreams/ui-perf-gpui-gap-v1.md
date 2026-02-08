@@ -111,6 +111,7 @@ Baseline fact (quick reference):
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
+     - Implemented probe: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
    - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
      long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
    - Fret stopgap (default-on for jitter-class interactive resize):
