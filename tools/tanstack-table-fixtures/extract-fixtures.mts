@@ -2661,11 +2661,17 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   const bottom = (table.getBottomRows?.() ?? []).map((r: any) => String(r.id))
 
   const coreRows = table.getCoreRowModel?.()?.flatRows ?? []
+  const modelRows = table.getRowModel?.()?.flatRows ?? []
+  const rowIds = [
+    ...new Set([
+      ...coreRows.map((row: any) => String(row.id)),
+      ...modelRows.map((row: any) => String(row.id)),
+    ]),
+  ]
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "top" | "bottom" | null> = {}
   const pinned_index: Record<string, number> = {}
-  for (const row of coreRows) {
-    const id = String(row.id)
+  for (const id of rowIds) {
     const r = table.getRow?.(id, true)
     if (!r) {
       continue

@@ -2328,8 +2328,14 @@ impl<'a, TData> Table<'a, TData> {
     /// Returns `-1` when the row is not currently visible in its pinned region. Returns `None`
     /// when the row key does not exist.
     pub fn row_pinned_index(&self, row_key: RowKey) -> Option<i32> {
-        let core = self.core_row_model();
-        if core.row_by_key(row_key).is_none() {
+        let exists = if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            grouped.row_by_key(row_key).is_some()
+                || self.core_row_model().row_by_key(row_key).is_some()
+        } else {
+            self.core_row_model().row_by_key(row_key).is_some()
+        };
+        if !exists {
             return None;
         }
 
@@ -2351,12 +2357,34 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_can_pin(&self, row_key: RowKey) -> Option<bool> {
         let core = self.core_row_model();
-        let index = core.row_by_key(row_key)?;
-        let row = core.row(index)?;
-        if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
-            return Some(enable_row_pinning(row_key, row.original));
+
+        if let Some(index) = core.row_by_key(row_key) {
+            let row = core.row(index)?;
+            if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
+                return Some(enable_row_pinning(row_key, row.original));
+            }
+            return Some(self.options.enable_row_pinning);
         }
-        Some(self.options.enable_row_pinning)
+
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            let grouped = self.grouped_row_model();
+            let index = grouped.row_by_key(row_key)?;
+            let row = grouped.row(index)?;
+            if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
+                let first_leaf_key = match row.kind {
+                    super::GroupedRowKind::Group {
+                        first_leaf_row_key, ..
+                    } => first_leaf_row_key,
+                    super::GroupedRowKind::Leaf { row_key } => row_key,
+                };
+                let leaf_index = core.row_by_key(first_leaf_key)?;
+                let leaf_row = core.row(leaf_index)?;
+                return Some(enable_row_pinning(row_key, leaf_row.original));
+            }
+            return Some(self.options.enable_row_pinning);
+        }
+
+        None
     }
 
     pub fn row_pinning_updater(

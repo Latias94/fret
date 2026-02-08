@@ -585,6 +585,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     (including sorted grouped roots) and is parity-asserted by fixture snapshots.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::center_row_keys`),
       `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` (`row_id_for_key`, row pinning assertions).
+  - Update: `row_pinning.can_pin/pin_position/pinned_index` inventories now include grouped row ids
+    (e.g. `role:1`) under grouping, and are fixture-gated.
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_grouped_rows.json`
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
