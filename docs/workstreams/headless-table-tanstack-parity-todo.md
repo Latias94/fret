@@ -902,7 +902,11 @@ Next UI parity targets (capability, not exact DOM behavior):
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json` (asserts `mem_mb ▲2`)
     - [ ] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
     - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
-    - [ ] HTP-ui-dt-040 Column visibility dropdown (docs-style checkbox menu).
+    - [x] HTP-ui-dt-040 Column visibility dropdown (docs-style checkbox menu).
+      - Evidence:
+        - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` wires `TableState.column_visibility`)
+        - Gallery: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_legacy`, `preview_data_table_torture` add toolbar)
+        - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json`
 
 ---
 

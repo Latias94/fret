@@ -16533,6 +16533,13 @@ fn preview_data_table_legacy(
     let normalize_col_id =
         |id: &str| -> Arc<str> { Arc::<str>::from(id.replace('%', "pct").replace('_', "-")) };
 
+    let toolbar = shadcn::DataTableToolbar::new(
+        state.clone(),
+        assets.columns.clone(),
+        |col: &fret_ui_headless::table::ColumnDef<DemoProcessRow>| col.id.clone(),
+    )
+    .into_element(cx);
+
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
@@ -16540,7 +16547,7 @@ fn preview_data_table_legacy(
             cx,
             assets.data.clone(),
             1,
-            state,
+            state.clone(),
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
             |col| col.id.clone(),
@@ -16567,6 +16574,7 @@ fn preview_data_table_legacy(
         cx.text("Click header to sort; click row to toggle selection."),
         cx.text(format!("Selected rows: {selected_count}")),
         cx.text(sorting_text.as_ref()),
+        toolbar,
         table,
     ]
 }
@@ -16670,6 +16678,12 @@ fn preview_data_table_torture(
         Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
     };
 
+    let toolbar_columns = columns.clone();
+    let toolbar =
+        shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
+            Arc::<str>::from(col.id.as_ref())
+        });
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -16685,10 +16699,12 @@ fn preview_data_table_torture(
                         .label(sorting_text.clone())
                         .test_id("ui-gallery-data-table-torture-sorting"),
                 ),
+                toolbar.clone().into_element(cx),
             ]
         },
     );
 
+    let state_for_table = state.clone();
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
             let retained = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
@@ -16705,7 +16721,7 @@ fn preview_data_table_torture(
                         cx,
                         data.clone(),
                         1,
-                        state,
+                        state_for_table.clone(),
                         columns.clone(),
                         |row, _index, _parent| RowKey(row.id),
                         |col| Arc::<str>::from(col.id.as_ref()),

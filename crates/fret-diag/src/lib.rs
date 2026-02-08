@@ -2638,6 +2638,12 @@ See: `docs/tracy.md`.\n";
                                     "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
                                 ),
                             ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json",
+                                ),
+                            ),
                         ],
                         Some(BuiltinSuite::UiGallery),
                     )
