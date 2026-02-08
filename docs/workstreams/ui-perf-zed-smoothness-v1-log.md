@@ -7781,3 +7781,49 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
 - top_total_time_us: `17154`
 - bundle: `target/fret-diag-resize-probes-gate-p0-layout-bucket/attempt-1/1770523025092-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-08 12:20:46 (commit `6099825de`)
+
+Change:
+- No code change; re-run perf gates/baseline checks to sanity check current head.
+
+Suites:
+- `ui-resize-probes` (gate, attempts=3)
+- `ui-code-editor-resize-probes` (gate, attempts=3)
+- `ui-gallery-steady` (baseline check, repeat=3)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-perf/ui-gallery-steady-check-1770524277 \
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-1770523760/summary.json`
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-1770524063/summary.json`
+- `ui-gallery-steady`: `target/fret-diag-perf/ui-gallery-steady-check-1770524277/check.perf_thresholds.json`
+
+Results:
+- `ui-code-editor-resize-probes`: PASS (gate; attempts=3).
+  - Worst overall `top_total_time_us`: `13402` (`target/fret-diag-resize-probes-gate-1770524063/stdout.json`)
+- `ui-gallery-steady`: PASS (baseline; failures=0).
+- `ui-resize-probes`: FAIL (gate; attempts=3).
+  - Failures (same script+metric; baseline threshold `19128` us):
+    - attempt-1: `top_total_time_us=21000` (`attempt-1/check.perf_thresholds.json`)
+    - attempt-2: `top_total_time_us=19299` (`attempt-2/check.perf_thresholds.json`)
+    - attempt-3: `top_total_time_us=22025` (`attempt-3/check.perf_thresholds.json`)
+    - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+
+Notes:
+- This looks like tail/noise sensitivity in `drag-jitter` gating on this machine state.
+  If this keeps happening, consider cutting a new `ui-resize-probes` baseline (v4) with more candidates/validation
+  runs, or revisiting the metric/seed/headroom contract for this suite.

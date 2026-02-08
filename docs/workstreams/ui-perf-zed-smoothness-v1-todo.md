@@ -27,6 +27,11 @@ Conventions:
     strict majority pass (keeps the gate strict, but reduces single-run flake).
     - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
     - Implementation: commit `4755aa087`
+  - [ ] Stabilize `ui-resize-probes` `drag-jitter` tail behavior on macOS M4 (avoid intermittent gate failures).
+    - Evidence: perf log entry `2026-02-08 12:20:46` (attempts=3; 0/3 pass; one near-threshold run and one outlier).
+    - Candidate actions:
+      - Cut a new baseline (v4) with more candidates/validation runs on an idle machine.
+      - If it remains flaky, revisit the metric/seed/headroom contract for `drag-jitter` (keep “no hitch” intent).
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
@@ -36,7 +41,7 @@ Conventions:
   - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
     - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
   - [x] Re-validate both resize gates on the current head (no-code-change evidence snapshot).
-    - Evidence: perf log entry `2026-02-08` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+    - Evidence: perf log entry `2026-02-08 12:20:46` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Track an “interactive resize” window in the UI tree to enable guarded LOD/deferral experiments (commit `34bac1b78`).
     - Evidence: perf log entry `2026-02-07 21:23` (`target/fret-diag-resize-probes-gate-r24/summary.json`).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
