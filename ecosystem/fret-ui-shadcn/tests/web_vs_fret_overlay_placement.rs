@@ -6171,6 +6171,7 @@ fn web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures() {
     assert!(!suite.cases.is_empty());
 
     for case in suite.cases {
+        eprintln!("overlay placement smoke case={}", case.id);
         match case.recipe {
             OverlayPlacementSmokeRecipe::PopoverDemo => {
                 assert_overlay_placement_matches(
@@ -24101,6 +24102,7 @@ fn web_vs_fret_sonner_open_toast_rect_matches_web_fixtures() {
     assert!(!suite.cases.is_empty());
 
     for case in suite.cases {
+        eprintln!("sonner toast open case={}", case.id);
         let web = read_web_golden_open(&case.web_name);
         assert_sonner_toast_rect_matches_web(&case.web_name, &web, move |sonner, host, window| {
             let mut opts = fret_ui_shadcn::ToastMessageOptions::new();
