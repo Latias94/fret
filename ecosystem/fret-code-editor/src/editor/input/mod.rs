@@ -876,7 +876,7 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
 }
 
 pub(super) fn clamp_selection_out_of_folds(st: &mut CodeEditorState) {
-    if st.display_wrap_cols.is_some() || st.preedit.is_some() || st.line_folds.is_empty() {
+    if st.preedit.is_some() || st.line_folds.is_empty() {
         return;
     }
 
@@ -909,7 +909,7 @@ enum FoldSnap {
 }
 
 fn clamp_byte_out_of_folds(st: &CodeEditorState, byte: usize, snap: FoldSnap) -> usize {
-    if st.display_wrap_cols.is_some() || st.preedit.is_some() || st.line_folds.is_empty() {
+    if st.preedit.is_some() || st.line_folds.is_empty() {
         return byte;
     }
 
