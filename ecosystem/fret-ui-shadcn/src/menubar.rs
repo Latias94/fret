@@ -3968,8 +3968,9 @@ mod tests {
         // Hover switching is timer-driven (small delay) to avoid accidental flicker while the
         // pointer travels across triggers.
         let effects = app.flush_effects();
+        let switch_delay = std::time::Duration::from_millis(100);
         let switch_timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, .. } => Some(*token),
+            Effect::SetTimer { token, after, .. } if *after == switch_delay => Some(*token),
             _ => None,
         });
         let Some(switch_timer) = switch_timer else {
