@@ -7827,3 +7827,38 @@ Notes:
 - This looks like tail/noise sensitivity in `drag-jitter` gating on this machine state.
   If this keeps happening, consider cutting a new `ui-resize-probes` baseline (v4) with more candidates/validation
   runs, or revisiting the metric/seed/headroom contract for this suite.
+
+## 2026-02-08 13:02:42 (commit `828c945d4`)
+
+Change:
+- Merge remote `main` refactor into local `main` (conflict resolved in `crates/fret-diag`).
+
+Suites:
+- `ui-code-editor-resize-probes` (gate, attempts=1)
+- `ui-resize-probes` (gate, attempts=1)
+- `ui-gallery-steady` (baseline check, repeat=3)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-merge-828c945d4-editor
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-merge-828c945d4-p0
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-perf/ui-gallery-steady-merge-828c945d4-r3 \
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 \
+  --sort time --top 15 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-merge-828c945d4-editor/summary.json`
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-merge-828c945d4-p0/summary.json`
+- `ui-gallery-steady`: `target/fret-diag-perf/ui-gallery-steady-merge-828c945d4-r3/check.perf_thresholds.json`
+
+Results:
+- `ui-code-editor-resize-probes`: PASS (gate).
+- `ui-resize-probes`: PASS (gate).
+- `ui-gallery-steady`: PASS (baseline; failures=0).
