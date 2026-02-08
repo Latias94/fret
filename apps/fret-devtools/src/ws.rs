@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
-    DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1,
+    DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1, UiSemanticsNodeGetAckV1,
+    UiSemanticsNodeGetV1,
 };
 
 use crate::{State, is_abs_path, pack, push_log};
@@ -181,6 +182,42 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                         .update(&st.last_screenshot_json, |v| *v = text);
                 }
             }
+            "semantics.node.get_ack" => {
+                if !message_matches_selected_session(app, st, &msg) {
+                    continue;
+                }
+                let payload = msg.payload;
+                if let Ok(parsed) =
+                    serde_json::from_value::<UiSemanticsNodeGetAckV1>(payload.clone())
+                {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_node_live_status, |v| {
+                            *v = Some(Arc::<str>::from(parsed.status));
+                        });
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_node_live_updated_unix_ms, |v| {
+                            *v = parsed.captured_unix_ms
+                        });
+
+                    if let Some(node) = parsed.node {
+                        if let Ok(text) = serde_json::to_string_pretty(&node) {
+                            let _ = app
+                                .models_mut()
+                                .update(&st.semantics_selected_node_live_json, |v| *v = text);
+                        }
+                    } else {
+                        let _ = app
+                            .models_mut()
+                            .update(&st.semantics_selected_node_live_json, |v| v.clear());
+                    }
+                } else if let Ok(text) = serde_json::to_string_pretty(&payload) {
+                    let _ = app
+                        .models_mut()
+                        .update(&st.semantics_selected_node_live_json, |v| *v = text);
+                }
+            }
             _ => {}
         }
     }
@@ -200,6 +237,91 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
     st.client
         .set_default_session_id(selected.as_ref().map(|s| s.to_string()));
     st.applied_session_id = selected;
+
+    st.live_semantics_last_target = None;
+    st.live_semantics_last_sent_unix_ms = None;
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_node_live_json, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_node_live_status, |v| *v = None);
+    let _ = app
+        .models_mut()
+        .update(&st.semantics_selected_node_live_updated_unix_ms, |v| {
+            *v = None
+        });
+}
+
+pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {
+    let selected_session_id = app
+        .models()
+        .read(&st.selected_session_id, |v| v.clone())
+        .ok()
+        .flatten();
+    if selected_session_id.is_none() {
+        st.live_semantics_last_target = None;
+        st.live_semantics_last_sent_unix_ms = None;
+        return;
+    }
+
+    let selected_node_id = app
+        .models()
+        .read(&st.semantics_selected_id, |v| *v)
+        .ok()
+        .flatten();
+    let Some(selected_node_id) = selected_node_id else {
+        st.live_semantics_last_target = None;
+        st.live_semantics_last_sent_unix_ms = None;
+        return;
+    };
+
+    let window_ffi = app
+        .models()
+        .read(&st.semantics_cache, |v| v.as_ref().map(|i| i.window))
+        .ok()
+        .flatten();
+    let Some(window_ffi) = window_ffi else {
+        return;
+    };
+
+    let now = unix_ms_now();
+    let target = (window_ffi, selected_node_id);
+    let selection_changed = st.live_semantics_last_target != Some(target);
+    let due = match st.live_semantics_last_sent_unix_ms {
+        None => true,
+        Some(prev) => now.saturating_sub(prev) >= 1000,
+    };
+    if !selection_changed && !due {
+        return;
+    }
+
+    st.live_semantics_last_target = Some(target);
+    st.live_semantics_last_sent_unix_ms = Some(now);
+
+    let request_id = st.next_transport_request_id;
+    st.next_transport_request_id = st.next_transport_request_id.saturating_add(1);
+
+    st.client.send(DiagTransportMessageV1 {
+        schema_version: 1,
+        r#type: "semantics.node.get".to_string(),
+        session_id: None,
+        request_id: Some(request_id),
+        payload: serde_json::to_value(UiSemanticsNodeGetV1 {
+            schema_version: 1,
+            window: window_ffi,
+            node_id: selected_node_id,
+        })
+        .unwrap_or(serde_json::Value::Null),
+    });
+}
+
+fn unix_ms_now() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
 }
 
 fn ensure_session_selection_is_valid(app: &mut App, st: &mut State) {

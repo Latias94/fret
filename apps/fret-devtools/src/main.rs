@@ -97,9 +97,16 @@ struct State {
     semantics_expanded: Model<HashSet<u64>>,
     semantics_selected_id: Model<Option<u64>>,
     semantics_selected_node_json: Model<String>,
+    semantics_selected_node_live_json: Model<String>,
+    semantics_selected_node_live_status: Model<Option<Arc<str>>>,
+    semantics_selected_node_live_updated_unix_ms: Model<Option<u64>>,
 
     client: DevtoolsWsClient,
     applied_session_id: Option<Arc<str>>,
+
+    next_transport_request_id: u64,
+    live_semantics_last_target: Option<(u64, u64)>,
+    live_semantics_last_sent_unix_ms: Option<u64>,
 
     pack_tx: std::sync::mpsc::Sender<pack::PackJobResult>,
     pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
@@ -199,6 +206,9 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let semantics_expanded = app.models_mut().insert(HashSet::<u64>::new());
     let semantics_selected_id = app.models_mut().insert(None::<u64>);
     let semantics_selected_node_json = app.models_mut().insert(String::new());
+    let semantics_selected_node_live_json = app.models_mut().insert(String::new());
+    let semantics_selected_node_live_status = app.models_mut().insert(None::<Arc<str>>);
+    let semantics_selected_node_live_updated_unix_ms = app.models_mut().insert(None::<u64>);
 
     let mut client_cfg =
         DevtoolsWsClientConfig::with_defaults(cfg.ws_url.to_string(), cfg.token.to_string());
@@ -254,8 +264,14 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         semantics_expanded,
         semantics_selected_id,
         semantics_selected_node_json,
+        semantics_selected_node_live_json,
+        semantics_selected_node_live_status,
+        semantics_selected_node_live_updated_unix_ms,
         client,
         applied_session_id: None,
+        next_transport_request_id: 1000,
+        live_semantics_last_target: None,
+        live_semantics_last_sent_unix_ms: None,
         pack_tx,
         pack_rx,
     };
@@ -269,6 +285,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
+    ws::maybe_request_semantics_node_details(cx.app, st);
 
     let mut needs_frames = false;
     cx.with_state(
@@ -325,6 +342,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.semantics_expanded, Invalidation::Paint);
     cx.observe_model(&st.semantics_selected_id, Invalidation::Paint);
     cx.observe_model(&st.semantics_selected_node_json, Invalidation::Paint);
+    cx.observe_model(&st.semantics_selected_node_live_json, Invalidation::Paint);
+    cx.observe_model(&st.semantics_selected_node_live_status, Invalidation::Paint);
+    cx.observe_model(
+        &st.semantics_selected_node_live_updated_unix_ms,
+        Invalidation::Paint,
+    );
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -722,6 +745,10 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
 
                     let selected_id_model = st.semantics_selected_id.clone();
                     let selected_json_model = st.semantics_selected_node_json.clone();
+                    let selected_live_json_model = st.semantics_selected_node_live_json.clone();
+                    let selected_live_status_model = st.semantics_selected_node_live_status.clone();
+                    let selected_live_updated_model =
+                        st.semantics_selected_node_live_updated_unix_ms.clone();
                     let index_for_select = Arc::clone(&index_for_list);
                     let on_select: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
@@ -733,6 +760,15 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                             let _ = host
                                 .models_mut()
                                 .update(&selected_json_model, |v| *v = text);
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_live_json_model, |v| v.clear());
+                            let _ = host.models_mut().update(&selected_live_status_model, |v| {
+                                *v = None;
+                            });
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_live_updated_model, |v| *v = None);
                             host.request_redraw(action_cx.window);
                         });
 
@@ -1225,11 +1261,46 @@ fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> 
         .models()
         .read(&st.last_screenshot_json, |v| v.clone())
         .unwrap_or_default();
-    let semantics_node = cx
+    let semantics_node_fallback = cx
         .app
         .models()
         .read(&st.semantics_selected_node_json, |v| v.clone())
         .unwrap_or_default();
+    let semantics_node_live = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_json, |v| v.clone())
+        .unwrap_or_default();
+    let semantics_node_live_status = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_status, |v| v.clone())
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("unknown"));
+    let semantics_node_live_updated = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_node_live_updated_unix_ms, |v| *v)
+        .ok()
+        .flatten();
+
+    let semantics_node = if !semantics_node_live.is_empty() {
+        let mut out = String::new();
+        out.push_str(&format!(
+            "live_status={}",
+            semantics_node_live_status.as_ref()
+        ));
+        if let Some(ts) = semantics_node_live_updated {
+            out.push_str(&format!(" updated_unix_ms={ts}"));
+        }
+        out.push('\n');
+        out.push('\n');
+        out.push_str(&semantics_node_live);
+        out
+    } else {
+        semantics_node_fallback
+    };
 
     let tabs = shadcn::Tabs::new(st.details_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
