@@ -296,8 +296,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
-  - Remaining: broaden schema to include a fuller column/header/cell capability inventory (and keep versioning strict).
-  - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
+  - Update (parity-gated): `core_model.flat_columns` is now part of the core snapshot schema (`schema_version: 3`)
+    so consumers can rely on stable inventories without recomputing.
+  - Update: core snapshot `cells` is keyed by TanStack-style `RowId` strings (not numeric row keys) to match upstream
+    `rowsById`/cell inventory semantics and avoid drift when custom `getRowId` is used.
+  - Remaining: broaden the schema with more column/header/cell inventories (keep versioning strict) as additional
+    UI consumers require them.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
   - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
   - Fret mapping: snapshot-friendly header lists + footer groups as reversed header groups.
@@ -839,6 +843,16 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
   - Remaining: lift this pattern across the full derived row model pipeline (core/filtered/sorted/expanded/paginated),
     plus a stable external cache surface for rebuild-each-frame callers.
+  - Planned sub-milestones (to keep the work executable and gateable):
+    - [x] HTP-memo-011 Cache filtered root row order (dependency-driven; stable external cache).
+      - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
+        (`TanStackSortedFlatRowOrderCache.filtered_memo` + `filtered_recompute_count`)
+    - [x] HTP-memo-012 Cache sorted root row order (harden deps + invalidation across sorting/columns/filtering).
+      - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
+        (`TanStackSortedFlatRowOrderCache.sorted_memo` + `flat_row_order_signature`)
+      - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_memo_rebuild_each_frame_gate.rs`
+    - [ ] HTP-memo-013 Cache expanded + paginated row order (including `paginateExpandedRows=false` semantics).
+    - [ ] HTP-memo-014 Add broader guardrail gates for rebuild-each-frame callers (recompute-count expectations).
 - [x] HTP-memo-020 Provide an integration pattern for 鈥渞ebuild each frame鈥?while retaining memo cache.
   - Done: `Table::tanstack_sorted_flat_row_order_with_cache(items_revision, cache)` integrates a persistent
     memo cache with ephemeral `Table` rebuilds.

@@ -52,7 +52,7 @@ Mapping conventions:
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `table.getAllColumns()` | `Table::column_tree()` (nested `ColumnDef` tree) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
-| `table.getAllFlatColumns()` | `Table::all_flat_columns()` (preorder DFS; no columnOrder) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`all_flat_columns`) + `visibility_ordering.json` |
+| `table.getAllFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (helper) | Aligned | `visibility_ordering.json` + `tanstack_v8_visibility_ordering_parity.rs` |
 | `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
 | `table.getColumn(columnId)` | `Table::column(column_id)` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column`) |
 | `table.getCoreRowModel()` | `Table::core_row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
@@ -71,7 +71,7 @@ Mapping conventions:
 | `row.getParentRow()/getParentRows()` | `RowModel::parent_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
 | `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`cell_value`) |
 | `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
-| `row.getAllCells()` | `Table::row_cells(row_key)` (snapshot of ids + flags + pin splits) | Partial | `headers_cells.json` / `column_pinning.json` |
+| `row.getAllCells()` | `CoreModelSnapshot.cells[row_id]` (preferred) + `Table::row_cells(row_key)` (helper) | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_unique_values`) |
 
 ### Column core surface
@@ -79,8 +79,8 @@ Mapping conventions:
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `column.id/depth/parent/columns` | `ColumnDef` tree (`Table::column_tree`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
-| `column.getFlatColumns()` | `Table::all_flat_columns()` (table-level equivalent) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` |
-| `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Partial | parity fixtures (ordering/visibility) |
+| `column.getFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (table-level equivalent) | Aligned | `visibility_ordering.json` |
+| `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Aligned | `visibility_ordering.json` |
 
 ### Header + cell core surface
 
