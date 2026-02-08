@@ -60,12 +60,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Minimum gates per audit level”)
 
-- [ ] BU-FR-skill-008 Evaluate skill coverage for fearless refactors and decide whether to add any missing “procedural” skills.
+- [~] BU-FR-skill-008 Evaluate skill coverage for fearless refactors and decide whether to add any missing “procedural” skills.
   - Goal: make repeated tasks (audit snapshots, fixture-driven conformance, perf/diag gates) easy to run consistently.
   - Start from:
     - `.agents/skills/README.md`
     - `.agents/skills/fret-crate-audits/SKILL.md`
     - `.agents/skills/fret-boundary-checks/SKILL.md`
+  - Early evidence:
+    - `.agents/skills/fret-fixture-driven-harnesses/SKILL.md`
 
 ## M1 — Core contracts closure
 
