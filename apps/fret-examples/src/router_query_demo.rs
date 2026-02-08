@@ -9,7 +9,7 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
-use fret_router_ui::{RouterUiStore, router_outlet};
+use fret_router_ui::{RouterLink, RouterUiStore, router_outlet};
 use fret_ui::Invalidation;
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
@@ -275,7 +275,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
 
     let header_lines = ui::v_flex(cx, |cx| {
         [
-            ui::raw_text(cx, format!("location={location_label}")).into_element(cx),
+            ui::h_flex(cx, |cx| {
+                [
+                    ui::raw_text(cx, format!("location={location_label}")).into_element(cx),
+                    shadcn::Button::new("Copy URL")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .on_activate(RouterLink::copy_href_on_activate(location_label.clone()))
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
             ui::raw_text(cx, last_transition)
                 .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
                 .into_element(cx),
@@ -381,10 +392,10 @@ fn on_command(
             Some(RouteLocation::parse("/settings")),
         ),
         RouterQueryDemoMsg::NavigateUser => {
-            let location = st
+            let link = st
                 .router
-                .router()
-                .build_location(
+                .link_to(
+                    NavigationAction::Push,
                     &RouteId::User,
                     &[PathParam {
                         name: "id".to_string(),
@@ -395,9 +406,9 @@ fn on_command(
                         .with_typed("debug", Some(true)),
                     None,
                 )
-                .expect("router should build a user location");
+                .expect("router should build a user link");
             st.router
-                .navigate_with_prefetch_intents(app, NavigationAction::Push, Some(location))
+                .navigate_with_prefetch_intents(app, link.action, Some(link.to))
         }
         RouterQueryDemoMsg::Back => {
             st.router
