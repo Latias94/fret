@@ -58,6 +58,8 @@ Conventions:
     - Keep the old knob for global experiments:
       - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
+  - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
+    - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
 
 ## Milestones
 

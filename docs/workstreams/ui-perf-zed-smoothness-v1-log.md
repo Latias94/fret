@@ -7189,3 +7189,40 @@ Outlier details (attempt-2 failures; us; drag-jitter script):
 Notes:
 - This run did not land code changes; it is intended to keep the perf narrative continuous and to surface whether
   we are still dealing with rare tail outliers (yes, on `drag-jitter`) even after recent resize churn reductions.
+
+---
+
+## 2026-02-08 — Editor resize jitter: CPU vs renderer attribution (deep run)
+
+Commit: `f1292f2f8`
+
+Goal:
+- Confirm whether the editor resize tail is CPU-bound (widget paint / text prepare) vs renderer-bound (scene encoding /
+  uploads / pipeline churn).
+
+Command:
+- `cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json \`
+  `--dir target/fret-diag-perf-editor-resize-renderer-r1 --timeout-ms 300000 --reuse-launch --repeat 3 --warmup-frames 5 \`
+  `--sort time --top 20 --json \`
+  `--env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \`
+  `--env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_RENDERER_PERF=1 \`
+  `--launch -- target/release/fret-ui-gallery > target/fret-diag-perf-editor-resize-renderer-r1/perf.json`
+
+Result (p95; us; extracted from `target/fret-diag-perf-editor-resize-renderer-r1/perf.json`):
+- `total_time_us`: `43651`
+- `paint_time_us`: `41764`
+- `layout_time_us`: `2082`
+- `layout_engine_solve_time_us`: `425`
+- `prepaint_time_us`: `36`
+- `top_renderer_encode_scene_us`: `694`
+- `top_renderer_prepare_text_us`: `575`
+- `top_renderer_draw_calls`: `69`
+
+Worst bundle:
+- `target/fret-diag-perf-editor-resize-renderer-r1/1770512736995-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Conclusion (actionable):
+- The resize tail is **still dominated by CPU paint** (Canvas/widget paint + text prepare).
+- Renderer-side work visible in this probe (`encode_scene`, `prepare_text`) is sub-millisecond and not the bottleneck.
+- Next: focus on breaking down `Canvas` paint time (internal ops/text reasons) and on improving reuse/LOD during
+  interactive resize for editor-grade surfaces.
