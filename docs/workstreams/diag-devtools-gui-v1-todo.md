@@ -55,9 +55,9 @@ Conventions:
   - [x] Scripts (browse `tools/diag-scripts` + open editor).
   - [x] Semantics tree (virtualized via `VirtualList`; keep selection visible; selected-node inspector).
   - [x] WS message tail (basic event log).
-- [ ] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
-  - [ ] auto-refresh latest bundle,
-  - [ ] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.
+- [x] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
+  - [x] auto-refresh latest bundle,
+  - [x] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.
 
 ### M3: Script Studio (authoring UX)
 

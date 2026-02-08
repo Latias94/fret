@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_app::App;
+use fret_diag::transport::DiagTransportKind;
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionListV1, DevtoolsSessionRemovedV1,
     DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1, UiSemanticsNodeGetAckV1,
@@ -278,6 +279,10 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
 }
 
 pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {
+    if st.devtools.client().kind() != DiagTransportKind::WebSocket {
+        return;
+    }
+
     let live_enabled = app
         .models()
         .read(&st.semantics_live_enabled, |v| *v)

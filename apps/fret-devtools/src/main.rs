@@ -9,7 +9,8 @@ use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
 use fret_diag::transport::{
-    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+    ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
+    ToolingDiagClient, WsDiagTransportConfig,
 };
 use fret_diag_protocol::{
     DevtoolsSessionDescriptorV1, UiActionScriptV1, UiActionScriptV2, UiScriptStageV1,
@@ -48,6 +49,8 @@ const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
+    transport: DiagTransportKind,
+    fs_out_dir: Arc<str>,
     ws_port: u16,
     ws_url: Arc<str>,
     token: Arc<str>,
@@ -118,6 +121,11 @@ struct State {
 }
 
 fn main() -> anyhow::Result<()> {
+    let transport =
+        env_transport_kind("FRET_DEVTOOLS_TRANSPORT").unwrap_or(DiagTransportKind::WebSocket);
+    let fs_out_dir =
+        std::env::var("FRET_DIAG_DIR").unwrap_or_else(|_| "target/fret-diag".to_string());
+
     let port = env_u16("FRET_DEVTOOLS_WS_PORT").unwrap_or(7331);
     let token =
         std::env::var("FRET_DEVTOOLS_TOKEN").unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
@@ -125,6 +133,7 @@ fn main() -> anyhow::Result<()> {
 
     eprintln!("fret-devtools: bind={bind} token={token}");
     eprintln!("fret-devtools: url=ws://127.0.0.1:{port}/?fret_devtools_token={token}");
+    eprintln!("fret-devtools: transport={transport:?} fs_out_dir={fs_out_dir}");
 
     std::thread::spawn({
         let token = token.clone();
@@ -139,6 +148,8 @@ fn main() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(DevtoolsConfig {
+        transport,
+        fs_out_dir: Arc::<str>::from(fs_out_dir),
         ws_port: port,
         ws_url: ws_url.clone(),
         token: token.clone(),
@@ -188,7 +199,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let script_last_bundle_dir = app.models_mut().insert(None::<Arc<str>>);
     let script_pack_after_run = app.models_mut().insert(false);
 
-    let target_out_dir = app.models_mut().insert(None::<Arc<str>>);
+    let target_out_dir = match cfg.transport {
+        DiagTransportKind::FileSystem => app.models_mut().insert(Some(cfg.fs_out_dir.clone())),
+        DiagTransportKind::WebSocket => app.models_mut().insert(None::<Arc<str>>),
+    };
     let last_bundle_dir_abs = app.models_mut().insert(None::<Arc<str>>);
     let last_bundle_dump_exported_unix_ms = app.models_mut().insert(None::<u64>);
     let last_bundle_dump_bundle_json = app.models_mut().insert(None::<Arc<str>>);
@@ -200,7 +214,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
     let last_screenshot_json = app.models_mut().insert(String::new());
-    let log_lines = app.models_mut().insert(Vec::<Arc<str>>::new());
+    let log_lines = match cfg.transport {
+        DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
+            "filesystem transport: polling FRET_DIAG_DIR={}",
+            cfg.fs_out_dir
+        ))]),
+        DiagTransportKind::WebSocket => app.models_mut().insert(Vec::<Arc<str>>::new()),
+    };
 
     let semantics_cache = app
         .models_mut()
@@ -218,17 +238,28 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let semantics_live_enabled = app.models_mut().insert(true);
     let semantics_live_force_nonce = app.models_mut().insert(0u64);
 
-    let mut client_cfg =
-        DevtoolsWsClientConfig::with_defaults(cfg.ws_url.to_string(), cfg.token.to_string());
-    client_cfg.client_kind = ClientKindV1::Tooling;
-    client_cfg.capabilities = vec![
-        "inspect".to_string(),
-        "pick".to_string(),
-        "scripts".to_string(),
-        "bundles".to_string(),
-    ];
-    let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(client_cfg))
-        .expect("devtools ws client connect must succeed");
+    let client = match cfg.transport {
+        DiagTransportKind::WebSocket => {
+            let mut client_cfg = DevtoolsWsClientConfig::with_defaults(
+                cfg.ws_url.to_string(),
+                cfg.token.to_string(),
+            );
+            client_cfg.client_kind = ClientKindV1::Tooling;
+            client_cfg.capabilities = vec![
+                "inspect".to_string(),
+                "pick".to_string(),
+                "scripts".to_string(),
+                "bundles".to_string(),
+            ];
+            ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(client_cfg))
+                .expect("devtools ws client connect must succeed")
+        }
+        DiagTransportKind::FileSystem => {
+            let fs_cfg =
+                FsDiagTransportConfig::from_out_dir(PathBuf::from(cfg.fs_out_dir.as_ref()));
+            ToolingDiagClient::connect_fs(fs_cfg).expect("devtools fs client connect must succeed")
+        }
+    };
     let devtools = DevtoolsOps::new(client);
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();
@@ -1558,6 +1589,15 @@ fn on_command(
                 app.request_redraw(window);
                 return;
             }
+            if st.devtools.client().kind() != DiagTransportKind::WebSocket {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "screenshot.request requires WebSocket transport (filesystem mode cannot request runner-owned screenshots)",
+                );
+                app.request_redraw(window);
+                return;
+            }
             let _ = st
                 .devtools
                 .screenshot_request(None, Some("devtools"), 300, None);
@@ -1904,4 +1944,14 @@ fn push_log(app: &mut App, model: &Model<Vec<Arc<str>>>, line: &str) {
 
 fn env_u16(key: &str) -> Option<u16> {
     std::env::var(key).ok().and_then(|v| v.parse().ok())
+}
+
+fn env_transport_kind(key: &str) -> Option<DiagTransportKind> {
+    let v = std::env::var(key).ok()?;
+    let v = v.trim().to_lowercase();
+    match v.as_str() {
+        "ws" | "websocket" => Some(DiagTransportKind::WebSocket),
+        "fs" | "filesystem" => Some(DiagTransportKind::FileSystem),
+        _ => None,
+    }
 }
