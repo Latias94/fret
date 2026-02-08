@@ -433,6 +433,12 @@ Exit criteria:
 - Fold regions and placeholders (if adopted) do not break caret/selection semantics.
 - Inlays (if adopted) are represented without mutating the underlying buffer.
 
+Current policy note (v1 + current v2 direction):
+
+- While inline IME preedit is active, fold placeholders and inlays are suppressed (do not compose).
+- Revisit composition only after preedit is modeled as a first-class injected display fragment and the DisplayMap can
+  compose multiple fragment sources under a single, deterministic buffer↔display↔a11y mapping surface.
+
 ### M9 — Composable rows / retained host (only if needed)
 
 Exit criteria:

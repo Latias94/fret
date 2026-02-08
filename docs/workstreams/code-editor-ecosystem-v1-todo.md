@@ -279,6 +279,7 @@ Evidence anchors:
   - [x] Decision (v2): keep v1 behavior — suppress inlays while inline preedit is active.
     - Rationale: composing inlays with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (and the mapping surface can compose multiple fragment sources deterministically).
+  - [ ] Follow-up (v2+): define a fragment-based DisplayMap composition model so fold/inlay/preedit can compose under a single mapping surface.
 
 ---
 
