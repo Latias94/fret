@@ -410,6 +410,7 @@ impl WinitAppDriver for DockingDemoDriver {
                 window,
                 bounds,
                 scale_factor,
+                &state.ui,
                 semantics_snapshot,
                 element_runtime,
             )
