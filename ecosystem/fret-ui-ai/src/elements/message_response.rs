@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -44,7 +45,11 @@ impl MessageResponse {
     pub fn new(source: impl Into<Arc<str>>) -> Self {
         Self {
             source: source.into(),
-            layout: LayoutRefinement::default(),
+            // Message responses are expected to participate in the transcript's flow layout and
+            // wrap text to the available message width (AI Elements / shadcn style). Leaving the
+            // width unconstrained can collapse to ~0px inside stacks, which in turn explodes
+            // vertical wrapping and breaks scroll/semantics geometry.
+            layout: LayoutRefinement::default().w_full().min_w_0(),
             padding: Space::N0,
             streaming: true,
             finalized: true,
@@ -106,6 +111,14 @@ impl MessageResponse {
 
         let mut components = fret_markdown::MarkdownComponents::<H>::default();
         components.on_link_activate = self.on_link_activate;
+        if components.code_block_ui.max_height.is_none() {
+            let max_height = theme
+                .metric_by_key("fret.ai.message.code_block.max_height")
+                .or_else(|| theme.metric_by_key("fret.markdown.code_block.max_height"))
+                .or_else(|| theme.metric_by_key("markdown.code_block.max_height"))
+                .unwrap_or(Px(240.0));
+            components.code_block_ui.max_height = Some(max_height);
+        }
 
         #[derive(Debug, Default)]
         struct CodeActionOrdinalState {

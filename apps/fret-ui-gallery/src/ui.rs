@@ -17118,6 +17118,30 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
     let messages = match messages {
         Some(model) => model,
         None => {
+            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+                ui_ai::SourceItem::new("src-0", "Example source A")
+                    .url("https://example.com/a")
+                    .excerpt("A short excerpt used for truncation and wrapping tests."),
+                ui_ai::SourceItem::new("src-1", "Example source B")
+                    .url("https://example.com/b")
+                    .excerpt("Another excerpt: this should wrap and remain readable."),
+            ]);
+
+            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+                ui_ai::CitationItem::new("src-0", "[1]"),
+                ui_ai::CitationItem::from_arc(
+                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                    "[2]",
+                ),
+            ]);
+
+            let tool_call = ui_ai::ToolCall::new("toolcall-seed-0", "search")
+                .state(ui_ai::ToolCallState::InputAvailable)
+                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "query": "seeded tool call",
+                    "k": 3
+                })));
+
             let initial: Arc<[ui_ai::AiMessage]> = Arc::from(vec![
                 ui_ai::AiMessage::new(
                     1,
@@ -17132,6 +17156,25 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
                             "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
                         ),
                     ))],
+                ),
+                ui_ai::AiMessage::new(
+                    3,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from(
+                        "Show me seeded tools + sources + citations.",
+                    ))],
+                ),
+                ui_ai::AiMessage::new(
+                    4,
+                    ui_ai::MessageRole::Assistant,
+                    [
+                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                            Arc::<str>::from(""),
+                        )),
+                        ui_ai::MessagePart::ToolCall(tool_call),
+                        ui_ai::MessagePart::Sources(sources),
+                        ui_ai::MessagePart::Citations(citations),
+                    ],
                 ),
             ]);
             let model = cx.app.models_mut().insert(initial);
@@ -17164,7 +17207,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
     let next_id = match next_id {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(3u64);
+            let model = cx.app.models_mut().insert(5u64);
             cx.with_state(ChatModels::default, |st| st.next_id = Some(model.clone()));
             model
         }
@@ -17193,6 +17236,36 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             model
         }
     };
+
+    let prompt_non_empty = cx
+        .get_model_cloned(&prompt, Invalidation::Paint)
+        .map(|v| !v.trim().is_empty())
+        .unwrap_or(false);
+    let prompt_non_empty_marker = prompt_non_empty.then(|| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-prompt-nonempty")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Px(Px(0.0)),
+                                height: fret_ui::element::Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            },
+        )
+    });
 
     let loading_value = cx
         .get_model_copied(&loading, Invalidation::Paint)
@@ -17330,7 +17403,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
                 .unwrap_or(0);
 
             let tool_call = ui_ai::ToolCall::new("toolcall-0", "search")
-                .state(ui_ai::ToolCallState::Running)
+                .state(ui_ai::ToolCallState::InputAvailable)
                 .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
                     "query": text,
                     "k": 3
@@ -17360,7 +17433,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
 
             let tool_call_final = tool_call
                 .clone()
-                .state(ui_ai::ToolCallState::Succeeded)
+                .state(ui_ai::ToolCallState::OutputAvailable)
                 .output(ui_ai::ToolCallPayload::Json(serde_json::json!({
                     "results": [
                         {"title": "A", "score": 0.9},
@@ -17457,6 +17530,107 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         }
     });
 
+    let start_streaming: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let pending = pending.clone();
+        let loading = loading.clone();
+        let content_revision = content_revision.clone();
+        move |host, _action_cx, _reason| {
+            fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
+                let mut out = Vec::new();
+                let mut buf = String::new();
+                let mut count = 0usize;
+
+                for ch in text.chars() {
+                    buf.push(ch);
+                    count = count.saturating_add(1);
+                    if count >= chars_per_chunk {
+                        out.push(Arc::<str>::from(std::mem::take(&mut buf)));
+                        count = 0;
+                    }
+                }
+
+                if !buf.is_empty() {
+                    out.push(Arc::<str>::from(buf));
+                }
+
+                out.into()
+            }
+
+            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+                ui_ai::SourceItem::new("src-0", "Example source A")
+                    .url("https://example.com/a")
+                    .excerpt("A short excerpt used for truncation and wrapping tests."),
+                ui_ai::SourceItem::new("src-1", "Example source B")
+                    .url("https://example.com/b")
+                    .excerpt("Another excerpt: this should wrap and remain readable."),
+            ]);
+
+            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+                ui_ai::CitationItem::new("src-0", "[1]"),
+                ui_ai::CitationItem::from_arc(
+                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                    "[2]",
+                ),
+            ]);
+
+            let tool_call_running = ui_ai::ToolCall::new("toolcall-seed-0", "search")
+                .state(ui_ai::ToolCallState::InputAvailable)
+                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "query": "seeded tool call",
+                    "k": 3
+                })));
+
+            let tool_call_final = tool_call_running
+                .clone()
+                .state(ui_ai::ToolCallState::OutputAvailable)
+                .output(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "results": [
+                        {"title": "A", "score": 0.9},
+                        {"title": "B", "score": 0.8}
+                    ]
+                })));
+
+            let reply = "This assistant message is streamed in append-only chunks.\n\n```rust\nfn streamed_demo() {\n    println!(\"hello from stream\");\n}\n```\n";
+            let chunks = chunk_for_demo(reply, 12);
+
+            let assistant_id = 4u64;
+
+            let _ = host.models_mut().update(&messages, |list| {
+                let mut vec = list.as_ref().to_vec();
+                if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                    msg.parts = Arc::from(vec![
+                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                            Arc::<str>::from(""),
+                        )),
+                        ui_ai::MessagePart::ToolCall(tool_call_running.clone()),
+                        ui_ai::MessagePart::Sources(sources.clone()),
+                        ui_ai::MessagePart::Citations(citations.clone()),
+                    ]);
+                }
+                *list = vec.into();
+            });
+
+            let _ = host.models_mut().update(&pending, |v| {
+                *v = Some(PendingReply {
+                    assistant_id,
+                    chunks,
+                    next_chunk: 0,
+                    markdown: Arc::<str>::from(""),
+                    tool_call_running,
+                    tool_call_final,
+                    sources,
+                    citations,
+                })
+            });
+
+            let _ = host.models_mut().update(&loading, |v| *v = true);
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
+        }
+    });
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -17466,6 +17640,12 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             vec![
                 cx.text("Goal: interactive demo for PromptInput + transcript append."),
                 cx.text("Send triggers a short \"loading\" window where Stop is available."),
+                shadcn::Button::new("Start streaming (seeded)")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-ai-chat-start-stream")
+                    .on_activate(start_streaming.clone())
+                    .into_element(cx),
             ]
         },
     );
@@ -17501,7 +17681,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
         .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
         .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
-        .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(460.0)))
+        .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(360.0)))
         .into_element(cx);
 
     let exported_value = cx
@@ -17522,6 +17702,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         header,
         actions_demo,
         chat,
+        prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
         exported.unwrap_or_else(|| cx.text("")),
     ]
 }

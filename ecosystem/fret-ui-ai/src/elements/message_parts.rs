@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -153,14 +153,13 @@ impl MessageParts {
                                 continue;
                             };
 
-                            out.push(cx.semantics(
-                                SemanticsProps {
-                                    role: SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![el],
-                            ));
+                            out.push(
+                                el.attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .role(SemanticsRole::Group)
+                                        .test_id(test_id),
+                                ),
+                            );
                         }
                         MessagePart::Markdown(md) => {
                             let mut response =
@@ -177,14 +176,13 @@ impl MessageParts {
                                 continue;
                             };
 
-                            out.push(cx.semantics(
-                                SemanticsProps {
-                                    role: SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![el],
-                            ));
+                            out.push(
+                                el.attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .role(SemanticsRole::Group)
+                                        .test_id(test_id),
+                                ),
+                            );
                         }
                         MessagePart::ToolCall(call) => {
                             let mut block = ToolCallBlock::new(call.clone());
@@ -222,23 +220,29 @@ impl MessageParts {
                                 |cx| {
                                     let mut out = Vec::new();
                                     for (citation_index, item) in items.iter().enumerate() {
-                                        let mut citation = InlineCitation::new(item.label.clone())
-                                            .source_ids(item.source_ids.clone())
-                                            .select_source_model(selected_source_id.clone());
-                                        if let Some(sources) = sources_for_citations.clone() {
-                                            citation = citation.sources(sources);
-                                        }
-                                        if let Some(handler) = on_link_activate.clone() {
-                                            citation = citation.on_open_url(handler);
-                                        }
+                                        out.push(cx.keyed(citation_index, |cx| {
+                                            let mut citation =
+                                                InlineCitation::new(item.label.clone())
+                                                    .source_ids(item.source_ids.clone())
+                                                    .select_source_model(
+                                                        selected_source_id.clone(),
+                                                    );
+                                            if let Some(sources) = sources_for_citations.clone() {
+                                                citation = citation.sources(sources);
+                                            }
+                                            if let Some(handler) = on_link_activate.clone() {
+                                                citation = citation.on_open_url(handler);
+                                            }
 
-                                        if let Some(prefix) = test_id_prefix.clone() {
-                                            citation = citation.test_id(Arc::<str>::from(format!(
-                                                "{prefix}citation-{index}-{citation_index}"
-                                            )));
-                                        }
+                                            if let Some(prefix) = test_id_prefix.clone() {
+                                                citation =
+                                                    citation.test_id(Arc::<str>::from(format!(
+                                                        "{prefix}citation-{index}-{citation_index}"
+                                                    )));
+                                            }
 
-                                        out.push(citation.into_element(cx));
+                                            citation.into_element(cx)
+                                        }));
                                     }
                                     out
                                 },
@@ -249,14 +253,13 @@ impl MessageParts {
                                 continue;
                             };
 
-                            out.push(cx.semantics(
-                                SemanticsProps {
-                                    role: SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![row],
-                            ));
+                            out.push(
+                                row.attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .role(SemanticsRole::Group)
+                                        .test_id(test_id),
+                                ),
+                            );
                         }
                     }
                 }
