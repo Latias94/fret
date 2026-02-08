@@ -1,12 +1,16 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, PressablePointerUpResult,
+    UiPointerActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
@@ -63,6 +67,158 @@ fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) ->
         0.1
     };
     alpha_mul(destructive_fg, alpha)
+}
+
+const CONTEXT_MENU_CANCEL_OPEN_DELAY: Duration = Duration::from_millis(500);
+const CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX: f32 = 1.0;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+struct ContextMenuCancelOpenState {
+    active: bool,
+    allow_item_mouse_up: bool,
+    pointer_id: Option<fret_core::PointerId>,
+    anchor: Option<Point>,
+    armed: Option<TimerToken>,
+    moved_from_anchor: bool,
+}
+
+type ContextMenuCancelOpenShared = Arc<Mutex<ContextMenuCancelOpenState>>;
+
+fn context_menu_cancel_open_shared() -> ContextMenuCancelOpenShared {
+    Arc::new(Mutex::new(ContextMenuCancelOpenState::default()))
+}
+
+fn context_menu_cancel_open_distance_exceeds_threshold(anchor: Point, position: Point) -> bool {
+    let dx = anchor.x.0 - position.x.0;
+    let dy = anchor.y.0 - position.y.0;
+    (dx * dx + dy * dy)
+        > CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX * CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX
+}
+
+fn context_menu_cancel_open_clear_inner(
+    host: &mut dyn UiPointerActionHost,
+    state: &mut ContextMenuCancelOpenState,
+) {
+    if let Some(token) = state.armed.take() {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+    *state = ContextMenuCancelOpenState::default();
+}
+
+fn context_menu_cancel_open_start(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn UiPointerActionHost,
+    window: fret_core::AppWindowId,
+    pointer_id: fret_core::PointerId,
+    anchor: Point,
+) {
+    let token = host.next_timer_token();
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    context_menu_cancel_open_clear_inner(host, &mut state);
+    state.active = true;
+    state.pointer_id = Some(pointer_id);
+    state.anchor = Some(anchor);
+    state.armed = Some(token);
+    host.push_effect(Effect::SetTimer {
+        window: Some(window),
+        token,
+        after: CONTEXT_MENU_CANCEL_OPEN_DELAY,
+        repeat: None,
+    });
+}
+
+fn context_menu_cancel_open_mark_moved_if_needed(
+    shared: &ContextMenuCancelOpenShared,
+    pointer_id: fret_core::PointerId,
+    position: Point,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) || state.moved_from_anchor {
+        return;
+    }
+    let Some(anchor) = state.anchor else {
+        return;
+    };
+    if context_menu_cancel_open_distance_exceeds_threshold(anchor, position) {
+        state.moved_from_anchor = true;
+    }
+}
+
+fn context_menu_cancel_open_on_timer(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn UiPointerActionHost,
+    token: TimerToken,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if state.armed != Some(token) {
+        return;
+    }
+    state.armed = None;
+    state.allow_item_mouse_up = true;
+    // 500ms 后不再需要持续 pointer capture。
+    host.release_pointer_capture();
+}
+
+fn context_menu_cancel_open_on_pointer_up(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn UiPointerActionHost,
+    open: &Model<bool>,
+    pointer_id: fret_core::PointerId,
+    position: Point,
+    button: fret_core::MouseButton,
+) {
+    if button != fret_core::MouseButton::Right {
+        return;
+    }
+
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) {
+        return;
+    }
+
+    let should_cancel = state.allow_item_mouse_up
+        && !state.moved_from_anchor
+        && state.anchor.is_some_and(|anchor| {
+            !context_menu_cancel_open_distance_exceeds_threshold(anchor, position)
+        });
+    if should_cancel {
+        let _ = host.models_mut().update(open, |v| *v = false);
+    }
+    context_menu_cancel_open_clear_inner(host, &mut state);
+}
+
+fn context_menu_cancel_open_stop_without_close(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn UiPointerActionHost,
+    pointer_id: fret_core::PointerId,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) {
+        return;
+    }
+    context_menu_cancel_open_clear_inner(host, &mut state);
+}
+
+fn context_menu_cancel_open_item_pointer_up_handler(
+    shared: ContextMenuCancelOpenShared,
+    open: Model<bool>,
+) -> fret_ui::action::OnPressablePointerUp {
+    Arc::new(move |host, _acx, up| {
+        context_menu_cancel_open_on_pointer_up(
+            &shared,
+            host,
+            &open,
+            up.pointer_id,
+            up.position,
+            up.button,
+        );
+        // 右键释放不应走 Pressable 默认激活链路。
+        if up.button == fret_core::MouseButton::Right {
+            PressablePointerUpResult::SkipActivate
+        } else {
+            PressablePointerUpResult::Continue
+        }
+    })
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1988,11 +2144,11 @@ fn context_menu_submenu_panel<H: UiHost>(
 ///
 /// Notes:
 /// - Position is anchored at the last pointer-down location observed within the trigger region.
-/// - Keyboard invocation via Shift+F10 is supported (there is no dedicated `ContextMenu` key in
-///   `fret_core::KeyCode` yet).
+/// - Keyboard invocation via Shift+F10 and `ContextMenu` key is supported.
 #[derive(Clone)]
 pub struct ContextMenu {
     open: Model<bool>,
+    disabled: bool,
     modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
@@ -2014,6 +2170,7 @@ impl std::fmt::Debug for ContextMenu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ContextMenu")
             .field("open", &"<model>")
+            .field("disabled", &self.disabled)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -2030,6 +2187,7 @@ impl ContextMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            disabled: false,
             modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
@@ -2052,6 +2210,12 @@ impl ContextMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Whether trigger gestures/shortcuts should be ignored.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -2185,6 +2349,7 @@ impl ContextMenu {
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+            let disabled = self.disabled;
             let trigger_element = trigger(cx);
             let trigger_element = menu::trigger::apply_menu_trigger_a11y(
                 trigger_element,
@@ -2193,7 +2358,9 @@ impl ContextMenu {
             );
             let trigger_id = trigger_element.id;
 
-            menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
+            if !disabled {
+                menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
+            }
 
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
@@ -2219,6 +2386,9 @@ impl ContextMenu {
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       cx: fret_ui::action::ActionCx,
                       down: fret_ui::action::PointerDownCx| {
+                    if disabled {
+                        return false;
+                    }
                     let _ = menu::context_menu_touch_long_press_on_pointer_down(
                         &touch_long_press,
                         host,
@@ -3280,7 +3450,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let mut request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
+                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
                     trigger_id,
@@ -3309,9 +3479,9 @@ impl ContextMenu {
 mod tests {
     use super::*;
 
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::UiServices;
@@ -3479,33 +3649,35 @@ mod tests {
             bounds,
             "context-menu",
             move |cx| {
-                vec![ContextMenu::new(open)
-                    .on_dismiss_request(on_dismiss_request)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Px(Px(120.0));
-                                        layout.size.height = Length::Px(Px(40.0));
-                                        layout
+                vec![
+                    ContextMenu::new(open)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
                                     },
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::new(),
-                            )
-                        },
-                        |_cx| {
-                            vec![
-                                ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
-                                ContextMenuEntry::Separator,
-                                ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
-                                ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
-                            ]
-                        },
-                    )]
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| {
+                                vec![
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Alpha")),
+                                    ContextMenuEntry::Separator,
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Beta")),
+                                    ContextMenuEntry::Item(ContextMenuItem::new("Gamma")),
+                                ]
+                            },
+                        ),
+                ]
             },
         );
         ui.set_root(root);
@@ -3523,6 +3695,18 @@ mod tests {
         bounds: Rect,
         open: Model<bool>,
     ) -> fret_core::NodeId {
+        render_frame_focusable_trigger_with_disabled(ui, app, services, window, bounds, open, false)
+    }
+
+    fn render_frame_focusable_trigger_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
@@ -3535,7 +3719,7 @@ mod tests {
             bounds,
             "context-menu-shift-f10",
             |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::new(open).disabled(disabled).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -4129,36 +4313,38 @@ mod tests {
                     },
                 );
 
-                let trigger = ContextMenu::new(open)
-                    .on_open_auto_focus(on_open_auto_focus.clone())
-                    .on_close_auto_focus(on_close_auto_focus.clone())
-                    .into_element(
-                        cx,
-                        {
-                            let trigger_id_out = trigger_id_out.clone();
-                            move |cx| {
-                                cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
+                let trigger =
+                    ContextMenu::new(open)
+                        .on_open_auto_focus(on_open_auto_focus.clone())
+                        .on_close_auto_focus(on_close_auto_focus.clone())
+                        .into_element(
+                            cx,
+                            {
+                                let trigger_id_out = trigger_id_out.clone();
+                                move |cx| {
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
                                         },
-                                        enabled: true,
-                                        focusable: true,
-                                        ..Default::default()
-                                    },
-                                    move |cx, _st, id| {
-                                        trigger_id_out.set(Some(id));
-                                        vec![cx
-                                            .container(ContainerProps::default(), |_cx| Vec::new())]
-                                    },
-                                )
-                            }
-                        },
-                        move |_cx| entries.clone(),
-                    );
+                                        move |cx, _st, id| {
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
+                                }
+                            },
+                            move |_cx| entries.clone(),
+                        );
 
                 vec![trigger, underlay]
             },
@@ -4283,6 +4469,157 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
             .expect("Alpha menu item");
         assert_eq!(ui.focus(), Some(alpha.id));
+    }
+
+    #[test]
+    fn context_menu_opens_on_context_menu_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ContextMenu,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ =
+            render_frame_focusable_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        assert_eq!(ui.focus(), Some(alpha.id));
+    }
+
+    #[test]
+    fn context_menu_disabled_blocks_pointer_and_keyboard_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::F10,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+                is_click: true,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            !open_now,
+            "disabled context menu should not open via keyboard or pointer triggers"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled context menu should not render menu content"
+        );
     }
 
     #[test]
