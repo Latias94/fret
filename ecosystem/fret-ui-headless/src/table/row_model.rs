@@ -3154,7 +3154,7 @@ impl<'a, TData> Table<'a, TData> {
             let Some(row) = self.row_model().row(row_i) else {
                 continue;
             };
-            let row_id = Arc::<str>::from(row.key.0.to_string());
+            let row_id = row.id.0.clone();
             if let Some(snapshot) = self.row_cells(row.key) {
                 cells.insert(row_id, snapshot);
             }
