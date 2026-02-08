@@ -72,6 +72,10 @@ Conventions:
     - Implementation: `feat(fret-ui): add interactive-resize wrapped text width cache knob` (commit `2e479fc2f`).
     - Knob: `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES` (default: `0`/off; try `4`).
     - Evidence: perf log entries `2026-02-08` (A/B: off vs `ENTRIES=4`).
+  - [x] Bucket wrapped-text **measure** widths during interactive resize in the host-widget layout path to reduce
+    measure churn and align layout/paint wrap widths.
+    - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
+    - Evidence: perf log entries `2026-02-08` (`ui-code-editor-resize-probes` and P0 `ui-resize-probes` sanity).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
