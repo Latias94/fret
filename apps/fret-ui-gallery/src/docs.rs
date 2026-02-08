@@ -606,6 +606,26 @@ use fret_ui_ai::{FileTree, FileTreeFile, FileTreeFolder};
 ```
 "#;
 
+pub(crate) const DOC_AI_CODE_BLOCK_DEMO: &str = r#"
+## AI code block (demo)
+
+This page is a small demo for AI Elements-aligned code artifact surfaces in `fret-ui-ai`:
+
+- `CodeBlock` for fenced-code rendering backed by `ecosystem/fret-code-view`,
+- `Snippet` for inline copyable commands/values.
+
+It exists to validate:
+
+- stable copy feedback state (`Copied` timeout),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CODE_BLOCK_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{CodeBlock, CodeBlockCopyButton, Snippet, SnippetCopyButton, SnippetInput, SnippetText};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 

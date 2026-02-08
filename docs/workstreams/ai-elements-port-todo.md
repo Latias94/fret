@@ -67,8 +67,8 @@ Status legend:
 
 | Upstream | Status | Planned owner | Notes |
 | --- | --- | --- | --- |
-| `code-block` | Not started | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`. |
-| `snippet` | Not started | `fret-ui-ai` | Likely a thin wrapper over `code-block`. |
+| `code-block` | Prototype | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`; demo + diag gate exist. |
+| `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Not started | `fret-ui-ai` | Add only after code-block is stable. |
 | `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
@@ -125,6 +125,10 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json` (`[!]` if click targeting is occluded by prompt chrome)
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json` (`[!]` if hover/click targeting is occluded by prompt chrome)
 
+Existing gates (UI Gallery `ai_code_block_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
+
 Planned next gate:
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
@@ -134,7 +138,7 @@ Planned next gate:
 
 Prioritize thin adapters over new engines:
 
-- [ ] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
+- [~] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
 - [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
 - [ ] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
 - [ ] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.

@@ -706,6 +706,7 @@ fn page_preview(
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
+        PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -17823,6 +17824,52 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
                 selected_marker.unwrap_or_else(|| cx.text("")),
             ]
         },
+    )]
+}
+
+fn preview_ai_code_block_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let code: Arc<str> = Arc::from(
+        "fn main() {\n    println!(\"Hello, Fret!\");\n}\n\n// A longer line to exercise horizontal scrolling:\n// 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\n",
+    );
+
+    let filename = ui_ai::CodeBlockFilename::new("src/main.rs").into_element(cx);
+    let copy = ui_ai::CodeBlockCopyButton::new(code.clone())
+        .test_id("ui-ai-code-block-copy")
+        .copied_marker_test_id("ui-ai-code-block-copied-marker")
+        .into_element(cx);
+
+    let block = ui_ai::CodeBlock::new(code.clone())
+        .language("rust")
+        .header_left([filename])
+        .header_right([copy])
+        .test_id("ui-ai-code-block-root")
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
+
+    let snippet_code: Arc<str> = Arc::from("cargo run -p fret-ui-gallery");
+    let snippet = ui_ai::Snippet::new([
+        ui_ai::SnippetText::new("$").into_element(cx),
+        ui_ai::SnippetInput::new(snippet_code.clone()).into_element(cx),
+        ui_ai::SnippetCopyButton::new(snippet_code)
+            .test_id("ui-ai-snippet-copy")
+            .copied_marker_test_id("ui-ai-snippet-copied-marker")
+            .into_element(cx),
+    ])
+    .test_id("ui-ai-snippet-root")
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("CodeBlock + Snippet (AI Elements)"), block, snippet],
     )]
 }
 

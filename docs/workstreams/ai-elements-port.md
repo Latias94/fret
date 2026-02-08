@@ -75,6 +75,7 @@ an interactive chat demo:
   conversation/message parts for app composition.
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
 - `FileTree`: AI Elements-aligned nested file tree surface (small trees; no virtualization yet).
+- `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
   - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates:
@@ -88,6 +89,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
+  - `AI code block (demo)` (`ai_code_block_demo`): `CodeBlock` + `Snippet` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
