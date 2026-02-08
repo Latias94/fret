@@ -288,6 +288,8 @@ pub(crate) fn content_view(
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -454,6 +456,8 @@ pub(crate) fn content_view(
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
         code_editor_soft_wrap,
+        code_editor_folds,
+        code_editor_inlays,
     );
 
     let active_tab: Arc<str> = cx
@@ -627,6 +631,8 @@ fn page_preview(
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -665,6 +671,8 @@ fn page_preview(
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
             code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
@@ -3324,6 +3332,8 @@ fn preview_code_editor_torture(
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
     soft_wrap: Model<bool>,
+    folds: Model<bool>,
+    inlays: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -3334,6 +3344,53 @@ fn preview_code_editor_torture(
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
         .unwrap_or(false);
+    let folds_enabled = cx
+        .get_model_copied(&folds, Invalidation::Layout)
+        .unwrap_or(false);
+    let inlays_enabled = cx
+        .get_model_copied(&inlays, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let soft_wrap_set_on = soft_wrap.clone();
+    let set_soft_wrap_on: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&soft_wrap_set_on, |v| *v = true);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        });
+    let soft_wrap_set_off = soft_wrap.clone();
+    let set_soft_wrap_off: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&soft_wrap_set_off, |v| *v = false);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        });
+
+    let folds_set_on = folds.clone();
+    let set_folds_on: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&folds_set_on, |v| *v = true);
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    });
+    let folds_set_off = folds.clone();
+    let set_folds_off: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&folds_set_off, |v| *v = false);
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    });
+
+    let inlays_set_on = inlays.clone();
+    let set_inlays_on: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&inlays_set_on, |v| *v = true);
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    });
+    let inlays_set_off = inlays.clone();
+    let set_inlays_off: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&inlays_set_off, |v| *v = false);
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    });
 
     let handle = cx.with_state(
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
@@ -3352,6 +3409,54 @@ fn preview_code_editor_torture(
             fret_runtime::TextBoundaryMode::UnicodeWord
         });
         last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let last_folds = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_folds.get() != Some(folds_enabled) {
+        if folds_enabled {
+            let span = handle.with_buffer(|b| b.line_text(0)).and_then(|line| {
+                let prefix_end = line.find(": ").map(|i| i + 2).unwrap_or(0);
+                let comment_start = line.find("//").unwrap_or_else(|| line.len());
+                let start = prefix_end.min(line.len());
+                let end = comment_start.min(line.len());
+                if start < end {
+                    Some(code_editor_view::FoldSpan {
+                        range: start..end,
+                        placeholder: Arc::<str>::from("…"),
+                    })
+                } else {
+                    None
+                }
+            });
+            if let Some(span) = span {
+                handle.set_line_folds(0, vec![span]);
+            } else {
+                handle.clear_all_folds();
+            }
+        } else {
+            handle.clear_all_folds();
+        }
+        last_folds.set(Some(folds_enabled));
+    }
+
+    let last_inlays = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_inlays.get() != Some(inlays_enabled) {
+        if inlays_enabled {
+            let byte = handle
+                .with_buffer(|b| b.line_text(0))
+                .map(|line| line.find(": ").map(|i| i + 2).unwrap_or(0).min(line.len()))
+                .unwrap_or(0);
+            handle.set_line_inlays(
+                0,
+                vec![code_editor_view::InlaySpan {
+                    byte,
+                    text: Arc::<str>::from("<inlay>"),
+                }],
+            );
+        } else {
+            handle.clear_all_inlays();
+        }
+        last_inlays.set(Some(inlays_enabled));
     }
 
     let header_handle = handle.clone();
@@ -3422,10 +3527,68 @@ fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-soft-wrap")
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
+                            shadcn::Button::new("Wrap: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-soft-wrap-set-off")
+                                .on_activate(set_soft_wrap_off.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Wrap: 80")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-soft-wrap-set-on")
+                                .on_activate(set_soft_wrap_on.clone())
+                                .into_element(cx),
                             cx.text(if soft_wrap_enabled {
                                 "Soft wrap: 80 cols"
                             } else {
                                 "Soft wrap: off"
+                            }),
+                            shadcn::Switch::new(folds.clone())
+                                .test_id("ui-gallery-code-editor-torture-folds")
+                                .a11y_label("Toggle fold fixture on line 0 (unwrapped only)")
+                                .into_element(cx),
+                            shadcn::Button::new("Folds: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-folds-set-off")
+                                .on_activate(set_folds_off.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Folds: on")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-folds-set-on")
+                                .on_activate(set_folds_on.clone())
+                                .into_element(cx),
+                            cx.text(if folds_enabled && !soft_wrap_enabled {
+                                "Folds: fixture"
+                            } else if folds_enabled {
+                                "Folds: (disabled under wrap)"
+                            } else {
+                                "Folds: off"
+                            }),
+                            shadcn::Switch::new(inlays.clone())
+                                .test_id("ui-gallery-code-editor-torture-inlays")
+                                .a11y_label("Toggle inlay fixture on line 0 (unwrapped only)")
+                                .into_element(cx),
+                            shadcn::Button::new("Inlays: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-inlays-set-off")
+                                .on_activate(set_inlays_off.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Inlays: on")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-inlays-set-on")
+                                .on_activate(set_inlays_on.clone())
+                                .into_element(cx),
+                            cx.text(if inlays_enabled && !soft_wrap_enabled {
+                                "Inlays: fixture"
+                            } else if inlays_enabled {
+                                "Inlays: (disabled under wrap)"
+                            } else {
+                                "Inlays: off"
                             }),
                         ]
                     },

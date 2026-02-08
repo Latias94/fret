@@ -72,6 +72,8 @@ struct UiGalleryHarnessModelIds {
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
 }
@@ -163,6 +165,8 @@ struct UiGalleryWindowState {
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
     code_editor_soft_wrap: Model<bool>,
+    code_editor_folds: Model<bool>,
+    code_editor_inlays: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -490,6 +494,8 @@ impl UiGalleryDriver {
         let code_editor_syntax_rust = app.models_mut().insert(true);
         let code_editor_boundary_identifier = app.models_mut().insert(true);
         let code_editor_soft_wrap = app.models_mut().insert(false);
+        let code_editor_folds = app.models_mut().insert(false);
+        let code_editor_inlays = app.models_mut().insert(false);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -621,6 +627,8 @@ impl UiGalleryDriver {
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
             code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -664,6 +672,8 @@ impl UiGalleryDriver {
                     code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
                     code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
                     code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                    code_editor_folds: state.code_editor_folds.clone(),
+                    code_editor_inlays: state.code_editor_inlays.clone(),
                     text_input: state.text_input.clone(),
                     text_area: state.text_area.clone(),
                 },
@@ -1179,6 +1189,8 @@ impl UiGalleryDriver {
         let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
         let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
         let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
+        let code_editor_folds = state.code_editor_folds.clone();
+        let code_editor_inlays = state.code_editor_inlays.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -1605,6 +1617,8 @@ impl UiGalleryDriver {
                                             code_editor_syntax_rust.clone(),
                                             code_editor_boundary_identifier.clone(),
                                             code_editor_soft_wrap.clone(),
+                                            code_editor_folds.clone(),
+                                            code_editor_inlays.clone(),
                                         )
                                     }
                                 })]
@@ -1703,6 +1717,8 @@ impl UiGalleryDriver {
                                         code_editor_syntax_rust.clone(),
                                         code_editor_boundary_identifier.clone(),
                                         code_editor_soft_wrap.clone(),
+                                        code_editor_folds.clone(),
+                                        code_editor_inlays.clone(),
                                     )
                                 }
                             })
@@ -2318,6 +2334,8 @@ pub fn build_app() -> App {
                 let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
                 let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
                 let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+                let folds = app.models().get_cloned(&ids.code_editor_folds)?;
+                let inlays = app.models().get_cloned(&ids.code_editor_inlays)?;
                 let text_input = app.models().get_cloned(&ids.text_input)?;
                 let text_area = app.models().get_cloned(&ids.text_area)?;
 
@@ -2330,9 +2348,17 @@ pub fn build_app() -> App {
                         let anchor = selection.anchor.min(text.len()) as u64;
                         let caret = selection.caret().min(text.len()) as u64;
                         let stats = handle.cache_stats();
+                        let fold_placeholder_present = handle
+                            .debug_decorated_line_text(0)
+                            .is_some_and(|t| t.contains('…'));
+                        let inlay_present = handle
+                            .debug_decorated_line_text(0)
+                            .is_some_and(|t| t.contains("<inlay>"));
                         serde_json::json!({
                             "schema_version": 1,
                             "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                            "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
+                            "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                             "text_len_bytes": text.len() as u64,
                             "selection": { "anchor": anchor, "caret": caret },
                             "cache_stats": {
@@ -2366,6 +2392,8 @@ pub fn build_app() -> App {
                         "syntax_rust": syntax_rust,
                         "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
                         "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                        "folds_fixture": folds,
+                        "inlays_fixture": inlays,
                         "torture": torture,
                     }),
                 );
