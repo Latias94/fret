@@ -96,7 +96,7 @@ Evidence anchors:
 - Windows mapping: `crates/fret-launch/src/runner/desktop/windows_menu.rs`.
 - Runner handling + inheritance: `crates/fret-launch/src/runner/desktop/mod.rs`.
 - Window-scoped input snapshots: `crates/fret-runtime/src/window_input_context.rs`.
-- Command availability seam (Undo/Redo): `crates/fret-runtime/src/window_command_availability.rs` + `crates/fret-runtime/src/when_expr.rs` (`edit.can_undo`, `edit.can_redo`).
+- Command availability seam (Undo/Redo, Router): `crates/fret-runtime/src/window_command_availability.rs` + `crates/fret-runtime/src/when_expr.rs` (`edit.can_undo`, `edit.can_redo`, `router.can_back`, `router.can_forward`).
 
 ### MVP 1: User-Customizable `menubar.json` (Done)
 
