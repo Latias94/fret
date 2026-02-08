@@ -160,6 +160,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `docs/workstreams/headless-table-tanstack-parity-capability.md` (references `fret-ui-kit` virtualized table usage).
   - Update: documented the current TanStack → Fret mapping strategy in
     `docs/workstreams/headless-table-tanstack-parity-capability.md` (pure models + snapshots + helper surfaces).
+  - Update: closed a core “row value” capability gap to reduce consumer drift:
+    - `row.getUniqueValues(columnId)` now has an engine-owned surface (`Table::row_unique_values`)
+      backed by an optional `ColumnDef::unique_values_by` hook.
+    - `ColumnHelper::{accessor,accessor_str}` now stamps a `sort_value_by` “getValue” source so
+      core sorting/filtering helpers don’t depend on ad-hoc value wiring.
+    - Filtering now resolves its “value source” via a shared getter across `sort_value/value_u64/facet_*`
+      to avoid being weaker when consumers only configured faceting or numeric extraction.
 - [x] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
