@@ -30,7 +30,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Start from: `docs/ui-diagnostics-and-scripted-tests.md` and `tools/diag-scripts/`
   - Early evidence:
     - `fretboard diag suite ui-gallery-overlay-steady` (overlay/focus interaction subset)
-    - `apps/fretboard/src/diag/mod.rs` (suite definitions)
+    - `crates/fret-diag/src/lib.rs` (suite definitions)
 
 - [ ] BU-FR-guard-004 Convert “huge Rust conformance sources” into data-driven harnesses where possible.
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
