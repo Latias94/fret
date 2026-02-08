@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "textarea-demo.geometry",
+      "web_name": "textarea-demo",
+      "recipe": "demo"
+    },
+    {
+      "id": "textarea-disabled.geometry",
+      "web_name": "textarea-disabled",
+      "recipe": "disabled"
+    },
+    {
+      "id": "textarea-with-button.geometry",
+      "web_name": "textarea-with-button",
+      "recipe": "with_button"
+    },
+    {
+      "id": "textarea-with-label.geometry",
+      "web_name": "textarea-with-label",
+      "recipe": "with_label"
+    },
+    {
+      "id": "textarea-with-text.geometry",
+      "web_name": "textarea-with-text",
+      "recipe": "with_text"
+    }
+  ]
+}
