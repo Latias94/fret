@@ -2,7 +2,7 @@
   "name": "fret-skills",
   "version": "0.3.7",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-07",
+  "last_updated": "2026-02-08",
   "skills": {
     "foundation": [
       "fret-component-authoring",
@@ -41,6 +41,9 @@
     "debugging": [
       "fret-diag-workflow"
     ],
+    "performance": [
+      "fret-perf-workflow"
+    ],
     "parity": [
       "fret-shadcn-source-alignment"
     ],
@@ -49,7 +52,8 @@
     ],
     "quality": [
       "fret-crate-audits",
-      "fret-boundary-checks"
+      "fret-boundary-checks",
+      "fret-fixture-driven-harnesses"
     ]
   },
   "triggers": {
@@ -172,6 +176,41 @@
       "capture_screenshot",
       "FRET_DIAG"
     ],
+    "perf": [
+      "perf",
+      "performance",
+      "benchmark",
+      "profiling",
+      "profile",
+      "frame time",
+      "frametime",
+      "stutter",
+      "jank",
+      "hitch",
+      "gpu",
+      "wgpu",
+      "tracy",
+      "renderdoc",
+      "resize",
+      "scroll",
+      "pointer-move",
+      "diag perf",
+      "perf baseline",
+      "perf gates"
+    ],
+    "quality": [
+      "crate audit",
+      "audit crate",
+      "code quality",
+      "best practices",
+      "layering",
+      "crate boundaries",
+      "dependency policy",
+      "forbidden deps",
+      "fixtures",
+      "fixture-driven",
+      "data-driven harness"
+    ],
     "shadcn_radix": [
       "shadcn",
       "radix",
@@ -199,16 +238,6 @@
       "data-table",
       "data-grid",
       "data grid"
-    ],
-    "quality": [
-      "crate audit",
-      "audit crate",
-      "code quality",
-      "best practices",
-      "layering",
-      "crate boundaries",
-      "dependency policy",
-      "forbidden deps"
     ],
     "app_architecture": [
       "fret-kit",

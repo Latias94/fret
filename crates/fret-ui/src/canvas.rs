@@ -992,6 +992,16 @@ impl CanvasCache {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
 
+        let fingerprint_constraints = match constraints.wrap {
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => {
+                CanvasTextConstraints {
+                    max_width: None,
+                    ..constraints
+                }
+            }
+            _ => constraints,
+        };
+
         let cache_key = CanvasTextCacheKey { key, scale_bits };
         let entry = self.text_by_key.entry(cache_key).or_default();
         entry.last_used_frame = self.frame;
@@ -999,7 +1009,7 @@ impl CanvasCache {
         let fingerprint = HostedTextFingerprint {
             content: content.clone(),
             style: style.clone(),
-            constraints,
+            constraints: fingerprint_constraints,
             font_stack_key,
             scale_bits,
         };
@@ -1012,9 +1022,9 @@ impl CanvasCache {
             }
 
             let text_constraints = TextConstraints {
-                max_width: constraints.max_width,
-                wrap: constraints.wrap,
-                overflow: constraints.overflow,
+                max_width: fingerprint_constraints.max_width,
+                wrap: fingerprint_constraints.wrap,
+                overflow: fingerprint_constraints.overflow,
                 scale_factor: raster_scale_factor,
             };
 
@@ -1195,8 +1205,14 @@ struct CanvasTextConstraintsKey {
 
 impl CanvasTextConstraintsKey {
     fn from_constraints(constraints: CanvasTextConstraints) -> Self {
+        let max_width_bits = match constraints.wrap {
+            // `TextWrap::None` does not change shaping results based on width unless we need to
+            // materialize an overflow policy (ellipsis). Callers clip at higher levels.
+            TextWrap::None if constraints.overflow != TextOverflow::Ellipsis => None,
+            _ => constraints.max_width.map(|w| w.0.to_bits()),
+        };
         Self {
-            max_width_bits: constraints.max_width.map(|w| w.0.to_bits()),
+            max_width_bits,
             wrap: constraints.wrap,
             overflow: constraints.overflow,
         }
