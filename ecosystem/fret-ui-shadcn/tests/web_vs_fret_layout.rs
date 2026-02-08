@@ -137,6 +137,20 @@ struct LayoutResizableCase {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
+enum LayoutCalendarVariantRecipe {
+    SingleMonth,
+    MultiMonth,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutCalendarVariantCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutCalendarVariantRecipe,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
 enum LayoutRadioGroupRecipe {
     RowGeometry,
     IndicatorOffset,
@@ -22484,8 +22498,30 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
 }
 
 #[test]
-fn web_vs_fret_layout_calendar_01_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-01");
+fn web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_calendar_variant_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutCalendarVariantCase> =
+        serde_json::from_str(raw).expect("layout calendar variant fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
+
+    for case in suite.cases {
+        eprintln!(
+            "layout calendar variant case={} web_name={}",
+            case.id, case.web_name
+        );
+        match case.recipe {
+            LayoutCalendarVariantRecipe::SingleMonth => {
+                assert_calendar_single_month_variant_geometry_matches_web(&case.web_name);
+            }
+            LayoutCalendarVariantRecipe::MultiMonth => {
+                assert_calendar_multi_month_variant_geometry_matches_web(&case.web_name);
+            }
+        }
+    }
 }
 
 #[test]
@@ -24268,111 +24304,6 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         "expected transparent calendar bg inside CardContent, got {:?}",
         color_to_rgba(actual_bg)
     );
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_04_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-04");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_06_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-06");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_08_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-08");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_10_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-10");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_13_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-13");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_14_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-14");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_15_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-15");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_16_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-16");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_17_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-17");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_18_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-18");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_19_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-19");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_20_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-20");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_21_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-21");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_31_geometry_matches() {
-    assert_calendar_single_month_variant_geometry_matches_web("calendar-31");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_02_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-02");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_03_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-03");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_05_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-05");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_07_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-07");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_09_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-09");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_11_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-11");
-}
-
-#[test]
-fn web_vs_fret_layout_calendar_12_geometry_matches() {
-    assert_calendar_multi_month_variant_geometry_matches_web("calendar-12");
 }
 
 #[test]
