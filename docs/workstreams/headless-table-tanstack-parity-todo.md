@@ -714,6 +714,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Hardened gate coverage: column pinning fixtures now also assert per-row pinned cell splits
     (`getLeftVisibleCells`/`getCenterVisibleCells`/`getRightVisibleCells`).
     - Evidence: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` (`expect.cells`)
+  - Update: visibility × pinning semantics are now fixture-gated:
+    - Leaf-column splits (`getLeft/Center/RightLeafColumns`) ignore visibility, matching TanStack.
+    - Visible cell splits (`getLeft/Center/RightVisibleCells`) filter hidden pinned columns.
+    - Fixture snapshots:
+      - `column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells`
+      - `column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells`
 - [x] HTP-colpin-020 Align `resetColumnPinning(defaultState?)` semantics.
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`

@@ -5939,6 +5939,16 @@ function snapshotColumnPinning(
         { enablePinning: false },
         {},
       ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells",
+        {},
+        { columnPinning: { left: ["a"], right: [] }, columnVisibility: { a: false } },
+      ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells",
+        {},
+        { columnPinning: { left: ["a", "b"], right: [] }, columnVisibility: { b: false } },
+      ),
       mkActions(
         "column_pinning_action_pin_left_right_unpin",
         {},
