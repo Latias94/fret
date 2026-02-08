@@ -66,12 +66,7 @@ Acceptance criteria:
 - Inline citation HoverCard gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`).
 - Citation highlight gate passes (`tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`).
 
-Known risk:
-
-- Some targets can land near the bottom edge and become **occluded by sticky prompt chrome**.
-  See “Known blockers” in `docs/workstreams/ai-elements-port.md`.
-
-Status: Blocked on stable pointer targeting (diag +/or UI insets).
+Status: Done (gates passing).
 
 ### M3 — Code artifacts (developer-facing outputs)
 

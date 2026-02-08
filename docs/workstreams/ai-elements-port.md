@@ -76,8 +76,15 @@ an interactive chat demo:
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
-  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates (prompt input,
-    streaming finalize, tool-call disclosure, citation highlight, export-to-markdown).
+  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates:
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
@@ -474,41 +481,33 @@ minimum v1 gate set:
 Concrete script names and gating checklists live in the TODO tracker:
 `docs/workstreams/ai-elements-port-todo.md`.
 
-## Known blockers (v1)
+## Known pitfalls (v1)
 
-### Diag automation: click targeting inside scroll + sticky chrome
+### Diag automation: scroll container selection and semantics wrappers
 
-Some `ai_chat_demo` interactions are difficult to gate with pure “semantics bounds → pointer click”
-automation when the transcript scroll surface shares space with sticky bottom chrome (the prompt
-panel) and when scroll transforms can move targets near the bottom edge of the viewport.
+If multiple semantics nodes accidentally share the same `test_id` (e.g. a layout-transparent
+semantics decorator plus an inner leaf), a naive “pick deepest match” strategy can select a tiny
+wrapper node. For scroll-driven automation, this matters because wheel routing depends on the
+hit-test target.
 
-Symptoms:
+Current mitigation (diagnostics):
 
-- `scroll_into_view` succeeds (target is within the **window** bounds) but the target is still
-  occluded by sticky chrome.
-- A subsequent `click(test_id=...)` can hit a non-pressable container at the same location, so the
-  intended pressable does not activate and follow-up `wait_until` steps time out.
+- `scroll_into_view` container selection prefers a container candidate that is an ancestor of the
+  target semantics node and has the largest bounds (more likely to be the true scroll surface).
+- `fret-ui-ai` parts use layout-transparent semantics wrappers for `test_id` anchors so adding
+  selectors does not change layout or hit-test routing.
 
-Concrete evidence:
+If these gates regress again:
 
-- Diag bundle example: `target/fret-diag-ai-elements-port4/1770379213331-script-step-0011-wait_until-timeout/bundle.json`
-- Snapshot evidence (same bundle): `debug.hit_test.hit_semantics_actionable_ancestor` reports the
-  intended button (`test_id=ui-ai-msg-4-sources-2-trigger`), but `debug.hit_test.hit` resolves to a
-  different non-actionable node in a sibling subtree — consistent with an occluding sticky container.
+- Capture a bundle at the failure step and inspect `debug.semantics` for duplicate `test_id` nodes.
+- If a selector matches multiple candidates, prefer a selector that is path-qualified (role + path)
+  or add a container/root `test_id` that is unique.
 
-Short-term mitigations:
+### Sticky bottom chrome and safe insets
 
-- Prefer seeded fixtures that expose targets without depending on prompt typing.
-- Use a conservative `padding_px` in `scroll_into_view` to keep targets away from the bottom chrome.
-- Gate the _rendered_ outcome (content exists / semantics stable) even if the exact click path is
-  not yet fully stable.
-
-Long-term fixes (preferred):
-
-- Extend diag scripting to support container-relative “fully visible” constraints and safe insets
-  (exclude known occluding chrome regions).
-- Extend `click` to validate the resulting hit-test path and retry with alternative points when
-  occluded.
+Even with correct container selection, targets can land too close to sticky prompt chrome (the
+prompt panel). Keep `scroll_into_view.padding_insets_px.bottom_px` conservative in scripts so click
+targets land above the sticky region.
 
 ## Component inventory (upstream → Fret mapping)
 

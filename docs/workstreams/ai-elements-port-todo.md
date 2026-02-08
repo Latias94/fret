@@ -274,14 +274,13 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 - [x] AIEL-MVP2-tooling-010 Align `Sources` to upstream Collapsible behavior (`Used N sources` trigger, hidden-by-default content).
 - [x] AIEL-MVP2-tooling-011 Align `InlineCitation` to upstream HoverCard behavior (delay 0, pager with prev/next + `current/count`).
-- [!] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
-  - Blocker: pointer targeting can be occluded by sticky prompt chrome when the target lands near the bottom edge.
-- [!] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
-  - Blocker: `click(test_id=...sources-*-trigger)` can hit a non-pressable container at the same location; see workstream “Known blockers”.
-- [ ] AIEL-MVP2-tooling-014 Fix/mitigate occlusion for pointer-driven gates.
-  - Option A (preferred): improve diag `scroll_into_view` to exclude known occluding chrome targets.
-  - Option B (workaround): add `click_with_insets` or a multi-point click strategy (validate hit-test path, retry).
-  - Option C (escape hatch): add a semantics-level `invoke(test_id=...)` step (bypasses pointer hit-test; use sparingly).
+- [x] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
+  - Script: `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
+- [x] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
+  - Script: `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
+- [x] AIEL-MVP2-tooling-014 Fix/mitigate pointer targeting issues for these gates.
+  - Implemented: diagnostics `scroll_into_view` container selection prefers an ancestor container with the largest bounds (avoids selecting tiny semantics wrappers).
+  - Implemented: parts-level `test_id` semantics wrappers are layout-transparent (avoid accidental wheel/click routing changes).
 
 ### Tool calls / Sources / Citations
 
@@ -291,8 +290,11 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ## Regression gates (default requirement)
 
-- [ ] AIEL-MVP0-gates-001 Add `tools/diag-scripts/ui-gallery-ai-transcript-scroll.json`.
-  - Scenario: open UI Gallery `ai_transcript_torture`, wheel-scroll for N steps, capture bundle.
+- [x] AIEL-MVP0-gates-001 Gate transcript torture scrolling.
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
+    - `tools/diag-scripts/ui-gallery-ai-transcript-scroll-button.json`
+  - Scenario: open UI Gallery `ai_transcript_torture`, wheel-scroll, verify scroll affordances, capture bundle.
   - Env baseline:
     - `FRET_UI_GALLERY_START_PAGE=ai_transcript_torture`
     - `FRET_UI_GALLERY_AI_TRANSCRIPT_LEN=5000`
@@ -300,9 +302,16 @@ Keep this list in sync with the pinned upstream commit recorded in
   - Checks (choose at least one): stale paint, view-cache reuse stability, top-frame perf snapshot.
 - [ ] AIEL-MVP0-gates-002 Add `tools/diag-scripts/ui-gallery-ai-transcript-append.json`.
   - Scenario: append messages (or bump revision) while scrolled near-bottom and away-from-bottom; verify stick-to-bottom eligibility.
-- [ ] AIEL-MVP1-gates-010 Add a stable UI Gallery page for “chat demo” and gate basic interactions via diag.
-  - Minimum: prompt input type/submit/stop, tool call collapse/expand, copy action on code fence.
-- [ ] AIEL-MVP1-gates-011 Add `tools/diag-scripts/ui-gallery-ai-prompt-input-keyboard.json`.
-  - Scenario: keyboard-only driving of prompt input (focus, type, submit, cancel/stop).
+- [x] AIEL-MVP1-gates-010 Gate “chat demo” interactions via diag.
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-message-action-tooltip.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
+    - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 - [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
   (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).
