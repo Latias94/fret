@@ -7,11 +7,13 @@ use fret_app::{App, CommandId, Effect};
 use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
+use fret_diag::transport::{
+    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+};
 use fret_diag_protocol::{
     DevtoolsSessionDescriptorV1, DiagTransportMessageV1, UiActionScriptV1, UiActionScriptV2,
     UiScriptStageV1,
 };
-use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, VirtualListOptions};
@@ -104,7 +106,7 @@ struct State {
     semantics_live_enabled: Model<bool>,
     semantics_live_force_nonce: Model<u64>,
 
-    client: DevtoolsWsClient,
+    client: ToolingDiagClient,
     applied_session_id: Option<Arc<str>>,
 
     next_transport_request_id: u64,
@@ -226,7 +228,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         "scripts".to_string(),
         "bundles".to_string(),
     ];
-    let client = DevtoolsWsClient::connect_native(client_cfg)
+    let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(client_cfg))
         .expect("devtools ws client connect must succeed");
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();

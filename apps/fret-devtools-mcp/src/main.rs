@@ -5,11 +5,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use fret_diag::transport::{
+    ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+};
 use fret_diag_protocol::{
     DevtoolsSessionAddedV1, DevtoolsSessionDescriptorV1, DevtoolsSessionListV1,
     DevtoolsSessionRemovedV1, DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1,
 };
-use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use rmcp::handler::server::tool::ToolRouter;
 use rmcp::model::*;
@@ -37,7 +39,7 @@ struct WsInfoV1 {
 #[derive(Clone)]
 struct FretDevtoolsMcp {
     ws: WsState,
-    client: Arc<DevtoolsWsClient>,
+    client: ToolingDiagClient,
     inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
     sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
     selected_session_id: Arc<Mutex<Option<String>>>,
@@ -48,7 +50,7 @@ struct FretDevtoolsMcp {
 impl FretDevtoolsMcp {
     fn new(
         ws: WsState,
-        client: Arc<DevtoolsWsClient>,
+        client: ToolingDiagClient,
         inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
         sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
         selected_session_id: Arc<Mutex<Option<String>>>,
@@ -584,13 +586,14 @@ async fn main() -> anyhow::Result<()> {
         "scripts".to_string(),
         "bundles".to_string(),
     ];
-    let client = Arc::new(DevtoolsWsClient::connect_native(cfg).map_err(anyhow::Error::msg)?);
+    let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))
+        .map_err(anyhow::Error::msg)?;
 
     let inbox = Arc::new(Mutex::new(VecDeque::new()));
     let sessions = Arc::new(Mutex::new(Vec::<DevtoolsSessionDescriptorV1>::new()));
     let selected_session_id = Arc::new(Mutex::new(None::<String>));
     tokio::spawn({
-        let client = Arc::clone(&client);
+        let client = client.clone();
         let inbox = Arc::clone(&inbox);
         let sessions = Arc::clone(&sessions);
         let selected_session_id = Arc::clone(&selected_session_id);
