@@ -1,22 +1,29 @@
+use std::panic::Location;
 use std::sync::Arc;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::IconId;
-use fret_runtime::CommandId;
+use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
+    AnyElement, CrossAlign, Elements, FlexProps, MainAlign, OpacityProps, Overflow, PressableProps,
+    RingStyle, SpacerProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-use crate::hover_card::{HoverCard, HoverCardAlign};
 use crate::layout as shadcn_layout;
+use crate::overlay_motion;
+use crate::tooltip::{Tooltip, TooltipAlign, TooltipContent, TooltipProvider, TooltipSide};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -56,6 +63,92 @@ fn sidebar_width_icon(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.sidebar.width_icon")
         .unwrap_or(Px(48.0))
+}
+
+const SIDEBAR_COLLAPSE_OPEN_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
+const SIDEBAR_COLLAPSE_CLOSE_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
+
+#[derive(Default)]
+struct SidebarCollapseMotionState {
+    initialized: bool,
+    last_app_tick: u64,
+    last_frame_tick: u64,
+    tick: u64,
+    timeline: transition_prim::TransitionTimeline,
+}
+
+#[track_caller]
+fn sidebar_collapse_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    collapsed: bool,
+) -> transition_prim::TransitionOutput {
+    let app_tick = cx.app.tick_id().0;
+    let frame_tick = cx.frame_id.0;
+    let open = !collapsed;
+    let loc = Location::caller();
+    let motion = cx.keyed(
+        (
+            loc.file(),
+            loc.line(),
+            loc.column(),
+            "sidebar-collapse-motion",
+        ),
+        |cx| {
+            cx.with_state(SidebarCollapseMotionState::default, |st| {
+                st.timeline
+                    .set_durations(SIDEBAR_COLLAPSE_OPEN_TICKS, SIDEBAR_COLLAPSE_CLOSE_TICKS);
+
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_app_tick = app_tick;
+                    st.last_frame_tick = frame_tick;
+
+                    if open {
+                        for _ in 0..=SIDEBAR_COLLAPSE_OPEN_TICKS {
+                            st.tick = st.tick.saturating_add(1);
+                            let seeded = st.timeline.update_with_easing(
+                                true,
+                                st.tick,
+                                overlay_motion::shadcn_ease,
+                            );
+                            if !seeded.animating {
+                                break;
+                            }
+                        }
+                    } else {
+                        let _ = st.timeline.update_with_easing(
+                            false,
+                            st.tick,
+                            overlay_motion::shadcn_ease,
+                        );
+                    }
+
+                    return transition_prim::TransitionOutput {
+                        present: open,
+                        linear: if open { 1.0 } else { 0.0 },
+                        progress: if open { 1.0 } else { 0.0 },
+                        animating: false,
+                    };
+                }
+
+                if st.last_frame_tick != frame_tick {
+                    st.last_frame_tick = frame_tick;
+                    st.tick = st.tick.saturating_add(1);
+                } else if st.last_app_tick != app_tick {
+                    st.last_app_tick = app_tick;
+                    st.tick = st.tick.saturating_add(1);
+                } else {
+                    st.tick = st.tick.saturating_add(1);
+                }
+
+                st.timeline
+                    .update_with_easing(open, st.tick, overlay_motion::shadcn_ease)
+            })
+        },
+    );
+
+    scheduling::set_continuous_frames(cx, motion.animating);
+    motion
 }
 
 fn sidebar_bg(theme: &Theme) -> Color {
@@ -118,6 +211,169 @@ fn menu_button_style(theme: &Theme) -> TextStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SidebarState {
+    Expanded,
+    Collapsed,
+}
+
+impl SidebarState {
+    fn collapsed(self) -> bool {
+        matches!(self, Self::Collapsed)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SidebarContext {
+    pub state: SidebarState,
+    pub open: Model<bool>,
+    pub open_mobile: Model<bool>,
+    pub is_mobile: bool,
+}
+
+impl SidebarContext {
+    pub fn collapsed(&self) -> bool {
+        self.state.collapsed()
+    }
+
+    pub fn toggle_sidebar<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
+        if self.is_mobile {
+            cx.pressable_toggle_bool(&self.open_mobile);
+        } else {
+            cx.pressable_toggle_bool(&self.open);
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct SidebarProviderState {
+    context: Option<SidebarContext>,
+}
+
+pub fn use_sidebar<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SidebarContext> {
+    cx.inherited_state_where::<SidebarProviderState>(|st| st.context.is_some())
+        .and_then(|st| st.context.clone())
+}
+
+#[track_caller]
+fn with_sidebar_provider_state<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    context: SidebarContext,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(SidebarProviderState::default, |st| {
+        let prev = st.context.clone();
+        st.context = Some(context);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(SidebarProviderState::default, |st| {
+        st.context = prev;
+    });
+    out
+}
+
+fn sidebar_collapsed_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
+    use_sidebar(cx).map(|ctx| ctx.collapsed()).unwrap_or(false)
+}
+
+/// shadcn/ui `SidebarProvider` (V1).
+///
+/// Provides shared sidebar open/collapsed state and wraps descendants in `TooltipProvider`
+/// with upstream-aligned default delay (`0`).
+#[derive(Debug, Clone)]
+pub struct SidebarProvider {
+    open: Option<Model<bool>>,
+    default_open: bool,
+    open_mobile: Option<Model<bool>>,
+    default_open_mobile: bool,
+    is_mobile: bool,
+}
+
+impl SidebarProvider {
+    pub fn new() -> Self {
+        Self {
+            open: None,
+            default_open: true,
+            open_mobile: None,
+            default_open_mobile: false,
+            is_mobile: false,
+        }
+    }
+
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    pub fn open_mobile(mut self, open_mobile: Option<Model<bool>>) -> Self {
+        self.open_mobile = open_mobile;
+        self
+    }
+
+    pub fn default_open_mobile(mut self, default_open_mobile: bool) -> Self {
+        self.default_open_mobile = default_open_mobile;
+        self
+    }
+
+    pub fn is_mobile(mut self, is_mobile: bool) -> Self {
+        self.is_mobile = is_mobile;
+        self
+    }
+
+    pub fn with<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx, f).into_vec()
+    }
+
+    pub fn with_elements<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let open =
+            controllable_state::use_controllable_model(cx, self.open, || self.default_open).model();
+        let open_mobile = controllable_state::use_controllable_model(cx, self.open_mobile, || {
+            self.default_open_mobile
+        })
+        .model();
+
+        let open_now = cx.watch_model(&open).layout().copied().unwrap_or(true);
+        let state = if open_now {
+            SidebarState::Expanded
+        } else {
+            SidebarState::Collapsed
+        };
+
+        let context = SidebarContext {
+            state,
+            open,
+            open_mobile,
+            is_mobile: self.is_mobile,
+        };
+
+        with_sidebar_provider_state(cx, context, |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .with_elements(cx, f)
+        })
+    }
+}
+
 /// shadcn/ui `Sidebar` (V1).
 ///
 /// This is implemented as a declarative composition surface (not a retained widget), so it can
@@ -157,13 +413,17 @@ impl Sidebar {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let collapsed = sidebar_collapsed_in_scope(cx);
+        let collapsed = if self.collapsed { true } else { collapsed };
         let theme = Theme::global(&*cx.app).clone();
 
-        let w = if self.collapsed {
-            sidebar_width_icon(&theme)
-        } else {
-            sidebar_width(&theme)
-        };
+        let motion = sidebar_collapse_motion(cx, collapsed);
+        let expanded_progress = motion.progress;
+        let w = transition_prim::lerp_px(
+            sidebar_width_icon(&theme),
+            sidebar_width(&theme),
+            expanded_progress,
+        );
         let layout = LayoutRefinement::default()
             .w_px(w)
             .h_full()
@@ -250,10 +510,12 @@ impl SidebarContent {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let collapsed = sidebar_collapsed_in_scope(cx);
+        let collapsed = if self.collapsed { true } else { collapsed };
         let theme = Theme::global(&*cx.app).clone();
 
         let mut layout = LayoutRefinement::default().h_full();
-        if self.collapsed {
+        if collapsed {
             layout = layout.overflow_hidden();
         }
 
@@ -320,8 +582,11 @@ impl SidebarGroupLabel {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let collapsed = sidebar_collapsed_in_scope(cx);
+        let collapsed = if self.collapsed { true } else { collapsed };
         let theme = Theme::global(&*cx.app).clone();
-        if self.collapsed {
+        let motion = sidebar_collapse_motion(cx, collapsed);
+        if !motion.present {
             return cx.spacer(fret_ui::element::SpacerProps {
                 min: Px(0.0),
                 ..Default::default()
@@ -339,13 +604,21 @@ impl SidebarGroupLabel {
             .metric_by_key("component.sidebar.group_label_line_height")
             .unwrap_or(Px(16.0));
 
-        ui::text(cx, self.text)
+        let text = ui::text(cx, self.text)
             .text_size_px(size)
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
             .nowrap()
-            .into_element(cx)
+            .into_element(cx);
+
+        cx.opacity_props(
+            OpacityProps {
+                layout: fret_ui::element::LayoutStyle::default(),
+                opacity: motion.progress,
+            },
+            move |_cx| vec![text],
+        )
     }
 }
 
@@ -478,18 +751,22 @@ impl SidebarMenuButton {
         self
     }
 
-    fn build_button<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn build_button<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        expanded_progress: f32,
+    ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let radius = decl_style::radius(&theme, Radius::Md);
         let ring = sidebar_ring(&theme, radius);
 
         let label = self.label.clone();
-        let h = if self.collapsed {
-            sidebar_menu_button_collapsed_h(&theme)
-        } else {
-            sidebar_menu_button_h(&theme, self.size)
-        };
+        let h = transition_prim::lerp_px(
+            sidebar_menu_button_collapsed_h(&theme),
+            sidebar_menu_button_h(&theme, self.size),
+            expanded_progress,
+        );
 
         let on_click = self.on_click.clone();
         let on_activate = self.on_activate.clone();
@@ -517,8 +794,8 @@ impl SidebarMenuButton {
         let icon = self.icon.clone();
         let active = self.active;
         let disabled = disabled;
-        let collapsed = self.collapsed;
         let size = self.size;
+        let expanded_progress = expanded_progress.clamp(0.0, 1.0);
 
         cx.pressable(pressable, move |cx, st| {
             cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
@@ -549,11 +826,11 @@ impl SidebarMenuButton {
                 ChromeRefinement::default().rounded(Radius::Md)
             };
 
-            let h = if collapsed {
-                sidebar_menu_button_collapsed_h(&theme)
-            } else {
-                sidebar_menu_button_h(&theme, size)
-            };
+            let h = transition_prim::lerp_px(
+                sidebar_menu_button_collapsed_h(&theme),
+                sidebar_menu_button_h(&theme, size),
+                expanded_progress,
+            );
 
             let mut props = decl_style::container_props(
                 &theme,
@@ -584,14 +861,15 @@ impl SidebarMenuButton {
 
                 let label = label.clone();
                 let icon = icon.clone();
+                let label_opacity = expanded_progress;
                 vec![cx.flex(row, move |cx| {
                     let mut out = Vec::new();
                     if let Some(icon) = icon.clone() {
                         out.push(decl_icon::icon(cx, icon));
                     }
-                    if !collapsed {
+                    if label_opacity > 0.0 {
                         let style = menu_button_style(&theme);
-                        let mut text = ui::text(cx, label.clone())
+                        let text = ui::text(cx, label.clone())
                             .w_full()
                             .min_w_0()
                             .flex_1()
@@ -600,13 +878,23 @@ impl SidebarMenuButton {
                             .font_weight(style.weight)
                             .text_color(ColorRef::Color(fg))
                             .truncate();
+
+                        let mut text = text;
                         if let Some(line_height) = style.line_height {
                             text = text.line_height_px(line_height);
                         }
                         if let Some(letter_spacing_em) = style.letter_spacing_em {
                             text = text.letter_spacing_em(letter_spacing_em);
                         }
-                        out.push(text.into_element(cx));
+
+                        let text = text.into_element(cx);
+                        out.push(cx.opacity_props(
+                            OpacityProps {
+                                layout: fret_ui::element::LayoutStyle::default(),
+                                opacity: label_opacity,
+                            },
+                            move |_cx| vec![text],
+                        ));
                     } else {
                         out.push(cx.spacer(SpacerProps {
                             min: Px(0.0),
@@ -620,16 +908,23 @@ impl SidebarMenuButton {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let button = self.build_button(cx);
+        let collapsed = sidebar_collapsed_in_scope(cx);
+        let collapsed = if self.collapsed { true } else { collapsed };
+        let mut this = self;
+        this.collapsed = collapsed;
 
-        if !self.collapsed {
+        let motion = sidebar_collapse_motion(cx, collapsed);
+        let expanded_progress = motion.progress;
+        let button = this.build_button(cx, expanded_progress);
+
+        if !collapsed || expanded_progress > 0.01 {
             return button;
         }
 
-        // In collapsed (icon) mode, show the label via a hover card.
+        // In collapsed (icon) mode, show the label via a tooltip.
         let theme = Theme::global(&*cx.app).clone();
 
-        let label = self.label.clone();
+        let label = this.label.clone();
 
         let chrome = ChromeRefinement::default()
             .bg(ColorRef::Color(
@@ -645,9 +940,7 @@ impl SidebarMenuButton {
             ))
             .rounded(Radius::Md)
             .p(Space::N2);
-        let mut props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-        props.layout.overflow = Overflow::Clip;
-        let content = cx.container(props, move |cx| {
+        let content = TooltipContent::new({
             let style = menu_button_style(&theme);
             let mut text = ui::text(cx, label.clone())
                 .text_size_px(style.size)
@@ -661,11 +954,377 @@ impl SidebarMenuButton {
                 text = text.letter_spacing_em(letter_spacing_em);
             }
             vec![text.into_element(cx)]
-        });
+        })
+        .refine_style(chrome)
+        .refine_layout(LayoutRefinement::default().overflow_hidden())
+        .into_element(cx);
 
-        HoverCard::new(button, content)
-            .align(HoverCardAlign::Center)
+        Tooltip::new(button, content)
+            .side(TooltipSide::Right)
+            .align(TooltipAlign::Center)
             .side_offset(Px(8.0))
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
+        Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextMetrics, TextService,
+    };
+    use fret_runtime::{FrameId, TickId};
+    use fret_ui::element::ContainerProps;
+    use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_sidebar_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        window: AppWindowId,
+        bounds: Rect,
+        collapsed: bool,
+        frame: u64,
+    ) -> Rect {
+        app.set_frame_id(FrameId(frame));
+        app.set_tick_id(TickId(frame));
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "shadcn-sidebar-motion",
+            |cx| {
+                let child = cx.container(ContainerProps::default(), |_cx| Vec::new());
+                let sidebar = Sidebar::new([child]).collapsed(collapsed).into_element(cx);
+                vec![sidebar]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let sidebar_node = *ui.children(root).first().expect("sidebar node");
+        ui.debug_node_bounds(sidebar_node).expect("sidebar bounds")
+    }
+
+    #[test]
+    fn sidebar_collapse_animates_width_between_expanded_and_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1200.0), Px(720.0)),
+        );
+
+        let theme = Theme::global(&app).clone();
+        let expanded_w = sidebar_width(&theme).0;
+        let icon_w = sidebar_width_icon(&theme).0;
+
+        let mut expanded_rect = Rect::default();
+        for frame in 1..=24 {
+            expanded_rect = render_sidebar_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                frame,
+            );
+        }
+        let expanded_actual = expanded_rect.size.width.0;
+        assert!(
+            (expanded_actual - expanded_w).abs() <= 1.0,
+            "expected expanded width ~{expanded_w}, got {expanded_actual}"
+        );
+
+        let mut min_transitioning = f32::INFINITY;
+        let mut max_transitioning = f32::NEG_INFINITY;
+        for frame in 25..=31 {
+            let w = render_sidebar_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                frame,
+            )
+            .size
+            .width
+            .0;
+            min_transitioning = min_transitioning.min(w);
+            max_transitioning = max_transitioning.max(w);
+        }
+
+        assert!(
+            min_transitioning < expanded_w - 0.5,
+            "expected collapse motion to reduce width below expanded ({expanded_w}), min={min_transitioning}"
+        );
+        assert!(
+            max_transitioning > icon_w + 0.5,
+            "expected early collapse motion to remain above icon width ({icon_w}), max={max_transitioning}"
+        );
+    }
+
+    #[test]
+    fn sidebar_collapse_settles_to_icon_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1200.0), Px(720.0)),
+        );
+
+        let theme = Theme::global(&app).clone();
+        let icon_w = sidebar_width_icon(&theme).0;
+
+        for frame in 1..=24 {
+            let _ = render_sidebar_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                frame,
+            );
+        }
+
+        let mut collapsed_rect = Rect::default();
+        for frame in 25..=56 {
+            collapsed_rect = render_sidebar_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                frame,
+            );
+        }
+
+        let collapsed_actual = collapsed_rect.size.width.0;
+        assert!(
+            (collapsed_actual - icon_w).abs() <= 1.0,
+            "expected collapsed width ~{icon_w}, got {collapsed_actual}"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_collapsed_drives_sidebar_width_without_manual_prop() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1200.0), Px(720.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-provider-collapse",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let child = cx.container(ContainerProps::default(), |_cx| Vec::new());
+                        let sidebar = Sidebar::new([child]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let icon_w = sidebar_width_icon(&theme).0;
+
+        let sidebar_node = *ui.children(root).first().expect("sidebar node");
+        let sidebar_bounds = ui.debug_node_bounds(sidebar_node).expect("sidebar bounds");
+        assert!(
+            (sidebar_bounds.size.width.0 - icon_w).abs() <= 1.0,
+            "expected provider-collapsed width ~{icon_w}, got {}",
+            sidebar_bounds.size.width.0
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_button_collapsed_uses_tooltip_semantics_not_hover_card() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                app.set_tick_id(TickId(frame));
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "shadcn-sidebar-collapsed-tooltip",
+                    |cx| {
+                        TooltipProvider::new()
+                            .delay_duration_frames(0)
+                            .with_elements(cx, |cx| {
+                                let button = SidebarMenuButton::new("Settings")
+                                    .collapsed(true)
+                                    .icon(IconId::new_static("lucide.settings-2"))
+                                    .test_id("sidebar-settings-button")
+                                    .into_element(cx);
+                                vec![button]
+                            })
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let first = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected first semantics snapshot");
+        let trigger = first
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-settings-button"))
+            .expect("expected sidebar menu button semantics node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for step in 0..settle_frames {
+            let tick = 3 + step;
+            render_frame(&mut ui, &mut app, &mut services, tick);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-settings-button"))
+            .expect("expected focused sidebar menu button semantics node");
+        let tooltip = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tooltip)
+            .expect("expected collapsed sidebar menu button tooltip semantics node");
+
+        assert!(
+            trigger.described_by.iter().any(|id| *id == tooltip.id),
+            "expected sidebar menu button to be described by tooltip content when collapsed"
+        );
     }
 }

@@ -242,7 +242,7 @@ pub use sheet::{
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
-    SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+    SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
