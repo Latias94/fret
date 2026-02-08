@@ -63,6 +63,10 @@ Conventions:
   - [x] Normalize Canvas hosted/shared text fingerprints to ignore `max_width` for nowrap+non-ellipsis.
     - Implementation: `perf(fret-ui): normalize nowrap canvas text keys` (commit `667d8317b`).
     - Evidence: perf log entry `2026-02-08` (editor resize jitter drops to ~13ms worst-frame).
+  - [x] Avoid code editor baseline text measurement churn during resize by making baseline alignment caching
+    independent of the row `max_width`.
+    - Implementation: `perf(fret-code-editor): avoid baseline measure churn on resize` (commit `dd2da2ada`).
+    - Evidence: perf log entry `2026-02-08` (`ui-code-editor-resize-probes` p95 total ~11.8ms).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
