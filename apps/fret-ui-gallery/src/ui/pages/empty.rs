@@ -100,7 +100,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-demo"));
+        .test_id("ui-gallery-empty-demo");
         section_card(cx, "Demo", empty)
     };
 
@@ -129,7 +129,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         )
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-outline"));
+        .test_id("ui-gallery-empty-outline");
         section_card(cx, "Outline", empty)
     };
 
@@ -160,7 +160,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         )
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-background"));
+        .test_id("ui-gallery-empty-background");
         section_card(cx, "Background", empty)
     };
 
@@ -187,7 +187,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-avatar"));
+        .test_id("ui-gallery-empty-avatar");
 
         section_card(cx, "Avatar", empty)
     };
@@ -232,7 +232,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-avatar-group"));
+        .test_id("ui-gallery-empty-avatar-group");
 
         section_card(cx, "Avatar Group", empty)
     };
@@ -264,7 +264,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         ])
         .refine_layout(LayoutRefinement::default().w_full().min_h(Px(280.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-input-group"));
+        .test_id("ui-gallery-empty-input-group");
 
         section_card(cx, "InputGroup", empty)
     };
@@ -302,7 +302,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-rtl"));
+        .test_id("ui-gallery-empty-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -329,8 +329,7 @@ pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-empty-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-empty-component");
 
     let code_panel_body = stack::vstack(
         cx,

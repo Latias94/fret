@@ -729,8 +729,7 @@ pub(super) fn preview_combobox(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-combobox-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-combobox-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

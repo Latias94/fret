@@ -286,7 +286,7 @@ pub(super) fn preview_input(
             .placeholder("Enter text")
             .refine_layout(max_w_xs.clone())
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-basic"));
+            .test_id("ui-gallery-input-basic");
         section_card(cx, "Basic", content)
     };
 
@@ -302,7 +302,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-field"));
+        .test_id("ui-gallery-input-field");
         section_card(cx, "Field", content)
     };
 
@@ -337,7 +337,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-field-group"));
+        .test_id("ui-gallery-input-field-group");
         section_card(cx, "Field Group", content)
     };
 
@@ -352,7 +352,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-disabled"));
+        .test_id("ui-gallery-input-disabled");
         section_card(cx, "Disabled", content)
     };
 
@@ -369,7 +369,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-invalid"));
+        .test_id("ui-gallery-input-invalid");
         section_card(cx, "Invalid", content)
     };
 
@@ -395,7 +395,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-file"));
+        .test_id("ui-gallery-input-file");
         section_card(cx, "File", content)
     };
 
@@ -410,7 +410,7 @@ pub(super) fn preview_input(
         .orientation(shadcn::FieldOrientation::Horizontal)
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-inline"));
+        .test_id("ui-gallery-input-inline");
         section_card(cx, "Inline", content)
     };
 
@@ -444,7 +444,7 @@ pub(super) fn preview_input(
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-grid"));
+        .test_id("ui-gallery-input-grid");
         section_card(cx, "Grid", content)
     };
 
@@ -472,7 +472,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_xs.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-required"));
+        .test_id("ui-gallery-input-required");
         section_card(cx, "Required", content)
     };
 
@@ -499,7 +499,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-badge"));
+        .test_id("ui-gallery-input-badge");
         section_card(cx, "Badge", content)
     };
 
@@ -520,7 +520,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-input-group"));
+        .test_id("ui-gallery-input-input-group");
         section_card(cx, "Input Group", content)
     };
 
@@ -542,7 +542,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-button-group"));
+        .test_id("ui-gallery-input-button-group");
         section_card(cx, "Button Group", content)
     };
 
@@ -621,7 +621,7 @@ pub(super) fn preview_input(
         ])
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-form"));
+        .test_id("ui-gallery-input-form");
 
         section_card(cx, "Form", content)
     };
@@ -644,7 +644,7 @@ pub(super) fn preview_input(
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-rtl"));
+        .test_id("ui-gallery-input-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -678,8 +678,7 @@ pub(super) fn preview_input(
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-input-component");
 
     let code_panel_body = stack::vstack(
         cx,

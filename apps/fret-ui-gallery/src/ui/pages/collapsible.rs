@@ -289,7 +289,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id_prefix))
+        .test_id(test_id_prefix)
     };
 
     let demo_content = details_collapsible(
@@ -344,7 +344,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-collapsible-controlled"));
+    .test_id("ui-gallery-collapsible-controlled");
     let controlled_state = section_card(cx, "Controlled State", controlled_content);
 
     let basic_content = shadcn::Collapsible::uncontrolled(false)
@@ -375,7 +375,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-collapsible-basic"));
+        .test_id("ui-gallery-collapsible-basic");
     let basic = section_card(cx, "Basic", basic_content);
 
     let input_field = |cx: &mut ElementContext<'_, App>,
@@ -387,7 +387,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             shadcn::Input::new(value)
                 .a11y_label(label)
                 .into_element(cx)
-                .attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+                .test_id(test_id),
         ])
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)

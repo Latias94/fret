@@ -276,7 +276,7 @@ pub(super) fn preview_dropdown_menu(
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dropdown-menu-demo"));
+        .test_id("ui-gallery-dropdown-menu-demo");
     let demo = section_card(cx, "Demo", demo_content);
 
     let basic_content = shadcn::DropdownMenu::new(basic_open.clone()).into_element(

@@ -130,7 +130,7 @@ pub(super) fn preview_command_palette(
                 .test_id("ui-gallery-command-basic-trigger")
                 .into_element(cx)
         })
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-basic"));
+        .test_id("ui-gallery-command-basic");
     let basic = section_card(cx, "Basic", basic_dialog);
 
     let shortcuts_entries = vec![
@@ -160,7 +160,7 @@ pub(super) fn preview_command_palette(
         .a11y_label("Command shortcuts")
         .entries(shortcuts_entries)
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-shortcuts"));
+        .test_id("ui-gallery-command-shortcuts");
     let shortcuts = section_card(cx, "Shortcuts", shortcuts_palette);
 
     let groups_entries = vec![
@@ -197,7 +197,7 @@ pub(super) fn preview_command_palette(
         .a11y_label("Command groups")
         .entries(groups_entries)
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-groups"));
+        .test_id("ui-gallery-command-groups");
     let groups = section_card(cx, "Groups", groups_palette);
 
     let scroll_action = on_select(Arc::from("command.scrollable.item"));
@@ -231,7 +231,7 @@ pub(super) fn preview_command_palette(
         .entries(scrollable_entries)
         .refine_scroll_layout(LayoutRefinement::default().h_px(Px(220.0)).max_h(Px(220.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-scrollable"));
+        .test_id("ui-gallery-command-scrollable");
     let scrollable = section_card(cx, "Scrollable", scrollable_palette);
 
     let rtl_entries = vec![
@@ -258,7 +258,7 @@ pub(super) fn preview_command_palette(
                 .a11y_label("RTL command list")
                 .entries(rtl_entries)
                 .into_element(cx)
-                .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-rtl"))
+                .test_id("ui-gallery-command-rtl")
         },
     );
     let rtl = section_card(cx, "RTL", rtl_content);
@@ -291,8 +291,7 @@ pub(super) fn preview_command_palette(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-command-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-command-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {
