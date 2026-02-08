@@ -7973,3 +7973,73 @@ Worst-frame attribution (editor jitter script):
 Notes:
 - In the sampled worst frames, `resource_caches.render_text.blobs_live` and `blob_cache_entries` remained `498`
   (no obvious unbounded growth in this probe), but this needs broader validation on longer-running workloads.
+
+## 2026-02-08 17:38:51 (commit `06a16f35b`)
+
+Change:
+- Make the “wrap from unwrapped layout” path behave like GPUI’s `compute_wrap_boundaries`: if no word-boundary
+  candidate exists, we still cut at the last fitting cluster rather than bailing out to the per-line shaping path.
+- This is critical for code-editor content where long tokens frequently require hard cuts; previously this would
+  cause “shape unwrapped, then fall back and shape again”, doubling work in hot frames.
+
+Suites:
+- `ui-code-editor-resize-probes` (gate; attempts=3 off vs on)
+- `ui-resize-probes` (gate; attempts=3 on; sanity)
+
+Notes (measurement hygiene):
+- The primary workspace had unrelated, in-progress refactors in the working tree that changed perf characteristics.
+  To keep this A/B reversible and commit-addressable, the measurements below were run from a detached worktree
+  at the same commit hash:
+  - worktree root: `/Users/frankorz/codes/rust/fret-perf-lab-06a16`
+
+Commands (from the detached worktree root):
+```powershell
+# Ensure the release binary is up-to-date (gate default launch-bin).
+cargo build -p fret-ui-gallery --release
+
+# A/B (editor resize jitter)
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=0 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1
+
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1
+
+# P0 sanity (resize probes)
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 `
+    --out-dir target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1
+```
+
+Artifacts (absolute paths; see the detached worktree note above):
+- Off (`ENTRIES=0`):
+  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/summary.json`
+- On (`ENTRIES=2048`):
+  - `ui-code-editor-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/summary.json`
+  - `ui-resize-probes`: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-unwrapped-on-clean-r1/summary.json`
+
+Results:
+- Off (`ENTRIES=0`): `ui-code-editor-resize-probes` FAIL (passes=0/3; required=2).
+  - Max `top_layout_engine_solve_time_us` (attempt-1): `488` (threshold: `372`).
+  - Max `top_total_time_us` (attempt-1): `12528` (threshold: `12476`).
+- On (`ENTRIES=2048`): `ui-code-editor-resize-probes` PASS (passes=3/3; required=2).
+  - Max `top_layout_engine_solve_time_us` (attempt-1): `347` (threshold: `372`).
+  - Max `top_total_time_us` (attempt-1): `11105` (threshold: `12476`).
+- On (`ENTRIES=2048`): `ui-resize-probes` PASS (passes=2/3; required=2).
+  - One outlier attempt (attempt-1) failed with `top_layout_engine_solve_time_us=3738` (threshold: `2816`) in
+    `ui-gallery-window-resize-drag-jitter-steady.json`; attempts=3 majority-pass mitigates this tail.
+
+Worst-frame attribution (editor jitter script; max solve snapshot within bundle):
+- Off bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-off-clean-r1/attempt-1/1770541531439-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `layout_engine_solve_time_us`: `488`
+  - `paint_text_prepare_time_us`: `6812` (width-changed prepares: `13`)
+- On bundle: `/Users/frankorz/codes/rust/fret-perf-lab-06a16/target/fret-diag-resize-probes-gate-ui-code-editor-unwrapped-on-clean-r1/attempt-1/1770541992598-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `layout_engine_solve_time_us`: `347`
+  - `paint_text_prepare_time_us`: `1275` (width-changed prepares: `30`)

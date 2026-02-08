@@ -92,8 +92,22 @@ Conventions:
     - Implementation: `perf(fret-render): retain released text blobs via LRU` (commit `abf7ce646`).
     - Knob: `FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES` (default: `0`/off; A/B tested at `256`).
     - Evidence: perf log entry `2026-02-08 15:51:15` (A/B gates + worst-frame attribution).
+  - [x] Add a width-independent “unwrapped layout” cache and reuse it for word wrap under width jitter (GPUI-style).
+    - Goal: prevent “shape again” work when only wrap widths change during interactive resize (especially in the
+      code editor jitter probe).
+    - Implementation:
+      - `perf(fret-render): reuse unwrapped layouts for word wrap` (commit `2fac17832`)
+      - `perf(fret-render): avoid fallback after unwrapped wrap` (commit `06a16f35b`)
+    - Knobs:
+      - `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES` (default: `0`/off; A/B tested at `2048`)
+      - `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES` (default: `4096`; A/B tested at `16384`)
+    - Evidence: perf log entry `2026-02-08 17:38:51` (A/B gates + worst-frame attribution; editor gate flips
+      from FAIL to PASS when enabled).
   - [ ] Follow-up: validate memory bounds + eviction behavior on longer editor sessions (ensure the LRU remains
     bounded and does not retain pathological blobs indefinitely).
+  - [ ] Follow-up: decide if `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES` should become a default-on policy for
+    native builds (with an opt-out env), and add explicit diagnostics counters for cache hit/miss rates so we can
+    validate “global optimum” across the acceptance suite.
   - [x] Bucket wrapped-text **measure** widths during interactive resize in the host-widget layout path to reduce
     measure churn and align layout/paint wrap widths.
     - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
