@@ -3376,6 +3376,7 @@ impl<'a, TData> Table<'a, TData> {
             &mut next,
             col.id.clone(),
             pointer_x,
+            start,
             vec![(col.id.clone(), start)],
         );
         Some(next)
@@ -3496,11 +3497,10 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         match region {
-            super::ColumnSizingRegion::All => Some(tanstack_start_for(
-                left.into_iter().chain(center).chain(right),
-                col,
-                sizing,
-            )),
+            super::ColumnSizingRegion::All => {
+                let visible = self.visible_columns();
+                Some(tanstack_start_for(visible, col, sizing))
+            }
             super::ColumnSizingRegion::Left => {
                 if pin_pos != Some(super::ColumnPinPosition::Left) {
                     return None;
@@ -3551,11 +3551,10 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         match region {
-            super::ColumnSizingRegion::All => Some(tanstack_after_for(
-                left.into_iter().chain(center).chain(right),
-                col,
-                sizing,
-            )),
+            super::ColumnSizingRegion::All => {
+                let visible = self.visible_columns();
+                Some(tanstack_after_for(visible, col, sizing))
+            }
             super::ColumnSizingRegion::Left => {
                 if pin_pos != Some(super::ColumnPinPosition::Left) {
                     return None;

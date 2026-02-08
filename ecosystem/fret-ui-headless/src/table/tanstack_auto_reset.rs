@@ -20,6 +20,8 @@ use super::{Table, TableState};
 pub struct TanStackAutoResetQueue {
     page_index_registered: bool,
     expanded_registered: bool,
+    pending_page_index_register: bool,
+    pending_expanded_register: bool,
     pending_page_index_reset: bool,
     pending_expanded_reset: bool,
 }
@@ -27,6 +29,8 @@ pub struct TanStackAutoResetQueue {
 impl TanStackAutoResetQueue {
     /// Starts a new "render pass" (logical tick). Pending resets are cleared, registration is kept.
     pub fn begin_render_pass(&mut self) {
+        self.pending_page_index_register = false;
+        self.pending_expanded_register = false;
         self.pending_page_index_reset = false;
         self.pending_expanded_reset = false;
     }
@@ -34,7 +38,9 @@ impl TanStackAutoResetQueue {
     /// TanStack-aligned: queues `_autoResetPageIndex()` (register-first, coalesced).
     pub fn auto_reset_page_index<TData>(&mut self, table: &Table<'_, TData>) {
         if !self.page_index_registered {
-            self.page_index_registered = true;
+            // TanStack sets `registered=true` via `_queue` (microtask), so multiple calls in the
+            // same render pass still count as "first register" and should not schedule a reset.
+            self.pending_page_index_register = true;
             return;
         }
         if table.should_auto_reset_page_index() {
@@ -45,7 +51,7 @@ impl TanStackAutoResetQueue {
     /// TanStack-aligned: queues `_autoResetExpanded()` (register-first, coalesced).
     pub fn auto_reset_expanded<TData>(&mut self, table: &Table<'_, TData>) {
         if !self.expanded_registered {
-            self.expanded_registered = true;
+            self.pending_expanded_register = true;
             return;
         }
         if table.should_auto_reset_expanded() {
@@ -65,6 +71,14 @@ impl TanStackAutoResetQueue {
         if self.pending_page_index_reset {
             state.pagination = table.reset_page_index(false);
         }
+        if self.pending_expanded_register {
+            self.expanded_registered = true;
+        }
+        if self.pending_page_index_register {
+            self.page_index_registered = true;
+        }
+        self.pending_expanded_register = false;
+        self.pending_page_index_register = false;
         self.pending_expanded_reset = false;
         self.pending_page_index_reset = false;
     }

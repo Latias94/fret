@@ -3840,6 +3840,7 @@ where
                                                                                                             &mut st.column_sizing_info,
                                                                                                             col_id_down.clone(),
                                                                                                             down.position.x.0,
+                                                                                                            start,
                                                                                                             vec![(col_id_down.clone(), start)],
                                                                                                         );
                                                                                                     });
