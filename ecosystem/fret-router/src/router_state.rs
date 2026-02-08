@@ -72,6 +72,7 @@ impl HistoryAdapter for MemoryHistory {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum RouterTransitionCause {
+    Init,
     Navigate { action: NavigationAction },
     Redirect { action: NavigationAction },
     Sync,
@@ -261,6 +262,7 @@ impl RouterTransition {
 
     pub fn action(&self) -> Option<NavigationAction> {
         match self.cause {
+            RouterTransitionCause::Init => None,
             RouterTransitionCause::Navigate { action } => Some(action),
             RouterTransitionCause::Redirect { action } => Some(action),
             RouterTransitionCause::Sync => None,
@@ -541,16 +543,19 @@ where
 
     fn resolve_guard_chain(
         &self,
+        initial_cause: RouterTransitionCause,
         original_action: NavigationAction,
         from: &RouteLocation,
         initial_target: RouteLocation,
     ) -> Result<RouterGuardResolution, RouteSearchValidationFailure> {
+        let force_replace_redirects = matches!(
+            initial_cause,
+            RouterTransitionCause::Sync | RouterTransitionCause::Init
+        );
         let mut redirect_chain = Vec::<RouteLocation>::new();
         let mut seen = std::collections::HashSet::<String>::new();
         let mut current_action = original_action;
-        let mut current_cause = RouterTransitionCause::Navigate {
-            action: original_action,
-        };
+        let mut current_cause = initial_cause;
         let mut current_target = initial_target;
 
         loop {
@@ -609,7 +614,11 @@ where
                         }
 
                         redirect_chain.push(current_target);
-                        current_action = normalize_redirect_action(redirect_action);
+                        current_action = if force_replace_redirects {
+                            NavigationAction::Replace
+                        } else {
+                            normalize_redirect_action(redirect_action)
+                        };
                         current_cause = RouterTransitionCause::Redirect {
                             action: current_action,
                         };
@@ -655,7 +664,11 @@ where
                     }
 
                     redirect_chain.push(current_target);
-                    current_action = normalize_redirect_action(redirect_action);
+                    current_action = if force_replace_redirects {
+                        NavigationAction::Replace
+                    } else {
+                        normalize_redirect_action(redirect_action)
+                    };
                     current_cause = RouterTransitionCause::Redirect {
                         action: current_action,
                     };
@@ -771,6 +784,21 @@ where
         }
     }
 
+    pub fn init_with_prefetch_intents(
+        &mut self,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouteSearchValidationFailure> {
+        match self.init() {
+            Ok(update) => Ok(RouterUpdateWithPrefetchIntents {
+                update,
+                intents: self.take_prefetch_intents(),
+            }),
+            Err(err) => {
+                let _ = self.take_prefetch_intents();
+                Err(err)
+            }
+        }
+    }
+
     pub fn navigate_with_prefetch_intents(
         &mut self,
         action: NavigationAction,
@@ -800,6 +828,70 @@ where
         std::mem::take(&mut self.events)
     }
 
+    pub fn init(&mut self) -> Result<RouterUpdate, RouteSearchValidationFailure> {
+        self.history.refresh();
+        let from = self.history.current().clone();
+        let from_state = self.state.clone();
+
+        match self.resolve_guard_chain(
+            RouterTransitionCause::Init,
+            NavigationAction::Replace,
+            &from,
+            from.canonicalized(),
+        )? {
+            RouterGuardResolution::Allow {
+                cause,
+                action: nav_action,
+                to,
+                redirect_chain,
+            } => {
+                if matches!(cause, RouterTransitionCause::Redirect { .. })
+                    || !redirect_chain.is_empty()
+                    || to != from
+                {
+                    if !self.history.navigate(nav_action, Some(to.clone())) {
+                        return Ok(RouterUpdate::NoChange);
+                    }
+
+                    return self.commit_changed_transition(cause, from, redirect_chain);
+                }
+
+                let transition = RouterTransition {
+                    cause: RouterTransitionCause::Init,
+                    from: self.state.location.clone(),
+                    to: self.state.location.clone(),
+                    redirect_chain: Vec::new(),
+                    blocked_by: None,
+                };
+                self.collect_loader_intents(&from_state, &transition);
+                Ok(RouterUpdate::NoChange)
+            }
+            RouterGuardResolution::Block {
+                cause,
+                action: _nav_action,
+                attempted,
+                redirect_chain,
+                reason,
+            } => {
+                let transition = RouterTransition {
+                    cause,
+                    from,
+                    to: attempted,
+                    redirect_chain,
+                    blocked_by: Some(reason),
+                };
+
+                self.state.last_transition = Some(transition.clone());
+                self.events.push(RouterEvent::Blocked {
+                    transition: transition.clone(),
+                    state: self.state.clone(),
+                });
+
+                Ok(RouterUpdate::Blocked(transition))
+            }
+        }
+    }
+
     pub fn sync(&mut self) -> Result<RouterUpdate, RouteSearchValidationFailure> {
         self.history.refresh();
         let next_location = self.history.current().clone();
@@ -807,24 +899,80 @@ where
             return Ok(RouterUpdate::NoChange);
         }
 
+        let from = self.state.location.clone();
         let from_state = self.state.clone();
-        let next_state = RouterState::from_match_result(self.tree.match_routes_with_search(
-            &next_location,
-            self.search_table.as_ref(),
-            self.search_mode,
-        )?);
 
-        let transition =
-            RouterTransition::sync(self.state.location.clone(), next_state.location.clone());
-        self.state = next_state;
-        self.state.last_transition = Some(transition.clone());
-        self.events.push(RouterEvent::Transitioned {
-            transition: transition.clone(),
-            state: self.state.clone(),
-        });
-        self.collect_loader_intents(&from_state, &transition);
+        match self.resolve_guard_chain(
+            RouterTransitionCause::Sync,
+            NavigationAction::Replace,
+            &from,
+            next_location.canonicalized(),
+        )? {
+            RouterGuardResolution::Allow {
+                cause,
+                action: nav_action,
+                to,
+                redirect_chain,
+            } => {
+                if matches!(cause, RouterTransitionCause::Redirect { .. })
+                    || !redirect_chain.is_empty()
+                {
+                    if !self.history.navigate(nav_action, Some(to.clone())) {
+                        return Ok(RouterUpdate::NoChange);
+                    }
+                    return self.commit_changed_transition(cause, from, redirect_chain);
+                }
 
-        Ok(RouterUpdate::Changed(transition))
+                let next_state =
+                    RouterState::from_match_result(self.tree.match_routes_with_search(
+                        &next_location,
+                        self.search_table.as_ref(),
+                        self.search_mode,
+                    )?);
+
+                let transition = RouterTransition::sync(
+                    self.state.location.clone(),
+                    next_state.location.clone(),
+                );
+                self.state = next_state;
+                self.state.last_transition = Some(transition.clone());
+                self.events.push(RouterEvent::Transitioned {
+                    transition: transition.clone(),
+                    state: self.state.clone(),
+                });
+                self.collect_loader_intents(&from_state, &transition);
+
+                Ok(RouterUpdate::Changed(transition))
+            }
+            RouterGuardResolution::Block {
+                cause,
+                action: _nav_action,
+                attempted,
+                redirect_chain,
+                reason,
+            } => {
+                let _ = self
+                    .history
+                    .navigate(NavigationAction::Replace, Some(from.clone()));
+                self.history.refresh();
+
+                let transition = RouterTransition {
+                    cause,
+                    from,
+                    to: attempted,
+                    redirect_chain,
+                    blocked_by: Some(reason),
+                };
+
+                self.state.last_transition = Some(transition.clone());
+                self.events.push(RouterEvent::Blocked {
+                    transition: transition.clone(),
+                    state: self.state.clone(),
+                });
+
+                Ok(RouterUpdate::Blocked(transition))
+            }
+        }
     }
 
     pub fn navigate(
@@ -842,7 +990,12 @@ where
                 };
 
                 let proposed_location = target.canonicalized();
-                match self.resolve_guard_chain(action, &from, proposed_location)? {
+                match self.resolve_guard_chain(
+                    RouterTransitionCause::Navigate { action },
+                    action,
+                    &from,
+                    proposed_location,
+                )? {
                     RouterGuardResolution::Allow {
                         cause,
                         action: nav_action,
@@ -883,7 +1036,12 @@ where
                 if self.guard.is_some() {
                     if let Some(attempted) = self.history.peek(action) {
                         let attempted = attempted.canonicalized();
-                        match self.resolve_guard_chain(action, &from, attempted)? {
+                        match self.resolve_guard_chain(
+                            RouterTransitionCause::Navigate { action },
+                            action,
+                            &from,
+                            attempted,
+                        )? {
                             RouterGuardResolution::Allow {
                                 cause,
                                 action: nav_action,
@@ -940,7 +1098,12 @@ where
                 let mut final_chain = Vec::<RouteLocation>::new();
 
                 if self.guard.is_some() {
-                    match self.resolve_guard_chain(action, &from, attempted.clone())? {
+                    match self.resolve_guard_chain(
+                        RouterTransitionCause::Navigate { action },
+                        action,
+                        &from,
+                        attempted.clone(),
+                    )? {
                         RouterGuardResolution::Allow {
                             cause,
                             action: nav_action,
@@ -1104,6 +1267,94 @@ mod tests {
 
         let events = router.take_events();
         assert_eq!(events.len(), 1);
+    }
+
+    #[test]
+    fn router_init_collects_loader_intents_without_location_change() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+        }
+
+        let tree = Arc::new(RouteTree::new(RouteNode::new(RouteId::Root, "/").unwrap()));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Root,
+            RouteHooks {
+                before_load: None,
+                loader: Some(Arc::new(|ctx| {
+                    assert!(matches!(ctx.cause, super::RouterTransitionCause::Init));
+                    vec![super::RoutePrefetchIntent {
+                        route: ctx.matched.route,
+                        namespace: "test.ns",
+                        location: ctx.to.clone(),
+                        extra: None,
+                    }]
+                })),
+            },
+        );
+
+        let update = router
+            .init_with_prefetch_intents()
+            .expect("init should succeed");
+        assert!(matches!(update.update, RouterUpdate::NoChange));
+        assert_eq!(update.intents.len(), 1);
+    }
+
+    #[test]
+    fn router_sync_runs_before_load_and_can_redirect() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        router.route_hooks_mut().insert(
+            RouteId::Settings,
+            RouteHooks {
+                before_load: Some(Arc::new(|ctx| {
+                    if ctx.to.path == "/settings" {
+                        RouterGuardDecision::Redirect {
+                            action: NavigationAction::Replace,
+                            to: RouteLocation::parse("/"),
+                        }
+                    } else {
+                        RouterGuardDecision::Allow
+                    }
+                })),
+                loader: None,
+            },
+        );
+
+        assert!(router.history_mut().push(RouteLocation::parse("/settings")));
+        let update = router.sync().expect("sync should succeed");
+        assert!(update.changed());
+        assert_eq!(router.state().location.to_url(), "/");
+
+        let transition = router
+            .state()
+            .last_transition
+            .as_ref()
+            .expect("transition should exist");
+        assert!(matches!(
+            transition.cause,
+            super::RouterTransitionCause::Redirect { .. }
+        ));
     }
 
     #[test]
