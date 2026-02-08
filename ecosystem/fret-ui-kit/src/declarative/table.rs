@@ -1588,7 +1588,7 @@ where
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
 
-    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+    let state_value = cx.watch_model(&state).layout().cloned_or_default();
     let sorting = state_value.sorting.clone();
 
     let ordered_columns = order_columns(columns.as_ref(), &state_value.column_order);
@@ -2462,7 +2462,7 @@ where
     ICell: IntoIterator<Item = AnyElement>,
 {
     let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
-    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+    let state_value = cx.watch_model(&state).layout().cloned_or_default();
 
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
