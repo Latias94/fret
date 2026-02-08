@@ -121,6 +121,15 @@ Target behavior (TanStack-aligned):
 - each route can validate/augment search
 - child route sees parent-validated search
 - canonicalization is deterministic (important for query keys and caching)
+ 
+### Build location (TanStack-aligned)
+
+Apps should be able to construct canonical, search-stabilized locations without duplicating URL
+string assembly logic. In v1, prefer a lightweight helper that:
+
+- formats the path from a route id + path params
+- runs the per-route search validation chain (root -> leaf) to apply defaults
+- returns a canonical `RouteLocation` suitable for navigation + query keying
 
 ### Transitions
 
@@ -178,4 +187,5 @@ Unify under a trait:
 - `ecosystem/fret-router/src/web.rs` + `ecosystem/fret-router/tests/web_wasm.rs` (web adapters)
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
 - `ecosystem/fret-router/src/router_state.rs` (`navigate_with_prefetch_intents` / `sync_with_prefetch_intents`)
+- `ecosystem/fret-query/src/lib.rs` (tests: namespace invalidation cancels inflight and ignores stale apply)
 - `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; route-driven query effects; page back/forward)
