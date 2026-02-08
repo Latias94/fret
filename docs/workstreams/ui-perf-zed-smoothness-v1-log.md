@@ -7923,3 +7923,53 @@ Results:
   - Worst overall `top_total_time_us`: `14099` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor/stdout.json`)
 - `ui-resize-probes`: PASS.
   - Worst overall `top_total_time_us`: `17567` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0/stdout.json`)
+
+## 2026-02-08 15:51:15 (commit `abf7ce646`)
+
+Change:
+- Add a renderer-owned, bounded “released blob” retention policy (LRU) so `TextSystem::release()` can keep recently
+  released `TextBlobId`s alive (default off) and avoid `Text::prepare` thrash when wrap widths oscillate.
+  - Knob: `FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES` (default: `0`/off; A/B tested at `256`).
+
+Suites:
+- `ui-code-editor-resize-probes` (gate; attempts=1 for off, attempts=3 for on)
+- `ui-resize-probes` (gate; attempts=1 for off, attempts=3 for on)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0
+
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3
+FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3
+```
+
+Artifacts:
+- Off:
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/summary.json`
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0/summary.json`
+- On (`ENTRIES=256`):
+  - `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/summary.json`
+  - `ui-resize-probes`: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3/summary.json`
+
+Results:
+- Off (default `ENTRIES=0`):
+  - `ui-code-editor-resize-probes`: PASS (attempts=1).
+    - Worst overall `top_total_time_us`: `13075` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/stdout.json`)
+  - `ui-resize-probes`: PASS (attempts=1).
+    - Worst overall `top_total_time_us`: `17222` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-p0/stdout.json`)
+- On (`ENTRIES=256`):
+  - `ui-code-editor-resize-probes`: PASS (passes=3/3; required=2).
+    - Worst overall `top_total_time_us`: `12744` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/stdout.json`)
+  - `ui-resize-probes`: PASS (passes=2/3; required=2).
+    - Worst overall `top_total_time_us`: `17295` (`target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-p0-a3/stdout.json`)
+
+Worst-frame attribution (editor jitter script):
+- Off worst bundle: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-off-editor/attempt-1/1770536398224-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `paint_text_prepare_time_us`: `4483` (width-changed prepares: `30`)
+- On (`ENTRIES=256`) worst bundle: `target/fret-diag-resize-probes-gate-released-blob-lru-abf7ce646-on256-editor-a3/attempt-1/1770536510926-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `paint_text_prepare_time_us`: `3973` (width-changed prepares: `29`)
+
+Notes:
+- In the sampled worst frames, `resource_caches.render_text.blobs_live` and `blob_cache_entries` remained `498`
+  (no obvious unbounded growth in this probe), but this needs broader validation on longer-running workloads.

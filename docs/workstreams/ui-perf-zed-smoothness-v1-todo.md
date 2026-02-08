@@ -83,14 +83,17 @@ Conventions:
     - Implementation: `feat(fret-ui): add interactive-resize wrapped text width cache knob` (commit `2e479fc2f`).
     - Knob: `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES` (default: `0`/off; try `4`).
     - Evidence: perf log entries `2026-02-08` (A/B: off vs `ENTRIES=4`).
-  - [ ] Consider a renderer-owned, bounded “released blob” retention policy (LRU / time-based) to avoid thrashing
+  - [x] Add a renderer-owned, bounded “released blob” retention policy (LRU / time-based) to avoid thrashing
     `Text::prepare` under interactive resize width jitter.
     - Rationale: `TextSystem::release` currently eagerly evicts blobs when refcount hits zero, which amplifies churn
       when the UI alternates between a small set of wrap widths.
     - Expected impact: reduce `paint_text_prepare.us(time/calls)` spikes on resize frames even without per-widget
       multi-width caches.
-    - Evidence: must include an A/B run on `ui-resize-probes` and `ui-code-editor-resize-probes` (attempts=3),
-      plus a memory/eviction analysis (blob/shape cache growth bounded).
+    - Implementation: `perf(fret-render): retain released text blobs via LRU` (commit `abf7ce646`).
+    - Knob: `FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES` (default: `0`/off; A/B tested at `256`).
+    - Evidence: perf log entry `2026-02-08 15:51:15` (A/B gates + worst-frame attribution).
+  - [ ] Follow-up: validate memory bounds + eviction behavior on longer editor sessions (ensure the LRU remains
+    bounded and does not retain pathological blobs indefinitely).
   - [x] Bucket wrapped-text **measure** widths during interactive resize in the host-widget layout path to reduce
     measure churn and align layout/paint wrap widths.
     - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
