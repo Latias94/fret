@@ -152,6 +152,10 @@ Golden path: enable the `fret-kit` `router` feature to register router commands 
 `with_default_config_files()` to install the default keybindings before applying layered
 `.fret/keymap.json` overrides.
 
+If you register router commands later (after config layering), call
+`fret_app::install_command_default_keybindings_into_keymap(app)` again to ensure the defaults are
+added to the baseline keymap (the installer is idempotent per command id).
+
 ## Evidence anchors (when implemented)
 
 - `ecosystem/fret-router-ui/src/lib.rs` (store + outlet/link primitives)
