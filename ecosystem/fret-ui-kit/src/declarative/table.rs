@@ -2601,34 +2601,25 @@ where
             ) -> (
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
                 std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
-                std::collections::HashMap<RowKey, Arc<[(ColumnId, TanStackValue)]>>,
             ) {
                 if agg_columns.is_empty() {
-                    return (Default::default(), Default::default(), Default::default());
+                    return (Default::default(), Default::default());
                 }
                 let out_u64 =
                     compute_grouped_u64_aggregations(model, data, row_index_by_key, agg_columns);
 
                 let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
                     Default::default();
-                let mut out_any: std::collections::HashMap<
-                    RowKey,
-                    Arc<[(ColumnId, TanStackValue)]>,
-                > = Default::default();
                 for (&row_key, entries) in &out_u64 {
                     let mut text_values: Vec<(ColumnId, Arc<str>)> =
                         Vec::with_capacity(entries.len());
-                    let mut any_values: Vec<(ColumnId, TanStackValue)> =
-                        Vec::with_capacity(entries.len());
                     for (col_id, v) in entries.iter() {
                         text_values.push((col_id.clone(), Arc::from(v.to_string())));
-                        any_values.push((col_id.clone(), TanStackValue::Number(*v as f64)));
                     }
                     out_text.insert(row_key, Arc::from(text_values.into_boxed_slice()));
-                    out_any.insert(row_key, Arc::from(any_values.into_boxed_slice()));
                 }
 
-                (out_u64, out_text, out_any)
+                (out_u64, out_text)
             }
 
             fn group_label_for_key<TData>(
@@ -2759,7 +2750,7 @@ where
                 }
             }
 
-            let (group_aggs_u64, group_aggs_text, group_aggs_any) =
+            let (group_aggs_u64, group_aggs_text) =
                 compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
             let group_aggs_any = table.grouped_aggregations_any().clone();
 
