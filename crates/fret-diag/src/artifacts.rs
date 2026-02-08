@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 use zip::write::FileOptions;
 
+const DEFAULT_IN_MEMORY_BUNDLE_NAME: &str = "bundle";
+
 /// Returns the default repo-local exports root used by tooling when materializing in-memory bundles.
 ///
 /// This path is intended for the **DevTools GUI** (and other tooling) to bridge web-runner bundles
@@ -51,16 +53,29 @@ pub fn materialize_bundle_json_to_exports(
     })
 }
 
-/// Packs an in-memory `bundle.json` into a zip (in bytes) with `bundle.json` at the zip root.
+/// Packs an in-memory `bundle.json` into a zip (in bytes) using the same directory layout as `diag pack`:
+///
+/// `{bundle_name}/bundle.json`
 ///
 /// This is intended for future web-only DevTools UIs (download/export) and for MCP-style surfaces
 /// that may want to return zip bytes directly.
 pub fn pack_bundle_json_to_zip_bytes(bundle_json: &str) -> Result<Vec<u8>, String> {
+    pack_bundle_json_to_zip_bytes_named(DEFAULT_IN_MEMORY_BUNDLE_NAME, bundle_json)
+}
+
+pub fn pack_bundle_json_to_zip_bytes_named(
+    bundle_name: &str,
+    bundle_json: &str,
+) -> Result<Vec<u8>, String> {
     let mut cursor = Cursor::new(Vec::<u8>::new());
     {
         let mut zip = zip::ZipWriter::new(&mut cursor);
         let opts = FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-        zip.start_file("bundle.json", opts)
+        let bundle_name = bundle_name.trim();
+        if bundle_name.is_empty() {
+            return Err("bundle_name must not be empty".to_string());
+        }
+        zip.start_file(format!("{bundle_name}/bundle.json"), opts)
             .map_err(|e| e.to_string())?;
         zip.write_all(bundle_json.as_bytes())
             .map_err(|e| e.to_string())?;
@@ -84,7 +99,9 @@ mod tests {
         let mut zip = zip::ZipArchive::new(reader).expect("open zip");
         assert_eq!(zip.len(), 1);
 
-        let mut file = zip.by_name("bundle.json").expect("bundle.json exists");
+        let mut file = zip
+            .by_name("bundle/bundle.json")
+            .expect("bundle/bundle.json exists");
         let mut contents = String::new();
         file.read_to_string(&mut contents)
             .expect("read bundle.json");

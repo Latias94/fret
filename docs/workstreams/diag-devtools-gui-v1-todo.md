@@ -96,7 +96,7 @@ Conventions:
   - [x] native: filesystem (existing),
   - [x] web: in-memory export helpers (zip bytes + materialize to exports dir).
 - [x] Allow DevTools to pack web runner dumps by materializing `bundle.dumped.bundle` into `.fret/diag/exports/`.
-- [ ] Ensure the offline bundle viewer can open zips produced by web runs (same structure as `diag pack`).
+- [x] Ensure the offline bundle viewer can open zips produced by web runs (same structure as `diag pack`).
 
 ### M6: Quality gates + “real-time inspect” polish
 
