@@ -71,15 +71,18 @@ pub mod export;
 pub mod model;
 
 pub use elements::{
-    AiChat, AiConversationTranscript, CodeBlock, CodeBlockCopyButton, CodeBlockFilename,
-    Conversation, ConversationDownload, ConversationEmptyState, ConversationMessage,
-    ConversationScrollButton, ConversationTranscript, FileTree, FileTreeAction, FileTreeFile,
-    FileTreeFolder, FileTreeIcon, FileTreeItem, FileTreeName, InlineCitation, Message,
-    MessageAction, MessageActionTemplate, MessageActions, MessageContent, MessageParts,
-    MessageResponse, MessageToolbar, OnFileTreeActionActivate, OnFileTreeExpandedChange,
-    OnFileTreeSelect, PromptInput, Snippet, SnippetCopyButton, SnippetInput, SnippetText,
-    SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,
-    ToolSectionTitle, ToolStatus,
+    AiChat, AiConversationTranscript, CodeBlock, CodeBlockCopyButton, CodeBlockFilename, Commit,
+    CommitActions, CommitAuthor, CommitAuthorAvatar, CommitContent, CommitCopyButton, CommitFile,
+    CommitFileAdditions, CommitFileChanges, CommitFileDeletions, CommitFileIcon, CommitFileInfo,
+    CommitFilePath, CommitFileStatus, CommitFileStatusKind, CommitFiles, CommitHash, CommitHeader,
+    CommitInfo, CommitMessage, CommitMetadata, CommitSeparator, CommitTimestamp, Conversation,
+    ConversationDownload, ConversationEmptyState, ConversationMessage, ConversationScrollButton,
+    ConversationTranscript, FileTree, FileTreeAction, FileTreeFile, FileTreeFolder, FileTreeIcon,
+    FileTreeItem, FileTreeName, InlineCitation, Message, MessageAction, MessageActionTemplate,
+    MessageActions, MessageContent, MessageParts, MessageResponse, MessageToolbar,
+    OnFileTreeActionActivate, OnFileTreeExpandedChange, OnFileTreeSelect, PromptInput, Snippet,
+    SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock, Tool, ToolCallBlock, ToolContent,
+    ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
 };
 pub use export::messages_to_markdown;
 pub use model::{

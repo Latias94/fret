@@ -707,6 +707,7 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
+        PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -17910,6 +17911,94 @@ fn preview_ai_code_block_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) 
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("CodeBlock + Snippet (AI Elements)"), block, snippet],
+    )]
+}
+
+fn preview_ai_commit_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+    use std::time::{Duration, SystemTime};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let hash: Arc<str> = Arc::from("a1b2c3d");
+
+    let info = ui_ai::CommitInfo::new([
+        ui_ai::CommitHash::new(hash.clone()).into_element(cx),
+        ui_ai::CommitMessage::new("Fix FileTree row actions").into_element(cx),
+        ui_ai::CommitMetadata::new([
+            ui_ai::CommitAuthor::new([
+                ui_ai::CommitAuthorAvatar::new("JD").into_element(cx),
+                cx.text("John Doe"),
+            ])
+            .into_element(cx),
+            ui_ai::CommitSeparator::default().into_element(cx),
+            ui_ai::CommitTimestamp::new(SystemTime::now() - Duration::from_secs(86_400))
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let actions = ui_ai::CommitActions::new([ui_ai::CommitCopyButton::new(hash.clone())
+        .test_id("ui-ai-commit-copy")
+        .copied_marker_test_id("ui-ai-commit-copied-marker")
+        .into_element(cx)])
+    .into_element(cx);
+
+    let header = ui_ai::CommitHeader::new([info, actions]).test_id("ui-ai-commit-header");
+
+    let files = ui_ai::CommitFiles::new([
+        ui_ai::CommitFile::new([
+            ui_ai::CommitFileInfo::new([
+                ui_ai::CommitFileStatus::new(ui_ai::CommitFileStatusKind::Modified)
+                    .into_element(cx),
+                ui_ai::CommitFileIcon::default().into_element(cx),
+                ui_ai::CommitFilePath::new("ecosystem/fret-ui-ai/src/elements/file_tree.rs")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            ui_ai::CommitFileChanges::new([
+                ui_ai::CommitFileAdditions::new(12).into_element(cx),
+                ui_ai::CommitFileDeletions::new(3).into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        ui_ai::CommitFile::new([
+            ui_ai::CommitFileInfo::new([
+                ui_ai::CommitFileStatus::new(ui_ai::CommitFileStatusKind::Added).into_element(cx),
+                ui_ai::CommitFileIcon::default().into_element(cx),
+                ui_ai::CommitFilePath::new(
+                    "tools/diag-scripts/ui-gallery-ai-commit-demo-copy.json",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            ui_ai::CommitFileChanges::new([ui_ai::CommitFileAdditions::new(1).into_element(cx)])
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let content = ui_ai::CommitContent::new([files]).test_id("ui-ai-commit-content");
+
+    let commit = ui_ai::Commit::new(header, content)
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-ai-commit-root"),
+        );
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| vec![cx.text("Commit (AI Elements)"), commit],
     )]
 }
 

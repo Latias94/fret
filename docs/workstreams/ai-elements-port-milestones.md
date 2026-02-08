@@ -86,6 +86,7 @@ Notes:
 
 - `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gates (`ui-gallery-ai-file-tree-demo-toggle.json`, `ui-gallery-ai-file-tree-demo-actions.json`).
 - `CodeBlock` / `Snippet` v0 are ported with a UI Gallery demo + diag gate (`ui-gallery-ai-code-block-demo-copy.json`).
+- `Commit` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-commit-demo-copy.json`).
 - Remaining work in this milestone focuses on `CodeBlock` / `Snippet` parity and a large-tree
   strategy (likely via UI Kit primitives + virtualization).
 
