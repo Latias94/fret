@@ -47,13 +47,14 @@ Conventions:
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
     - Knob: `FRET_TEXT_WORD_WRAP_SHAPE_ONCE` (`1`/`0`) overrides the default threshold behavior.
     - Evidence: perf log entries appended for the A/B run and the default behavior (2026-02-07, `ui-resize-probes`).
-  - [ ] Prototype wrap-width bucketing during interactive resize so small width deltas do not trigger full wrap reflow.
-    - Current status: implemented as an **opt-in knob** (`FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`) but kept default-off.
-    - Evidence (still mixed): perf log entries on `2026-02-07` show bucketing is not consistently positive:
-      - bucket=2px: small improvement on `drag-jitter`, but `resize-stress` still regresses vs the same-run baseline.
-      - bucket=4px: regresses both probes.
-      Keep default-off until we have a strategy that is both consistently faster and visually acceptable; the likely
-      long-term fix is improving wrapped-text reuse (shaping vs wrapping separation), not just width quantization.
+  - [x] Add a default small-step wrap-width bucketing policy during interactive resize to reduce text wrap churn under
+    `drag-jitter`-style width jitter.
+    - Default: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX=32` (set to `0`/`1` to disable).
+    - Applies only when:
+      - interactive resize is active, and
+      - the window width delta is small (jitter-class, not stress-class).
+    - Keep the old knob for global experiments:
+      - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
 ## Milestones

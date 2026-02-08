@@ -113,12 +113,15 @@ Baseline fact (quick reference):
    - Fret TODO: make “width jitter” a first-class acceptance probe for editor surfaces (not just UI chrome).
    - Interim win: for plain LTR paragraphs, use a “shape once → slice lines” wrap path to avoid per-line shaping on
      long text (commit `4f2009408`, default-on threshold in `10e7d97fc`).
-   - Fret experiment knob (default-off): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
-   - Latest evidence (see perf log entries on 2026-02-07):
-     - Bucketing remains **inconsistent**: bucket=2px can reduce `drag-jitter`, but `resize-stress` tends to regress;
-       bucket=4px regresses both probes.
-     - Conclusion: keep this off by default; the better direction is to improve wrapped-text reuse (separate shaping vs
-       wrapping keys and reuse line layouts across frames), not rely on quantization.
+   - Fret stopgap (default-on for jitter-class interactive resize):
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
+     - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
+   - Fret experiment knob (still default-off, broader scope): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+   - Latest evidence: see the perf log entries dated `2026-02-08` for `ui-resize-probes` gate stability before/after
+     the small-step default bucketing change.
+   - Conclusion: quantization is a pragmatic “make live-resize bounded” lever, but it is not the end state; the
+     longer-term direction remains improving wrapped-text reuse (separate shaping vs wrapping keys and reuse line
+     layouts across frames), closer to GPUI’s amortization model.
 
 2) **Layout invalidation granularity**
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.
