@@ -962,4 +962,4 @@ and does not need to preserve method names, but the **capability must exist**.
 | `getIsGrouped/getIsPlaceholder/getIsAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `grouping_cells.json` |
 | `getValue` | `Table::cell_value(row_key, column_id)` | Partial | gated indirectly via sorting/filtering fixtures |
 | `renderValue` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
-| `getContext` | not modeled (Rust-native UI integration provides context separately) | Missing | N/A |
+| `getContext` | `Table::cell_context(row_key, column_id)` (snapshot: ids + keys) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |
