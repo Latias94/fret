@@ -48,10 +48,9 @@ Evidence anchors:
 ## 4) Module ownership map (internal seams)
 
 - Input/event mapping and state machine (pointer/buttons/click counting/modifiers/wheel)
-  - Files: `crates/fret-runner-winit/src/lib.rs` (currently hosts most of the mapping + state)
+  - Files: `crates/fret-runner-winit/src/mapping/*`, `crates/fret-runner-winit/src/state/input/mod.rs`
 - Window-side state (cursor + IME request dedupe)
-  - Files: `crates/fret-runner-winit/src/lib.rs`
-  - Note: a directory split exists under `crates/fret-runner-winit/src/state/*`, but it is not currently wired into the crate module tree (see hazards).
+  - Files: `crates/fret-runner-winit/src/state/window.rs`
 - Accessibility (AccessKit integration)
   - Files: `crates/fret-runner-winit/src/accessibility.rs`, `crates/fret-runner-winit/src/accessibility_accesskit_winit.rs`
 - External drag/drop glue
@@ -65,7 +64,7 @@ Evidence anchors:
 
 - Input mapping and click counting semantics
   - Failure mode: incorrect multi-click counts, “click vs drag” detection drift, pointer id mapping drift.
-  - Existing gates: unit tests in `lib.rs` (pointer id mapping, IME cursor quantization, click slop behavior).
+  - Existing gates: unit tests in `mapping/*` and `state/*` (pointer id mapping, IME cursor quantization, click slop behavior).
   - Missing gate to add: fixture-driven event-sequence tests once we have a stable harness for winit `WindowEvent` construction.
 - IME lifecycle correctness and cursor-area deduplication
   - Failure mode: cursor rect updates missed or spammed; enable/disable ordering issues; scale-factor change regressions.
@@ -75,10 +74,9 @@ Evidence anchors:
   - Failure mode: stale semantics tree, focus mismatch, incorrect node ids.
   - Existing gates: not audited at L0.
   - Missing gate to add: at least one deterministic semantics snapshot test for a small UI tree (if feasible without a full window).
-- “Half-moved” module structure
-  - Failure mode: duplicate implementations diverge; engineers/agents edit the wrong files.
-  - Observation: `src/mapping/*` and `src/state/*` exist but are not declared as modules from `lib.rs` today.
-  - Recommended action: either wire them in and delete the duplicates in `lib.rs`, or remove the unused copies.
+- Module wiring drift
+  - Failure mode: refactors add new modules/files that are not wired into the crate root (or are feature-gated incorrectly), leading to dead code and missing gates.
+  - Recommended action: keep `src/lib.rs` as a thin facade that explicitly declares internal modules and re-exports a stable surface.
 
 Evidence anchors:
 
@@ -88,20 +86,18 @@ Evidence anchors:
 
 ## 6) Code quality findings (Rust best practices)
 
-- `src/lib.rs` is a large “god module” (~1k LOC) that mixes:
-  - pure mapping helpers
-  - input state machines
-  - window-side IME/cursor state
-  - tests
-- This is an ideal candidate for a directory-module split with a stable facade.
+- Keep `src/lib.rs` as a thin facade and avoid re-growing a “god module”.
 
 Evidence anchors:
 
 - `crates/fret-runner-winit/src/lib.rs`
+- `crates/fret-runner-winit/src/mapping/mod.rs`
+- `crates/fret-runner-winit/src/state/mod.rs`
 
 ## 7) Recommended refactor steps (small, gated)
 
 1. Wire `mapping/` + `state/` into the crate module tree and remove duplicated implementations from `lib.rs` — outcome: one source of truth — gate: `cargo nextest run -p fret-runner-winit`.
+   - Status: landed.
 2. Keep mapping helpers pure and unit-tested (no window handles) — outcome: easy regression gates — gate: unit tests + `nextest`.
 3. Add one deterministic `fretboard diag` for an IME + text-input flow on Windows once runner-level diag is available — outcome: catch end-to-end regressions — gate: diag suite (future).
 
@@ -109,4 +105,3 @@ Evidence anchors:
 
 - Should click slop and multi-click delay be treated as a stable, documented contract (shared across runners), or remain runner-specific?
 - Where should normalization policy live long-term: `fret-core` input normalization or runner-specific mapping?
-
