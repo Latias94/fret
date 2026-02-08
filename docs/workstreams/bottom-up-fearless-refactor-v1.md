@@ -489,6 +489,7 @@ Recommended default gates (adjust per workstream):
 - Format: `cargo fmt`
 - Lint (when affordable): `cargo clippy --workspace --all-targets -- -D warnings`
 - Tests (subset, then expand): `cargo nextest run -p fret-ui` and `cargo nextest run -p fret-ui-shadcn`
+- Diag (interaction subset): `cargo run -p fretboard -- diag suite ui-gallery-overlay-steady --env FRET_DIAG=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 Gate tiers (suggested; tune to your machine/CI budgets):
 

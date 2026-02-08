@@ -26,8 +26,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 - [ ] BU-FR-guard-002 Add a short “how to add a regression gate” appendix to this workstream (unit test vs `fretboard diag`).
   - Link: `docs/ui-diagnostics-and-scripted-tests.md`
 
-- [ ] BU-FR-guard-003 Inventory the current scripted diagnostics suites and map them to program milestones.
+- [~] BU-FR-guard-003 Inventory the current scripted diagnostics suites and map them to program milestones.
   - Start from: `docs/ui-diagnostics-and-scripted-tests.md` and `tools/diag-scripts/`
+  - Early evidence:
+    - `fretboard diag suite ui-gallery-overlay-steady` (overlay/focus interaction subset)
+    - `apps/fretboard/src/diag/mod.rs` (suite definitions)
 
 - [ ] BU-FR-guard-004 Convert “huge Rust conformance sources” into data-driven harnesses where possible.
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
