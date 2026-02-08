@@ -357,6 +357,25 @@ where
     R: Clone + Eq + Hash + 'static,
     H: HistoryAdapter + 'static,
 {
+    router_link_with_props(cx, store, link, PressableProps::default(), children)
+}
+
+/// Build a low-level router link pressable with explicit `PressableProps`.
+///
+/// The pressable:
+/// - navigates on `pressable_on_activate`
+/// - computes prefetch intents on hover and stores them in `RouterUiStore::intents_model()`
+pub fn router_link_with_props<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    props: PressableProps,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
     let on_activate = store.navigate_link_on_activate(link.clone());
     let on_hover = store.prefetch_link_on_hover_change(link);
     let children: Vec<AnyElement> = children.into_iter().collect();
@@ -364,8 +383,27 @@ where
     cx.pressable_with_id_props(|cx, _state, _id| {
         cx.pressable_on_activate(on_activate);
         cx.pressable_on_hover_change(on_hover);
-        (PressableProps::default(), children)
+        (props, children)
     })
+}
+
+/// Build a router link pressable and stamp a diagnostics `test_id`.
+///
+/// Prefer this in demos and automated `fretboard diag` scripts.
+pub fn router_link_with_test_id<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let mut props = PressableProps::default();
+    props.a11y.test_id = Some(test_id.into());
+    router_link_with_props(cx, store, link, props, children)
 }
 
 #[cfg(test)]
