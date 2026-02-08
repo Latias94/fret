@@ -8080,3 +8080,32 @@ Artifacts:
 Results:
 - Baseline selection: PASS on best candidate validation (fail_total=0; see selection summary).
 - `ui-gallery-steady` vs `v25`: PASS (failures=0).
+
+## 2026-02-08 20:31:50 (commit `ed769a7c1`)
+
+Change:
+- No code change; validate that enabling the text resize-jitter knobs does not regress the steady suite under the
+  new canonical baseline (`v25`).
+
+Suites:
+- `ui-gallery-steady` (baseline v25; repeat=3)
+
+Commands:
+```powershell
+cargo run -q -p fretboard -- diag perf ui-gallery-steady `
+  --dir target/fret-diag-perf/ui-gallery-steady-v25-unwrapped-on-r3 `
+  --timeout-ms 600000 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json `
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v25.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 `
+  --env FRET_TEXT_RELEASED_BLOB_CACHE_ENTRIES=256 `
+  --env FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 `
+  --env FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES=16384 `
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- `ui-gallery-steady`: `target/fret-diag-perf/ui-gallery-steady-v25-unwrapped-on-r3/check.perf_thresholds.json`
+
+Results:
+- PASS (failures=0).
