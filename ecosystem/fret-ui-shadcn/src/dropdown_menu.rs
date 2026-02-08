@@ -1192,6 +1192,27 @@ impl DropdownMenu {
             let scale = motion.scale;
             let opening = is_open;
             let arrow = self.arrow;
+            #[derive(Default)]
+            struct TriggerKeyboardOpenState {
+                focus_last_on_open: Option<Model<bool>>,
+            }
+            let focus_last_on_open = cx.with_state(TriggerKeyboardOpenState::default, |st| {
+                st.focus_last_on_open.clone()
+            });
+            let focus_last_on_open = if let Some(model) = focus_last_on_open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state(TriggerKeyboardOpenState::default, |st| {
+                    st.focus_last_on_open = Some(model.clone());
+                });
+                model
+            };
+            let keyboard_focus_last_on_open = cx
+                .watch_model(&focus_last_on_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
                 theme
                     .metric_by_key("component.dropdown_menu.arrow_size")
@@ -1216,12 +1237,50 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
             let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-            menu::trigger::wire_open_or_focus_on_arrow_keys(
-                cx,
+            let open_for_trigger_arrow_keys = self.open.clone();
+            let first_item_focus_id_for_trigger_arrow_keys = first_item_focus_id.clone();
+            let last_item_focus_id_for_trigger_arrow_keys = last_item_focus_id.clone();
+            let focus_last_on_open_for_trigger_arrow_keys = focus_last_on_open.clone();
+            cx.key_on_key_down_for(
                 trigger_id,
-                self.open.clone(),
-                first_item_focus_id.clone(),
-                last_item_focus_id.clone(),
+                Arc::new(move |host, _acx, down| {
+                    if down.repeat {
+                        return false;
+                    }
+
+                    let focus_last = match down.key {
+                        fret_core::KeyCode::ArrowDown => false,
+                        fret_core::KeyCode::ArrowUp => true,
+                        _ => return false,
+                    };
+
+                    let is_open = host
+                        .models_mut()
+                        .read(&open_for_trigger_arrow_keys, |v| *v)
+                        .ok()
+                        .unwrap_or(false);
+
+                    if !is_open {
+                        let _ = host
+                            .models_mut()
+                            .update(&focus_last_on_open_for_trigger_arrow_keys, |v| {
+                                *v = focus_last;
+                            });
+                        let _ = host.models_mut().update(&open_for_trigger_arrow_keys, |v| *v = true);
+                        return true;
+                    }
+
+                    let target = if focus_last {
+                        last_item_focus_id_for_trigger_arrow_keys.get()
+                    } else {
+                        first_item_focus_id_for_trigger_arrow_keys.get()
+                    };
+                    let Some(target) = target else {
+                        return false;
+                    };
+                    host.request_focus(target);
+                    true
+                }),
             );
             let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
@@ -1252,6 +1311,7 @@ impl DropdownMenu {
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id_for_request = first_item_focus_id.clone();
+                let last_item_focus_id_for_request = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -3164,7 +3224,11 @@ impl DropdownMenu {
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
                         .pointer_content_focus(content_focus_id.get())
-                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        .keyboard_entry_focus(if keyboard_focus_last_on_open {
+                            last_item_focus_id_for_request.get()
+                        } else {
+                            first_item_focus_id_for_request.get()
+                        }),
                     None,
                     None,
                     on_dismiss_request.clone(),
@@ -3172,6 +3236,12 @@ impl DropdownMenu {
                     modal,
                 );
                 OverlayController::request(cx, request);
+                if keyboard_focus_last_on_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&focus_last_on_open, |v| *v = false);
+                }
             }
 
             trigger
@@ -4565,6 +4635,82 @@ mod tests {
             ui.focus(),
             Some(alpha.id),
             "ArrowDown on open trigger should move focus to first menu item"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_arrow_up_opens_and_focuses_last_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+        ];
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowUp,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "ArrowUp should open dropdown menu from trigger"
+        );
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let gamma = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Gamma"))
+            .expect("Gamma menu item");
+
+        assert_eq!(
+            ui.focus(),
+            Some(gamma.id),
+            "ArrowUp open should focus last menu item"
         );
     }
 
