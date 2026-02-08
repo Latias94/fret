@@ -3916,6 +3916,7 @@ fn preview_markdown_editor_source(
             let mode_handle = header_handle.clone();
             let edit_handle = header_handle.clone();
             let read_only_handle = header_handle.clone();
+            let disabled_handle = header_handle.clone();
 
             let mode = mode_handle.interaction();
             let mode_label = if !mode.enabled {
@@ -4078,6 +4079,18 @@ fn preview_markdown_editor_source(
                                 .on_activate(Arc::new(move |host, action_cx, _reason| {
                                     read_only_handle.set_interaction(
                                         code_editor::CodeEditorInteractionOptions::read_only(),
+                                    );
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: disabled")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-mode-disabled")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    disabled_handle.set_interaction(
+                                        code_editor::CodeEditorInteractionOptions::disabled(),
                                     );
                                     host.notify(action_cx);
                                     host.request_redraw(action_cx.window);

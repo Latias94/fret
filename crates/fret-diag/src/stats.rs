@@ -10515,6 +10515,237 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_read_only_block
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for editable baseline snapshot
+    // 1: waiting for a disabled snapshot
+    // 2: ensure disabled does not mutate (rev/len/caret stable for >=2 snapshots)
+    // 3: success
+    let mut state: u8 = 0;
+
+    let mut edit_before_rev: u64 = 0;
+    let mut edit_before_len: u64 = 0;
+    let mut edit_before_caret: u64 = 0;
+
+    let mut disabled_rev: u64 = 0;
+    let mut disabled_len: u64 = 0;
+    let mut disabled_caret: u64 = 0;
+    let mut disabled_samples: u64 = 0;
+
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let enabled = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let editable = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("editable"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let rev = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            match state {
+                0 if enabled && editable => {
+                    edit_before_rev = rev;
+                    edit_before_len = len;
+                    edit_before_caret = caret;
+                    state = 1;
+                }
+                1 if !enabled => {
+                    disabled_rev = rev;
+                    disabled_len = len;
+                    disabled_caret = caret;
+                    disabled_samples = 0;
+                    state = 2;
+                }
+                2 if !enabled => {
+                    disabled_samples = disabled_samples.saturating_add(1);
+                    if rev != disabled_rev || len != disabled_len || caret != disabled_caret {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "expected": {
+                                "buffer_revision": disabled_rev,
+                                "text_len_bytes": disabled_len,
+                                "selection_caret": disabled_caret
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "selection_caret": caret
+                            },
+                        }));
+                        state = 3;
+                        break;
+                    }
+                    if disabled_samples >= 2 {
+                        state = 3;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "enabled": enabled,
+                "editable": editable,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "selection_caret": caret,
+                "state": state,
+            }));
+        }
+        if state == 3 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_markdown_editor_source_disabled_blocks_edits.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_markdown_editor_source_disabled_blocks_edits",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "editable_baseline": {
+            "buffer_revision": edit_before_rev,
+            "text_len_bytes": edit_before_len,
+            "selection_caret": edit_before_caret
+        },
+        "disabled_baseline": {
+            "buffer_revision": disabled_rev,
+            "text_len_bytes": disabled_len,
+            "selection_caret": disabled_caret,
+            "samples": disabled_samples
+        },
+        "violation": violation,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery markdown editor disabled gate requires fret_ui_gallery app snapshots after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if violation.is_some() {
+        return Err(format!(
+            "ui-gallery markdown editor disabled gate observed mutation while disabled\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 && disabled_samples >= 2 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery markdown editor disabled gate failed (expected: disabled holds revision/len/caret stable)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable(
     bundle_path: &Path,
     warmup_frames: u64,

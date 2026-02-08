@@ -54,6 +54,7 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits,
     check_bundle_for_ui_gallery_code_editor_word_boundary,
     check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition,
+    check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits,
     check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click,
     check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
@@ -143,6 +144,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_geom_fallbacks_low: bool = false;
     let mut check_ui_gallery_code_editor_torture_read_only_blocks_edits: bool = false;
     let mut check_ui_gallery_markdown_editor_source_read_only_blocks_edits: bool = false;
+    let mut check_ui_gallery_markdown_editor_source_disabled_blocks_edits: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_word_boundary: bool = false;
     let mut check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool = false;
@@ -666,6 +668,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-markdown-editor-source-read-only-blocks-edits" => {
                 check_ui_gallery_markdown_editor_source_read_only_blocks_edits = true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-disabled-blocks-edits" => {
+                check_ui_gallery_markdown_editor_source_disabled_blocks_edits = true;
                 i += 1;
             }
             "--check-ui-gallery-markdown-editor-source-soft-wrap-toggle-stable" => {
@@ -1633,6 +1639,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
                     || check_ui_gallery_code_editor_torture_read_only_blocks_edits
                     || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
+                    || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
                     || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                     || check_ui_gallery_markdown_editor_source_word_boundary
                     || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
@@ -1707,6 +1714,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_geom_fallbacks_low,
                         check_ui_gallery_code_editor_torture_read_only_blocks_edits,
                         check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+                        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
@@ -2043,6 +2051,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_geom_fallbacks_low
                         || check_ui_gallery_code_editor_torture_read_only_blocks_edits
                         || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
+                        || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
                         || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                         || check_ui_gallery_markdown_editor_source_word_boundary
                         || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
@@ -2116,6 +2125,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_geom_fallbacks_low,
                             check_ui_gallery_code_editor_torture_read_only_blocks_edits,
                             check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+                            check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
                             check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                             check_ui_gallery_markdown_editor_source_word_boundary,
                             check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
@@ -3411,6 +3421,9 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
                         &src,
                     )
+                    || ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
+                        &src,
+                    )
                     || ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
                         &src,
                     )
@@ -3620,6 +3633,11 @@ See: `docs/tracy.md`.\n";
                         ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
                             &src,
                         ) && !check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
+                    let suite_ui_gallery_markdown_editor_source_disabled_blocks_edits =
+                        ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
+                            &src,
+                        )
+                            && !check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
                     let suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable =
                         ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
                             &src,
@@ -3751,6 +3769,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_read_only_blocks_edits,
                         check_ui_gallery_markdown_editor_source_read_only_blocks_edits
                             || suite_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+                        check_ui_gallery_markdown_editor_source_disabled_blocks_edits
+                            || suite_ui_gallery_markdown_editor_source_disabled_blocks_edits,
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                             || suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary
@@ -7390,6 +7410,19 @@ fn ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate
     )
 }
 
+fn ui_gallery_script_requires_markdown_editor_source_disabled_blocks_edits_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-disabled-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
     script: &Path,
 ) -> bool {
@@ -7818,6 +7851,7 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_geom_fallbacks_low: bool,
     check_ui_gallery_code_editor_torture_read_only_blocks_edits: bool,
     check_ui_gallery_markdown_editor_source_read_only_blocks_edits: bool,
+    check_ui_gallery_markdown_editor_source_disabled_blocks_edits: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_word_boundary: bool,
     check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool,
@@ -7987,6 +8021,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_markdown_editor_source_read_only_blocks_edits {
         check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_disabled_blocks_edits {
+        check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits(
             bundle_path,
             warmup_frames,
         )?;
@@ -8856,6 +8896,7 @@ mod tests {
         check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json,
         check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_json,
+        check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click_json,
         check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_json,
@@ -11883,6 +11924,86 @@ mod tests {
         let _ = std::fs::create_dir_all(&out_dir);
         let bundle_path = out_dir.join("bundle.json");
         check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_disabled_gate_passes_on_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": { "markdown_editor_source": {
+                                    "interaction": { "enabled": true, "editable": true },
+                                    "buffer_revision": 7,
+                                    "text_len_bytes": 42,
+                                    "selection": { "caret": 3 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": { "markdown_editor_source": {
+                                    "interaction": { "enabled": false, "editable": false },
+                                    "buffer_revision": 7,
+                                    "text_len_bytes": 42,
+                                    "selection": { "caret": 3 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": { "markdown_editor_source": {
+                                    "interaction": { "enabled": false, "editable": false },
+                                    "buffer_revision": 7,
+                                    "text_len_bytes": 42,
+                                    "selection": { "caret": 3 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 4,
+                            "frame_id": 4,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": { "markdown_editor_source": {
+                                    "interaction": { "enabled": false, "editable": false },
+                                    "buffer_revision": 7,
+                                    "text_len_bytes": 42,
+                                    "selection": { "caret": 3 }
+                                }}
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_markdown_editor_disabled_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits_json(
             &bundle,
             &bundle_path,
             0,
