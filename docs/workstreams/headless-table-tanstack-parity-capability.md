@@ -72,7 +72,7 @@ Mapping conventions:
 | `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`cell_value`) |
 | `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
 | `row.getAllCells()` | `Table::row_cells(row_key)` (snapshot of ids + flags + pin splits) | Partial | `headers_cells.json` / `column_pinning.json` |
-| `row.getUniqueValues(columnId)` | no dedicated surface yet (could be expressed via `faceting` or a future per-row helper) | Missing | N/A |
+| `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_unique_values`) |
 
 ### Column core surface
 
