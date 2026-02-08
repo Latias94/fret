@@ -10,24 +10,21 @@
       "timeout_frames": 240
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "type_text", "text": "table retained" },
+    { "type": "type_text", "text": "datatable (torture)" },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" }
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" }
       },
       "timeout_frames": 240
     },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-table-retained-torture" }
-    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }
       },
       "timeout_frames": 240
     },
@@ -36,11 +33,11 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-status" }
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-status" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-status" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-status" } },
     { "type": "wait_frames", "n": 2 },
 
     {
@@ -54,7 +51,7 @@
 
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-mem_mb" },
+      "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-mem_mb" },
       "modifiers": { "shift": true }
     },
     { "type": "wait_frames", "n": 2 },
@@ -83,6 +80,6 @@
       }
     },
 
-    { "type": "capture_bundle", "label": "ui-gallery-table-retained-multi-sort-shift-click" }
+    { "type": "capture_bundle", "label": "ui-gallery-data-table-retained-multi-sort-shift-click" }
   ]
 }

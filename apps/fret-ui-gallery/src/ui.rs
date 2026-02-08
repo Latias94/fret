@@ -16576,7 +16576,7 @@ fn preview_data_table_torture(
     theme: &Theme,
     _state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
-    use fret_ui_headless::table::{ColumnDef, RowKey};
+    use fret_ui_headless::table::{ColumnDef, RowKey, SortSpec};
 
     let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
@@ -16654,6 +16654,22 @@ fn preview_data_table_torture(
         }
     };
 
+    let sorting: Vec<SortSpec> = cx
+        .app
+        .models()
+        .read(&state, |st| st.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+    let sorting_text: Arc<str> = if sorting.is_empty() {
+        Arc::<str>::from("Sorting: <none>")
+    } else {
+        let parts: Vec<String> = sorting
+            .iter()
+            .map(|s| format!("{} {}", s.column, if s.desc { "desc" } else { "asc" }))
+            .collect();
+        Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
+    };
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -16663,6 +16679,12 @@ fn preview_data_table_torture(
             vec![
                 cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
                 cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+                cx.text(sorting_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(sorting_text.clone())
+                        .test_id("ui-gallery-data-table-torture-sorting"),
+                ),
             ]
         },
     );

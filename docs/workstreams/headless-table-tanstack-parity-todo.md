@@ -888,9 +888,21 @@ Next UI parity targets (capability, not exact DOM behavior):
   - Runner: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`click_events_with_modifiers` + ClickStable injection).
   - Tests: `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
 - [ ] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
-  - Column filters UI (per-column filtering + faceting-driven menus)
-  - Column pinning UI affordances (left/center/right sticky behavior)
-  - Multi-sort UX (Shift-click + “sort order” indicator when multiple columns are sorted)
+  - Sub-milestones (keep each gateable via `fretboard diag`):
+    - [x] HTP-ui-dt-011 Multi-sort input semantics: Shift-click appends/toggles sort specs (TanStack default).
+      - Gate: one script Shift-clicks 2 headers and asserts a deterministic sorting status row.
+      - Evidence:
+        - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0` header pointer-up hook)
+        - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json`
+    - [x] HTP-ui-dt-012 Multi-sort visual affordance: show sort order when multiple columns are sorted.
+      - Gate: script asserts the header for the 2nd sorted column displays an order badge/label.
+      - Evidence:
+        - UI: `ecosystem/fret-ui-shadcn/src/data_table.rs` (header indicator renders `▲2` / `▼2`)
+        - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (retained header text renders `mem_mb ▲2`)
+        - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json` (asserts `mem_mb ▲2`)
+    - [ ] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
+    - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
+    - [ ] HTP-ui-dt-040 Column visibility dropdown (docs-style checkbox menu).
 
 ---
 

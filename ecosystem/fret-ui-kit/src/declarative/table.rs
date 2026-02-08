@@ -94,6 +94,7 @@ fn sort_for_column(sorting: &[SortSpec], id: &ColumnId) -> Option<bool> {
         .map(|s| s.desc)
 }
 
+#[cfg(test)]
 fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
     match current {
         None => Some(false),
@@ -102,6 +103,7 @@ fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
     }
 }
 
+#[cfg(test)]
 fn apply_single_sort_toggle(state: &mut TableState, col_id: &ColumnId) {
     let current = sort_for_column(&state.sorting, col_id);
     let next = next_sort_for_column(current);
@@ -1524,7 +1526,7 @@ where
 /// This is an opt-in surface intended for perf/correctness harnesses. v0 is intentionally minimal:
 /// - fixed-height or measured body rows (controlled by `props.row_measure_mode`)
 /// - flat (non-grouped) tables only
-/// - single-column sorting only
+/// - sorting (including multi-sort state) is supported
 /// - focusable "List" semantics with keyboard navigation and typeahead (opt-in labels)
 ///
 /// Typeahead labels:
@@ -1644,22 +1646,34 @@ where
                 })
                 .collect();
 
-            if let Some(spec) = sorting.first() {
-                if let Some(col) = columns
-                    .iter()
-                    .find(|c| c.id.as_ref() == spec.column.as_ref())
-                    && let Some(cmp) = col.sort_cmp.as_ref()
-                {
+            if !sorting.is_empty() {
+                let mut sorters: Vec<(
+                    SortSpec,
+                    Arc<dyn Fn(&TData, &TData) -> std::cmp::Ordering>,
+                )> = Vec::new();
+                for spec in &sorting {
+                    if let Some(col) = columns
+                        .iter()
+                        .find(|c| c.id.as_ref() == spec.column.as_ref())
+                        && let Some(cmp) = col.sort_cmp.as_ref()
+                    {
+                        sorters.push((spec.clone(), Arc::clone(cmp)));
+                    }
+                }
+
+                if !sorters.is_empty() {
                     entries.sort_by(|a, b| {
                         let a_row = &data[a.data_index];
                         let b_row = &data[b.data_index];
-                        let ord = (cmp)(a_row, b_row);
-                        let ord = if spec.desc { ord.reverse() } else { ord };
-                        if ord == std::cmp::Ordering::Equal {
-                            a.key.cmp(&b.key)
-                        } else {
-                            ord
+                        for (spec, cmp) in &sorters {
+                            let ord = (cmp)(a_row, b_row);
+                            let ord = if spec.desc { ord.reverse() } else { ord };
+                            if ord != std::cmp::Ordering::Equal {
+                                return ord;
+                            }
                         }
+
+                        a.key.cmp(&b.key)
                     });
                 }
             }
@@ -1703,6 +1717,7 @@ where
         let right_col_indices = right_col_indices.clone();
         let scroll_x = scroll_x.clone();
         let sorting = sorting.clone();
+        let data_for_header = data.clone();
 
         cx.container(
             ContainerProps {
@@ -1739,6 +1754,8 @@ where
                             debug_header_cell_test_id_prefix.clone();
                         let sorting = sorting.clone();
                         let state = state.clone();
+                        let enable_sorting = props.enable_sorting;
+                        let data = data_for_header.clone();
 
                         let row = stack::hstack(
                             cx,
@@ -1756,6 +1773,28 @@ where
                                         let sort_state = sort_for_column(&sorting, &col.id);
                                         let col_id = col.id.clone();
                                         let state = state.clone();
+                                        let sorting_for_cell = sorting.clone();
+                                        let enabled = enable_sorting
+                                            && col.enable_sorting
+                                            && (col.sort_cmp.is_some() || col.sort_value.is_some());
+                                        let sort_options = TableOptions {
+                                            enable_sorting,
+                                            ..TableOptions::default()
+                                        };
+                                        let sort_toggle_column = SortToggleColumn {
+                                            id: col_id.clone(),
+                                            enable_sorting: col.enable_sorting,
+                                            enable_multi_sort: col.enable_multi_sort,
+                                            sort_desc_first: col.sort_desc_first,
+                                            has_sort_value_source: col.sort_cmp.is_some()
+                                                || col.sort_value.is_some(),
+                                        };
+                                        let auto_sort_dir_desc = col
+                                            .sort_value
+                                            .as_ref()
+                                            .and_then(|f| data.first().map(|r| f(r)))
+                                            .map(|v| !matches!(v, TanStackValue::String(_)))
+                                            .unwrap_or(false);
                                         let debug_test_id: Option<Arc<str>> =
                                             debug_header_cell_test_id_prefix.as_ref().map(
                                                 |prefix| {
@@ -1798,7 +1837,7 @@ where
                                                             layout.size.height = Length::Fill;
                                                             layout
                                                         },
-                                                        enabled: true,
+                                                        enabled,
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Button),
                                                             label: Some(label.clone()),
@@ -1808,20 +1847,91 @@ where
                                                         ..Default::default()
                                                     },
                                                     move |cx, _st| {
-                                                        cx.pressable_update_model(
-                                                            &state,
-                                                            move |st| {
-                                                                apply_single_sort_toggle(
-                                                                    st, &col_id,
-                                                                );
-                                                                st.pagination.page_index = 0;
-                                                            },
-                                                        );
+                                                        if enabled {
+                                                            let state_model_for_pointer =
+                                                                state.clone();
+                                                            let sort_toggle_column_for_pointer =
+                                                                sort_toggle_column.clone();
+                                                            let sort_options_for_pointer =
+                                                                sort_options.clone();
+                                                            cx.pressable_on_pointer_up(Arc::new(
+                                                                move |host, acx, up| {
+                                                                    if !up.is_click
+                                                                        || up.button
+                                                                            != fret_core::MouseButton::Left
+                                                                    {
+                                                                        return PressablePointerUpResult::Continue;
+                                                                    }
 
-                                                        let indicator: Arc<str> = match sort_state {
-                                                            None => Arc::from(""),
-                                                            Some(false) => Arc::from(" ▲"),
-                                                            Some(true) => Arc::from(" ▼"),
+                                                                    let multi =
+                                                                        up.modifiers.shift;
+                                                                    let _ = host.update_model(
+                                                                        &state_model_for_pointer,
+                                                                        |st| {
+                                                                            toggle_sorting_state_handler_tanstack(
+                                                                                &mut st.sorting,
+                                                                                &sort_toggle_column_for_pointer,
+                                                                                sort_options_for_pointer,
+                                                                                multi,
+                                                                                auto_sort_dir_desc,
+                                                                            );
+                                                                            st.pagination.page_index = 0;
+                                                                        },
+                                                                    );
+                                                                    host.notify(acx);
+                                                                    PressablePointerUpResult::SkipActivate
+                                                                },
+                                                            ));
+
+                                                            cx.pressable_update_model(
+                                                                &state,
+                                                                move |st| {
+                                                                    toggle_sorting_state_handler_tanstack(
+                                                                        &mut st.sorting,
+                                                                        &sort_toggle_column,
+                                                                        sort_options,
+                                                                        false,
+                                                                        auto_sort_dir_desc,
+                                                                    );
+                                                                    st.pagination.page_index = 0;
+                                                                },
+                                                            );
+                                                        }
+
+                                                        let header_text: Arc<str> = match sort_state
+                                                        {
+                                                            None => label.clone(),
+                                                            Some(desc) => {
+                                                                let order = if sorting_for_cell
+                                                                    .len()
+                                                                    > 1
+                                                                {
+                                                                    sorting_for_cell
+                                                                        .iter()
+                                                                        .position(|s| {
+                                                                            s.column.as_ref()
+                                                                                == col_id.as_ref()
+                                                                        })
+                                                                        .map(|v| v + 1)
+                                                                } else {
+                                                                    None
+                                                                };
+                                                                match order {
+                                                                    Some(order) => {
+                                                                        Arc::<str>::from(format!(
+                                                                            "{} {}{}",
+                                                                            label,
+                                                                            if desc { "▼" } else { "▲" },
+                                                                            order
+                                                                        ))
+                                                                    }
+                                                                    None => Arc::<str>::from(format!(
+                                                                        "{} {}",
+                                                                        label,
+                                                                        if desc { "▼" } else { "▲" }
+                                                                    )),
+                                                                }
+                                                            }
                                                         };
 
                                                         vec![cx.container(
@@ -1841,10 +1951,7 @@ where
                                                                 ..Default::default()
                                                             },
                                                             move |_cx| {
-                                                                vec![_cx.text(format!(
-                                                                    "{}{}",
-                                                                    label, indicator
-                                                                ))]
+                                                                vec![_cx.text(header_text.as_ref())]
                                                             },
                                                         )]
                                                     },
@@ -2901,12 +3008,12 @@ where
                             let mut children: Option<Vec<crate::headless::table::GroupedRowIndex>> =
                                 None;
 
-                            if let Some(spec) = sorting.first() {
+                            if !sorting.is_empty() {
                                 let mut owned = row.sub_rows.clone();
                                 sort_grouped_row_indices_in_place(
                                     model,
                                     &mut owned,
-                                    std::slice::from_ref(spec),
+                                    sorting,
                                     columns,
                                     data,
                                     row_index_by_key,

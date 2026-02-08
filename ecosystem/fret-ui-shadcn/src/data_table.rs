@@ -54,7 +54,7 @@ fn mixed_revision(a: u64, b: u64) -> u64 {
 ///
 /// Notes (v0):
 /// - row activation toggles selection by `RowKey` (flat tables; sub-row selection is deferred)
-/// - header activation toggles single-column sorting (multi-sort key modifiers are deferred)
+/// - header activation toggles sorting (Shift-click appends/toggles multi-sort, TanStack-style)
 #[derive(Debug, Clone)]
 pub struct DataTable {
     overscan: usize,
@@ -284,6 +284,7 @@ impl DataTable {
 
             let row_key_at = move |d: &TData, index: usize| (get_row_key)(d, index, None);
 
+            let state_for_header = state.clone();
             let columns = columns.clone();
             let state = state.clone();
             let data = data.clone();
@@ -304,6 +305,7 @@ impl DataTable {
                     let style = header_style.clone();
                     let header_fg = header_fg;
                     let sort_fg = sort_fg;
+                    let state_for_header = state_for_header.clone();
                     vec![cx.flex(
                         FlexProps {
                             layout: decl_style::layout_style(
@@ -311,7 +313,7 @@ impl DataTable {
                                 LayoutRefinement::default().w_full().h_full(),
                             ),
                             direction: Axis::Horizontal,
-                            gap: Px(0.0),
+                            gap: Px(2.0),
                             padding: Edges::all(Px(0.0)),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
@@ -335,8 +337,27 @@ impl DataTable {
                             }
 
                             if let Some(desc) = sort_state {
-                                let indicator: Arc<str> =
-                                    Arc::from(if desc { " ▼" } else { " ▲" });
+                                let sorting = cx
+                                    .app
+                                    .models()
+                                    .read(&state_for_header, |st| st.sorting.clone())
+                                    .ok()
+                                    .unwrap_or_default();
+                                let order = if sorting.len() > 1 {
+                                    sorting
+                                        .iter()
+                                        .position(|s| s.column.as_ref() == col.id.as_ref())
+                                        .map(|idx| idx + 1)
+                                } else {
+                                    None
+                                };
+                                let indicator: Arc<str> = match order {
+                                    Some(order) => Arc::<str>::from(format!(
+                                        "{}{order}",
+                                        if desc { "▼" } else { "▲" }
+                                    )),
+                                    None => Arc::from(if desc { "▼" } else { "▲" }),
+                                };
                                 let mut text = ui::label(cx, indicator)
                                     .text_size_px(style.size)
                                     .font_weight(style.weight)

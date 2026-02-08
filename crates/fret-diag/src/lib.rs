@@ -2632,6 +2632,12 @@ See: `docs/tracy.md`.\n";
                                     "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
                                 ),
                             ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
+                                ),
+                            ),
                         ],
                         Some(BuiltinSuite::UiGallery),
                     )
