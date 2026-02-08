@@ -4,309 +4,25 @@ use std::{
     collections::HashSet,
     marker::PhantomData,
     panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind},
-    rc::{Rc, Weak},
+    rc::Rc,
 };
 
 use slotmap::SlotMap;
 
-slotmap::new_key_type! {
-    pub struct ModelId;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ModelCreatedDebugInfo {
-    pub type_name: &'static str,
-    pub file: &'static str,
-    pub line: u32,
-    pub column: u32,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct ModelChangedDebugInfo {
-    pub type_name: &'static str,
-    pub file: &'static str,
-    pub line: u32,
-    pub column: u32,
-}
-
-/// A reference-counted handle to a typed model stored in a [`ModelStore`].
-///
-/// This is intentionally gpui-like (`Entity<T>`):
-/// - `Model<T>` is a strong handle (cloning increments a per-model strong count).
-/// - `WeakModel<T>` can be upgraded back to `Model<T>` if the model is still alive.
-/// - When the last strong handle is dropped, the model is removed from the store.
-pub struct Model<T> {
-    store: ModelStore,
-    id: ModelId,
-    _phantom: PhantomData<fn() -> T>,
-}
-
-impl<T> Model<T> {
-    pub fn id(&self) -> ModelId {
-        self.id
-    }
-
-    pub fn downgrade(&self) -> WeakModel<T> {
-        WeakModel {
-            store: Rc::downgrade(&self.store.inner),
-            id: self.id,
-            _phantom: PhantomData,
-        }
-    }
-
-    pub fn read<H: ModelHost, R>(
-        &self,
-        host: &mut H,
-        f: impl FnOnce(&mut H, &T) -> R,
-    ) -> Result<R, ModelUpdateError>
-    where
-        T: Any,
-    {
-        host.read(self, f)
-    }
-
-    #[track_caller]
-    pub fn update<H: ModelHost, R>(
-        &self,
-        host: &mut H,
-        f: impl FnOnce(&mut T, &mut ModelCx<'_, H>) -> R,
-    ) -> Result<R, ModelUpdateError>
-    where
-        T: Any,
-    {
-        let changed_at = Location::caller();
-
-        let mut lease = host.models_mut().lease(self)?;
-        let result = if cfg!(panic = "unwind") {
-            catch_unwind(AssertUnwindSafe(|| {
-                let mut cx = ModelCx { host };
-                f(lease.value_mut(), &mut cx)
-            }))
-        } else {
-            Ok({
-                let mut cx = ModelCx { host };
-                f(lease.value_mut(), &mut cx)
-            })
-        };
-
-        match result {
-            Ok(value) => {
-                lease.mark_dirty();
-                host.models_mut()
-                    .end_lease_with_changed_at(&mut lease, changed_at);
-                Ok(value)
-            }
-            Err(panic) => {
-                host.models_mut().end_lease(&mut lease);
-                resume_unwind(panic)
-            }
-        }
-    }
-
-    pub fn revision<H: ModelHost>(&self, host: &H) -> Option<u64>
-    where
-        T: Any,
-    {
-        host.model_revision(self)
-    }
-
-    #[track_caller]
-    pub fn notify<H: ModelHost>(&self, host: &mut H) -> Result<(), ModelUpdateError>
-    where
-        T: Any,
-    {
-        host.models_mut()
-            .notify_with_changed_at(self, Location::caller())
-    }
-
-    pub fn read_ref<H: ModelHost, R>(
-        &self,
-        host: &H,
-        f: impl FnOnce(&T) -> R,
-    ) -> Result<R, ModelUpdateError>
-    where
-        T: Any,
-    {
-        host.models().read(self, f)
-    }
-}
-
-impl<T> std::fmt::Debug for Model<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Model").field("id", &self.id).finish()
-    }
-}
-
-impl<T> PartialEq for Model<T> {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.store.inner, &other.store.inner) && self.id == other.id
-    }
-}
-
-impl<T> Eq for Model<T> {}
-
-impl<T> std::hash::Hash for Model<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (Rc::as_ptr(&self.store.inner) as usize).hash(state);
-        self.id.hash(state);
-    }
-}
-
-impl<T> Clone for Model<T> {
-    fn clone(&self) -> Self {
-        self.store.inc_strong(self.id);
-        Self {
-            store: self.store.clone(),
-            id: self.id,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<T> Drop for Model<T> {
-    fn drop(&mut self) {
-        self.store.dec_strong(self.id);
-    }
-}
-
-pub struct WeakModel<T> {
-    store: Weak<ModelStoreInner>,
-    id: ModelId,
-    _phantom: PhantomData<fn() -> T>,
-}
-
-impl<T> std::fmt::Debug for WeakModel<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WeakModel").field("id", &self.id).finish()
-    }
-}
-
-impl<T> PartialEq for WeakModel<T> {
-    fn eq(&self, other: &Self) -> bool {
-        Weak::ptr_eq(&self.store, &other.store) && self.id == other.id
-    }
-}
-
-impl<T> Eq for WeakModel<T> {}
-
-impl<T> std::hash::Hash for WeakModel<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (Weak::as_ptr(&self.store) as usize).hash(state);
-        self.id.hash(state);
-    }
-}
-
-impl<T> Clone for WeakModel<T> {
-    fn clone(&self) -> Self {
-        Self {
-            store: self.store.clone(),
-            id: self.id,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl<T> WeakModel<T> {
-    pub fn id(&self) -> ModelId {
-        self.id
-    }
-
-    pub fn upgrade(&self) -> Option<Model<T>> {
-        let store = ModelStore {
-            inner: self.store.upgrade()?,
-            _not_send: PhantomData,
-        };
-        store.upgrade_strong(self.id).then(|| Model {
-            store,
-            id: self.id,
-            _phantom: PhantomData,
-        })
-    }
-}
-
-pub struct ModelCx<'a, H: ModelHost + ?Sized> {
-    host: &'a mut H,
-}
-
-impl<'a, H: ModelHost + ?Sized> ModelCx<'a, H> {
-    pub fn app(&mut self) -> &mut H {
-        self.host
-    }
-}
-
-pub trait ModelHost {
-    fn models(&self) -> &ModelStore;
-    fn models_mut(&mut self) -> &mut ModelStore;
-
-    fn read<T: Any, R>(
-        &mut self,
-        model: &Model<T>,
-        f: impl FnOnce(&mut Self, &T) -> R,
-    ) -> Result<R, ModelUpdateError> {
-        let mut lease = self.models_mut().lease(model)?;
-        let result = if cfg!(panic = "unwind") {
-            catch_unwind(AssertUnwindSafe(|| f(self, lease.value_ref())))
-        } else {
-            Ok(f(self, lease.value_ref()))
-        };
-
-        self.models_mut().end_lease(&mut lease);
-
-        match result {
-            Ok(value) => Ok(value),
-            Err(panic) => resume_unwind(panic),
-        }
-    }
-
-    fn model_revision<T: Any>(&self, model: &Model<T>) -> Option<u64> {
-        self.models().revision(model)
-    }
-
-    #[track_caller]
-    fn update_model<T: Any, R>(
-        &mut self,
-        model: &Model<T>,
-        f: impl FnOnce(&mut T, &mut ModelCx<'_, Self>) -> R,
-    ) -> Result<R, ModelUpdateError> {
-        let changed_at = Location::caller();
-
-        let mut lease = self.models_mut().lease(model)?;
-        let result = if cfg!(panic = "unwind") {
-            catch_unwind(AssertUnwindSafe(|| {
-                let mut cx = ModelCx { host: self };
-                f(lease.value_mut(), &mut cx)
-            }))
-        } else {
-            Ok({
-                let mut cx = ModelCx { host: self };
-                f(lease.value_mut(), &mut cx)
-            })
-        };
-
-        match result {
-            Ok(value) => {
-                lease.mark_dirty();
-                self.models_mut()
-                    .end_lease_with_changed_at(&mut lease, changed_at);
-                Ok(value)
-            }
-            Err(panic) => {
-                self.models_mut().end_lease(&mut lease);
-                resume_unwind(panic)
-            }
-        }
-    }
-}
+use super::ModelId;
+use super::debug::{ModelChangedDebugInfo, ModelCreatedDebugInfo};
+use super::error::ModelUpdateError;
+use super::handle::Model;
 
 pub struct ModelStore {
-    inner: Rc<ModelStoreInner>,
+    pub(super) inner: Rc<ModelStoreInner>,
     // Models are main-thread only. Enforce this at compile time by making the store (and all
     // derived handles) `!Send` + `!Sync`.
-    _not_send: PhantomData<std::rc::Rc<()>>,
+    pub(super) _not_send: PhantomData<std::rc::Rc<()>>,
 }
 
 #[derive(Default)]
-struct ModelStoreInner {
+pub(super) struct ModelStoreInner {
     state: RefCell<ModelStoreState>,
 }
 
@@ -336,13 +52,6 @@ struct ModelEntry {
     last_changed_type: Option<&'static str>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModelUpdateError {
-    NotFound,
-    AlreadyLeased,
-    TypeMismatch,
-}
-
 pub struct ModelLease<T: Any> {
     id: ModelId,
     value: Option<Box<T>>,
@@ -350,19 +59,19 @@ pub struct ModelLease<T: Any> {
 }
 
 impl<T: Any> ModelLease<T> {
-    fn value_ref(&self) -> &T {
+    pub(super) fn value_ref(&self) -> &T {
         self.value
             .as_deref()
             .expect("leased model must contain a value")
     }
 
-    fn value_mut(&mut self) -> &mut T {
+    pub(super) fn value_mut(&mut self) -> &mut T {
         self.value
             .as_deref_mut()
             .expect("leased model must contain a value")
     }
 
-    fn mark_dirty(&mut self) {
+    pub(super) fn mark_dirty(&mut self) {
         self.dirty = true;
     }
 }
@@ -510,7 +219,7 @@ impl ModelStore {
         }
     }
 
-    fn inc_strong(&self, id: ModelId) {
+    pub(super) fn inc_strong(&self, id: ModelId) {
         let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
             return;
@@ -518,7 +227,7 @@ impl ModelStore {
         entry.strong = entry.strong.saturating_add(1);
     }
 
-    fn dec_strong(&self, id: ModelId) {
+    pub(super) fn dec_strong(&self, id: ModelId) {
         // IMPORTANT: do not drop removed values while holding a store borrow.
         //
         // Model values may themselves contain `Model<_>` handles (e.g. composite component state),
@@ -548,7 +257,7 @@ impl ModelStore {
         drop(removed);
     }
 
-    fn upgrade_strong(&self, id: ModelId) -> bool {
+    pub(super) fn upgrade_strong(&self, id: ModelId) -> bool {
         let mut state = self.state_mut();
         let Some(entry) = state.storage.get_mut(id) else {
             return false;
@@ -598,11 +307,7 @@ impl ModelStore {
             #[cfg(debug_assertions)]
             last_changed_type: None,
         });
-        Model {
-            store: self.clone(),
-            id,
-            _phantom: PhantomData,
-        }
+        Model::from_store_id(self.clone(), id)
     }
 
     pub fn read<T: Any, R>(
@@ -636,24 +341,24 @@ impl ModelStore {
             Err(ModelUpdateError::NotFound) => None,
             Err(ModelUpdateError::AlreadyLeased) => {
                 #[cfg(debug_assertions)]
-                if let Some((ty, at)) = self.debug_lease_info(model.id) {
+                if let Some((ty, at)) = self.debug_lease_info(model.id()) {
                     panic!(
                         "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
-                        model.id,
+                        model.id(),
                         ty,
                         at.file(),
                         at.line(),
                         at.column()
                     );
                 }
-                panic!("model is currently leased: id={:?}", model.id);
+                panic!("model is currently leased: id={:?}", model.id());
             }
             Err(ModelUpdateError::TypeMismatch) => {
                 #[cfg(debug_assertions)]
-                if let Some((stored, at)) = self.debug_created_info(model.id) {
+                if let Some((stored, at)) = self.debug_created_info(model.id()) {
                     panic!(
                         "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
-                        model.id,
+                        model.id(),
                         stored,
                         at.file(),
                         at.line(),
@@ -661,7 +366,7 @@ impl ModelStore {
                         std::any::type_name::<T>()
                     );
                 }
-                panic!("model type mismatch: id={:?}", model.id);
+                panic!("model type mismatch: id={:?}", model.id());
             }
         }
     }
@@ -672,24 +377,24 @@ impl ModelStore {
             Err(ModelUpdateError::NotFound) => None,
             Err(ModelUpdateError::AlreadyLeased) => {
                 #[cfg(debug_assertions)]
-                if let Some((ty, at)) = self.debug_lease_info(model.id) {
+                if let Some((ty, at)) = self.debug_lease_info(model.id()) {
                     panic!(
                         "model is currently leased: id={:?} type={} leased_at={}:{}:{}",
-                        model.id,
+                        model.id(),
                         ty,
                         at.file(),
                         at.line(),
                         at.column()
                     );
                 }
-                panic!("model is currently leased: id={:?}", model.id);
+                panic!("model is currently leased: id={:?}", model.id());
             }
             Err(ModelUpdateError::TypeMismatch) => {
                 #[cfg(debug_assertions)]
-                if let Some((stored, at)) = self.debug_created_info(model.id) {
+                if let Some((stored, at)) = self.debug_created_info(model.id()) {
                     panic!(
                         "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={}",
-                        model.id,
+                        model.id(),
                         stored,
                         at.file(),
                         at.line(),
@@ -697,14 +402,14 @@ impl ModelStore {
                         std::any::type_name::<T>()
                     );
                 }
-                panic!("model type mismatch: id={:?}", model.id);
+                panic!("model type mismatch: id={:?}", model.id());
             }
         }
     }
 
     pub fn revision<T: Any>(&self, model: &Model<T>) -> Option<u64> {
         let state = self.state();
-        state.storage.get(model.id).map(|e| e.revision)
+        state.storage.get(model.id()).map(|e| e.revision)
     }
 
     #[track_caller]
@@ -771,7 +476,7 @@ impl ModelStore {
             let mut state = self.state_mut();
             let entry = state
                 .storage
-                .get_mut(model.id)
+                .get_mut(model.id())
                 .ok_or(ModelUpdateError::NotFound)?;
             if entry.strong == 0 {
                 return Err(ModelUpdateError::NotFound);
@@ -793,7 +498,7 @@ impl ModelStore {
                         if let Some(leased_at) = entry.leased_at {
                             eprintln!(
                                 "model already leased: id={:?} type={} leased_at={}:{}:{} attempted_at={}:{}:{}",
-                                model.id,
+                                model.id(),
                                 leased_type,
                                 leased_at.file(),
                                 leased_at.line(),
@@ -805,7 +510,7 @@ impl ModelStore {
                         } else {
                             eprintln!(
                                 "model already leased: id={:?} type={} attempted_at={}:{}:{} (lease origin unknown)",
-                                model.id,
+                                model.id(),
                                 leased_type,
                                 caller.file(),
                                 caller.line(),
@@ -820,7 +525,7 @@ impl ModelStore {
 
         match boxed.downcast::<T>() {
             Ok(value) => Ok(ModelLease {
-                id: model.id,
+                id: model.id(),
                 value: Some(value),
                 dirty: false,
             }),
@@ -828,10 +533,10 @@ impl ModelStore {
                 #[cfg(debug_assertions)]
                 {
                     let state = self.state();
-                    if let Some(entry) = state.storage.get(model.id) {
+                    if let Some(entry) = state.storage.get(model.id()) {
                         eprintln!(
                             "model type mismatch: id={:?} stored_type={} stored_at={}:{}:{} expected_type={} attempted_at={}:{}:{}",
-                            model.id,
+                            model.id(),
                             entry.created_type,
                             entry.created_at.file(),
                             entry.created_at.line(),
@@ -845,7 +550,7 @@ impl ModelStore {
                 }
 
                 let mut state = self.state_mut();
-                if let Some(entry) = state.storage.get_mut(model.id)
+                if let Some(entry) = state.storage.get_mut(model.id())
                     && entry.value.is_none()
                 {
                     entry.value = Some(boxed);
@@ -1045,7 +750,7 @@ impl ModelStore {
         model: &Model<T>,
         changed_at: &'static Location<'static>,
     ) -> Result<(), ModelUpdateError> {
-        let id = model.id;
+        let id = model.id();
 
         let mut state = self.state_mut();
         {
@@ -1100,6 +805,7 @@ impl Default for ModelStore {
 
 #[cfg(test)]
 mod tests {
+    use super::super::{Model, ModelUpdateError};
     use super::*;
 
     #[cfg(debug_assertions)]
