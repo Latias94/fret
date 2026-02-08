@@ -14,25 +14,28 @@ Status legend:
 
 ## Phase 0 - Decisions and scope
 
-- `[ ]` Confirm crate location and dependencies:
+- `[x]` Confirm crate location and dependencies:
   - new crate `ecosystem/fret-router-ui`
   - depends on `fret-router` + `fret-ui`
   - optional `fret-query` integration via feature
 
 ## Phase 1 - Store + snapshot
 
-- `[ ]` Add `RouterUiSnapshot<R>` (portable struct for UI observation).
-- `[ ]` Add `RouterUiStore<R, H>`:
+- `[x]` Add `RouterUiSnapshot<R>` (portable struct for UI observation).
+- `[x]` Add `RouterUiStore<R, H>`:
   - owns `Router<R, H>`
   - owns `Model<RouterUiSnapshot<R>>`
   - exposes `navigate_*` / `sync_*` returning update-scoped intents
-- `[ ]` Add unit tests:
+- `[x]` Add unit tests:
   - model snapshot updates when router changes
   - init prefetch (`init_with_prefetch_intents`) updates snapshot/intents as expected
 
 ## Phase 2 - Outlet
 
-- `[ ]` Add `RouterOutlet` element:
+- `[x]` Add match-chain helpers on `RouterUiSnapshot`:
+  - `leaf_match()` / `leaf_route()`
+- `[x]` Add an outlet-style helper (`router_outlet`) for reading the snapshot model with deterministic invalidation.
+- `[ ]` Add a `RouterOutlet` element wrapper (optional sugar):
   - renders by leaf route id (match chain)
   - supports a `NotFound` fallback
 - `[ ]` Add diagnostics hooks:
@@ -50,8 +53,7 @@ Status legend:
 
 ## Phase 4 - App adoption
 
-- `[ ]` Adopt in one desktop app:
+- `[x]` Adopt in one desktop app:
   - show match-driven outlet rendering
   - show typed navigation via `navigate_to_*` + typed search helpers
 - `[ ]` Add a `fretboard diag` script for a basic navigation flow.
-

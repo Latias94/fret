@@ -65,6 +65,7 @@ Target shape (names subject to change):
   - `fn router_mut(&mut self) -> &mut Router<R, H>`
   - `fn navigate_*` helpers that update the snapshot model and return update-scoped intents
   - `fn sync_*` helpers for external history changes (desktop: rarely; web: popstate)
+  - requests `app.request_redraw(window)` when updates change router state
 
 ### 2) Outlet-style rendering
 
@@ -76,6 +77,12 @@ Provide a UI primitive that renders based on the current match chain:
   - supports a `NotFound` fallback
 
 Goal: authoring code can stay declarative and match-driven rather than stringly.
+
+As an initial step, `fret-router-ui` can also expose a lightweight helper:
+
+- `router_outlet(cx, &Model<RouterUiSnapshot<R>>, |cx, snap| -> AnyElement { ... })`
+  - reads the snapshot model with deterministic invalidation
+  - delegates match-driven rendering to the caller
 
 ### 3) Link-style navigation helpers (desktop)
 
@@ -102,4 +109,3 @@ Apps can map these to their own command IDs and menus.
 
 - `ecosystem/fret-router-ui/src/lib.rs` (store + outlet/link primitives)
 - `apps/*` (at least one desktop app adopts `RouterOutlet` + typed navigation)
-
