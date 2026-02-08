@@ -397,9 +397,13 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) view_cache_contained_relayouts: u32,
     pub(super) view_cache_roots_total: u32,
     pub(super) view_cache_roots_reused: u32,
+    pub(super) view_cache_roots_first_mount: u32,
+    pub(super) view_cache_roots_node_recreated: u32,
     pub(super) view_cache_roots_cache_key_mismatch: u32,
+    pub(super) view_cache_roots_not_marked_reuse_root: u32,
     pub(super) view_cache_roots_needs_rerender: u32,
     pub(super) view_cache_roots_layout_invalidated: u32,
+    pub(super) view_cache_roots_manual: u32,
     pub(super) set_children_barrier_writes: u32,
     pub(super) barrier_relayouts_scheduled: u32,
     pub(super) barrier_relayouts_performed: u32,
@@ -7902,11 +7906,27 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let view_cache_roots_first_mount = stats
+                .and_then(|m| m.get("view_cache_roots_first_mount"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_node_recreated = stats
+                .and_then(|m| m.get("view_cache_roots_node_recreated"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
             let view_cache_roots_cache_key_mismatch = stats
                 .and_then(|m| m.get("view_cache_roots_cache_key_mismatch"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let view_cache_roots_not_marked_reuse_root = stats
+                .and_then(|m| m.get("view_cache_roots_not_marked_reuse_root"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let view_cache_roots_needs_rerender = stats
                 .and_then(|m| m.get("view_cache_roots_needs_rerender"))
                 .and_then(|v| v.as_u64())
@@ -7914,6 +7934,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .min(u32::MAX as u64) as u32;
             let view_cache_roots_layout_invalidated = stats
                 .and_then(|m| m.get("view_cache_roots_layout_invalidated"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_manual = stats
+                .and_then(|m| m.get("view_cache_roots_manual"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
@@ -8388,9 +8413,13 @@ pub(super) fn bundle_stats_from_json_with_options(
                 view_cache_contained_relayouts,
                 view_cache_roots_total,
                 view_cache_roots_reused,
+                view_cache_roots_first_mount,
+                view_cache_roots_node_recreated,
                 view_cache_roots_cache_key_mismatch,
+                view_cache_roots_not_marked_reuse_root,
                 view_cache_roots_needs_rerender,
                 view_cache_roots_layout_invalidated,
+                view_cache_roots_manual,
                 set_children_barrier_writes,
                 barrier_relayouts_scheduled,
                 barrier_relayouts_performed,

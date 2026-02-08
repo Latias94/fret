@@ -3645,14 +3645,23 @@ See: `docs/tracy.md`.\n";
                             top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                         let top_view_cache_roots_reused =
                             top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                        let top_view_cache_roots_first_mount =
+                            top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                        let top_view_cache_roots_node_recreated =
+                            top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                         let top_view_cache_roots_cache_key_mismatch = top
                             .map(|r| r.view_cache_roots_cache_key_mismatch)
+                            .unwrap_or(0);
+                        let top_view_cache_roots_not_marked_reuse_root = top
+                            .map(|r| r.view_cache_roots_not_marked_reuse_root)
                             .unwrap_or(0);
                         let top_view_cache_roots_needs_rerender =
                             top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                         let top_view_cache_roots_layout_invalidated = top
                             .map(|r| r.view_cache_roots_layout_invalidated)
                             .unwrap_or(0);
+                        let top_view_cache_roots_manual =
+                            top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                         let top_paint_cache_hit_test_only_replay_allowed = top
                             .map(|r| r.paint_cache_hit_test_only_replay_allowed)
                             .unwrap_or(0);
@@ -3707,9 +3716,13 @@ See: `docs/tracy.md`.\n";
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                                 "top_view_cache_roots_total": top_view_cache_roots_total,
                                 "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                                "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                                "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                                 "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                                "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                                 "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                                 "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                                "top_view_cache_roots_manual": top_view_cache_roots_manual,
                                 "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
                                 "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                                 "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
@@ -4095,14 +4108,23 @@ See: `docs/tracy.md`.\n";
                         top.map(|r| r.view_cache_roots_total).unwrap_or(0);
                     let top_view_cache_roots_reused =
                         top.map(|r| r.view_cache_roots_reused).unwrap_or(0);
+                    let top_view_cache_roots_first_mount =
+                        top.map(|r| r.view_cache_roots_first_mount).unwrap_or(0);
+                    let top_view_cache_roots_node_recreated =
+                        top.map(|r| r.view_cache_roots_node_recreated).unwrap_or(0);
                     let top_view_cache_roots_cache_key_mismatch = top
                         .map(|r| r.view_cache_roots_cache_key_mismatch)
+                        .unwrap_or(0);
+                    let top_view_cache_roots_not_marked_reuse_root = top
+                        .map(|r| r.view_cache_roots_not_marked_reuse_root)
                         .unwrap_or(0);
                     let top_view_cache_roots_needs_rerender =
                         top.map(|r| r.view_cache_roots_needs_rerender).unwrap_or(0);
                     let top_view_cache_roots_layout_invalidated = top
                         .map(|r| r.view_cache_roots_layout_invalidated)
                         .unwrap_or(0);
+                    let top_view_cache_roots_manual =
+                        top.map(|r| r.view_cache_roots_manual).unwrap_or(0);
                     let top_paint_cache_hit_test_only_replay_allowed = top
                         .map(|r| r.paint_cache_hit_test_only_replay_allowed)
                         .unwrap_or(0);
@@ -4237,9 +4259,13 @@ See: `docs/tracy.md`.\n";
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
                         "top_view_cache_roots_total": top_view_cache_roots_total,
                         "top_view_cache_roots_reused": top_view_cache_roots_reused,
+                        "top_view_cache_roots_first_mount": top_view_cache_roots_first_mount,
+                        "top_view_cache_roots_node_recreated": top_view_cache_roots_node_recreated,
                         "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
+                        "top_view_cache_roots_not_marked_reuse_root": top_view_cache_roots_not_marked_reuse_root,
                         "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                         "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                        "top_view_cache_roots_manual": top_view_cache_roots_manual,
                         "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
                         "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                         "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
