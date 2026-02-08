@@ -29,7 +29,7 @@ Template for per-crate notes:
 | `fret-render-wgpu` | L0 | `docs/workstreams/crate-audits/fret-render-wgpu.l0.md` |
 | `fret-render` | L0 | `docs/workstreams/crate-audits/fret-render.l0.md` |
 | `fret-platform` | L0 | `docs/workstreams/crate-audits/fret-platform.l0.md` |
-| `fret-platform-native` | Not started | |
+| `fret-platform-native` | L0 | `docs/workstreams/crate-audits/fret-platform-native.l0.md` |
 | `fret-platform-web` | Not started | |
 | `fret-runner-winit` | Not started | |
 | `fret-runner-web` | Not started | |
