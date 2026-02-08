@@ -21,7 +21,7 @@ Template for per-crate notes:
 
 | crate | status | note |
 | --- | --- | --- |
-| `fret-core` | L0 | `docs/workstreams/crate-audits/fret-core.l0.md` |
+| `fret-core` | L1 | `docs/workstreams/crate-audits/fret-core.l1.md` |
 | `fret-runtime` | L0 | `docs/workstreams/crate-audits/fret-runtime.l0.md` |
 | `fret-app` | L0 | `docs/workstreams/crate-audits/fret-app.l0.md` |
 | `fret-ui` | L0 | `docs/workstreams/crate-audits/fret-ui.l0.md` |
