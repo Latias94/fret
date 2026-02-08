@@ -132,6 +132,9 @@ string assembly logic. In v1, prefer a lightweight helper that:
 - runs the per-route search validation chain (root -> leaf) to apply defaults
 - returns a canonical `RouteLocation` suitable for navigation + query keying
 
+For link rendering (web, diagnostics, and copy/paste), prefer `Router::href_to(...)` which wraps
+`build_location(...)` and formats the canonical URL string.
+
 ### Transitions
 
 Standardize a transition snapshot (portable; diagnostics-friendly):
