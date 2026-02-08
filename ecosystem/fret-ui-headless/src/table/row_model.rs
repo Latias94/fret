@@ -1977,6 +1977,65 @@ impl<'a, TData> Table<'a, TData> {
         (order.clone(), recomputed)
     }
 
+    /// Returns the final **ungrouped** row-model ordering (rows + flatRows) with a persistent
+    /// external memo cache.
+    ///
+    /// This helper exists to support "rebuild each frame" callers: they can rebuild a fresh
+    /// `Table` every frame while keeping a persistent memo cache (TanStack-style) outside the
+    /// ephemeral instance.
+    ///
+    /// Returns `None` when grouping is active, since grouped row models contain non-core rows (group
+    /// headers) whose stable-key strategy is a separate concern.
+    pub fn tanstack_ungrouped_row_model_order_with_cache(
+        &self,
+        items_revision: u64,
+        cache: &mut super::TanStackUngroupedRowModelOrderCache,
+    ) -> Option<(Arc<super::TanStackRowModelOrderSnapshot>, bool)> {
+        if !self.state.grouping.is_empty() && !self.options.manual_grouping {
+            return None;
+        }
+
+        let deps = super::TanStackUngroupedRowModelOrderDeps {
+            items_revision,
+            data_len: self.data.len(),
+            sorting: self.state.sorting.clone(),
+            column_filters: self.state.column_filters.clone(),
+            global_filter: self.state.global_filter.clone(),
+            expanding: self.state.expanding.clone(),
+            pagination: self.state.pagination,
+            options: self.options,
+            global_filter_fn: self.global_filter_fn.clone(),
+            has_get_column_can_global_filter: self.get_column_can_global_filter.is_some(),
+        };
+
+        debug_assert_eq!(deps.data_len, self.data.len());
+        debug_assert_eq!(
+            deps.has_get_column_can_global_filter,
+            self.get_column_can_global_filter.is_some()
+        );
+
+        let signature = super::tanstack_memo::columns_signature(&self.columns);
+        let (value, recomputed) = cache.ungrouped_order(signature, deps, || {
+            let model = self.row_model();
+            let rows: Vec<super::RowKey> = model
+                .root_rows()
+                .iter()
+                .filter_map(|&i| model.row(i).map(|r| r.key))
+                .collect();
+            let flat_rows: Vec<super::RowKey> = model
+                .flat_rows()
+                .iter()
+                .filter_map(|&i| model.row(i).map(|r| r.key))
+                .collect();
+            super::TanStackRowModelOrderSnapshot {
+                rows: Arc::from(rows.into_boxed_slice()),
+                flat_rows: Arc::from(flat_rows.into_boxed_slice()),
+            }
+        });
+
+        Some((value.clone(), recomputed))
+    }
+
     /// TanStack-aligned: `column.getCanSort()`.
     pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
         let col = self.column(column_id)?;

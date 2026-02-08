@@ -8,6 +8,20 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct TanStackUngroupedRowModelOrderDeps {
+    pub items_revision: u64,
+    pub data_len: usize,
+    pub sorting: Vec<SortSpec>,
+    pub column_filters: super::ColumnFiltersState,
+    pub global_filter: GlobalFilterState,
+    pub expanding: super::ExpandingState,
+    pub pagination: super::PaginationState,
+    pub options: TableOptions,
+    pub global_filter_fn: FilteringFnSpec,
+    pub has_get_column_can_global_filter: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct TanStackFilteredFlatRowOrderDeps {
     pub items_revision: u64,
     pub data_len: usize,
@@ -34,6 +48,57 @@ pub struct TanStackSortedFlatRowOrderDeps {
 pub struct FlatRowOrderEntry {
     pub index: usize,
     pub key: RowKey,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TanStackRowModelOrderSnapshot {
+    /// TanStack `getRowModel().rows` equivalent (in Fret's row model shape: `root_rows` keys).
+    pub rows: Arc<[RowKey]>,
+    /// TanStack `getRowModel().flatRows` equivalent (Fret: `flat_rows` keys).
+    pub flat_rows: Arc<[RowKey]>,
+}
+
+#[derive(Default)]
+pub struct TanStackUngroupedRowModelOrderCache {
+    memo: Memo<(u64, TanStackUngroupedRowModelOrderDeps), Arc<TanStackRowModelOrderSnapshot>>,
+    columns_signature: u64,
+    recompute_count: u64,
+}
+
+impl TanStackUngroupedRowModelOrderCache {
+    pub fn recompute_count(&self) -> u64 {
+        self.recompute_count
+    }
+
+    /// Returns a stable, memoized snapshot of the final **ungrouped** row model ordering.
+    ///
+    /// This cache is designed for "rebuild each frame" callers: keep it outside ephemeral table
+    /// instances, and drive invalidation via `deps` (plus `items_revision`).
+    ///
+    /// Notes:
+    /// - This is intentionally scoped to the **ungrouped** pipeline (`state.grouping.is_empty()`).
+    ///   Grouped row models introduce non-core rows (group headers) whose keys are not stable across
+    ///   consumer-defined rebuild strategies; that will be covered by a separate cache surface.
+    pub fn ungrouped_order(
+        &mut self,
+        columns_signature: u64,
+        deps: TanStackUngroupedRowModelOrderDeps,
+        compute: impl FnOnce() -> TanStackRowModelOrderSnapshot,
+    ) -> (&Arc<TanStackRowModelOrderSnapshot>, bool) {
+        if columns_signature != self.columns_signature {
+            self.columns_signature = columns_signature;
+            self.memo.reset();
+        }
+
+        let sig_and_deps = (columns_signature, deps);
+        let (value, recomputed) =
+            self.memo
+                .get_or_compute(sig_and_deps, || Arc::new(compute()));
+        if recomputed {
+            self.recompute_count = self.recompute_count.saturating_add(1);
+        }
+        (value, recomputed)
+    }
 }
 
 #[derive(Default)]
@@ -132,7 +197,7 @@ impl TanStackSortedFlatRowOrderCache {
     }
 }
 
-fn columns_signature<TData>(columns: &[ColumnDef<TData>]) -> u64 {
+pub(crate) fn columns_signature<TData>(columns: &[ColumnDef<TData>]) -> u64 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 

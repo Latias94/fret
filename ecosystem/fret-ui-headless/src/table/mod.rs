@@ -112,6 +112,8 @@ pub use sorting::{
 pub use state::TableState;
 pub use tanstack_memo::{
     FlatRowOrderEntry, TanStackSortedFlatRowOrderCache, TanStackSortedFlatRowOrderDeps,
+    TanStackRowModelOrderSnapshot, TanStackUngroupedRowModelOrderCache,
+    TanStackUngroupedRowModelOrderDeps,
 };
 pub use tanstack_options::TanStackTableOptions;
 pub use tanstack_state::{
