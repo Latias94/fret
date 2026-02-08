@@ -19,6 +19,25 @@ pub struct RoutePrefetchIntent<R> {
     pub extra: Option<&'static str>,
 }
 
+#[derive(Debug, Clone)]
+pub enum RouterBuildLocationError {
+    UnknownRoute,
+    MissingPathParams,
+    SearchValidation(RouteSearchValidationFailure),
+}
+
+impl std::fmt::Display for RouterBuildLocationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UnknownRoute => f.write_str("unknown route"),
+            Self::MissingPathParams => f.write_str("missing path params"),
+            Self::SearchValidation(err) => err.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for RouterBuildLocationError {}
+
 pub trait HistoryAdapter {
     fn current(&self) -> &RouteLocation;
     fn refresh(&mut self) {}
@@ -343,6 +362,119 @@ where
     R: Clone + Hash + Eq,
     H: HistoryAdapter,
 {
+    fn route_chain_nodes<'a>(
+        node: &'a crate::RouteNode<R>,
+        target: &R,
+        out: &mut Vec<&'a crate::RouteNode<R>>,
+    ) -> bool {
+        out.push(node);
+        if &node.route == target {
+            return true;
+        }
+
+        for child in &node.children {
+            if Self::route_chain_nodes(child, target, out) {
+                return true;
+            }
+        }
+
+        out.pop();
+        false
+    }
+
+    fn build_path_for_chain(
+        chain: &[&crate::RouteNode<R>],
+        params: &[crate::PathParam],
+        matched_paths_out: &mut Vec<String>,
+    ) -> Result<String, RouterBuildLocationError> {
+        let mut segments: Vec<String> = Vec::new();
+        matched_paths_out.clear();
+
+        for node in chain {
+            let formatted = node
+                .pattern
+                .format_path(params)
+                .ok_or(RouterBuildLocationError::MissingPathParams)?;
+            for seg in formatted.split('/').filter(|seg| !seg.is_empty()) {
+                segments.push(seg.to_string());
+            }
+
+            let matched = if segments.is_empty() {
+                "/".to_string()
+            } else {
+                format!("/{}", segments.join("/"))
+            };
+            matched_paths_out.push(matched);
+        }
+
+        Ok(if segments.is_empty() {
+            "/".to_string()
+        } else {
+            format!("/{}", segments.join("/"))
+        })
+    }
+
+    pub fn build_location(
+        &self,
+        route: &R,
+        params: &[crate::PathParam],
+        search: crate::SearchMap,
+        fragment: Option<String>,
+    ) -> Result<RouteLocation, RouterBuildLocationError> {
+        let mut chain: Vec<&crate::RouteNode<R>> = Vec::new();
+        if !Self::route_chain_nodes(&self.tree.root, route, &mut chain) {
+            return Err(RouterBuildLocationError::UnknownRoute);
+        }
+
+        let mut matched_paths: Vec<String> = Vec::with_capacity(chain.len());
+        let path = Self::build_path_for_chain(&chain, params, &mut matched_paths)?;
+
+        let mut location = RouteLocation {
+            path,
+            query: search.into_pairs(),
+            fragment,
+        };
+        location.canonicalize();
+
+        let mut accumulated = crate::SearchMap::from_location(&location);
+        for (index, node) in chain.iter().enumerate() {
+            let Some(validator) = self.search_table.validator_for(&node.route) else {
+                continue;
+            };
+            match validator(&location, &accumulated) {
+                Ok(next) => {
+                    accumulated = next;
+                }
+                Err(err) => {
+                    if self.search_mode == SearchValidationMode::Strict {
+                        return Err(RouterBuildLocationError::SearchValidation(
+                            RouteSearchValidationFailure {
+                                match_index: index,
+                                matched_path: matched_paths
+                                    .get(index)
+                                    .cloned()
+                                    .unwrap_or_else(|| "/".to_string()),
+                                error: err,
+                            },
+                        ));
+                    }
+                }
+            }
+        }
+
+        location.query = accumulated.into_pairs();
+        location.canonicalize();
+        Ok(location)
+    }
+
+    pub fn build_location_for_route(
+        &self,
+        route: &R,
+        params: &[crate::PathParam],
+    ) -> Result<RouteLocation, RouterBuildLocationError> {
+        self.build_location(route, params, crate::SearchMap::new(), None)
+    }
+
     fn route_before_load_decision(
         &self,
         cause: RouterTransitionCause,
@@ -871,8 +1003,8 @@ fn normalize_redirect_action(action: NavigationAction) -> NavigationAction {
 #[cfg(test)]
 mod tests {
     use super::{
-        RouteHooks, Router, RouterBlockReason, RouterGuardDecision, RouterUpdate,
-        RouterUpdateWithPrefetchIntents,
+        RouteHooks, Router, RouterBlockReason, RouterBuildLocationError, RouterGuardDecision,
+        RouterUpdate, RouterUpdateWithPrefetchIntents,
     };
     use crate::{
         MemoryHistory, NavigationAction, RouteLocation, RouteNode, RouteSearchTable, RouteTree,
@@ -1695,5 +1827,73 @@ mod tests {
         let mut history = MemoryHistory::new(RouteLocation::parse("/"));
         assert!(history.navigate(NavigationAction::Push, Some(RouteLocation::parse("/next"))));
         assert_eq!(history.current().to_url(), "/next");
+    }
+
+    #[test]
+    fn build_location_formats_path_and_stabilizes_search() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            User,
+        }
+
+        fn validate_root(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Ok(search.clone().with("lang", Some("en".to_string())))
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::User, "users/:id").unwrap()]),
+        ));
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, validate_root);
+        let search_table = Arc::new(search_table);
+
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let location = router
+            .build_location(
+                &RouteId::User,
+                &[crate::PathParam {
+                    name: "id".to_string(),
+                    value: "42".to_string(),
+                }],
+                SearchMap::new(),
+                None,
+            )
+            .expect("build_location should succeed");
+
+        assert_eq!(location.to_url(), "/users/42?lang=en");
+    }
+
+    #[test]
+    fn build_location_errors_when_params_missing() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            User,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::User, "users/:id").unwrap()]),
+        ));
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let err = router
+            .build_location_for_route(&RouteId::User, &[])
+            .expect_err("expected build_location_for_route to fail");
+        assert!(matches!(err, RouterBuildLocationError::MissingPathParams));
     }
 }

@@ -39,6 +39,8 @@ Status legend:
 - `[x]` Add per-route `validate_search(parent_search, raw_search)` hook.
 - `[x]` Define error handling policy:
   - “throw” vs “recover with raw search” (TanStack has both)
+- `[x]` Add a lightweight build-location helper:
+  - `Router::build_location` / `Router::build_location_for_route`
 - `[x]` Add tests:
   - parent -> child accumulation
   - error path behavior
@@ -73,7 +75,7 @@ Status legend:
 - `[x]` Add update-scoped helpers:
   - `Router::navigate_with_prefetch_intents`
   - `Router::sync_with_prefetch_intents`
-- `[ ]` Add race/cancellation tests for rapid route changes.
+- `[x]` Add race/cancellation tests for rapid route changes.
 
 ## Phase 5 - App adoption
 

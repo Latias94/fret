@@ -2787,4 +2787,42 @@ mod tests {
         assert_eq!(state.retry.failures, 0);
         assert!(state.retry.next_retry_at.is_none());
     }
+
+    #[test]
+    fn invalidate_namespace_cancels_inflight_and_ignores_stale_completion() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.ns_cancel.v1", &123u32);
+
+        let handle = with_query_client(&mut app, |client, app| {
+            let handle = client.use_query(app, window, key, QueryPolicy::default(), |_token| Ok(1));
+            client.invalidate_namespace(key.namespace());
+            let _ = client.use_query(app, window, key, QueryPolicy::default(), |_token| Ok(2));
+            handle
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(
+            tasks.len(),
+            2,
+            "expected the second use_query call to start a new fetch after namespace invalidation"
+        );
+        for task in tasks {
+            task();
+        }
+        while drain_inboxes(&mut app, Some(window)) {}
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+        assert_eq!(
+            state.data.as_deref().copied(),
+            Some(2),
+            "expected the cancelled completion to be ignored"
+        );
+    }
 }

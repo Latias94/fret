@@ -48,9 +48,10 @@ pub use route_tree::{
 };
 pub use router_state::{
     HistoryAdapter, RouteBeforeLoadFn, RouteHookContext, RouteHooks, RouteHooksTable,
-    RouteLoaderFn, RouteMatchSnapshot, RoutePrefetchIntent, Router, RouterBlockReason, RouterEvent,
-    RouterGuardContext, RouterGuardDecision, RouterGuardFn, RouterState, RouterTransition,
-    RouterTransitionCause, RouterUpdate, RouterUpdateWithPrefetchIntents,
+    RouteLoaderFn, RouteMatchSnapshot, RoutePrefetchIntent, Router, RouterBlockReason,
+    RouterBuildLocationError, RouterEvent, RouterGuardContext, RouterGuardDecision, RouterGuardFn,
+    RouterState, RouterTransition, RouterTransitionCause, RouterUpdate,
+    RouterUpdateWithPrefetchIntents,
 };
 pub use search::{
     RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,
