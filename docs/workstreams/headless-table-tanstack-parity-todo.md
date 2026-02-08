@@ -120,7 +120,7 @@ P2 (engineering guardrails for sustained parity):
 Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upstream public API surfaces
 (table/row/column/header/cell) and mapping them to Fret equivalents.
 
-- [~] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
+- [x] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
   - Evidence target: expand 鈥淐apability Inventory鈥?in `docs/workstreams/headless-table-tanstack-parity.md`
     with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
   - In progress: initial core + pinning mapping is tracked in
@@ -169,6 +169,11 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       core sorting/filtering helpers don’t depend on ad-hoc value wiring.
     - Filtering now resolves its “value source” via a shared getter across `sort_value/value_u64/facet_*`
       to avoid being weaker when consumers only configured faceting or numeric extraction.
+
+- [ ] HTP-cap-030 Refresh the `fret-ui-shadcn` DataTable must-have surface once it is fully wired to the headless engine.
+  - Rationale: today, DataTable recipes primarily mutate `TableState` and rely on `fret-ui-kit` for rendering; once that
+    integration changes, we should update the consumer-driven must-have list and add any missing helper surfaces.
+  - Evidence target: `docs/workstreams/headless-table-tanstack-parity-capability.md` must-have section + a focused smoke gate.
 - [x] HTP-cap-020 Add 鈥渃apability smoke鈥?gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`

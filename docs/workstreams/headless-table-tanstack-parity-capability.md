@@ -189,15 +189,15 @@ Source of truth:
 | `getCoreRowModel` | `Table::core_row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRowModel` | `Table::row_model()` | Aligned | fixtures + gates across multiple cases |
 | `getRow(id, searchAll?)` | `Table::row_by_id(..)` / `Table::row_key_for_id(..)` (+ `rows_by_id` parity gate) | Aligned | `tanstack_v8_row_id_lookup_parity.rs` |
-| `getState` | `TableState` passed into `Table::builder().state(..)` (engine is pure) | Partial | state roundtrip gates exist, but not a full instance-style API |
-| `reset/setState/setOptions` | Rust-native: build new `Table` with new `TableState`/`TableOptions` | Partial | N/A (API-shape differs by design) |
+| `getState` | `Table::state()` (engine is pure; state is externally owned) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
+| `reset/setState/setOptions` | Reset helpers (`Table::reset_*`) + rebuild `Table` with updated `TableState`/`TableOptions` | Aligned | `resets.json` + `tanstack_v8_resets_parity.rs` |
 
 ### Row (CoreRow)
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
 | `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
-| `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
+| `getValue/getUniqueValues/renderValue` | `Table::{cell_value,row_unique_values,cell_render_value}` (+ `renderFallbackValue`) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`, `render_fallback.json` |
 | `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
@@ -205,14 +205,14 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `id/parent/depth/columns` | `ColumnDef` nested columns + `column_tree` snapshot | Partial | `tanstack_v8_headers_cells_parity.rs` |
-| `getFlatColumns/getLeafColumns` | `Table` core model snapshot leaf sets | Partial | `tanstack_v8_headers_cells_parity.rs` |
+| `id/parent/depth/columns` | `CoreModelSnapshot.column_tree` + `Table::column_tree_snapshot()` | Aligned | `headers_inventory_deep.json` |
+| `getFlatColumns/getLeafColumns` | `CoreModelSnapshot.flat_columns` + `CoreModelSnapshot.leaf_columns` | Aligned | `visibility_ordering.json`, `headers_inventory_deep.json` |
 
 ### Header / Cell (core)
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `getHeaderGroups` (+ pin variants) | `build_header_groups` + `Table::header_groups_snapshot`-style surfaces | Partial | `tanstack_v8_headers_cells_parity.rs` |
+| `getHeaderGroups` (+ pin variants) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | Header placeholder semantics | `HeaderSnapshot.is_placeholder/placeholder_id` | Aligned | `headers_cells.json` parity |
 | Cell id `${rowId}_${columnId}` | `CellSnapshot.id` | Aligned | `headers_cells.json` parity |
 
