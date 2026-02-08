@@ -7898,3 +7898,28 @@ Suites:
 Notes:
 - This entry is intended to keep the perf workstream “contract surface” (ADR + TODOs) in sync with the actual
   implementation choices before deeper refactors (text layout reuse, resize scheduling, GPU attribution).
+
+## 2026-02-08 15:19:25 (commit `ed78d4d62`)
+
+Change:
+- No code change; re-run resize perf gates once to confirm current head still passes after doc/contract updates.
+
+Suites:
+- `ui-code-editor-resize-probes` (gate, attempts=1)
+- `ui-resize-probes` (gate, attempts=1)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 1 --out-dir target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0
+```
+
+Artifacts:
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor/summary.json`
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0/summary.json`
+
+Results:
+- `ui-code-editor-resize-probes`: PASS.
+  - Worst overall `top_total_time_us`: `14099` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-editor/stdout.json`)
+- `ui-resize-probes`: PASS.
+  - Worst overall `top_total_time_us`: `17567` (`target/fret-diag-resize-probes-gate-post-doc-ed78d4d62-p0/stdout.json`)
