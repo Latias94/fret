@@ -39,7 +39,11 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
     check_bundle_for_ui_gallery_code_editor_a11y_selection,
     check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present,
     check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low,
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
     check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
@@ -123,6 +127,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
     let mut check_ui_gallery_code_editor_torture_geom_fallbacks_low: bool = false;
+    let mut check_ui_gallery_code_editor_torture_folds_placeholder_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_inlays_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap: bool = false;
     let mut check_ui_gallery_code_editor_word_boundary: bool = false;
     let mut check_ui_gallery_code_editor_a11y_selection: bool = false;
     let mut check_ui_gallery_code_editor_a11y_composition: bool = false;
@@ -594,6 +603,23 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-code-editor-torture-geom-fallbacks-low" => {
                 check_ui_gallery_code_editor_torture_geom_fallbacks_low = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-folds-placeholder-present" => {
+                check_ui_gallery_code_editor_torture_folds_placeholder_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-folds-placeholder-absent-under-soft-wrap" => {
+                check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-inlays-present" => {
+                check_ui_gallery_code_editor_torture_inlays_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-inlays-absent-under-soft-wrap" => {
+                check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap = true;
                 i += 1;
             }
             "--check-ui-gallery-code-editor-word-boundary" => {
@@ -1511,6 +1537,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap
+                    || check_ui_gallery_code_editor_torture_inlays_present
+                    || check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
                     || check_ui_gallery_code_editor_a11y_composition
@@ -1572,6 +1602,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_marker_present,
                         check_ui_gallery_code_editor_torture_undo_redo,
                         check_ui_gallery_code_editor_torture_geom_fallbacks_low,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap,
+                        check_ui_gallery_code_editor_torture_inlays_present,
+                        check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection,
                         check_ui_gallery_code_editor_a11y_composition,
@@ -1895,6 +1929,10 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_marker_present
                         || check_ui_gallery_code_editor_torture_undo_redo
                         || check_ui_gallery_code_editor_torture_geom_fallbacks_low
+                        || check_ui_gallery_code_editor_torture_folds_placeholder_present
+                        || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap
+                        || check_ui_gallery_code_editor_torture_inlays_present
+                        || check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap
                         || check_ui_gallery_code_editor_word_boundary
                         || check_ui_gallery_code_editor_a11y_selection
                         || check_ui_gallery_code_editor_a11y_composition
@@ -1955,6 +1993,10 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_marker_present,
                             check_ui_gallery_code_editor_torture_undo_redo,
                             check_ui_gallery_code_editor_torture_geom_fallbacks_low,
+                            check_ui_gallery_code_editor_torture_folds_placeholder_present,
+                            check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap,
+                            check_ui_gallery_code_editor_torture_inlays_present,
+                            check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap,
                             check_ui_gallery_code_editor_word_boundary,
                             check_ui_gallery_code_editor_a11y_selection,
                             check_ui_gallery_code_editor_a11y_composition,
@@ -3190,6 +3232,8 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present
+                    || check_ui_gallery_code_editor_torture_inlays_present
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
                     || check_ui_gallery_code_editor_a11y_composition
@@ -3419,6 +3463,18 @@ See: `docs/tracy.md`.\n";
                         ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(
                             &src,
                         ) && !check_ui_gallery_code_editor_torture_geom_fallbacks_low;
+                    let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
+                        ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
+                    let suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap =
+                        ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_soft_wrap_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap;
+                    let suite_ui_gallery_code_editor_torture_inlays_present =
+                        ui_gallery_script_requires_code_editor_torture_inlays_present_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_inlays_present;
+                    let suite_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap =
+                        ui_gallery_script_requires_code_editor_torture_inlays_absent_under_soft_wrap_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap;
                     let suite_ui_gallery_code_editor_word_boundary =
                         ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
                             && !check_ui_gallery_code_editor_word_boundary;
@@ -3511,6 +3567,14 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_undo_redo,
                         check_ui_gallery_code_editor_torture_geom_fallbacks_low
                             || suite_ui_gallery_code_editor_torture_geom_fallbacks_low,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present
+                            || suite_ui_gallery_code_editor_torture_folds_placeholder_present,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap
+                            || suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap,
+                        check_ui_gallery_code_editor_torture_inlays_present
+                            || suite_ui_gallery_code_editor_torture_inlays_present,
+                        check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap
+                            || suite_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary
                             || suite_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection
@@ -6688,7 +6752,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 22] {
+fn ui_gallery_suite_scripts() -> [&'static str; 26] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -6709,17 +6773,25 @@ fn ui_gallery_suite_scripts() -> [&'static str; 22] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-disabled-under-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-disabled-under-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 14] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 18] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-disabled-under-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-disabled-under-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
@@ -6886,6 +6958,53 @@ fn ui_gallery_script_requires_code_editor_torture_geom_fallbacks_low_gate(script
     matches!(
         name,
         "ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-folds-placeholder-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_soft_wrap_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-folds-disabled-under-soft-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_inlays_present_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(name, "ui-gallery-code-editor-torture-inlays-baseline.json")
+}
+
+fn ui_gallery_script_requires_code_editor_torture_inlays_absent_under_soft_wrap_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-inlays-disabled-under-soft-wrap-baseline.json"
     )
 }
 
@@ -7180,6 +7299,10 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_marker_present: bool,
     check_ui_gallery_code_editor_torture_undo_redo: bool,
     check_ui_gallery_code_editor_torture_geom_fallbacks_low: bool,
+    check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
+    check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap: bool,
+    check_ui_gallery_code_editor_torture_inlays_present: bool,
+    check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap: bool,
     check_ui_gallery_code_editor_word_boundary: bool,
     check_ui_gallery_code_editor_a11y_selection: bool,
     check_ui_gallery_code_editor_a11y_composition: bool,
@@ -7326,6 +7449,27 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_geom_fallbacks_low {
         check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_folds_placeholder_present {
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap {
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_inlays_present {
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_present(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap {
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap(
             bundle_path,
             warmup_frames,
         )?;
