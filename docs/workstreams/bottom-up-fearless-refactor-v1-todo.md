@@ -442,10 +442,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate fret-ui-kit`
     - `cargo nextest run -p fret-ui-kit`
 
-- [ ] BU-FR-eco-043 Reduce “god test file” risk in `fret-ui-kit` overlays by moving scenario matrices to fixtures.
+- [~] BU-FR-eco-043 Reduce “god test file” risk in `fret-ui-kit` overlays by moving scenario matrices to fixtures.
   - Target: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
   - Goal: shrink Rust LOC and make overlay contracts reviewable and stable during refactors.
   - Gate: `cargo nextest run -p fret-ui-kit`
+  - Early evidence (module split scaffolding):
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/tooltip.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
 
 - [ ] BU-FR-eco-044 L0 audit `fret-ui-shadcn`, and plan conversion of huge web-vs-fret conformance sources into data-driven harnesses.
   - Targets:

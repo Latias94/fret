@@ -82,7 +82,7 @@ Evidence anchors:
 ## 6) Code quality findings (Rust best practices)
 
 - Warnings present in baseline:
-  - `unused variable: group_aggs_any` in `ecosystem/fret-ui-kit/src/declarative/table.rs` (reported by `cargo nextest run -p fret-ui-kit`).
+- Warnings present in baseline: none observed after initial cleanup.
 - File-size hotspots suggest mixed responsibilities:
   - `declarative/table.rs` likely mixes model/state, rendering, interaction policy, and virtualization glue.
   - `imui.rs` suggests an integration facade that might benefit from directory-module structure (`imui/mod.rs` + focused submodules).
@@ -105,4 +105,3 @@ Evidence anchors:
 
 - Should `window_overlays` diagnostics-only exports remain in `fret-ui-kit`, or should `fret-bootstrap` own the bundle export vocabulary?
 - What is the intended long-term boundary between `fret-ui-kit` overlay policy and `crates/fret-ui` overlay mechanism (to prevent “policy leakage” back into `crates/`)?
-
