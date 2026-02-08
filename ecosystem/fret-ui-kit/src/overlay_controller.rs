@@ -587,6 +587,7 @@ impl OverlayController {
                         trigger,
                         open,
                         present: request.presence.present,
+                        on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
                 );

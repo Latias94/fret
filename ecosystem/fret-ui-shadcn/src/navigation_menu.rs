@@ -1,7 +1,10 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::Transform2D;
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, PointerType, Px, Rect, SemanticsRole,
+    TextStyle,
+};
 use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, Model, Platform, PlatformCapabilities,
@@ -17,6 +20,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
@@ -87,6 +91,8 @@ fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
         .metric_by_key("component.navigation_menu.trigger.pad_x")
         .unwrap_or(Px(16.0))
 }
+
+const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
     theme
@@ -734,6 +740,14 @@ impl NavigationMenu {
                 last_selected: Option<Arc<str>>,
             }
 
+            #[derive(Default)]
+            struct SafeCorridorState {
+                last_pointer: Option<Point>,
+                trigger_anchor: Option<Rect>,
+                viewport_panel: Option<Rect>,
+                pointer_in_corridor: bool,
+            }
+
             let open_model =
                 cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
             let open_model = if let Some(model) = open_model {
@@ -748,6 +762,11 @@ impl NavigationMenu {
 
             let selected: Option<Arc<str>> =
                 cx.watch_model(&value_model).layout().cloned().flatten();
+            let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
+                root_id,
+                || Arc::new(Mutex::new(SafeCorridorState::default())),
+                |st| st.clone(),
+            );
             let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
                 let changed = selected != st.last_selected;
                 if changed {
@@ -762,6 +781,22 @@ impl NavigationMenu {
                     .app
                     .models_mut()
                     .update(&open_model, |v| *v = selected.is_some());
+                if selected.is_none() {
+                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.pointer_in_corridor = false;
+                    safe.viewport_panel = None;
+                    safe.trigger_anchor = None;
+                }
+            }
+
+            if selected.is_some() {
+                let should_keep_open = {
+                    let safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.pointer_in_corridor
+                };
+                if should_keep_open {
+                    let _ = cx.app.models_mut().update(&open_model, |v| *v = true);
+                }
             }
 
             let open: bool = cx
@@ -1114,6 +1149,12 @@ impl NavigationMenu {
                 interactive: is_open,
             };
 
+            if !overlay_presence.present {
+                let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                safe.viewport_panel = None;
+                safe.pointer_in_corridor = false;
+            }
+
             let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
                 .map(|sw| {
                     let from_children = items
@@ -1145,6 +1186,17 @@ impl NavigationMenu {
                         )
                     })
                     .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size));
+
+                if let Some(selected_value) = selected_local.as_deref()
+                    && let Some(trigger_id) =
+                        radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, selected_value)
+                    && let Some(trigger_anchor) = cx
+                        .last_visual_bounds_for_element(trigger_id)
+                        .or_else(|| cx.last_bounds_for_element(trigger_id))
+                {
+                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                    safe.trigger_anchor = Some(trigger_anchor);
+                }
                 if viewport_enabled {
                     if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
                         radix_navigation_menu::navigation_menu_register_viewport_size(
@@ -1243,6 +1295,35 @@ impl NavigationMenu {
                 let scale = scale;
                 let selected_value_for_content_id = selected_local.clone();
                 let selected_for_overlay = selected_local.clone();
+                let safe_corridor_for_overlay_pointer_move = safe_corridor.clone();
+                let safe_corridor_for_overlay_layout = safe_corridor.clone();
+                let safe_corridor_for_content_hover = safe_corridor.clone();
+                let on_pointer_move: fret_ui::action::OnDismissiblePointerMove = Arc::new(
+                    move |_host: &mut dyn fret_ui::action::UiActionHost,
+                          _acx: fret_ui::action::ActionCx,
+                          mv: fret_ui::action::PointerMoveCx| {
+                        if mv.pointer_type == PointerType::Touch {
+                            return false;
+                        }
+                        let mut safe = safe_corridor_for_overlay_pointer_move
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        safe.last_pointer = Some(mv.position);
+                        safe.pointer_in_corridor = safe
+                            .trigger_anchor
+                            .zip(safe.viewport_panel)
+                            .is_some_and(|(trigger_anchor, viewport_panel)| {
+                                safe_hover::safe_hover_contains(
+                                    mv.position,
+                                    trigger_anchor,
+                                    viewport_panel,
+                                    NAV_MENU_SAFE_CORRIDOR_BUFFER,
+                                )
+                            });
+                        false
+                    },
+                );
+                let on_pointer_move = Some(on_pointer_move);
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
                     cx,
                     root_id,
@@ -1251,7 +1332,14 @@ impl NavigationMenu {
                     overlay_presence,
                     selected_for_overlay.as_deref(),
                     args,
+                    on_pointer_move,
                     move |cx, layout| {
+                        {
+                            let mut safe = safe_corridor_for_overlay_layout
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            safe.viewport_panel = Some(layout.placed);
+                        }
                         let Some(selected_value_key) =
                             selected_value_for_content_id.as_deref()
                         else {
@@ -1286,6 +1374,12 @@ impl NavigationMenu {
                                 let value_for_hover = value_for_hover.clone();
                                 cx.pressable_on_hover_change(Arc::new(
                                     move |host, action_cx, hovered| {
+                                        if hovered {
+                                            let mut safe = safe_corridor_for_content_hover
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            safe.pointer_in_corridor = false;
+                                        }
                                         let mut root = root_state_for_hover
                                             .lock()
                                             .unwrap_or_else(|e| e.into_inner());
@@ -2225,6 +2319,193 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn navigation_menu_keeps_open_while_pointer_moves_through_safe_corridor() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let nav_cfg = radix_navigation_menu::NavigationMenuConfig::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_tick_id(TickId(frame));
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+                let model_for_render = model.clone();
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "navigation-menu-safe-corridor",
+                    move |cx| {
+                        let nav_cfg_for_render = nav_cfg;
+                        let items = vec![
+                            NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                            NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                        ];
+                        vec![
+                            NavigationMenu::new(model_for_render.clone())
+                                .config(nav_cfg_for_render)
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let alpha_bounds = alpha_btn.bounds;
+        let trigger_center = center(alpha_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let open_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after == nav_cfg.delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-open timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: open_token },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let overlay_stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let root_id = overlay_stack
+            .topmost_popover
+            .expect("expected navigation menu viewport overlay root id");
+        let viewport_panel_id = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "navigation-menu-safe-corridor",
+            |cx| radix_navigation_menu::navigation_menu_viewport_panel_id(cx, root_id),
+        )
+        .expect("viewport panel id");
+        let viewport_panel =
+            fret_ui::elements::bounds_for_element(&mut app, window, viewport_panel_id)
+                .expect("viewport panel bounds");
+
+        let transit_point = Point::new(
+            Px(alpha_bounds.origin.x.0 + alpha_bounds.size.width.0 * 0.5),
+            Px(alpha_bounds.origin.y.0 + alpha_bounds.size.height.0 + 2.0),
+        );
+        assert!(
+            !alpha_bounds.contains(transit_point),
+            "transit point should be outside trigger bounds"
+        );
+        assert!(
+            !viewport_panel.contains(transit_point),
+            "transit point should be outside viewport panel bounds"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: transit_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 4);
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(760.0), Px(560.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 5);
+        render_frame(&mut ui, &mut app, &mut services, 6);
+
+        let close_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after == nav_cfg.close_delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-close timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: close_token },
+        );
+        render_frame(&mut ui, &mut app, &mut services, 7);
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected, None);
     }
 
     #[test]
