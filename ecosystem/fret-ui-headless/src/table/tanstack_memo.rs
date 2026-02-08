@@ -91,9 +91,9 @@ impl TanStackUngroupedRowModelOrderCache {
         }
 
         let sig_and_deps = (columns_signature, deps);
-        let (value, recomputed) =
-            self.memo
-                .get_or_compute(sig_and_deps, || Arc::new(compute()));
+        let (value, recomputed) = self
+            .memo
+            .get_or_compute(sig_and_deps, || Arc::new(compute()));
         if recomputed {
             self.recompute_count = self.recompute_count.saturating_add(1);
         }

@@ -3917,6 +3917,30 @@ function snapshotColumnPinning(
         { pagination: { pageIndex: 1, pageSize: 2 } },
         [{ type: "setGlobalFilterValue", value: "Renderer" }],
       ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_column_filters_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setColumnFilterValue", column_id: "status", value: "Running" }],
+      ),
     ]
   } else if (case_id === "resets") {
     const options: TanStackOptions = defaultOptions

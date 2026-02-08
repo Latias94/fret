@@ -28,6 +28,7 @@ mod row_pinning;
 mod row_selection;
 mod sorting;
 mod state;
+mod tanstack_auto_reset;
 mod tanstack_memo;
 mod tanstack_options;
 mod tanstack_state;
@@ -110,9 +111,10 @@ pub use sorting::{
     toggle_sorting_state_tanstack, toggle_sorting_tanstack,
 };
 pub use state::TableState;
+pub use tanstack_auto_reset::TanStackAutoResetQueue;
 pub use tanstack_memo::{
-    FlatRowOrderEntry, TanStackSortedFlatRowOrderCache, TanStackSortedFlatRowOrderDeps,
-    TanStackRowModelOrderSnapshot, TanStackUngroupedRowModelOrderCache,
+    FlatRowOrderEntry, TanStackRowModelOrderSnapshot, TanStackSortedFlatRowOrderCache,
+    TanStackSortedFlatRowOrderDeps, TanStackUngroupedRowModelOrderCache,
     TanStackUngroupedRowModelOrderDeps,
 };
 pub use tanstack_options::TanStackTableOptions;

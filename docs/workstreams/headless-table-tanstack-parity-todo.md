@@ -700,12 +700,20 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Covered: `pageCount`/`rowCount`/page bounds derived from `getPrePaginationRowModel()` under
     `paginateExpandedRows` true/false (fixture asserts `page_count`, `row_count`, `can_next_page`,
     `page_options`).
-- [ ] HTP-page-040 Expand auto-reset trigger coverage and queue coalescing semantics.
-  - Target: ensure we are not weaker than TanStack for `autoReset*` under broader triggers:
-    - columnFilters/globalFilter/pagination-affecting option changes,
-    - data updates (row identity-preserving and identity-changing),
-    - and coalescing behavior when multiple resets are queued in one logical tick.
-  - Evidence target: extend `auto_reset.json` or add a new fixture + parity gate.
+- [x] HTP-page-040 Expand auto-reset trigger coverage and queue coalescing semantics.
+  - Done (parity-gated): columnFilters/globalFilter/sorting triggers reset page index by default,
+    respect `manualPagination`, and allow explicit override via `autoResetPageIndex=true`.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json`
+      (snapshots: `auto_reset_column_filters_*`, `auto_reset_global_filter_*`, `auto_reset_sorting_*`)
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs`
+  - Done (coalescing model): added an explicit TanStack-style auto-reset queue for rebuild-each-frame callers.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` (`TanStackAutoResetQueue`)
+  - Remaining (tracked separately): data-update-trigger coverage (row identity preserving/changing).
+- [ ] HTP-page-041 Add auto-reset fixtures for data updates (identity-preserving vs identity-changing).
+  - Target: `autoResetPageIndex` (and `autoResetExpanded` where applicable) behavior when:
+    - data rows are mutated but `getRowId` stays stable,
+    - data rows are replaced and row ids change (rows removed/added/reordered).
+  - Evidence target: new fixture + parity gate (likely `auto_reset_data_updates.json`).
 - [x] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).

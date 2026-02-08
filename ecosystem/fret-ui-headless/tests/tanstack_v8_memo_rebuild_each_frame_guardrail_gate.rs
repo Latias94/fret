@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    BuiltInFilterFn, BuiltInSortingFn, ColumnDef, PaginationState, SortSpec, Table, TableOptions,
-    TableState, TanStackSortedFlatRowOrderCache, TanStackUngroupedRowModelOrderCache, TanStackValue,
-    RowKey,
+    BuiltInFilterFn, BuiltInSortingFn, ColumnDef, PaginationState, RowKey, SortSpec, Table,
+    TableOptions, TableState, TanStackSortedFlatRowOrderCache, TanStackUngroupedRowModelOrderCache,
+    TanStackValue,
 };
 
 #[derive(Debug)]
@@ -83,8 +83,8 @@ fn tanstack_v8_memo_rebuild_each_frame_guardrail_sorted_flat_row_order_ignores_p
 }
 
 #[test]
-fn tanstack_v8_memo_rebuild_each_frame_guardrail_ungrouped_row_model_order_recomputes_on_expand_and_page(
-) {
+fn tanstack_v8_memo_rebuild_each_frame_guardrail_ungrouped_row_model_order_recomputes_on_expand_and_page()
+ {
     let data = vec![
         Row {
             id: 1,
@@ -169,4 +169,3 @@ fn tanstack_v8_memo_rebuild_each_frame_guardrail_ungrouped_row_model_order_recom
     assert!(recomputed);
     assert_eq!(cache.recompute_count(), 3);
 }
-

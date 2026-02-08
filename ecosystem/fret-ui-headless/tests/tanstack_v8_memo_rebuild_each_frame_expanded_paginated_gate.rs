@@ -1,5 +1,5 @@
 use fret_ui_headless::table::{
-    PaginationState, Table, TableOptions, TableState, TanStackUngroupedRowModelOrderCache, RowKey,
+    PaginationState, RowKey, Table, TableOptions, TableState, TanStackUngroupedRowModelOrderCache,
 };
 
 #[derive(Debug)]
@@ -13,8 +13,8 @@ fn node(id: u64, children: Vec<Node>) -> Node {
 }
 
 #[test]
-fn tanstack_v8_memo_rebuild_each_frame_ungrouped_row_model_order_cache_is_reused_for_expanded_paginated_rows(
-) {
+fn tanstack_v8_memo_rebuild_each_frame_ungrouped_row_model_order_cache_is_reused_for_expanded_paginated_rows()
+ {
     let data = vec![
         node(1, vec![node(10, vec![]), node(11, vec![])]),
         node(2, vec![node(20, vec![])]),
@@ -51,7 +51,12 @@ fn tanstack_v8_memo_rebuild_each_frame_ungrouped_row_model_order_cache_is_reused
             .expect("ungrouped cache is available");
         recompute_flags.push(recomputed);
 
-        let rows = snapshot.rows.as_ref().iter().map(|k| k.0).collect::<Vec<_>>();
+        let rows = snapshot
+            .rows
+            .as_ref()
+            .iter()
+            .map(|k| k.0)
+            .collect::<Vec<_>>();
         assert_eq!(rows, vec![1, 10, 11]);
     }
 
@@ -72,4 +77,3 @@ fn tanstack_v8_memo_rebuild_each_frame_ungrouped_row_model_order_cache_is_reused
     assert!(recomputed);
     assert_eq!(cache.recompute_count(), 2);
 }
-
