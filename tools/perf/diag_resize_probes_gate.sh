@@ -5,6 +5,7 @@ usage() {
   cat <<'USAGE'
 Usage:
   tools/perf/diag_resize_probes_gate.sh \
+    [--suite <name>] \
     [--out-dir <path>] \
     [--baseline <path>] \
     [--launch-bin <path>] \
@@ -14,7 +15,7 @@ Usage:
     [--warmup-frames <n>]
 
 Notes:
-  - Runs the `ui-resize-probes` perf suite via `fretboard diag perf`.
+  - Runs a resize-focused perf suite via `fretboard diag perf` (defaults to `ui-resize-probes`).
   - Intended to be a lightweight "P0 resize must not regress" gate.
   - `--attempts` reruns the suite to reduce flakiness from rare tail outliers.
     The gate passes if a strict majority of attempts pass.
@@ -37,8 +38,9 @@ require_cmd() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+suite="ui-resize-probes"
 out_dir="target/fret-diag-resize-probes-gate-$(date +%s)"
-baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
+baseline=""
 launch_bin="target/release/fret-ui-gallery"
 timeout_ms=300000
 attempts=1
@@ -47,6 +49,10 @@ warmup_frames=5
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --suite)
+      suite="$2"
+      shift 2
+      ;;
     --out-dir)
       out_dir="$2"
       shift 2
@@ -98,7 +104,22 @@ if [[ "$attempts" -lt 1 ]]; then
   exit 2
 fi
 
-echo "[gate] ui-resize-probes -> ${out_dir} (attempts=${attempts})"
+if [[ -z "$baseline" ]]; then
+  case "$suite" in
+    ui-resize-probes)
+      baseline="docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json"
+      ;;
+    ui-code-editor-resize-probes)
+      baseline="docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json"
+      ;;
+    *)
+      echo "error: unknown --suite '$suite' (provide --baseline explicitly)" >&2
+      exit 2
+      ;;
+  esac
+fi
+
+echo "[gate] ${suite} -> ${out_dir} (attempts=${attempts})"
 echo "[gate] baseline: ${baseline}"
 echo "[gate] launch-bin: ${launch_bin}"
 
@@ -113,7 +134,7 @@ for ((i=1; i<=attempts; i++)); do
 
   cmd=(
     cargo run -q -p fretboard --
-    diag perf ui-resize-probes
+    diag perf "$suite"
     --dir "$attempt_dir"
     --timeout-ms "$timeout_ms"
     --reuse-launch
@@ -205,6 +226,7 @@ cp -f "$selected_attempt_dir/check.perf_thresholds.json" "$out_dir/check.perf_th
 
 jq -n \
   --arg out_dir "$out_dir" \
+  --arg suite "$suite" \
   --arg baseline "$baseline" \
   --arg launch_bin "$launch_bin" \
   --argjson pass "$pass" \
@@ -223,6 +245,7 @@ jq -n \
     kind: "resize_probes_gate_summary",
     pass: $pass,
     out_dir: $out_dir,
+    suite: $suite,
     baseline: $baseline,
     launch_bin: $launch_bin,
     attempts: ($attempts | tonumber),
