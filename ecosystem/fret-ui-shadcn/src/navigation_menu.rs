@@ -94,6 +94,37 @@ fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
 
 const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct NavigationMenuOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn navigation_menu_open_change_complete_event(
+    state: &mut NavigationMenuOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> Option<bool> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        return Some(open);
+    }
+
+    None
+}
+
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_y")
@@ -536,6 +567,7 @@ pub struct NavigationMenu {
     layout: LayoutRefinement,
     style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for NavigationMenu {
@@ -548,6 +580,10 @@ impl std::fmt::Debug for NavigationMenu {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -565,6 +601,7 @@ impl NavigationMenu {
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_open_change_complete: None,
         }
     }
 
@@ -580,6 +617,7 @@ impl NavigationMenu {
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_open_change_complete: None,
         }
     }
 
@@ -680,6 +718,15 @@ impl NavigationMenu {
         self
     }
 
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -691,6 +738,7 @@ impl NavigationMenu {
         let layout = self.layout;
         let style = self.style;
         let cfg = self.config;
+        let on_open_change_complete = self.on_open_change_complete;
 
         let value_model =
             radix_navigation_menu::navigation_menu_use_value_model(cx, controlled_model, || {
@@ -1184,6 +1232,20 @@ impl NavigationMenu {
                 present: motion.present && has_content,
                 interactive: is_open,
             };
+            let open_change_complete =
+                cx.with_state(NavigationMenuOpenChangeCallbackState::default, |state| {
+                    navigation_menu_open_change_complete_event(
+                        state,
+                        is_open,
+                        overlay_presence.present,
+                        motion.animating,
+                    )
+                });
+            if let (Some(open), Some(handler)) =
+                (open_change_complete, on_open_change_complete.as_ref())
+            {
+                handler(open);
+            }
 
             if !overlay_presence.present {
                 let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
@@ -1926,6 +1988,53 @@ mod tests {
             menu.config.skip_delay_duration,
             std::time::Duration::from_millis(30)
         );
+    }
+
+    #[test]
+    fn navigation_menu_on_open_change_complete_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model).on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(menu.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_open_change_complete_event_emits_after_settle() {
+        let mut state = NavigationMenuOpenChangeCallbackState::default();
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, true);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, Some(true));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, true, true);
+        assert_eq!(completed, None);
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, Some(false));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, None);
+    }
+
+    #[test]
+    fn navigation_menu_open_change_complete_event_completes_without_animation() {
+        let mut state = NavigationMenuOpenChangeCallbackState::default();
+
+        let _ = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        let completed = navigation_menu_open_change_complete_event(&mut state, true, true, false);
+        assert_eq!(completed, Some(true));
+
+        let completed = navigation_menu_open_change_complete_event(&mut state, false, false, false);
+        assert_eq!(completed, Some(false));
     }
 
     #[test]
