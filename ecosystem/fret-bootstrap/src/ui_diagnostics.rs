@@ -198,10 +198,8 @@ pub struct UiDiagnosticsService {
     last_picked_selector_json: HashMap<AppWindowId, String>,
     last_hovered_node_id: HashMap<AppWindowId, u64>,
     last_hovered_selector_json: HashMap<AppWindowId, String>,
-    last_hovered_bounds: HashMap<AppWindowId, RectV1>,
     inspect_focus_node_id: HashMap<AppWindowId, u64>,
     inspect_focus_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_bounds: HashMap<AppWindowId, RectV1>,
     inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
     inspect_pending_nav: HashMap<AppWindowId, InspectNavCommand>,
     inspect_focus_summary_line: HashMap<AppWindowId, String>,
@@ -453,57 +451,17 @@ impl UiDiagnosticsService {
                 }
 
                 if self.inspect_enabled {
-                    let mut cleared_windows: HashSet<AppWindowId> = HashSet::new();
-                    cleared_windows.extend(self.last_hovered_node_id.keys().copied());
-                    cleared_windows.extend(self.last_picked_node_id.keys().copied());
-                    cleared_windows.extend(self.inspect_focus_node_id.keys().copied());
-
                     self.inspect_enabled = false;
                     self.inspect_locked_windows.clear();
                     self.last_hovered_selector_json.clear();
                     self.last_picked_selector_json.clear();
                     self.last_hovered_node_id.clear();
-                    self.last_hovered_bounds.clear();
                     self.inspect_focus_node_id.clear();
                     self.inspect_focus_selector_json.clear();
-                    self.inspect_focus_bounds.clear();
                     self.inspect_focus_down_stack.clear();
                     self.inspect_pending_nav.clear();
                     self.inspect_focus_summary_line.clear();
                     self.inspect_focus_path_line.clear();
-
-                    for w in cleared_windows {
-                        self.ws_bridge.send(
-                            self.cfg.devtools_ws_url.as_deref(),
-                            self.cfg.devtools_token.as_deref(),
-                            DiagTransportMessageV1 {
-                                schema_version: 1,
-                                r#type: "inspect.hover".to_string(),
-                                session_id: None,
-                                request_id: None,
-                                payload: serde_json::json!({
-                                    "window": w.data().as_ffi(),
-                                    "node_id": serde_json::Value::Null,
-                                    "locked": false,
-                                }),
-                            },
-                        );
-                        self.ws_bridge.send(
-                            self.cfg.devtools_ws_url.as_deref(),
-                            self.cfg.devtools_token.as_deref(),
-                            DiagTransportMessageV1 {
-                                schema_version: 1,
-                                r#type: "inspect.focus".to_string(),
-                                session_id: None,
-                                request_id: None,
-                                payload: serde_json::json!({
-                                    "window": w.data().as_ffi(),
-                                    "node_id": serde_json::Value::Null,
-                                    "locked": false,
-                                }),
-                            },
-                        );
-                    }
 
                     let _ = write_json(
                         self.cfg.inspect_path.clone(),
@@ -2151,10 +2109,8 @@ impl UiDiagnosticsService {
         self.last_picked_selector_json.remove(&window);
         self.last_hovered_node_id.remove(&window);
         self.last_hovered_selector_json.remove(&window);
-        self.last_hovered_bounds.remove(&window);
         self.inspect_focus_node_id.remove(&window);
         self.inspect_focus_selector_json.remove(&window);
-        self.inspect_focus_bounds.remove(&window);
         self.inspect_focus_down_stack.remove(&window);
         self.inspect_pending_nav.remove(&window);
         self.inspect_focus_summary_line.remove(&window);
@@ -2191,31 +2147,8 @@ impl UiDiagnosticsService {
             return;
         };
         let Some(hovered_id) = hovered_node_id else {
-            let had_hover = self.last_hovered_node_id.contains_key(&window)
-                || self.last_hovered_selector_json.contains_key(&window)
-                || self.last_hovered_bounds.contains_key(&window);
             self.last_hovered_node_id.remove(&window);
             self.last_hovered_selector_json.remove(&window);
-            self.last_hovered_bounds.remove(&window);
-
-            if had_hover {
-                self.ws_bridge.send(
-                    self.cfg.devtools_ws_url.as_deref(),
-                    self.cfg.devtools_token.as_deref(),
-                    DiagTransportMessageV1 {
-                        schema_version: 1,
-                        r#type: "inspect.hover".to_string(),
-                        session_id: None,
-                        request_id: None,
-                        payload: serde_json::json!({
-                            "window": window.data().as_ffi(),
-                            "node_id": serde_json::Value::Null,
-                            "bounds": serde_json::Value::Null,
-                            "locked": self.inspect_is_locked(window),
-                        }),
-                    },
-                );
-            }
             return;
         };
         if self.inspect_is_locked(window) {
@@ -2236,61 +2169,13 @@ impl UiDiagnosticsService {
             return;
         };
         if let Ok(json) = serde_json::to_string(&selector) {
-            let prev_id = self.last_hovered_node_id.get(&window).copied();
-            let prev_sel = self
-                .last_hovered_selector_json
-                .get(&window)
-                .map(|s| s.as_str());
-            let bounds = RectV1::from(node.bounds);
-            let prev_bounds = self.last_hovered_bounds.get(&window).copied();
-            if prev_id == Some(hovered_id)
-                && prev_sel == Some(json.as_str())
-                && prev_bounds == Some(bounds)
-            {
-                return;
-            }
-
             self.last_hovered_node_id.insert(window, hovered_id);
             self.last_hovered_selector_json.insert(window, json);
-            self.last_hovered_bounds.insert(window, bounds);
             self.inspect_focus_node_id.insert(window, hovered_id);
             if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
                 self.inspect_focus_selector_json.insert(window, sel);
             }
             self.inspect_focus_down_stack.insert(window, Vec::new());
-
-            let role = semantics_role_label(node.role);
-            let test_id = node.test_id.as_deref();
-            let label = (!self.cfg.redact_text)
-                .then_some(node.label.as_deref())
-                .flatten()
-                .map(|s| truncate_debug_value(s, 120));
-
-            let selector_json = self
-                .last_hovered_selector_json
-                .get(&window)
-                .map(|s| s.to_string())
-                .unwrap_or_default();
-            self.ws_bridge.send(
-                self.cfg.devtools_ws_url.as_deref(),
-                self.cfg.devtools_token.as_deref(),
-                DiagTransportMessageV1 {
-                    schema_version: 1,
-                    r#type: "inspect.hover".to_string(),
-                    session_id: None,
-                    request_id: None,
-                    payload: serde_json::json!({
-                        "window": window.data().as_ffi(),
-                        "node_id": hovered_id,
-                        "selector_json": selector_json,
-                        "role": role,
-                        "test_id": test_id,
-                        "label": label,
-                        "bounds": bounds,
-                        "locked": self.inspect_is_locked(window),
-                    }),
-                },
-            );
         }
     }
 
@@ -2427,36 +2312,9 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
-        let can_send = self.inspect_enabled;
-
         let Some(snapshot) = snapshot else {
-            if can_send
-                && (self.inspect_focus_node_id.contains_key(&window)
-                    || self.last_picked_node_id.contains_key(&window)
-                    || self.last_hovered_node_id.contains_key(&window)
-                    || self.inspect_focus_summary_line.contains_key(&window)
-                    || self.inspect_focus_path_line.contains_key(&window)
-                    || self.inspect_focus_bounds.contains_key(&window))
-            {
-                self.ws_bridge.send(
-                    self.cfg.devtools_ws_url.as_deref(),
-                    self.cfg.devtools_token.as_deref(),
-                    DiagTransportMessageV1 {
-                        schema_version: 1,
-                        r#type: "inspect.focus".to_string(),
-                        session_id: None,
-                        request_id: None,
-                        payload: serde_json::json!({
-                            "window": window.data().as_ffi(),
-                            "node_id": serde_json::Value::Null,
-                            "locked": self.inspect_is_locked(window),
-                        }),
-                    },
-                );
-            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
-            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -2467,30 +2325,8 @@ impl UiDiagnosticsService {
             .or_else(|| self.last_picked_node_id.get(&window).copied())
             .or_else(|| self.last_hovered_node_id.get(&window).copied());
         let Some(node_id) = node_id else {
-            if can_send
-                && (self.inspect_focus_summary_line.contains_key(&window)
-                    || self.inspect_focus_path_line.contains_key(&window)
-                    || self.inspect_focus_bounds.contains_key(&window))
-            {
-                self.ws_bridge.send(
-                    self.cfg.devtools_ws_url.as_deref(),
-                    self.cfg.devtools_token.as_deref(),
-                    DiagTransportMessageV1 {
-                        schema_version: 1,
-                        r#type: "inspect.focus".to_string(),
-                        session_id: None,
-                        request_id: None,
-                        payload: serde_json::json!({
-                            "window": window.data().as_ffi(),
-                            "node_id": serde_json::Value::Null,
-                            "locked": self.inspect_is_locked(window),
-                        }),
-                    },
-                );
-            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
-            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -2499,30 +2335,8 @@ impl UiDiagnosticsService {
             .iter()
             .find(|n| n.id.data().as_ffi() == node_id)
         else {
-            if can_send
-                && (self.inspect_focus_summary_line.contains_key(&window)
-                    || self.inspect_focus_path_line.contains_key(&window)
-                    || self.inspect_focus_bounds.contains_key(&window))
-            {
-                self.ws_bridge.send(
-                    self.cfg.devtools_ws_url.as_deref(),
-                    self.cfg.devtools_token.as_deref(),
-                    DiagTransportMessageV1 {
-                        schema_version: 1,
-                        r#type: "inspect.focus".to_string(),
-                        session_id: None,
-                        request_id: None,
-                        payload: serde_json::json!({
-                            "window": window.data().as_ffi(),
-                            "node_id": serde_json::Value::Null,
-                            "locked": self.inspect_is_locked(window),
-                        }),
-                    },
-                );
-            }
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
-            self.inspect_focus_bounds.remove(&window);
             return;
         };
 
@@ -2550,63 +2364,11 @@ impl UiDiagnosticsService {
 
         let path = format_inspect_path(snapshot, node_id, self.cfg.redact_text, 10);
 
-        let prev_summary = self.inspect_focus_summary_line.get(&window).cloned();
-        let prev_path = self.inspect_focus_path_line.get(&window).cloned();
-        let prev_selector_json = self
-            .inspect_best_selector_json(window)
-            .map(|s| s.to_string());
-        let prev_bounds = self.inspect_focus_bounds.get(&window).copied();
-        let bounds = RectV1::from(node.bounds);
-        let test_id = node.test_id.as_deref();
-        let label = (!self.cfg.redact_text)
-            .then_some(node.label.as_deref())
-            .flatten()
-            .map(|s| truncate_debug_value(s, 120));
-
-        self.inspect_focus_summary_line
-            .insert(window, summary.clone());
+        self.inspect_focus_summary_line.insert(window, summary);
         if let Some(path) = path {
-            self.inspect_focus_path_line.insert(window, path.clone());
+            self.inspect_focus_path_line.insert(window, path);
         } else {
             self.inspect_focus_path_line.remove(&window);
-        }
-        self.inspect_focus_bounds.insert(window, bounds);
-
-        if can_send {
-            let selector_json = self
-                .inspect_best_selector_json(window)
-                .map(|s| s.to_string());
-            let next_summary = Some(summary);
-            let next_path = self.inspect_focus_path_line.get(&window).cloned();
-
-            let changed = prev_selector_json != selector_json
-                || prev_summary != next_summary
-                || prev_path != next_path
-                || prev_bounds != Some(bounds);
-            if changed {
-                self.ws_bridge.send(
-                    self.cfg.devtools_ws_url.as_deref(),
-                    self.cfg.devtools_token.as_deref(),
-                    DiagTransportMessageV1 {
-                        schema_version: 1,
-                        r#type: "inspect.focus".to_string(),
-                        session_id: None,
-                        request_id: None,
-                        payload: serde_json::json!({
-                            "window": window.data().as_ffi(),
-                            "node_id": node_id,
-                            "selector_json": selector_json,
-                            "role": role,
-                            "test_id": test_id,
-                            "label": label,
-                            "bounds": bounds,
-                            "summary": next_summary,
-                            "path": next_path,
-                            "locked": self.inspect_is_locked(window),
-                        }),
-                    },
-                );
-            }
         }
     }
 
@@ -3025,559 +2787,6 @@ impl UiDiagnosticsService {
         }
         let _ = write_json(self.cfg.pick_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.pick_result_trigger_path);
-    }
-
-    fn poll_devtools_ws(&mut self) {
-        let mut inbox: Vec<DiagTransportMessageV1> = Vec::new();
-        self.ws_bridge.drain_inbox(
-            self.cfg.devtools_ws_url.as_deref(),
-            self.cfg.devtools_token.as_deref(),
-            &mut inbox,
-        );
-
-        for msg in inbox {
-            self.apply_devtools_ws_message(msg);
-        }
-    }
-
-    fn apply_devtools_ws_message(&mut self, msg: DiagTransportMessageV1) {
-        match msg.r#type.as_str() {
-            "inspect.set" => {
-                let enabled = msg.payload.get("enabled").and_then(|v| v.as_bool());
-                let consume_clicks = msg.payload.get("consume_clicks").and_then(|v| v.as_bool());
-                if let (Some(enabled), Some(consume_clicks)) = (enabled, consume_clicks) {
-                    self.inspect_consume_clicks = consume_clicks;
-                    if enabled {
-                        self.inspect_enabled = true;
-                    } else {
-                        let mut cleared_windows: HashSet<AppWindowId> = HashSet::new();
-                        cleared_windows.extend(self.last_hovered_node_id.keys().copied());
-                        cleared_windows.extend(self.last_picked_node_id.keys().copied());
-                        cleared_windows.extend(self.inspect_focus_node_id.keys().copied());
-
-                        self.inspect_enabled = false;
-                        self.inspect_locked_windows.clear();
-                        self.last_hovered_selector_json.clear();
-                        self.last_picked_selector_json.clear();
-                        self.last_hovered_node_id.clear();
-                        self.last_hovered_bounds.clear();
-                        self.inspect_focus_node_id.clear();
-                        self.inspect_focus_selector_json.clear();
-                        self.inspect_focus_bounds.clear();
-                        self.inspect_focus_down_stack.clear();
-                        self.inspect_pending_nav.clear();
-                        self.inspect_focus_summary_line.clear();
-                        self.inspect_focus_path_line.clear();
-
-                        for w in cleared_windows {
-                            self.ws_bridge.send(
-                                self.cfg.devtools_ws_url.as_deref(),
-                                self.cfg.devtools_token.as_deref(),
-                                DiagTransportMessageV1 {
-                                    schema_version: 1,
-                                    r#type: "inspect.hover".to_string(),
-                                    session_id: None,
-                                    request_id: None,
-                                    payload: serde_json::json!({
-                                        "window": w.data().as_ffi(),
-                                        "node_id": serde_json::Value::Null,
-                                        "locked": false,
-                                    }),
-                                },
-                            );
-                            self.ws_bridge.send(
-                                self.cfg.devtools_ws_url.as_deref(),
-                                self.cfg.devtools_token.as_deref(),
-                                DiagTransportMessageV1 {
-                                    schema_version: 1,
-                                    r#type: "inspect.focus".to_string(),
-                                    session_id: None,
-                                    request_id: None,
-                                    payload: serde_json::json!({
-                                        "window": w.data().as_ffi(),
-                                        "node_id": serde_json::Value::Null,
-                                        "locked": false,
-                                    }),
-                                },
-                            );
-                        }
-                    }
-                }
-            }
-            "pick.arm" => {
-                self.pending_pick = None;
-                self.pick_armed_run_id = Some(self.next_pick_run_id());
-            }
-            "bundle.dump" => {
-                let label = msg
-                    .payload
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                if let Some(label) = label {
-                    self.request_force_dump(label);
-                } else {
-                    self.request_force_dump("devtools".to_string());
-                }
-            }
-            "screenshot.request" => {
-                let label = msg
-                    .payload
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string());
-                let timeout_frames = msg
-                    .payload
-                    .get("timeout_frames")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(300)
-                    .min(u32::MAX as u64) as u32;
-                let window_ffi = msg
-                    .payload
-                    .get("window")
-                    .and_then(|v| v.as_u64())
-                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
-
-                self.pending_devtools_screenshot = Some(PendingDevtoolsScreenshotRequest {
-                    request_id: msg.request_id,
-                    label,
-                    timeout_frames,
-                    window_ffi,
-                });
-                self.devtools_screenshot_wait = None;
-            }
-            "script.push" | "script.run" => {
-                let script_value = msg
-                    .payload
-                    .get("script")
-                    .cloned()
-                    .unwrap_or_else(|| msg.payload.clone());
-                let schema_version: u32 = script_value
-                    .get("schema_version")
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0)
-                    .min(u32::MAX as u64) as u32;
-
-                let script = match schema_version {
-                    1 => serde_json::from_value::<UiActionScriptV1>(script_value)
-                        .ok()
-                        .and_then(PendingScript::from_v1),
-                    2 => serde_json::from_value::<UiActionScriptV2>(script_value)
-                        .ok()
-                        .and_then(PendingScript::from_v2),
-                    _ => None,
-                };
-
-                let Some(script) = script else {
-                    return;
-                };
-                let run_id = self.next_script_run_id();
-                self.pending_script = Some(script);
-                self.pending_script_run_id = Some(run_id);
-                self.write_script_result(UiScriptResultV1 {
-                    schema_version: 1,
-                    run_id,
-                    updated_unix_ms: unix_ms_now(),
-                    window: None,
-                    stage: UiScriptStageV1::Queued,
-                    step_index: None,
-                    reason: None,
-                    last_bundle_dir: self
-                        .last_dump_dir
-                        .as_ref()
-                        .map(|p| display_path(&self.cfg.out_dir, p)),
-                });
-            }
-            "semantics.node.get" => {
-                let parsed = serde_json::from_value::<UiSemanticsNodeGetV1>(msg.payload.clone())
-                    .ok()
-                    .filter(|v| v.schema_version == 1);
-
-                let window_ffi = parsed
-                    .as_ref()
-                    .map(|v| v.window)
-                    .or_else(|| msg.payload.get("window").and_then(|v| v.as_u64()))
-                    .or_else(|| msg.payload.get("window_ffi").and_then(|v| v.as_u64()));
-                let node_id = parsed
-                    .as_ref()
-                    .map(|v| v.node_id)
-                    .or_else(|| msg.payload.get("node_id").and_then(|v| v.as_u64()))
-                    .or_else(|| msg.payload.get("node").and_then(|v| v.as_u64()));
-
-                let (Some(window_ffi), Some(node_id)) = (window_ffi, node_id) else {
-                    return;
-                };
-
-                self.pending_devtools_semantics_node_get.insert(
-                    window_ffi,
-                    PendingDevtoolsSemanticsNodeGet {
-                        transport_request_id: msg.request_id,
-                        node_id,
-                    },
-                );
-            }
-            _ => {}
-        }
-    }
-
-    fn drive_devtools_semantics_node_get_for_window(
-        &mut self,
-        window_ffi: u64,
-        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
-        semantics_fingerprint: Option<u64>,
-    ) {
-        if !self.is_enabled() {
-            return;
-        }
-
-        let Some(pending) = self.pending_devtools_semantics_node_get.remove(&window_ffi) else {
-            return;
-        };
-
-        let Some(semantics_snapshot) = semantics_snapshot else {
-            self.ws_bridge.send(
-                self.cfg.devtools_ws_url.as_deref(),
-                self.cfg.devtools_token.as_deref(),
-                DiagTransportMessageV1 {
-                    schema_version: 1,
-                    r#type: "semantics.node.get_ack".to_string(),
-                    session_id: None,
-                    request_id: pending.transport_request_id,
-                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
-                        schema_version: 1,
-                        status: "no_semantics".to_string(),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        window: window_ffi,
-                        node_id: pending.node_id,
-                        semantics_fingerprint,
-                        node: None,
-                        children: Vec::new(),
-                        captured_unix_ms: Some(unix_ms_now()),
-                    })
-                    .unwrap_or(serde_json::Value::Null),
-                },
-            );
-            return;
-        };
-
-        let node = semantics_snapshot
-            .nodes
-            .iter()
-            .find(|n| key_to_u64(n.id) == pending.node_id);
-
-        let Some(node) = node else {
-            self.ws_bridge.send(
-                self.cfg.devtools_ws_url.as_deref(),
-                self.cfg.devtools_token.as_deref(),
-                DiagTransportMessageV1 {
-                    schema_version: 1,
-                    r#type: "semantics.node.get_ack".to_string(),
-                    session_id: None,
-                    request_id: pending.transport_request_id,
-                    payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
-                        schema_version: 1,
-                        status: "not_found".to_string(),
-                        reason: Some("node_not_found".to_string()),
-                        window: window_ffi,
-                        node_id: pending.node_id,
-                        semantics_fingerprint,
-                        node: None,
-                        children: Vec::new(),
-                        captured_unix_ms: Some(unix_ms_now()),
-                    })
-                    .unwrap_or(serde_json::Value::Null),
-                },
-            );
-            return;
-        };
-
-        let ui_node = UiSemanticsNodeV1::from_node(
-            node,
-            self.cfg.redact_text,
-            self.cfg.max_debug_string_bytes,
-        );
-        let children = semantics_snapshot
-            .nodes
-            .iter()
-            .filter_map(|n| {
-                n.parent
-                    .filter(|p| key_to_u64(*p) == pending.node_id)
-                    .map(|_| key_to_u64(n.id))
-            })
-            .collect::<Vec<_>>();
-
-        self.ws_bridge.send(
-            self.cfg.devtools_ws_url.as_deref(),
-            self.cfg.devtools_token.as_deref(),
-            DiagTransportMessageV1 {
-                schema_version: 1,
-                r#type: "semantics.node.get_ack".to_string(),
-                session_id: None,
-                request_id: pending.transport_request_id,
-                payload: serde_json::to_value(UiSemanticsNodeGetAckV1 {
-                    schema_version: 1,
-                    status: "ok".to_string(),
-                    reason: None,
-                    window: window_ffi,
-                    node_id: pending.node_id,
-                    semantics_fingerprint,
-                    node: serde_json::to_value(ui_node).ok(),
-                    children,
-                    captured_unix_ms: Some(unix_ms_now()),
-                })
-                .unwrap_or(serde_json::Value::Null),
-            },
-        );
-    }
-
-    fn drive_devtools_screenshot_for_window(
-        &mut self,
-        app: &App,
-        window: AppWindowId,
-        scale_factor: f32,
-    ) {
-        if !self.is_enabled() {
-            return;
-        }
-
-        let window_ffi = window.data().as_ffi();
-
-        if let Some(mut state) = self.devtools_screenshot_wait.take() {
-            if state.window_ffi != window_ffi {
-                self.devtools_screenshot_wait = Some(state);
-                return;
-            }
-
-            let trigger_stamp = read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
-            let completed = trigger_stamp.is_some()
-                && trigger_stamp != state.last_result_trigger_stamp
-                && screenshot_request_completed(
-                    &self.cfg.screenshot_result_path,
-                    &state.request_id,
-                    state.window_ffi,
-                );
-
-            if completed {
-                self.emit_screenshot_result(
-                    state.transport_request_id,
-                    &state.request_id,
-                    state.window_ffi,
-                    Some(&state.bundle_dir_name),
-                    "completed",
-                    None,
-                );
-            } else if state.remaining_frames == 0 {
-                self.emit_screenshot_result(
-                    state.transport_request_id,
-                    &state.request_id,
-                    state.window_ffi,
-                    Some(&state.bundle_dir_name),
-                    "timeout",
-                    Some("capture_screenshot_timeout"),
-                );
-            } else {
-                state.remaining_frames = state.remaining_frames.saturating_sub(1);
-                state.last_result_trigger_stamp = trigger_stamp;
-                self.devtools_screenshot_wait = Some(state);
-            }
-
-            return;
-        }
-
-        let Some(pending) = self.pending_devtools_screenshot.take() else {
-            return;
-        };
-
-        if pending.window_ffi.is_some_and(|w| w != window_ffi) {
-            self.pending_devtools_screenshot = Some(pending);
-            return;
-        }
-
-        let request_id = format!(
-            "devtools-screenshot-window-{window_ffi}-tick-{tick}-frame-{frame}",
-            tick = app.tick_id().0,
-            frame = app.frame_id().0
-        );
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            self.emit_screenshot_result(
-                pending.request_id,
-                &request_id,
-                window_ffi,
-                None,
-                "unsupported",
-                Some("screenshots_not_supported_wasm"),
-            );
-            return;
-        }
-
-        if !self.cfg.screenshots_enabled {
-            self.emit_screenshot_result(
-                pending.request_id,
-                &request_id,
-                window_ffi,
-                None,
-                "disabled",
-                Some("screenshots_disabled"),
-            );
-            return;
-        }
-
-        let label = pending
-            .label
-            .as_deref()
-            .map(sanitize_label)
-            .unwrap_or_else(|| "devtools-screenshot".to_string());
-
-        self.dump_bundle(Some(&label));
-
-        let bundle_dir_name = self
-            .last_dump_dir
-            .as_ref()
-            .and_then(|p| p.file_name())
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_string();
-
-        if bundle_dir_name.is_empty() {
-            self.emit_screenshot_result(
-                pending.request_id,
-                &request_id,
-                window_ffi,
-                None,
-                "failed",
-                Some("no_last_dump_dir"),
-            );
-            return;
-        }
-
-        let req = serde_json::json!({
-            "schema_version": 1,
-            "out_dir": self.cfg.out_dir.to_string_lossy(),
-            "bundle_dir_name": bundle_dir_name.clone(),
-            "request_id": request_id.clone(),
-            "windows": [{
-                "window": window_ffi,
-                "tick_id": app.tick_id().0,
-                "frame_id": app.frame_id().0,
-                "scale_factor": scale_factor as f64,
-            }]
-        });
-
-        let bytes = serde_json::to_vec_pretty(&req).ok();
-        if let Some(bytes) = bytes {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-                let write_ok = std::fs::write(&self.cfg.screenshot_request_path, bytes).is_ok()
-                    && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
-                if write_ok {
-                    self.devtools_screenshot_wait = Some(DevtoolsScreenshotWaitState {
-                        remaining_frames: pending.timeout_frames,
-                        request_id,
-                        window_ffi,
-                        last_result_trigger_stamp: None,
-                        transport_request_id: pending.request_id,
-                        bundle_dir_name,
-                    });
-                } else {
-                    self.emit_screenshot_result(
-                        pending.request_id,
-                        &request_id,
-                        window_ffi,
-                        Some(&bundle_dir_name),
-                        "failed",
-                        Some("screenshot_request_write_failed"),
-                    );
-                }
-            }
-
-            #[cfg(target_arch = "wasm32")]
-            {
-                let _ = bytes;
-                self.emit_screenshot_result(
-                    pending.request_id,
-                    &request_id,
-                    window_ffi,
-                    Some(&bundle_dir_name),
-                    "unsupported",
-                    Some("screenshots_not_supported_wasm"),
-                );
-            }
-        } else {
-            self.emit_screenshot_result(
-                pending.request_id,
-                &request_id,
-                window_ffi,
-                Some(&bundle_dir_name),
-                "failed",
-                Some("screenshot_request_serialize_failed"),
-            );
-        }
-    }
-
-    fn emit_screenshot_result(
-        &mut self,
-        transport_request_id: Option<u64>,
-        request_id: &str,
-        window_ffi: u64,
-        bundle_dir_name: Option<&str>,
-        status: &str,
-        reason: Option<&str>,
-    ) {
-        let bundle_dir_name = bundle_dir_name
-            .map(|s| s.to_string())
-            .or_else(|| {
-                self.last_dump_dir
-                    .as_ref()
-                    .and_then(|p| p.file_name())
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string())
-            })
-            .unwrap_or_default();
-
-        #[cfg(not(target_arch = "wasm32"))]
-        let entry =
-            screenshot_request_entry(&self.cfg.screenshot_result_path, request_id, window_ffi);
-        #[cfg(target_arch = "wasm32")]
-        let entry: Option<serde_json::Value> = None;
-
-        let screenshots_dir = if bundle_dir_name.is_empty() {
-            None
-        } else {
-            Some(display_path(
-                &self.cfg.out_dir,
-                &self
-                    .cfg
-                    .out_dir
-                    .join("screenshots")
-                    .join(bundle_dir_name.clone()),
-            ))
-        };
-
-        self.ws_bridge.send(
-            self.cfg.devtools_ws_url.as_deref(),
-            self.cfg.devtools_token.as_deref(),
-            DiagTransportMessageV1 {
-                schema_version: 1,
-                r#type: "screenshot.result".to_string(),
-                session_id: None,
-                request_id: transport_request_id,
-                payload: serde_json::json!({
-                    "schema_version": 1,
-                    "status": status,
-                    "reason": reason,
-                    "request_id": request_id,
-                    "window": window_ffi,
-                    "bundle_dir_name": bundle_dir_name,
-                    "screenshots_dir": screenshots_dir,
-                    "entry": entry,
-                }),
-            },
-        );
     }
 
     fn poll_pick_trigger(&mut self) {
@@ -8836,7 +8045,7 @@ impl From<Point> for PointV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct RectV1 {
     pub x: f32,
     pub y: f32,
