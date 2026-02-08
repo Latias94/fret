@@ -92,3 +92,41 @@ tools/perf/diag_perf_baseline_select.sh \
 - “One probe win” is not accepted if `ui-gallery-steady` regresses.
 - If a change touches text/renderer caches, always re-run at least one resize probe and one steady suite check.
 - Prefer a small number of well-maintained gates over lots of flaky scripts.
+- If your working tree is “dirty” (unrelated refactors, conflict resolution, or experiments in progress), run perf
+  gates from a **detached worktree** at the exact commit you want to measure so the results remain reversible and
+  commit-addressable.
+  - Example:
+    ```bash
+    git worktree add --detach ../fret-perf-lab <commit>
+    cd ../fret-perf-lab
+    cargo build -p fret-ui-gallery --release
+    tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
+    ```
+- When A/B testing env knobs that are read via `OnceLock`/static initialization, ensure the target process is
+  restarted between A/B runs (a single `--reuse-launch` session cannot see changed env values).
+
+## A/B workflow (env knobs)
+
+When evaluating a new cache/knob, use an explicit A/B protocol and keep artifacts separate:
+
+1. Prebuild the release binary once:
+   - `cargo build -p fret-ui-gallery --release`
+2. Run `A` (off/default) and `B` (on) with separate output dirs.
+3. Extract and record:
+   - gate pass/fail + attempts summary,
+   - worst-frame bundle path(s),
+   - 3–5 “load-bearing” metrics (e.g. `top_total_time_us`, `top_layout_engine_solve_time_us`,
+     `paint_text_prepare_time_us` if text is involved),
+   - the exact env knobs and values.
+
+Example (word-wrap cache experiments):
+
+```bash
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=0 \
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 \
+    --out-dir target/fret-diag-ab-text-unwrapped-off
+
+FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 \
+  tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 \
+    --out-dir target/fret-diag-ab-text-unwrapped-on
+```
