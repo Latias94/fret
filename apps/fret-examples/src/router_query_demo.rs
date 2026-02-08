@@ -395,6 +395,7 @@ fn on_command(
             let link = st
                 .router
                 .link_to(
+                    app,
                     NavigationAction::Push,
                     &RouteId::User,
                     &[PathParam {
