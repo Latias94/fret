@@ -133,11 +133,11 @@ Conventions:
   - [x] `fret_diag_bundle_dump_latest` (best-effort latest bundle.dumped payload),
   - [x] `fret_diag_compare`.
 - [ ] (Optional) Expose key artifacts as resources:
-  - [ ] latest `bundle.json`,
-  - [ ] `repro.summary.json`,
-  - [ ] packed zip bytes (or a download handle).
+  - [x] latest `bundle.json`,
+  - [x] `repro.summary.json` (when present on disk),
+  - [x] `bundle.zip` (generated on read; same layout as `diag pack`).
 - [ ] Add an end-to-end AI scenario doc:
-  - [ ] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
+  - [x] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
 
 ## Cross-cutting hygiene
 

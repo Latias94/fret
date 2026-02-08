@@ -152,6 +152,7 @@ Recommended packaging:
 
 - A dedicated binary `apps/fret-devtools-mcp` (headless) for automation and CI.
 - Optionally, the GUI can embed/launch the MCP server for convenience.
+- End-to-end workflow guide: `docs/workstreams/diag-devtools-gui-v1-ai-mcp.md`.
 
 ### Transport strategy (v1)
 
