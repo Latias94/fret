@@ -40,6 +40,28 @@ mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
 #[derive(Debug, Clone, Deserialize)]
+struct FixtureSuite<T> {
+    schema_version: u32,
+    cases: Vec<T>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutTriggerHeightRecipe {
+    PlainButton,
+    DrawerTrigger,
+    DialogTrigger,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutTriggerHeightCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutTriggerHeightRecipe,
+    label: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
 }
@@ -1527,147 +1549,83 @@ fn find_semantics<'a>(
 }
 
 #[test]
-fn web_vs_fret_layout_button_default_height() {
-    let web = read_web_golden("button-default");
-    let theme = web_theme(&web);
-    let web_button = web_find_by_tag_and_text(&theme.root, "button", "Button").expect("web button");
+fn web_vs_fret_layout_trigger_heights_match_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_trigger_height_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutTriggerHeightCase> =
+        serde_json::from_str(raw).expect("layout trigger height fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
+    for case in suite.cases {
+        eprintln!("layout trigger height case={}", case.id);
+        let web = read_web_golden(&case.web_name);
+        let theme = web_theme(&web);
+        let web_trigger = web_find_by_tag_and_text(&theme.root, "button", &case.label)
+            .unwrap_or_else(|| {
+                panic!(
+                    "web trigger missing: web={} label={}",
+                    case.web_name, case.label
+                )
+            });
 
-    let snap = run_fret_root(bounds, |cx| {
-        vec![fret_ui_shadcn::Button::new("Button").into_element(cx)]
-    });
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+        );
 
-    let button = find_semantics(&snap, SemanticsRole::Button, Some("Button"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret button semantics node");
+        let snap = match case.recipe {
+            LayoutTriggerHeightRecipe::PlainButton => run_fret_root(bounds, |cx| {
+                vec![fret_ui_shadcn::Button::new(case.label.clone()).into_element(cx)]
+            }),
+            LayoutTriggerHeightRecipe::DrawerTrigger => run_fret_root(bounds, |cx| {
+                use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
 
-    assert_close_px(
-        "button height",
-        button.bounds.size.height,
-        web_button.rect.h,
-        1.0,
-    );
-}
+                let open: Model<bool> = cx.app.models_mut().insert(false);
+                vec![Drawer::new(open).into_element(
+                    cx,
+                    |cx| {
+                        Button::new(case.label.clone())
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
+                )]
+            }),
+            LayoutTriggerHeightRecipe::DialogTrigger => run_fret_root(bounds, |cx| {
+                use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
-#[test]
-fn web_vs_fret_layout_drawer_demo_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+                let open: Model<bool> = cx.app.models_mut().insert(false);
+                vec![Dialog::new(open).into_element(
+                    cx,
+                    |cx| {
+                        Button::new(case.label.clone())
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| DialogContent::new(Vec::new()).into_element(cx),
+                )]
+            }),
+        };
 
-    let web = read_web_golden("drawer-demo");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Open Drawer").expect("web trigger");
+        let trigger = find_semantics(&snap, SemanticsRole::Button, Some(&case.label))
+            .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+            .unwrap_or_else(|| {
+                panic!(
+                    "missing fret trigger semantics: web={} label={}",
+                    case.web_name, case.label
+                )
+            });
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Drawer::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Open Drawer")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Open Drawer"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "drawer-demo trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_drawer_dialog_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
-
-    let web = read_web_golden("drawer-dialog");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Edit Profile").expect("web trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Dialog::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Edit Profile")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DialogContent::new(Vec::new()).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Edit Profile"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "drawer-dialog trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
-}
-
-#[test]
-fn web_vs_fret_layout_dialog_close_button_trigger_height_matches_web() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
-
-    let web = read_web_golden("dialog-close-button");
-    let theme = web_theme(&web);
-    let web_trigger =
-        web_find_by_tag_and_text(&theme.root, "button", "Share").expect("web trigger");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap = run_fret_root(bounds, |cx| {
-        let open: Model<bool> = cx.app.models_mut().insert(false);
-        vec![Dialog::new(open).into_element(
-            cx,
-            |cx| {
-                Button::new("Share")
-                    .variant(ButtonVariant::Outline)
-                    .into_element(cx)
-            },
-            |cx| DialogContent::new(Vec::new()).into_element(cx),
-        )]
-    });
-
-    let trigger = find_semantics(&snap, SemanticsRole::Button, Some("Share"))
-        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-        .expect("fret trigger semantics node");
-
-    assert_close_px(
-        "dialog-close-button trigger h",
-        trigger.bounds.size.height,
-        web_trigger.rect.h,
-        1.0,
-    );
+        assert_close_px(
+            &format!("{} trigger height", case.web_name),
+            trigger.bounds.size.height,
+            web_trigger.rect.h,
+            1.0,
+        );
+    }
 }
 
 fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect, tol: f32) {
