@@ -188,4 +188,4 @@ Unify under a trait:
 - `ecosystem/fret-router/src/query_integration.rs` (namespace invalidation planning + keying helpers)
 - `ecosystem/fret-router/src/router_state.rs` (`navigate_with_prefetch_intents` / `sync_with_prefetch_intents`)
 - `ecosystem/fret-query/src/lib.rs` (tests: namespace invalidation cancels inflight and ignores stale apply)
-- `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; route-driven query effects; page back/forward)
+- `apps/fret-ui-gallery/src/driver.rs` (window-scoped router adoption; wasm: `WebHistoryAdapter` + browser navigation sync; route-driven query effects; page back/forward)

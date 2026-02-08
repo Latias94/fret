@@ -1,6 +1,6 @@
 # Router (TanStack Parity) v1 (Tracking)
 
-Last updated: 2026-02-07
+Last updated: 2026-02-08
 
 This file tracks concrete work for:
 
@@ -14,11 +14,11 @@ Status legend:
 
 ## Phase 0 - Decisions and scope
 
-- `[ ]` Confirm router instance ownership model:
+- `[x]` Confirm router instance ownership model:
   - shared `RouteTree`, per-window `RouterState` + history (recommended)
-- `[ ]` Confirm search typing strategy:
+- `[x]` Confirm search typing strategy:
   - progressive typing (recommended)
-- `[ ]` Confirm loader backend:
+- `[x]` Confirm loader backend:
   - `fret-query` primary integration (recommended)
 
 ## Phase 1 - Match chain core
@@ -84,3 +84,6 @@ Status legend:
   - query prefetch tied to route matches
 - `[x]` Wire UI Gallery page history navigation:
   - add `Back`/`Forward` commands driven by the router history stack
+- `[x]` Adopt a real web history adapter in an app:
+  - `WebHistoryAdapter` in `fret-ui-gallery` (wasm)
+  - sync router state on browser navigation (`popstate`) via `router.sync_with_prefetch_intents()`
