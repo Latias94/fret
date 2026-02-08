@@ -187,6 +187,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/src/keymap/wire.rs`
     - `crates/fret-runtime/src/keymap/error.rs`
 
+- [x] BU-FR-core-030 Convert `fret-runtime` window command gating to a directory subsystem (`window_command_gating/mod.rs`).
+  - Goal: split service state, snapshot data, and helper construction functions without changing the contract surface.
+  - Evidence:
+    - `crates/fret-runtime/src/window_command_gating/mod.rs`
+    - `crates/fret-runtime/src/window_command_gating/service.rs`
+    - `crates/fret-runtime/src/window_command_gating/snapshot.rs`
+    - `crates/fret-runtime/src/window_command_gating/helpers.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.
