@@ -77,8 +77,8 @@ Write-Host "public surface (src/lib.rs quick scan):"
 $libRs = Join-Path $srcDir "lib.rs"
 if (Test-Path $libRs) {
     $libLines = [System.IO.File]::ReadAllLines($libRs)
-    $pubUse = ($libLines | Where-Object { $_ -match "^\s*pub\s+use\s+" }).Count
-    $pubMod = ($libLines | Where-Object { $_ -match "^\s*pub\s+mod\s+" }).Count
+    $pubUse = @($libLines | Where-Object { $_ -match "^\s*pub\s+use\s+" }).Count
+    $pubMod = @($libLines | Where-Object { $_ -match "^\s*pub\s+mod\s+" }).Count
     Write-Host ("  pub mod: {0}" -f $pubMod)
     Write-Host ("  pub use: {0}" -f $pubUse)
 } else {
