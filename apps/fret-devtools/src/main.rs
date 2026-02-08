@@ -14,8 +14,9 @@ use fret_diag_protocol::{
 use fret_diag_ws::client::{ClientKindV1, DevtoolsWsClient, DevtoolsWsClientConfig};
 use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle, Length, VirtualListOptions};
 use fret_ui::elements::ContinuousFrames;
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme};
 use fret_ui_shadcn as shadcn;
 
@@ -570,6 +571,13 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .read(&st.semantics_selected_id, |v| *v)
         .ok()
         .flatten();
+    let source_hash = cx
+        .app
+        .models()
+        .read(&st.semantics_source_hash, |v| *v)
+        .ok()
+        .flatten()
+        .unwrap_or(0);
 
     let search_input = shadcn::Input::new(st.semantics_search.clone())
         .a11y_label("Semantics search")
@@ -590,103 +598,150 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             cx.text("No semantics yet. Use 'Dump Bundle' or run a script that dumps a bundle.")
         }
         (Some(index), None) => {
-            let max_rows = 4000usize;
-            let rows = semantics::compute_rows(&index, &expanded, &search, max_rows);
-            let truncated = rows.len() >= max_rows;
-
-            let mut elems: Vec<AnyElement> = Vec::new();
-            elems.reserve(rows.len().min(800));
-
-            for row in rows.iter().take(max_rows) {
-                let variant = if selected_id == Some(row.id) {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                };
-
-                let toggle = if row.has_children {
-                    let expanded_model = st.semantics_expanded.clone();
-                    let id = row.id;
-                    let is_expanded = row.is_expanded;
-                    let on_toggle: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _reason| {
-                            let _ = host.models_mut().update(&expanded_model, |set| {
-                                if is_expanded {
-                                    set.remove(&id);
-                                } else {
-                                    set.insert(id);
-                                }
-                            });
-                            host.request_redraw(action_cx.window);
-                        });
-                    let glyph = if row.is_expanded { "▾" } else { "▸" };
-                    shadcn::Button::new(glyph)
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_activate(on_toggle)
-                        .into_element(cx)
-                } else {
-                    cx.text(" ")
-                };
-
-                let indent = "  ".repeat(row.depth);
-                let label = format!("{indent}{}", row.label);
-                let selected_id_model = st.semantics_selected_id.clone();
-                let selected_json_model = st.semantics_selected_node_json.clone();
-                let index_for_select = Arc::clone(&index);
-                let id = row.id;
-                let on_select: fret_ui::action::OnActivate =
-                    Arc::new(move |host, action_cx, _reason| {
-                        let _ = host
-                            .models_mut()
-                            .update(&selected_id_model, |v| *v = Some(id));
-                        let text =
-                            semantics::selected_node_json(index_for_select.as_ref(), Some(id));
-                        let _ = host
-                            .models_mut()
-                            .update(&selected_json_model, |v| *v = text);
-                        host.request_redraw(action_cx.window);
-                    });
-
-                let row_button = shadcn::Button::new(label)
-                    .variant(variant)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_activate(on_select)
-                    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-                    .into_element(cx);
-
-                let line = fret_ui_kit::declarative::stack::hstack(
-                    cx,
-                    fret_ui_kit::declarative::stack::HStackProps::default()
-                        .gap_x(fret_ui_kit::Space::N1)
-                        .items_center()
-                        .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                    |_cx| [toggle, row_button],
-                );
-                elems.push(line);
+            #[derive(Debug, Default)]
+            struct RowsCache {
+                key: u64,
+                rows: Arc<Vec<semantics::SemanticsRow>>,
             }
 
-            let footer = cx.text(format!(
-                "window={} roots={} nodes={} rows={}{}",
+            let rows_key = {
+                use std::hash::{Hash, Hasher};
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                source_hash.hash(&mut hasher);
+                search.trim().to_lowercase().hash(&mut hasher);
+                let mut expanded_sorted: Vec<u64> = expanded.iter().copied().collect();
+                expanded_sorted.sort_unstable();
+                expanded_sorted.hash(&mut hasher);
+                hasher.finish()
+            };
+
+            let rows = cx.with_state(RowsCache::default, |cache| {
+                if cache.key != rows_key {
+                    let next = semantics::compute_rows(&index, &expanded, &search);
+                    cache.key = rows_key;
+                    cache.rows = Arc::new(next);
+                }
+                Arc::clone(&cache.rows)
+            });
+
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+            layout.flex.grow = 1.0;
+
+            let mut options = VirtualListOptions::fixed(Px(28.0), 8).keep_alive(16);
+            options.items_revision = rows_key;
+
+            let stats = cx.text(format!(
+                "window={} roots={} nodes={} rows={}",
                 index.window,
                 index.roots.len(),
                 index.nodes_by_id.len(),
-                rows.len(),
-                if truncated { " (truncated)" } else { "" }
+                rows.len()
             ));
 
-            let mut all_rows = Vec::with_capacity(elems.len() + 1);
-            all_rows.push(footer);
-            all_rows.extend(elems);
+            let rows_for_key = Arc::clone(&rows);
+            let rows_for_row = Arc::clone(&rows);
+            let index_for_list = Arc::clone(&index);
+            let selected_id_for_list = selected_id;
+            let has_search = !search.trim().is_empty();
 
-            shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
+            let list = cx.virtual_list_keyed_with_layout(
+                layout,
+                rows_for_key.len(),
+                options,
+                &scroll_handle,
+                |i| rows_for_key[i].id,
+                move |cx, i| {
+                    let row = &rows_for_row[i];
+                    let id = row.id;
+
+                    let variant = if selected_id_for_list == Some(id) {
+                        shadcn::ButtonVariant::Secondary
+                    } else {
+                        shadcn::ButtonVariant::Ghost
+                    };
+
+                    let toggle: AnyElement = if row.has_children {
+                        let glyph = if row.is_expanded { "▾" } else { "▸" };
+                        if has_search {
+                            cx.text(glyph.to_string())
+                        } else {
+                            let expanded_model = st.semantics_expanded.clone();
+                            let on_toggle: fret_ui::action::OnActivate =
+                                Arc::new(move |host, action_cx, _reason| {
+                                    let _ = host.models_mut().update(&expanded_model, |set| {
+                                        if set.contains(&id) {
+                                            set.remove(&id);
+                                        } else {
+                                            set.insert(id);
+                                        }
+                                    });
+                                    host.request_redraw(action_cx.window);
+                                });
+                            shadcn::Button::new(glyph)
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(on_toggle)
+                                .into_element(cx)
+                        }
+                    } else {
+                        cx.text(" ")
+                    };
+
+                    let label = index_for_list
+                        .node(id)
+                        .map(semantics::node_label)
+                        .unwrap_or_else(|| format!("<missing semantics node id={id}>"));
+
+                    let selected_id_model = st.semantics_selected_id.clone();
+                    let selected_json_model = st.semantics_selected_node_json.clone();
+                    let index_for_select = Arc::clone(&index_for_list);
+                    let on_select: fret_ui::action::OnActivate =
+                        Arc::new(move |host, action_cx, _reason| {
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_id_model, |v| *v = Some(id));
+                            let text =
+                                semantics::selected_node_json(index_for_select.as_ref(), Some(id));
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_json_model, |v| *v = text);
+                            host.request_redraw(action_cx.window);
+                        });
+
+                    let row_button = shadcn::Button::new(label)
+                        .variant(variant)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_select)
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .flex_1()
+                                .min_w_0()
+                                .ml_px(Px(12.0 * row.depth as f32)),
+                        )
+                        .into_element(cx);
+
+                    fret_ui_kit::declarative::stack::hstack(
+                        cx,
+                        fret_ui_kit::declarative::stack::HStackProps::default()
+                            .gap_x(fret_ui_kit::Space::N1)
+                            .items_center()
+                            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                        |_cx| [toggle, row_button],
+                    )
+                },
+            );
+
+            fret_ui_kit::declarative::stack::vstack(
                 cx,
                 fret_ui_kit::declarative::stack::VStackProps::default()
                     .gap_y(fret_ui_kit::Space::N1)
-                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                |_cx| all_rows,
-            )])
-            .into_element(cx)
+                    .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
+                |_cx| [stats, list],
+            )
         }
     };
 

@@ -64,7 +64,6 @@ pub(crate) struct SemanticsRow {
     pub depth: usize,
     pub has_children: bool,
     pub is_expanded: bool,
-    pub label: String,
 }
 
 pub(crate) fn refresh_semantics_cache_if_needed(app: &mut App, st: &State) {
@@ -157,7 +156,6 @@ pub(crate) fn compute_rows(
     index: &SemanticsIndex,
     expanded: &HashSet<u64>,
     search: &str,
-    max_rows: usize,
 ) -> Vec<SemanticsRow> {
     let search = search.trim().to_lowercase();
     let has_search = !search.is_empty();
@@ -180,9 +178,6 @@ pub(crate) fn compute_rows(
 
     let mut out = Vec::new();
     for root in index.roots.iter() {
-        if out.len() >= max_rows {
-            break;
-        }
         push_rows_from_node(
             &mut out,
             index,
@@ -191,7 +186,6 @@ pub(crate) fn compute_rows(
             expanded,
             visible.as_ref(),
             has_search,
-            max_rows,
         );
     }
     out
@@ -205,19 +199,14 @@ fn push_rows_from_node(
     expanded: &HashSet<u64>,
     visible: Option<&HashSet<u64>>,
     force_expand_visible: bool,
-    max_rows: usize,
 ) {
-    if out.len() >= max_rows {
-        return;
-    }
-
     if let Some(visible) = visible {
         if !visible.contains(&id) {
             return;
         }
     }
 
-    let Some(node) = index.node(id) else {
+    if index.node(id).is_none() {
         return;
     };
 
@@ -230,14 +219,10 @@ fn push_rows_from_node(
         depth,
         has_children,
         is_expanded: has_children && is_expanded,
-        label: node_label(node),
     });
 
     if has_children && is_expanded {
         for child in children {
-            if out.len() >= max_rows {
-                break;
-            }
             push_rows_from_node(
                 out,
                 index,
@@ -246,7 +231,6 @@ fn push_rows_from_node(
                 expanded,
                 visible,
                 force_expand_visible,
-                max_rows,
             );
         }
     }
@@ -274,7 +258,7 @@ fn node_matches(node: &UiSemanticsNodeV1, search_lower: &str) -> bool {
     false
 }
 
-fn node_label(node: &UiSemanticsNodeV1) -> String {
+pub(crate) fn node_label(node: &UiSemanticsNodeV1) -> String {
     let role = &node.role;
     let test_id = node.test_id.as_deref().unwrap_or("-");
     let label = node.label.as_deref().unwrap_or("-");
