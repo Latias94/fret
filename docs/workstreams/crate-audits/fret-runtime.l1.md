@@ -40,8 +40,9 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
     - `crates/fret-runtime/src/keymap/tests.rs` (when validation + resolution behavior)
     - `crates/fret-runtime/src/menu/tests.rs` (patch semantics)
 - `WhenExpr` identifier vocabulary drift breaking gating.
-  - Missing gate to add:
-    - a small “identifier contract” fixture list that covers bool vs string identifiers and capability key prefixes.
+  - Existing gates:
+    - `crates/fret-runtime/src/when_expr/tests.rs` (`when_expr_identifier_contract_matches_capability_tables`)
+    - `crates/fret-runtime/src/when_expr/tests.rs` (`when_expr_identifier_contract_covers_builtin_identifiers`)
 
 ## Recommended next steps
 
