@@ -1,3 +1,7 @@
+#![cfg(feature = "web-goldens")]
+// Heavy, web-golden-backed conformance. Enable via:
+//   cargo nextest run -p fret-ui-shadcn --features web-goldens
+
 use fret_app::App;
 use fret_core::{
     AppWindowId, Edges, Event, FontId, FontWeight, FrameId, KeyCode, Modifiers, MouseButton, Point,

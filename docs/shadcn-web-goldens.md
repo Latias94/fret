@@ -22,6 +22,13 @@ For each component page, the exporter writes a JSON file with:
   Recharts layers) to avoid capturing partial frames (e.g. `chart-bar-default` missing `path.recharts-rectangle`,
   or radar/radial charts captured at their animation origin).
 
+## Running Fret conformance
+
+The heaviest shadcn “web vs fret” conformance tests are gated behind a feature to keep the default
+developer inner loop cheaper:
+
+`cargo nextest run -p fret-ui-shadcn --features web-goldens`
+
 ## Prerequisites
 
 - `pnpm`
