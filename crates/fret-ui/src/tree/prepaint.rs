@@ -228,6 +228,7 @@ impl<H: UiHost> UiTree<H> {
                 };
 
                 let mut window_shift_kind = crate::tree::UiDebugVirtualListWindowShiftKind::None;
+                let allow_preemptive_prefetch = retained_host || !view_cache_active;
                 let window_range = if window_mismatch {
                     window_shift_kind = crate::tree::UiDebugVirtualListWindowShiftKind::Escape;
                     if retained_host {
@@ -292,6 +293,12 @@ impl<H: UiHost> UiTree<H> {
 
                             if let Some(prefetch) = forced_prefetch {
                                 Some(prefetch)
+                            } else if !allow_preemptive_prefetch {
+                                // For non-retained + view-cache hosts, prefetch shifts translate
+                                // directly into cache-root rerenders. Keep the current rendered
+                                // window while it still covers the visible range, and rely on
+                                // escape-driven shifts when we truly leave overscan.
+                                ideal_window_range
                             } else {
                                 let prefetch_margin = (inputs.overscan / 6).max(1);
                                 // Shift by a slightly larger step than the “near-edge” margin so we

@@ -1776,6 +1776,264 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// Returns a stable, memoized ordering of the root row list after filtering + sorting.
+    ///
+    /// This helper exists to support "rebuild each frame" callers: they can rebuild a fresh `Table`
+    /// while keeping a persistent memo cache (TanStack-style) outside the ephemeral instance.
+    ///
+    /// Notes:
+    /// - The returned ordering is based on the **flat core row model** (no grouping, no sub-rows).
+    /// - Cache invalidation is driven by `items_revision` plus a dependency snapshot derived from
+    ///   `state`, `options`, and the configured column/filter/sort surfaces.
+    pub fn tanstack_sorted_flat_row_order_with_cache(
+        &self,
+        items_revision: u64,
+        cache: &mut super::TanStackSortedFlatRowOrderCache,
+    ) -> (Arc<[super::FlatRowOrderEntry]>, bool) {
+        let deps = super::TanStackSortedFlatRowOrderDeps {
+            items_revision,
+            data_len: self.data.len(),
+            sorting: self.state.sorting.clone(),
+            column_filters: self.state.column_filters.clone(),
+            global_filter: self.state.global_filter.clone(),
+            options: self.options,
+            global_filter_fn: self.global_filter_fn.clone(),
+            has_get_column_can_global_filter: self.get_column_can_global_filter.is_some(),
+        };
+
+        let (order, recomputed) = cache.sorted_order(
+            self.data,
+            &self.columns,
+            self.get_row_key.as_ref(),
+            &self.filter_fns,
+            &self.sorting_fns,
+            self.get_column_can_global_filter.as_deref(),
+            deps,
+        );
+        (order.clone(), recomputed)
+    }
+
+    /// TanStack-aligned: `column.getCanSort()`.
+    pub fn column_can_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+        Some(self.options.enable_sorting && col.enable_sorting && has_sort_value_source)
+    }
+
+    /// TanStack-aligned: `column.getCanMultiSort()`.
+    pub fn column_can_multi_sort(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        let has_sort_value_source = col.sort_cmp.is_some() || col.sort_value.is_some();
+
+        // TanStack: `columnDef.enableMultiSort ?? table.options.enableMultiSort ?? !!accessorFn`
+        // We treat “accessorFn exists” as “has a sort value source”.
+        if has_sort_value_source {
+            Some(self.options.enable_multi_sort && col.enable_multi_sort)
+        } else {
+            Some(false)
+        }
+    }
+
+    /// TanStack-aligned: `column.getAutoSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`.
+    pub fn column_auto_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream uses `firstRow.getValue(column.id)` (accessorFn). In the Rust engine, we only
+        // have a stable “getValue” equivalent when the column provides `sort_value_by`.
+        //
+        // When `sort_value_by` is unavailable, we fall back to `desc` (matching upstream’s
+        // empty-row behavior where the first value is `undefined` and `typeof undefined !== "string"`).
+        let Some(get_value) = col.sort_value.as_ref() else {
+            return Some(true);
+        };
+
+        let model = self.filtered_row_model();
+        let first_value = model
+            .flat_rows()
+            .first()
+            .and_then(|&i| model.row(i))
+            .map(|r| (get_value)(r.original));
+
+        let desc = match first_value {
+            Some(super::TanStackValue::String(_)) => false,
+            _ => true,
+        };
+        Some(desc)
+    }
+
+    /// TanStack-aligned: `column.getFirstSortDir()`.
+    ///
+    /// Returns `true` for `desc` and `false` for `asc`. Returns `None` when we cannot infer the
+    /// direction (because the column has neither an explicit `sortDescFirst` override nor a stable
+    /// `sort_value_by` surface for auto inference).
+    pub fn column_first_sort_dir_desc_tanstack(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+
+        // Upstream:
+        // `sortDescFirst = columnDef.sortDescFirst ?? table.options.sortDescFirst ?? (getAutoSortDir() === 'desc')`
+        if let Some(explicit) = col.sort_desc_first.or(self.options.sort_desc_first) {
+            return Some(explicit);
+        }
+
+        self.column_auto_sort_dir_desc_tanstack(column_id)
+    }
+
+    /// TanStack-aligned: `column.getNextSortingOrder(multi?)`.
+    ///
+    /// Returns:
+    /// - `Some(Some(true))`  => `'desc'`
+    /// - `Some(Some(false))` => `'asc'`
+    /// - `Some(None)`        => `false` (remove)
+    /// - `None`              => unknown column id
+    pub fn column_next_sorting_order_desc_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+    ) -> Option<Option<bool>> {
+        let first_desc = self.column_first_sort_dir_desc_tanstack(column_id)?;
+        let is_sorted = super::sort_for_column(&self.state.sorting, column_id);
+
+        let enable_sorting_removal = self.options.enable_sorting_removal;
+        let enable_multi_remove = self.options.enable_multi_remove;
+
+        match is_sorted {
+            None => Some(Some(first_desc)),
+            Some(current_desc) => {
+                if current_desc != first_desc
+                    && enable_sorting_removal
+                    && (!multi || enable_multi_remove)
+                {
+                    return Some(None);
+                }
+                Some(Some(!current_desc))
+            }
+        }
+    }
+
+    /// TanStack-aligned: `column.clearSorting()`.
+    pub fn cleared_column_sorting(&self, column_id: &str) -> Option<super::SortingState> {
+        self.column(column_id)?;
+
+        let mut next = self.state.sorting.clone();
+        next.retain(|spec| spec.column.as_ref() != column_id);
+        Some(next)
+    }
+
+    /// TanStack-aligned: `column.getIsSorted()` (boolean form).
+    pub fn column_is_sorted(&self, column_id: &str) -> Option<bool> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .any(|s| s.column.as_ref() == column_id),
+        )
+    }
+
+    /// TanStack-aligned: `column.getSortIndex()`.
+    ///
+    /// Returns `-1` when the column is not currently sorted. Returns `None` when the column id
+    /// does not exist.
+    pub fn column_sort_index(&self, column_id: &str) -> Option<i32> {
+        self.column(column_id)?;
+        Some(
+            self.state
+                .sorting
+                .iter()
+                .position(|s| s.column.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
+    /// TanStack-aligned sorting state transition for `column.toggleSorting(...)`.
+    ///
+    /// This models the "direct toggle" policy (see `sorting.rs::toggle_sorting_tanstack`).
+    pub fn sorting_updater_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// TanStack-aligned sorting state transition for `column.getToggleSortingHandler()`.
+    ///
+    /// This models the "handler" policy (including `getCanSort` gating), aligning with
+    /// `sorting.rs::toggle_sorting_handler_tanstack`.
+    pub fn sorting_handler_updater_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::Updater<super::SortingState>> {
+        let col = self.column(column_id)?;
+        let toggle_col = super::sorting::SortToggleColumn {
+            id: col.id.clone(),
+            enable_sorting: col.enable_sorting,
+            enable_multi_sort: col.enable_multi_sort,
+            sort_desc_first: col.sort_desc_first,
+            has_sort_value_source: col.sort_cmp.is_some() || col.sort_value.is_some(),
+        };
+        let options = self.options;
+        Some(super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::sorting::toggle_sorting_state_handler_tanstack(
+                &mut next,
+                &toggle_col,
+                options,
+                event_multi,
+                auto_sort_dir_desc,
+            );
+            next
+        })))
+    }
+
+    /// Convenience: apply [`Self::sorting_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_tanstack(
+        &self,
+        column_id: &str,
+        multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater = self.sorting_updater_tanstack(column_id, multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
+    /// Convenience: apply [`Self::sorting_handler_updater_tanstack`] to the current sorting state.
+    pub fn toggled_column_sorting_handler_tanstack(
+        &self,
+        column_id: &str,
+        event_multi: bool,
+        auto_sort_dir_desc: bool,
+    ) -> Option<super::SortingState> {
+        let updater =
+            self.sorting_handler_updater_tanstack(column_id, event_multi, auto_sort_dir_desc)?;
+        Some(updater.apply(&self.state.sorting))
+    }
+
     /// TanStack-aligned: `table.resetColumnFilters(defaultState?)`.
     pub fn reset_column_filters(&self, default_state: bool) -> super::ColumnFiltersState {
         if default_state {
@@ -2449,6 +2707,122 @@ impl<'a, TData> Table<'a, TData> {
             &leaf_visible,
             Some("right"),
         )
+    }
+
+    pub fn footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn left_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.left_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn center_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.center_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn right_footer_groups(&self) -> Vec<super::HeaderGroupSnapshot> {
+        let mut groups = self.right_header_groups();
+        groups.reverse();
+        groups
+    }
+
+    pub fn flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn center_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn right_flat_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_header_groups()
+            .into_iter()
+            .flat_map(|g| g.headers)
+            .collect()
+    }
+
+    pub fn left_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.left_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn center_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.center_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    pub fn right_leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        self.right_flat_headers()
+            .into_iter()
+            .filter(|h| h.sub_header_ids.is_empty())
+            .collect()
+    }
+
+    /// TanStack-style `getLeafHeaders` (postorder traversal from top headers).
+    pub fn leaf_headers(&self) -> Vec<super::HeaderSnapshot> {
+        fn recurse(
+            id: &Arc<str>,
+            headers_by_id: &HashMap<Arc<str>, super::HeaderSnapshot>,
+            out: &mut Vec<super::HeaderSnapshot>,
+        ) {
+            let Some(h) = headers_by_id.get(id) else {
+                return;
+            };
+            for child in &h.sub_header_ids {
+                recurse(child, headers_by_id, out);
+            }
+            out.push(h.clone());
+        }
+
+        let left = self.left_header_groups();
+        let center = self.center_header_groups();
+        let right = self.right_header_groups();
+
+        let mut roots: Vec<Arc<str>> = Vec::new();
+        for groups in [&left, &center, &right] {
+            if let Some(top) = groups.first() {
+                roots.extend(top.headers.iter().map(|h| h.id.clone()));
+            }
+        }
+
+        let mut headers_by_id: HashMap<Arc<str>, super::HeaderSnapshot> = HashMap::new();
+        for groups in [left, center, right] {
+            for g in groups {
+                for h in g.headers {
+                    headers_by_id.insert(h.id.clone(), h);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        for root in roots {
+            recurse(&root, &headers_by_id, &mut out);
+        }
+        out
     }
 
     pub fn row_cells(&self, row_key: RowKey) -> Option<super::RowCellsSnapshot> {
@@ -3512,6 +3886,48 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn filtered_selected_flat_row_count(&self) -> usize {
         super::selected_flat_row_count(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    /// TanStack-aligned: `row.getCanSelect()`.
+    pub fn row_can_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanMultiSelect()`.
+    pub fn row_can_multi_select(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_multi_select_for_row(row_key, r))
+    }
+
+    /// TanStack-aligned: `row.getCanSelectSubRows()`.
+    pub fn row_can_select_sub_rows(&self, row_key: RowKey) -> bool {
+        let model = self.core_row_model();
+        model
+            .row_by_key(row_key)
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_select_sub_rows_for_row(row_key, r))
+    }
+
+    pub fn row_can_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_multi_select_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_multi_select_for_row(row.key, row))
+    }
+
+    pub fn row_can_select_sub_rows_by_id(&self, row_id: &str, search_all: bool) -> Option<bool> {
+        let row = self.row_by_id(row_id, search_all)?;
+        Some(self.row_can_select_sub_rows_for_row(row.key, row))
     }
 
     pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {

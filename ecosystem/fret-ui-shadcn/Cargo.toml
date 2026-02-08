@@ -12,7 +12,7 @@ documentation.workspace = true
 [features]
 default = []
 app-integration = ["dep:fret-app"]
-state-selector = ["dep:fret-selector"]
+state-selector = ["dep:fret-selector", "fret-selector/ui"]
 state-query = ["dep:fret-query"]
 state = ["state-selector", "state-query"]
 

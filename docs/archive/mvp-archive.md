@@ -40,8 +40,8 @@ Code anchors:
 - Declarative elements skeleton: `crates/fret-ui/src/elements/mod.rs`
 - Declarative demo widget: `apps/fret-examples/src/components_gallery.rs` (entrypoint evolves; search for declarative roots)
 - IME plumbing + cursor-area effects: `crates/fret-launch/src/runner/mod.rs`
-- Text system + atlas uploads: `crates/fret-render/src/text.rs`
-- `SceneOp::Text` rendering: `crates/fret-render/src/renderer/mod.rs`
+- Text system + atlas uploads: `crates/fret-render-wgpu/src/text.rs`
+- `SceneOp::Text` rendering: `crates/fret-render-wgpu/src/renderer/mod.rs`
 - Minimal `Text` / `TextInput` widgets: `crates/fret-ui/src/text_input/mod.rs`
 - Demo property rows with labels: `apps/fret-editor/src/inspector_edit.rs`
 - Keymap/when parsing + resolver: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`

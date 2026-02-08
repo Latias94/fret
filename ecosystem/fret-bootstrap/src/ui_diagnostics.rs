@@ -4814,6 +4814,10 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
+    pub scroll_nodes: Vec<UiScrollNodeTelemetryV1>,
+    #[serde(default)]
+    pub scrollbars: Vec<UiScrollbarTelemetryV1>,
+    #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
@@ -4847,6 +4851,8 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
     pub layout_hotspots: Vec<UiLayoutHotspotV1>,
+    #[serde(default)]
+    pub layout_inclusive_hotspots: Vec<UiLayoutHotspotV1>,
     #[serde(default)]
     pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
     #[serde(default)]
@@ -5046,6 +5052,18 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
                 .collect(),
+            scroll_nodes: ui
+                .debug_scroll_nodes()
+                .iter()
+                .copied()
+                .map(UiScrollNodeTelemetryV1::from_telemetry)
+                .collect(),
+            scrollbars: ui
+                .debug_scrollbars()
+                .iter()
+                .copied()
+                .map(UiScrollbarTelemetryV1::from_telemetry)
+                .collect(),
             prepaint_actions: ui
                 .debug_prepaint_actions()
                 .iter()
@@ -5117,6 +5135,11 @@ impl UiTreeDebugSnapshotV1 {
                 .collect(),
             layout_hotspots: ui
                 .debug_layout_hotspots()
+                .iter()
+                .map(UiLayoutHotspotV1::from_hotspot)
+                .collect(),
+            layout_inclusive_hotspots: ui
+                .debug_layout_inclusive_hotspots()
                 .iter()
                 .map(UiLayoutHotspotV1::from_hotspot)
                 .collect(),
@@ -5809,6 +5832,98 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiScrollAxisV1 {
+    X,
+    Y,
+    Both,
+}
+
+impl UiScrollAxisV1 {
+    fn from_axis(axis: fret_ui::tree::UiDebugScrollAxis) -> Self {
+        match axis {
+            fret_ui::tree::UiDebugScrollAxis::X => Self::X,
+            fret_ui::tree::UiDebugScrollAxis::Y => Self::Y,
+            fret_ui::tree::UiDebugScrollAxis::Both => Self::Both,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollNodeTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+}
+
+impl UiScrollNodeTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollNodeTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollbarTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<u64>,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+    pub track: RectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumb: Option<RectV1>,
+    #[serde(default)]
+    pub hovered: bool,
+    #[serde(default)]
+    pub dragging: bool,
+}
+
+impl UiScrollbarTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollbarTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            scroll_target: telemetry.scroll_target.map(|e| e.0),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
+            track: telemetry.track.into(),
+            thumb: telemetry.thumb.map(RectV1::from),
+            hovered: telemetry.hovered,
+            dragging: telemetry.dragging,
         }
     }
 }
@@ -6828,6 +6943,10 @@ pub struct UiLayoutHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub layout_time_us: u64,
     #[serde(default)]
@@ -6839,6 +6958,8 @@ impl UiLayoutHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -6876,6 +6997,8 @@ pub struct UiPaintWidgetHotspotV1 {
     pub element: Option<u64>,
     #[serde(default)]
     pub element_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
     pub widget_type: String,
     pub paint_time_us: u64,
     #[serde(default)]
@@ -6892,6 +7015,7 @@ impl UiPaintWidgetHotspotV1 {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
             element_kind: h.element_kind.map(|s| s.to_string()),
+            element_path: h.element_path.clone(),
             widget_type: h.widget_type.to_string(),
             paint_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
@@ -7527,6 +7651,10 @@ pub struct UiFrameStatsV1 {
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
     #[serde(default)]
+    pub paint_cache_hit_test_only_replay_allowed: u32,
+    #[serde(default)]
+    pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
+    #[serde(default)]
     pub paint_cache_replay_time_us: u64,
     #[serde(default)]
     pub paint_cache_bounds_translate_time_us: u64,
@@ -7542,6 +7670,10 @@ pub struct UiFrameStatsV1 {
     pub interaction_records: u32,
     pub layout_engine_solves: u64,
     pub layout_engine_solve_time_us: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_queries: u64,
+    #[serde(default)]
+    pub layout_engine_child_rect_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
     #[serde(default)]
     pub layout_fast_path_taken: bool,
@@ -7915,6 +8047,10 @@ impl UiFrameStatsV1 {
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            paint_cache_hit_test_only_replay_allowed: stats
+                .paint_cache_hit_test_only_replay_allowed,
+            paint_cache_hit_test_only_replay_rejected_key_mismatch: stats
+                .paint_cache_hit_test_only_replay_rejected_key_mismatch,
             paint_cache_replay_time_us: stats.paint_cache_replay_time.as_micros() as u64,
             paint_cache_bounds_translate_time_us: stats
                 .paint_cache_bounds_translate_time
@@ -7926,6 +8062,9 @@ impl UiFrameStatsV1 {
             interaction_records: stats.interaction_records,
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
+            layout_engine_child_rect_queries: stats.layout_engine_child_rect_queries,
+            layout_engine_child_rect_time_us: stats.layout_engine_child_rect_time.as_micros()
+                as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
             layout_fast_path_taken: stats.layout_fast_path_taken,
             layout_invalidations_count: stats.layout_invalidations_count,

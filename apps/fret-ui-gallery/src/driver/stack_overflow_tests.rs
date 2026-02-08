@@ -228,7 +228,7 @@ fn nav_to_datatable_does_not_stack_overflow_with_wgpu_renderer_services() {
     let cmd_nav = CommandId::new(CMD_NAV_DATA_TABLE);
     eprintln!("nav: data_table");
     assert!(UiGalleryDriver::handle_nav_command(
-        &mut app, &mut state, window, &cmd_nav,
+        &mut app, &mut state, window, &cmd_nav
     ));
 
     app.set_frame_id(FrameId(2));

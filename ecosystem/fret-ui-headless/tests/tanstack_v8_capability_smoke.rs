@@ -1,7 +1,6 @@
 use fret_ui_headless::table::{
     ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, RowId, RowKey,
     RowPinPosition, Table, TableState, TanStackTableState, TanStackValue,
-    toggle_sorting_handler_tanstack,
 };
 use std::sync::Arc;
 
@@ -88,9 +87,9 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     assert_eq!(next_row_pinning.top, vec![RowKey(2)]);
 
     // Sorting handler transition (TanStack-style "getToggleSortingHandler" behavior).
-    let mut sorting = table.state().sorting.clone();
-    let col_a = table.column("a").expect("column exists");
-    toggle_sorting_handler_tanstack(&mut sorting, col_a, table.options(), false, false);
+    let sorting = table
+        .toggled_column_sorting_handler_tanstack("a", false, false)
+        .expect("column exists");
     assert!(!sorting.is_empty());
 
     // Column filter state transition (TanStack-style `column.setFilterValue` behavior).

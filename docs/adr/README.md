@@ -52,7 +52,7 @@ ADR or adding a new ADR) before scaling feature surface area.
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Update: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
-  - Implement: `crates/fret-render/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
+  - Implement: `crates/fret-render-wgpu/src/text.rs`, platform font enumeration hooks (future: `crates/fret-platform`).
 
 - **Docking keep-alive + early submission + programmatic close without flicker**
   - Update: `docs/adr/0013-docking-ops-and-persistence.md`, `docs/adr/0011-overlays-and-multi-root.md`
@@ -149,7 +149,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
-- Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer/mod.rs`
+- Renderer (quads/SDF/text hooks): `crates/fret-render-wgpu/src/renderer/mod.rs`
 - Demo (end-to-end wiring): `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/docking_demo.rs`
 
 ## Current Focus (“Decide Early”)

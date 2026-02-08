@@ -12,6 +12,7 @@ type CaseId =
   | "sorting_fns"
   | "filtering_fns"
   | "headers_cells"
+  | "headers_inventory_deep"
   | "visibility_ordering"
   | "pinning"
   | "pinning_tree"
@@ -31,6 +32,11 @@ type CaseId =
 
 type SnapshotId =
   | "baseline"
+  | "headers_inventory_deep_baseline"
+  | "headers_inventory_deep_pin_one_leaf_left"
+  | "headers_inventory_deep_hide_deep_leaf"
+  | "headers_inventory_deep_hide_whole_branch"
+  | "headers_inventory_deep_order_reorders_across_depths"
   | "auto_reset_sorting_default_resets"
   | "auto_reset_sorting_manual_pagination_true_no_reset"
   | "auto_reset_sorting_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
@@ -389,6 +395,39 @@ type RowSelectionDetail = {
   is_selected: Record<string, boolean>
   is_some_selected: Record<string, boolean>
   is_all_sub_rows_selected: Record<string, boolean>
+  can_select: Record<string, boolean>
+  can_multi_select: Record<string, boolean>
+  can_select_sub_rows: Record<string, boolean>
+}
+
+type FilteringHelpersSnapshot = {
+  columns: Record<
+    string,
+    {
+      can_filter: boolean
+      filter_value: unknown | null
+      is_filtered: boolean
+      filter_index: number
+      can_global_filter: boolean
+    }
+  >
+  global_filter: unknown | null
+}
+
+type SortingHelpersSnapshot = {
+  columns: Record<
+    string,
+    {
+      can_sort: boolean
+      can_multi_sort: boolean
+      is_sorted: "asc" | "desc" | null
+      sort_index: number
+      auto_sort_dir: "asc" | "desc" | null
+      first_sort_dir: "asc" | "desc" | null
+      next_sorting_order: "asc" | "desc" | null
+      next_sorting_order_multi: "asc" | "desc" | null
+    }
+  >
 }
 
 type FixtureSnapshot = {
@@ -419,8 +458,27 @@ type FixtureSnapshot = {
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
+    is_all_columns_visible?: boolean
+    is_some_columns_visible?: boolean
+    sorting_helpers?: SortingHelpersSnapshot
+    filtering_helpers?: FilteringHelpersSnapshot
     headers_cells?: {
       header_groups: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
+      footer_groups?: {
         id: string
         depth: number
         headers: {
@@ -450,7 +508,37 @@ type FixtureSnapshot = {
           sub_header_ids: string[]
         }[]
       }[]
+      left_footer_groups?: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
       center_header_groups: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
+      center_footer_groups?: {
         id: string
         depth: number
         headers: {
@@ -479,6 +567,109 @@ type FixtureSnapshot = {
           row_span: number
           sub_header_ids: string[]
         }[]
+      }[]
+      right_footer_groups?: {
+        id: string
+        depth: number
+        headers: {
+          id: string
+          column_id: string
+          depth: number
+          index: number
+          is_placeholder: boolean
+          placeholder_id: string | null
+          col_span: number
+          row_span: number
+          sub_header_ids: string[]
+        }[]
+      }[]
+      flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      left_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      center_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      right_flat_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      left_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      center_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
+      }[]
+      right_leaf_headers?: {
+        id: string
+        column_id: string
+        depth: number
+        index: number
+        is_placeholder: boolean
+        placeholder_id: string | null
+        col_span: number
+        row_span: number
+        sub_header_ids: string[]
       }[]
       cells: Record<
         string,
@@ -665,6 +856,10 @@ type FixtureAction =
       event_multi?: boolean
     }
   | {
+      type: "clearSorting"
+      column_id: string
+    }
+  | {
       type: "setColumnFilterValue"
       column_id: string
       value: unknown
@@ -849,6 +1044,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "sorting_fns" &&
         v !== "filtering_fns" &&
         v !== "headers_cells" &&
+        v !== "headers_inventory_deep" &&
         v !== "visibility_ordering" &&
         v !== "pinning" &&
         v !== "pinning_tree" &&
@@ -875,7 +1071,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -945,6 +1141,9 @@ function snapshotRowSelectionDetail(table: any, rowIds: string[]): RowSelectionD
     is_selected: {},
     is_some_selected: {},
     is_all_sub_rows_selected: {},
+    can_select: {},
+    can_multi_select: {},
+    can_select_sub_rows: {},
   }
 
   for (const id of rowIds) {
@@ -953,11 +1152,17 @@ function snapshotRowSelectionDetail(table: any, rowIds: string[]): RowSelectionD
       out.is_selected[id] = false
       out.is_some_selected[id] = false
       out.is_all_sub_rows_selected[id] = false
+      out.can_select[id] = false
+      out.can_multi_select[id] = false
+      out.can_select_sub_rows[id] = false
       continue
     }
     out.is_selected[id] = Boolean(row.getIsSelected?.())
     out.is_some_selected[id] = Boolean(row.getIsSomeSelected?.())
     out.is_all_sub_rows_selected[id] = Boolean(row.getIsAllSubRowsSelected?.())
+    out.can_select[id] = Boolean(row.getCanSelect?.())
+    out.can_multi_select[id] = Boolean(row.getCanMultiSelect?.())
+    out.can_select_sub_rows[id] = Boolean(row.getCanSelectSubRows?.())
   }
 
   return out
@@ -1535,6 +1740,58 @@ async function main(): Promise<void> {
         ],
       },
     ]
+  } else if (case_id === "headers_inventory_deep") {
+    const rows: DemoProcessRow[] = [
+      { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
+      { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 3, name: "Indexer", status: "Running", cpu: 38, mem_mb: 860 },
+    ]
+
+    data = rows
+
+    // Deeper column nesting to exercise placeholder generation and leaf/flat traversal.
+    columns = [
+      {
+        id: "name",
+        accessorFn: (row: DemoProcessRow) => row.name,
+      },
+      {
+        id: "metrics",
+        columns: [
+          {
+            id: "stats",
+            columns: [
+              {
+                id: "perf",
+                columns: [
+                  {
+                    id: "cpu",
+                    accessorFn: (row: DemoProcessRow) => row.cpu,
+                  },
+                  {
+                    id: "cpu2",
+                    accessorFn: (row: DemoProcessRow) => row.cpu,
+                  },
+                ],
+              },
+              {
+                id: "mem",
+                columns: [
+                  {
+                    id: "mem_mb",
+                    accessorFn: (row: DemoProcessRow) => row.mem_mb,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            id: "status",
+            accessorFn: (row: DemoProcessRow) => row.status,
+          },
+        ],
+      },
+    ]
   } else if (case_id === "column_resizing_group_headers") {
     // Column sizing + resizing interactions against a grouped header that fans out to multiple leaf columns.
     // We keep a 1-row dataset so table-core initializes consistently.
@@ -1919,9 +2176,10 @@ async function main(): Promise<void> {
 function snapshotForState(
   options: TanStackOptions,
   state: TanStackState,
+  extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
 ): FixtureSnapshot["expect"] {
   const { table } = buildTable(options, state)
-    return {
+  const out: FixtureSnapshot["expect"] = {
       core: snapshotRowModel(table.getCoreRowModel()),
       filtered: snapshotRowModel(table.getFilteredRowModel()),
       sorted: snapshotRowModel(table.getSortedRowModel()),
@@ -1946,10 +2204,90 @@ function snapshotForState(
     is_some_rows_expanded: Boolean(table.getIsSomeRowsExpanded?.()),
     can_some_rows_expand: Boolean(table.getCanSomeRowsExpand?.()),
   }
+
+  return { ...out, ...(extras ? extras(table) : {}) }
 }
 
 function emptyRowModelSnapshot(): any {
   return { rows: [], flatRows: [] }
+}
+
+function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
+  const out: FilteringHelpersSnapshot = {
+    columns: {},
+    global_filter: table.getState?.().globalFilter ?? null,
+  }
+
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    const id = String(col.id)
+
+    const filterValue = col.getFilterValue?.()
+    out.columns[id] = {
+      can_filter: Boolean(col.getCanFilter?.()),
+      filter_value: filterValue === undefined ? null : filterValue,
+      is_filtered: Boolean(col.getIsFiltered?.()),
+      filter_index: Number(col.getFilterIndex?.() ?? -1),
+      can_global_filter: Boolean(col.getCanGlobalFilter?.()),
+    }
+  }
+
+  return out
+}
+
+function snapshotSortingHelpers(table: any): SortingHelpersSnapshot {
+  const out: SortingHelpersSnapshot = {
+    columns: {},
+  }
+
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    const id = String(col.id)
+    const raw = col.getIsSorted?.()
+    const is_sorted =
+      raw === undefined || raw === false ? null : (String(raw) as "asc" | "desc")
+
+    const auto_sort_dir_raw = col.getAutoSortDir?.()
+    const auto_sort_dir =
+      auto_sort_dir_raw === undefined || auto_sort_dir_raw === null
+        ? null
+        : (String(auto_sort_dir_raw) as "asc" | "desc")
+
+    const first_sort_dir_raw = col.getFirstSortDir?.()
+    const first_sort_dir =
+      first_sort_dir_raw === undefined || first_sort_dir_raw === null
+        ? null
+        : (String(first_sort_dir_raw) as "asc" | "desc")
+
+    const next_sorting_order_raw = col.getNextSortingOrder?.()
+    const next_sorting_order =
+      next_sorting_order_raw === undefined ||
+      next_sorting_order_raw === null ||
+      next_sorting_order_raw === false
+        ? null
+        : (String(next_sorting_order_raw) as "asc" | "desc")
+
+    const next_sorting_order_multi_raw = col.getNextSortingOrder?.(true)
+    const next_sorting_order_multi =
+      next_sorting_order_multi_raw === undefined ||
+      next_sorting_order_multi_raw === null ||
+      next_sorting_order_multi_raw === false
+        ? null
+        : (String(next_sorting_order_multi_raw) as "asc" | "desc")
+
+    out.columns[id] = {
+      can_sort: Boolean(col.getCanSort?.()),
+      can_multi_sort: Boolean(col.getCanMultiSort?.()),
+      is_sorted,
+      sort_index: Number(col.getSortIndex?.() ?? -1),
+      auto_sort_dir,
+      first_sort_dir,
+      next_sorting_order,
+      next_sorting_order_multi,
+    }
+  }
+
+  return out
 }
 
 function snapshotHeaderGroups(groups: any[]): {
@@ -1981,6 +2319,30 @@ function snapshotHeaderGroups(groups: any[]): {
       row_span: Number(h.rowSpan),
       sub_header_ids: (h.subHeaders ?? []).map((sh: any) => String(sh.id)),
     })),
+  }))
+}
+
+function snapshotHeaders(headers: any[]): {
+  id: string
+  column_id: string
+  depth: number
+  index: number
+  is_placeholder: boolean
+  placeholder_id: string | null
+  col_span: number
+  row_span: number
+  sub_header_ids: string[]
+}[] {
+  return (headers ?? []).map((h: any) => ({
+    id: String(h.id),
+    column_id: String(h.column?.id),
+    depth: Number(h.depth),
+    index: Number(h.index),
+    is_placeholder: Boolean(h.isPlaceholder),
+    placeholder_id: h.placeholderId === undefined ? null : String(h.placeholderId),
+    col_span: Number(h.colSpan),
+    row_span: Number(h.rowSpan),
+    sub_header_ids: (h.subHeaders ?? []).map((sh: any) => String(sh.id)),
   }))
 }
 
@@ -2608,6 +2970,7 @@ function snapshotColumnPinning(
     options: TanStackOptions,
     state: TanStackState,
     actions: FixtureAction[],
+    extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
   ): FixtureSnapshot["expect"] {
     const { table, currentState } = buildTable(options, state)
     const doc = new FakeDocument()
@@ -2620,6 +2983,17 @@ function snapshotColumnPinning(
           throw new Error(`Unknown column in action: ${action.column_id}`)
         }
         col.toggleSorting(undefined, action.multi ?? false)
+        continue
+      }
+      if (action.type === "clearSorting") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.clearSorting !== "function") {
+          throw new Error("Column has no clearSorting")
+        }
+        col.clearSorting()
         continue
       }
       if (action.type === "toggleSortingHandler") {
@@ -2959,6 +3333,7 @@ function snapshotColumnPinning(
       is_some_rows_expanded: Boolean(table.getIsSomeRowsExpanded?.()),
       can_some_rows_expand: Boolean(table.getCanSomeRowsExpand?.()),
       ...sizing,
+      ...(extras ? extras(table) : {}),
       next_state: {
         sorting: currentState.sorting ?? [],
         columnFilters: currentState.columnFilters ?? [],
@@ -3135,24 +3510,46 @@ function snapshotColumnPinning(
   let snapshots: FixtureSnapshot[]
 
   if (case_id === "demo_process") {
+    const withSortingHelpers = (table: any) => ({
+      sorting_helpers: snapshotSortingHelpers(table),
+    })
+    const mkExpectState = (options: TanStackOptions, state: TanStackState) =>
+      snapshotForState(options, state, withSortingHelpers)
+    const mkExpectActions = (
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => snapshotForActions(options, state, actions, withSortingHelpers)
+
     snapshots = [
       {
         id: "baseline",
         options: defaultOptions,
         state: {},
-        expect: snapshotForState(defaultOptions, {}),
+        expect: mkExpectState(defaultOptions, {}),
       },
       {
         id: "sorted_cpu_desc",
         options: defaultOptions,
         state: { sorting: [{ id: "cpu", desc: true }] },
-        expect: snapshotForState(defaultOptions, { sorting: [{ id: "cpu", desc: true }] }),
+        expect: mkExpectState(defaultOptions, { sorting: [{ id: "cpu", desc: true }] }),
+      },
+      {
+        id: "sorted_cpu_desc_then_clear",
+        options: defaultOptions,
+        state: { sorting: [{ id: "cpu", desc: true }] },
+        actions: [{ type: "clearSorting", column_id: "cpu" }],
+        expect: mkExpectActions(
+          defaultOptions,
+          { sorting: [{ id: "cpu", desc: true }] },
+          [{ type: "clearSorting", column_id: "cpu" }],
+        ),
       },
       {
         id: "sorted_cpu_invert_asc",
         options: defaultOptions,
         state: { sorting: [{ id: "cpu_invert", desc: false }] },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           sorting: [{ id: "cpu_invert", desc: false }],
         }),
       },
@@ -3161,7 +3558,7 @@ function snapshotColumnPinning(
         options: defaultOptions,
         state: {},
         actions: [{ type: "toggleSorting", column_id: "cpu_desc_first" }],
-        expect: snapshotForActions(defaultOptions, {}, [
+        expect: mkExpectActions(defaultOptions, {}, [
           { type: "toggleSorting", column_id: "cpu_desc_first" },
         ]),
       },
@@ -3177,7 +3574,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu", multi: false },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableSortingRemoval: false,
@@ -3201,7 +3598,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             maxMultiSortColCount: 1,
@@ -3225,7 +3622,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
           { type: "toggleSorting", column_id: "status", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             maxMultiSortColCount: 2,
@@ -3249,7 +3646,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "mem_mb", multi: true },
         ],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableMultiSort: false,
@@ -3269,7 +3666,7 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu_no_multi", multi: true },
         ],
-        expect: snapshotForActions(sortAscFirst, {}, [
+        expect: mkExpectActions(sortAscFirst, {}, [
           { type: "toggleSorting", column_id: "cpu", multi: false },
           { type: "toggleSorting", column_id: "cpu_no_multi", multi: true },
         ]),
@@ -3282,7 +3679,7 @@ function snapshotColumnPinning(
         },
         state: {},
         actions: [{ type: "toggleSortingHandler", column_id: "cpu" }],
-        expect: snapshotForActions(
+        expect: mkExpectActions(
           {
             ...sortAscFirst,
             enableSorting: false,
@@ -3296,7 +3693,7 @@ function snapshotColumnPinning(
         options: sortAscFirst,
         state: {},
         actions: [{ type: "toggleSortingHandler", column_id: "cpu_no_sort" }],
-        expect: snapshotForActions(sortAscFirst, {}, [
+        expect: mkExpectActions(sortAscFirst, {}, [
           { type: "toggleSortingHandler", column_id: "cpu_no_sort" },
         ]),
       },
@@ -3307,7 +3704,7 @@ function snapshotColumnPinning(
         actions: [
           { type: "toggleSortingHandler", column_id: "mem_mb", event_multi: true },
         ],
-        expect: snapshotForActions(sortAscFirst, { sorting: [{ id: "cpu", desc: false }] }, [
+        expect: mkExpectActions(sortAscFirst, { sorting: [{ id: "cpu", desc: false }] }, [
           { type: "toggleSortingHandler", column_id: "mem_mb", event_multi: true },
         ]),
       },
@@ -3315,7 +3712,7 @@ function snapshotColumnPinning(
         id: "filter_status_run",
         options: defaultOptions,
         state: { columnFilters: [{ id: "status", value: "run" }] },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           columnFilters: [{ id: "status", value: "run" }],
         }),
       },
@@ -3323,7 +3720,7 @@ function snapshotColumnPinning(
         id: "page_0_size_2",
         options: defaultOptions,
         state: { pagination: { pageIndex: 0, pageSize: 2 } },
-        expect: snapshotForState(defaultOptions, {
+        expect: mkExpectState(defaultOptions, {
           pagination: { pageIndex: 0, pageSize: 2 },
         }),
       },
@@ -4078,11 +4475,27 @@ function snapshotColumnPinning(
         }),
       },
       {
+        id: "sorting_fns_builtin_basic_desc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "num_basic", desc: true }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "num_basic", desc: true }],
+        }),
+      },
+      {
         id: "sorting_fns_builtin_datetime",
         options: defaultOptions,
         state: { sorting: [{ id: "dt_datetime", desc: false }] },
         expect: snapshotForState(defaultOptions, {
           sorting: [{ id: "dt_datetime", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_fns_builtin_datetime_desc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "dt_datetime", desc: true }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "dt_datetime", desc: true }],
         }),
       },
       {
@@ -4178,22 +4591,41 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "text_auto" },
         ]),
       },
+      {
+        id: "sorting_fns_toggle_dt_auto_first",
+        options: defaultOptions,
+        state: {},
+        actions: [{ type: "toggleSorting", column_id: "dt_auto" }],
+        expect: snapshotForActions(defaultOptions, {}, [
+          { type: "toggleSorting", column_id: "dt_auto" },
+        ]),
+      },
     ]
   } else if (case_id === "filtering_fns") {
     const base = defaultOptions
+    const withFilteringHelpers = (table: any) => ({
+      filtering_helpers: snapshotFilteringHelpers(table),
+    })
+    const mkExpectState = (options: TanStackOptions, state: TanStackState) =>
+      snapshotForState(options, state, withFilteringHelpers)
+    const mkExpectActions = (
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => snapshotForActions(options, state, actions, withFilteringHelpers)
 
     snapshots = [
       {
         id: "filtering_fns_text_auto_includes",
         options: base,
         state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
-        expect: snapshotForState(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }),
+        expect: mkExpectState(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }),
       },
       {
         id: "filtering_fns_text_equals_string",
         options: base,
         state: { columnFilters: [{ id: "text_equals_string", value: "banana" }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "text_equals_string", value: "banana" }],
         }),
       },
@@ -4201,7 +4633,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_num_in_number_range",
         options: base,
         state: { columnFilters: [{ id: "num_range", value: [4, 8] }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "num_range", value: [4, 8] }],
         }),
       },
@@ -4209,7 +4641,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_tags_arr_includes_all",
         options: base,
         state: { columnFilters: [{ id: "tags_all", value: ["a", "b"] }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "tags_all", value: ["a", "b"] }],
         }),
       },
@@ -4217,7 +4649,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_bool_equals",
         options: base,
         state: { columnFilters: [{ id: "flag_equals", value: true }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "flag_equals", value: true }],
         }),
       },
@@ -4225,7 +4657,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_weak_equals_string_number",
         options: base,
         state: { columnFilters: [{ id: "num_weak", value: "5" }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "num_weak", value: "5" }],
         }),
       },
@@ -4233,25 +4665,34 @@ function snapshotColumnPinning(
         id: "filtering_fns_global_filter_includes",
         options: base,
         state: { globalFilter: "ap" },
-        expect: snapshotForState(base, { globalFilter: "ap" }),
+        expect: mkExpectState(base, { globalFilter: "ap" }),
       },
       {
         id: "filtering_fns_global_filter_default_excludes_bool",
         options: base,
         state: { globalFilter: "true" },
-        expect: snapshotForState(base, { globalFilter: "true" }),
+        expect: mkExpectState(base, { globalFilter: "true" }),
       },
       {
         id: "filtering_fns_global_filter_disabled_when_enable_filters_false",
         options: { ...base, enableFilters: false },
         state: { globalFilter: "ap" },
-        expect: snapshotForState({ ...base, enableFilters: false }, { globalFilter: "ap" }),
+        expect: mkExpectState({ ...base, enableFilters: false }, { globalFilter: "ap" }),
+      },
+      {
+        id: "filtering_fns_column_filters_disabled_when_enable_column_filters_false",
+        options: { ...base, enableColumnFilters: false },
+        state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
+        expect: mkExpectState(
+          { ...base, enableColumnFilters: false },
+          { columnFilters: [{ id: "text_auto", value: "ap" }] },
+        ),
       },
       {
         id: "filtering_fns_registry_custom_text_case_sensitive",
         options: { ...base, filterFnsMode: "custom_text_case_sensitive" },
         state: { columnFilters: [{ id: "text_custom", value: "A" }] },
-        expect: snapshotForState(
+        expect: mkExpectState(
           { ...base, filterFnsMode: "custom_text_case_sensitive" },
           { columnFilters: [{ id: "text_custom", value: "A" }] },
         ),
@@ -4261,7 +4702,7 @@ function snapshotColumnPinning(
         options: base,
         state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
         actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "" }],
-        expect: snapshotForActions(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }, [
+        expect: mkExpectActions(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }, [
           { type: "setColumnFilterValue", column_id: "text_auto", value: "" },
         ]),
       },
@@ -4270,7 +4711,7 @@ function snapshotColumnPinning(
         options: { ...base, __onColumnFiltersChange: "noop" },
         state: {},
         actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "ap" }],
-        expect: snapshotForActions({ ...base, __onColumnFiltersChange: "noop" }, {}, [
+        expect: mkExpectActions({ ...base, __onColumnFiltersChange: "noop" }, {}, [
           { type: "setColumnFilterValue", column_id: "text_auto", value: "ap" },
         ]),
       },
@@ -4279,7 +4720,7 @@ function snapshotColumnPinning(
         options: { ...base, __onGlobalFilterChange: "noop" },
         state: {},
         actions: [{ type: "setGlobalFilterValue", value: "ap" }],
-        expect: snapshotForActions({ ...base, __onGlobalFilterChange: "noop" }, {}, [
+        expect: mkExpectActions({ ...base, __onGlobalFilterChange: "noop" }, {}, [
           { type: "setGlobalFilterValue", value: "ap" },
         ]),
       },
@@ -4301,6 +4742,18 @@ function snapshotColumnPinning(
       const left_header_groups = snapshotHeaderGroups(table.getLeftHeaderGroups())
       const center_header_groups = snapshotHeaderGroups(table.getCenterHeaderGroups())
       const right_header_groups = snapshotHeaderGroups(table.getRightHeaderGroups())
+      const footer_groups = snapshotHeaderGroups(table.getFooterGroups())
+      const left_footer_groups = snapshotHeaderGroups(table.getLeftFooterGroups())
+      const center_footer_groups = snapshotHeaderGroups(table.getCenterFooterGroups())
+      const right_footer_groups = snapshotHeaderGroups(table.getRightFooterGroups())
+      const flat_headers = snapshotHeaders(table.getFlatHeaders())
+      const left_flat_headers = snapshotHeaders(table.getLeftFlatHeaders())
+      const center_flat_headers = snapshotHeaders(table.getCenterFlatHeaders())
+      const right_flat_headers = snapshotHeaders(table.getRightFlatHeaders())
+      const leaf_headers = snapshotHeaders(table.getLeafHeaders())
+      const left_leaf_headers = snapshotHeaders(table.getLeftLeafHeaders())
+      const center_leaf_headers = snapshotHeaders(table.getCenterLeafHeaders())
+      const right_leaf_headers = snapshotHeaders(table.getRightLeafHeaders())
       const cells = snapshotCells(table)
 
       return {
@@ -4311,9 +4764,21 @@ function snapshotColumnPinning(
           ...baseExpect,
           headers_cells: {
             header_groups,
+            footer_groups,
             left_header_groups,
+            left_footer_groups,
             center_header_groups,
+            center_footer_groups,
             right_header_groups,
+            right_footer_groups,
+            flat_headers,
+            left_flat_headers,
+            center_flat_headers,
+            right_flat_headers,
+            leaf_headers,
+            left_leaf_headers,
+            center_leaf_headers,
+            right_leaf_headers,
             cells,
           },
           core_model: {
@@ -4385,6 +4850,108 @@ function snapshotColumnPinning(
         },
       ),
     ]
+  } else if (case_id === "headers_inventory_deep") {
+    const base = defaultOptions
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const { table } = buildTable(options, state)
+
+      const baseExpect: FixtureSnapshot["expect"] = {
+        core: snapshotRowModel(table.getCoreRowModel()),
+        filtered: snapshotRowModel(table.getFilteredRowModel()),
+        sorted: snapshotRowModel(table.getSortedRowModel()),
+        paginated: snapshotRowModel(table.getPaginationRowModel()),
+        row_model: snapshotRowModel(table.getRowModel()),
+      }
+
+      const header_groups = snapshotHeaderGroups(table.getHeaderGroups())
+      const left_header_groups = snapshotHeaderGroups(table.getLeftHeaderGroups())
+      const center_header_groups = snapshotHeaderGroups(table.getCenterHeaderGroups())
+      const right_header_groups = snapshotHeaderGroups(table.getRightHeaderGroups())
+      const footer_groups = snapshotHeaderGroups(table.getFooterGroups())
+      const left_footer_groups = snapshotHeaderGroups(table.getLeftFooterGroups())
+      const center_footer_groups = snapshotHeaderGroups(table.getCenterFooterGroups())
+      const right_footer_groups = snapshotHeaderGroups(table.getRightFooterGroups())
+      const flat_headers = snapshotHeaders(table.getFlatHeaders())
+      const left_flat_headers = snapshotHeaders(table.getLeftFlatHeaders())
+      const center_flat_headers = snapshotHeaders(table.getCenterFlatHeaders())
+      const right_flat_headers = snapshotHeaders(table.getRightFlatHeaders())
+      const leaf_headers = snapshotHeaders(table.getLeafHeaders())
+      const left_leaf_headers = snapshotHeaders(table.getLeftLeafHeaders())
+      const center_leaf_headers = snapshotHeaders(table.getCenterLeafHeaders())
+      const right_leaf_headers = snapshotHeaders(table.getRightLeafHeaders())
+      const cells = snapshotCells(table)
+
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...baseExpect,
+          headers_cells: {
+            header_groups,
+            footer_groups,
+            left_header_groups,
+            left_footer_groups,
+            center_header_groups,
+            center_footer_groups,
+            right_header_groups,
+            right_footer_groups,
+            flat_headers,
+            left_flat_headers,
+            center_flat_headers,
+            right_flat_headers,
+            leaf_headers,
+            left_leaf_headers,
+            center_leaf_headers,
+            right_leaf_headers,
+            cells,
+          },
+          core_model: {
+            column_tree: snapshotColumnTree(table.getAllColumns()),
+            leaf_columns: {
+              all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
+              left_visible: (table.getLeftVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+              center_visible: (table.getCenterVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+              right_visible: (table.getRightVisibleLeafColumns?.() ?? []).map((c: any) =>
+                String(c.id),
+              ),
+            },
+            header_groups,
+            left_header_groups,
+            center_header_groups,
+            right_header_groups,
+            rows: {
+              core: snapshotRowModel(table.getCoreRowModel()),
+              row_model: snapshotRowModel(table.getRowModel()),
+            },
+            cells,
+          },
+        },
+      }
+    }
+
+    snapshots = [
+      mk("headers_inventory_deep_baseline", base, {
+        columnPinning: { left: ["name"], right: ["status"] },
+      }),
+      mk("headers_inventory_deep_pin_one_leaf_left", base, {
+        columnPinning: { left: ["cpu"], right: [] },
+      }),
+      mk("headers_inventory_deep_hide_deep_leaf", base, {
+        columnVisibility: { cpu2: false },
+      }),
+      mk("headers_inventory_deep_hide_whole_branch", base, {
+        columnVisibility: { perf: false },
+      }),
+      mk("headers_inventory_deep_order_reorders_across_depths", base, {
+        columnOrder: ["status", "mem_mb", "cpu", "cpu2", "name"],
+      }),
+    ]
   } else if (case_id === "visibility_ordering") {
     const coreModelForState = (options: TanStackOptions, state: TanStackState) => {
       const { table } = buildTable(options, state)
@@ -4427,6 +4994,12 @@ function snapshotColumnPinning(
         ...snapshotForState(options, state),
         ...snapshotColumnSizing(buildTable(options, state).table),
         core_model: coreModelForState(options, state),
+        is_all_columns_visible: Boolean(
+          buildTable(options, state).table.getIsAllColumnsVisible?.(),
+        ),
+        is_some_columns_visible: Boolean(
+          buildTable(options, state).table.getIsSomeColumnsVisible?.(),
+        ),
       },
     })
 
@@ -4448,6 +5021,12 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           core_model: coreModelForState(options, expect.next_state),
+          is_all_columns_visible: Boolean(
+            buildTable(options, expect.next_state).table.getIsAllColumnsVisible?.(),
+          ),
+          is_some_columns_visible: Boolean(
+            buildTable(options, expect.next_state).table.getIsSomeColumnsVisible?.(),
+          ),
         },
       }
     }

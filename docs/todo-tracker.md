@@ -12,6 +12,12 @@ It complements (but does not replace) ADRs:
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
 - Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
+## P0 - Workspace crate boundaries
+
+- Track render/web-runner/facade boundary refactors in:
+  - `docs/workstreams/workspace-crate-boundaries-v1.md`
+  - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
+
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:
@@ -39,15 +45,15 @@ It complements (but does not replace) ADRs:
 - **Multiline IME contract + conformance harness**
   - Goal: lock and validate multiline selection/composition/caret-rect behavior (scroll/wrap/DPI/preedit updates).
   - ADRs: `docs/adr/0071-text-input-multiline-composition-contract.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
-  - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render/src/text.rs`
+  - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render-wgpu/src/text.rs`
 
 ## P0 - Fonts / Fallbacks / Missing Glyphs
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0006-text-system.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
-  - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render/src/text.rs`
-  - Current: `crates/fret-render/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
+  - Code: `crates/fret-ui/src/theme.rs`, `crates/fret-render-wgpu/src/text.rs`
+  - Current: `crates/fret-render-wgpu/src/text.rs` configures both `cosmic-text` fontdb generics and Parley/fontique generic families (keep backend behavior aligned as we converge the font source of truth).
   - Current: `TextStyle.font` is a semantic `FontId` (`Ui/Serif/Monospace/Family(name)`) and maps to generic stacks (`sans-serif`/`serif`/`monospace`) for shaping.
   - TODO: expose a curated default font stack at the theme/settings layer (and decide how user font loading maps to stable `FontId` values).
 
@@ -63,21 +69,21 @@ It complements (but does not replace) ADRs:
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`
-  - Code: `crates/fret-render/src/text.rs`
-  - Current: `crates/fret-render/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
+  - Code: `crates/fret-render-wgpu/src/text.rs`
+  - Current: `crates/fret-render-wgpu/src/text.rs` includes a `font_stack_key` (derived from locale + configured generic families + fallback policy) in the `TextBlobKey` cache key.
   - Current: runner font/config mutations go through `fret_runtime::apply_font_catalog_update`, which bumps `TextFontStackKey` to prevent stale layout/raster cache reuse.
 
 - **Emoji / variation selectors policy**
   - Goal: define baseline behavior for emoji fonts and variation selectors, and add a smoke test string that exercises it.
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0167-polychrome-glyphs-and-emoji-pipeline-v1.md`
-  - Code: `crates/fret-render/src/text.rs`
+  - Code: `crates/fret-render-wgpu/src/text.rs`
   - Current: optional wasm emoji font bundle (`fret-fonts/emoji` -> `Noto Color Emoji`) and a dedicated conformance demo (`apps/fret-examples/src/emoji_conformance_demo.rs`).
-  - Current: automated conformance (unit) covers VS16/ZWJ/flags/keycaps (`crates/fret-render/src/text.rs`).
+  - Current: automated conformance (unit) covers VS16/ZWJ/flags/keycaps (`crates/fret-render-wgpu/src/text.rs`).
 
 - **Center baseline within the line box across font swaps**
   - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.
   - Root cause: baseline placement derived from ascent only (no distribution of extra line-height padding), plus glyph bitmap bearings can shift perceived ink position vs logical advance metrics.
-  - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render/src/text.rs`).
+  - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render-wgpu/src/text.rs`).
   - Decision: align with the web/shadcn mental model (layout uses the line box + baseline). Do **not** implement default "optical alignment" (ink-bounds-based centering) to compensate for extreme font bearings.
   - Note: some "weird metrics" fonts may still look slightly off-center horizontally. Treat this as expected behavior under the web-aligned model unless we add an explicit per-component opt-in.
   - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
@@ -121,9 +127,9 @@ It complements (but does not replace) ADRs:
     - Zed blade shader gamma/contrast helpers: `repo-ref/zed/crates/gpui/src/platform/blade/shaders.wgsl`
     - Zed subpixel variant constants: `repo-ref/zed/crates/gpui/src/text_system.rs`
   - Code (current Fret implementation):
-    - Atlas sampler is filtering: `crates/fret-render/src/text.rs`
-    - Text shaders: `crates/fret-render/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`)
-    - Text draw origin uses `origin * scale_factor`: `crates/fret-render/src/renderer/render_scene/encode/draw/text.rs`
+    - Atlas sampler is filtering: `crates/fret-render-wgpu/src/text.rs`
+    - Text shaders: `crates/fret-render-wgpu/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`)
+    - Text draw origin uses `origin * scale_factor`: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/text.rs`
   - TODO:
     - Add an explicit "text rendering parameters" uniform (gamma ratios + contrast knobs) and apply it in text fragment shaders (mask + subpixel).
     - Decide and implement a single rule for subpixel variant selection: either snap device-pixel origins (translation-only) or choose variants using the final device-pixel fractional offset at encode time (with a safe fallback under non-translation transforms).
@@ -434,7 +440,7 @@ It complements (but does not replace) ADRs:
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
   - Problem: `fret-core::vector_path` and `SceneOp::Path` are implemented, but the contract is not yet locked at the ADR level (stroke joins/caps, AA expectations, transform interaction, caching keys).
   - ADRs: `docs/adr/0080-vector-path-contract.md`, `docs/adr/0002-display-list.md`, `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
-  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render/src/renderer/mod.rs`
+  - Code: `crates/fret-core/src/vector_path.rs`, `crates/fret-core/src/scene.rs`, `crates/fret-render-wgpu/src/renderer/mod.rs`
   - Update: contract locked (ADR 0080). Follow-up work is conformance testing and any v2 surface expansion (joins/caps/dashes).
 
 - **Clarify the runner vs platform split in docs and code**
@@ -446,4 +452,3 @@ It complements (but does not replace) ADRs:
   - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete native backend lives in `crates/fret-platform-native` and the event loop/effect draining live in `crates/fret-launch`; decide how much window registry/event translation should live in the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
   - Code: `crates/fret-platform-native/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-launch/src/runner/*`
-

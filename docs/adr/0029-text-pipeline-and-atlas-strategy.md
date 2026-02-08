@@ -177,7 +177,7 @@ To keep text output deterministic and avoid stale cache bugs:
 Current status:
 
 - The resolved default family names (`SansSerif`/`Serif`/`Monospace`) participate in the text cache key
-  via a `font_stack_key` (see `crates/fret-render/src/text.rs`).
+  via a `font_stack_key` (see `crates/fret-render-wgpu/src/text.rs`).
 
 ### Conformance smoke tests (recommended)
 
@@ -191,7 +191,7 @@ Add at least one integration/demo harness that renders and measures:
 This ADR defines the contract and lock-in targets; implementation will evolve. Current code status:
 
 - Text shaping/rasterization uses `cosmic-text` via the renderer text system:
-  - `crates/fret-render/src/text.rs`
+  - `crates/fret-render-wgpu/src/text.rs`
 - A framework-level fallback policy and platform-generic family defaults are configured at text-system startup, and a
   `font_stack_key` participates in `TextBlobId` caching so fallback/generic-family changes cannot reuse stale blobs.
 - `TextStyle.font` selects among the three generic families (`SansSerif`/`Serif`/`Monospace`) via the semantic `FontId`

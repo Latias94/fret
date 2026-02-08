@@ -10,8 +10,7 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = ["layout-engine-v2"]
-layout-engine-v2 = []
+default = []
 compat-policy-shortcuts = []
 compat-retained-widgets = []
 unstable-retained-bridge = []

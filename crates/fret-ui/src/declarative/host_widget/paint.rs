@@ -1318,39 +1318,79 @@ impl ElementHostWidget {
                 );
 
                 let is_horizontal = matches!(props.axis, crate::element::ScrollbarAxis::Horizontal);
-                let thumb = if is_horizontal {
-                    let offset_x = handle.offset().x;
-                    let viewport_w = handle.viewport_size().width;
-                    let content_w = handle.content_size().width;
-                    let max_offset = Px((content_w.0 - viewport_w.0).max(0.0));
-                    if max_offset.0 <= 0.0 {
-                        return;
-                    }
+                let offset = handle.offset();
+                let viewport = handle.viewport_size();
+                let content = handle.content_size();
+                let has_overflow = if is_horizontal {
+                    (content.width.0 - viewport.width.0).max(0.0) > 0.0
+                } else {
+                    (content.height.0 - viewport.height.0).max(0.0) > 0.0
+                };
 
+                if !has_overflow {
+                    if cx.tree.debug_enabled() {
+                        cx.tree.debug_record_scrollbar_telemetry(
+                            crate::tree::UiDebugScrollbarTelemetry {
+                                node: cx.node,
+                                element: Some(self.element),
+                                axis: if is_horizontal {
+                                    crate::tree::UiDebugScrollAxis::X
+                                } else {
+                                    crate::tree::UiDebugScrollAxis::Y
+                                },
+                                scroll_target: props.scroll_target,
+                                offset,
+                                viewport,
+                                content,
+                                track: cx.bounds,
+                                thumb: None,
+                                hovered,
+                                dragging,
+                            },
+                        );
+                    }
+                    return;
+                }
+
+                let thumb = if is_horizontal {
                     scrollbar_thumb_rect_horizontal(
                         cx.bounds,
-                        viewport_w,
-                        content_w,
-                        offset_x,
+                        viewport.width,
+                        content.width,
+                        offset.x,
                         props.style.track_padding,
                     )
                 } else {
-                    let offset_y = handle.offset().y;
-                    let viewport_h = handle.viewport_size().height;
-                    let content_h = handle.content_size().height;
-                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-                    if max_offset.0 <= 0.0 {
-                        return;
-                    }
-
                     scrollbar_thumb_rect(
                         cx.bounds,
-                        viewport_h,
-                        content_h,
-                        offset_y,
+                        viewport.height,
+                        content.height,
+                        offset.y,
                         props.style.track_padding,
                     )
                 };
+
+                if cx.tree.debug_enabled() {
+                    cx.tree.debug_record_scrollbar_telemetry(
+                        crate::tree::UiDebugScrollbarTelemetry {
+                            node: cx.node,
+                            element: Some(self.element),
+                            axis: if is_horizontal {
+                                crate::tree::UiDebugScrollAxis::X
+                            } else {
+                                crate::tree::UiDebugScrollAxis::Y
+                            },
+                            scroll_target: props.scroll_target,
+                            offset,
+                            viewport,
+                            content,
+                            track: cx.bounds,
+                            thumb,
+                            hovered,
+                            dragging,
+                        },
+                    );
+                }
 
                 let Some(thumb) = thumb else {
                     return;

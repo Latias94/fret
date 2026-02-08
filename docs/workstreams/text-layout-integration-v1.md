@@ -172,7 +172,7 @@ These changes improve I1/I2 and should be treated as “minimum correctness cons
   definite-width paint. Evidence: `crates/fret-ui/src/declarative/host_widget/measure.rs`.
 - **Line height stabilization**: Parley shaping output clamps `line_height` to at least
   `ascent + |descent|` and respects `TextStyle.line_height`. Evidence:
-  `crates/fret-render/src/text/parley_shaper.rs` (tests included).
+  `crates/fret-render-wgpu/src/text/parley_shaper.rs` (tests included).
 
 ## Decision Snapshot (v1)
 

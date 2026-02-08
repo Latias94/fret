@@ -29,18 +29,18 @@ We mirror this split in Fret.
 ## Current Status (Implemented)
 
 - SVG alpha-mask + tint
-  - CPU rasterization: `crates/fret-render/src/svg.rs`
+  - CPU rasterization: `crates/fret-render-wgpu/src/svg.rs`
   - UI primitive: `crates/fret-ui/src/element.rs` (`SvgIconProps`)
   - Scene op: `crates/fret-core/src/scene.rs` (`SceneOp::MaskImage`)
-  - Upload helpers: `crates/fret-render/src/svg.rs`
+  - Upload helpers: `crates/fret-render-wgpu/src/svg.rs`
 - SVG RGBA image upload
-  - CPU rasterization: `SvgRenderer::render_rgba*` in `crates/fret-render/src/svg.rs`
-  - GPU upload: `upload_rgba_image` in `crates/fret-render/src/svg.rs`
+  - CPU rasterization: `SvgRenderer::render_rgba*` in `crates/fret-render-wgpu/src/svg.rs`
+  - GPU upload: `upload_rgba_image` in `crates/fret-render-wgpu/src/svg.rs`
 - Path rendering + offscreen MSAA composite
   - Scene op: `crates/fret-core/src/scene.rs` (`SceneOp::Path`)
-  - Renderer intermediate + composite: `crates/fret-render/src/renderer/mod.rs`
+  - Renderer intermediate + composite: `crates/fret-render-wgpu/src/renderer/mod.rs`
 - Caching + explicit reclamation (GPUI-aligned)
-  - Global cache type: `crates/fret-render/src/svg_cache.rs` (`SvgImageCache`)
+  - Global cache type: `crates/fret-render-wgpu/src/svg_cache.rs` (`SvgImageCache`)
   - Eviction API: `clear/remove_alpha_mask/remove_rgba`
 - Demo wiring (cache stored as App global resource)
   - Runner hook: `crates/fret-launch/src/runner/mod.rs` (`gpu_frame_prepare`)

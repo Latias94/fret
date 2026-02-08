@@ -1,3 +1,11 @@
+//! UI runtime contract and mechanisms for the Fret workspace.
+//!
+//! This crate focuses on the **mechanisms** needed for editor-grade UI (tree, layout, input
+//! routing, paint orchestration) rather than policy-heavy components. Radix/shadcn-style
+//! interaction policies live in the ecosystem layer (`fret-ui-kit`, `fret-ui-shadcn`) instead.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-ui/README.md`.
+
 #![cfg_attr(test, allow(clippy::arc_with_non_send_sync))]
 
 pub mod action;
@@ -15,9 +23,10 @@ pub mod frame_pipeline;
 pub mod host;
 pub mod input_modality;
 pub mod internal_drag;
-pub mod layout_constraints;
-pub mod layout_engine;
-pub mod layout_pass;
+mod layout;
+pub use layout::constraints as layout_constraints;
+pub use layout::engine as layout_engine;
+pub use layout::pass as layout_pass;
 pub mod overlay_placement;
 pub mod paint;
 pub mod pending_shortcut;
@@ -35,17 +44,15 @@ pub mod scroll;
 mod svg_source;
 #[cfg(test)]
 mod test_host;
-#[allow(dead_code)]
-pub(crate) mod text_area;
-mod text_edit;
-#[allow(dead_code)]
-pub(crate) mod text_input;
-mod text_input_style;
-mod text_props;
-mod text_surface;
+mod text;
+pub(crate) use text::area as text_area;
+pub(crate) use text::edit as text_edit;
+pub(crate) use text::input as text_input;
+pub(crate) use text::props as text_props;
+pub(crate) use text::surface as text_surface;
 pub mod theme;
-pub mod theme_keys;
-pub(crate) mod theme_registry;
+pub use theme::keys as theme_keys;
+pub(crate) use theme::registry as theme_registry;
 pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]
@@ -68,8 +75,7 @@ pub use pending_shortcut::PendingShortcutOverlayState;
 pub use resizable_panel_group::ResizablePanelGroupStyle;
 pub use scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 pub use svg_source::SvgSource;
-pub use text_area::TextAreaStyle;
-pub use text_input_style::TextInputStyle;
+pub use text::{TextAreaStyle, TextInputStyle};
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
 pub use theme_keys::{ThemeColorKey, ThemeMetricKey};
 pub use tree::{

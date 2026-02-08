@@ -88,7 +88,8 @@ Primitives crates provide reusable building blocks with minimal policy:
 
 Recommended suffixes:
 
-- `fret-ui-primitives`: preferred umbrella name for UI-oriented primitives.
+- `fret-ui-primitives`: preferred umbrella name for UI-oriented primitives *if/when extracted as a
+  standalone crate*.
 - `fret-ui-headless`: acceptable if we want a narrower scope explicitly limited to state machines.
 
 #### C) **Kit/policy crates** (`*-kit`, `*-bootstrap`, `*-shadcn`)
@@ -107,21 +108,32 @@ Examples:
 
 ### 2) Split `fret-ui-kit` into “primitives” and “policy” surfaces (without breaking paths in v1)
 
-We introduce a new ecosystem crate (name to lock during implementation):
+We want a clear distinction between:
 
-- **Recommended**: `ecosystem/fret-ui-primitives`
+- **UI wiring primitives** (Radix-aligned, policy-light, reusable across design systems), and
+- **kit/policy surfaces** (tokens, recipes, opinionated helpers).
+
+Implementation note (v1):
+
+- If a standalone primitives crate does not yet represent a real seam (single in-tree consumer and
+  no extraction story), keep the primitives surface in `ecosystem/fret-ui-kit/src/primitives/*`
+  and `ecosystem/fret-ui-kit/src/declarative/*` to avoid accidental micro-crates.
+- If/when extraction becomes justified, the preferred crate name is:
+  - **Recommended**: `ecosystem/fret-ui-primitives`
 
 Responsibilities:
 
-- move `fret-ui-kit`’s *headless* state machines and low-level primitives into `fret-ui-primitives`,
-- keep dependencies minimal (avoid pulling in heavy recipe/policy modules),
-- provide a stable baseline surface for component authors.
+- Keep headless state machines in `ecosystem/fret-ui-headless`.
+- Keep UI wiring primitives in a stable, Radix-named surface (initially within `fret-ui-kit`, with a
+  future extraction to `fret-ui-primitives` if warranted).
+- Keep dependencies minimal for primitives (avoid pulling in heavy recipe/policy modules).
 
 `fret-ui-kit` remains:
 
 - the ergonomic policy surface,
 - the “golden path” component authoring helper crate,
-- a re-export facade for `fret-ui-primitives` (keep `fret_ui_kit::primitives::*` working).
+- and (if `fret-ui-primitives` exists) a re-export facade to keep `fret_ui_kit::primitives::*`
+  working.
 
 Migration plan (v1):
 
@@ -184,4 +196,3 @@ Rejected: increases churn and risks locking editor-specific policy into hard-to-
 - Golden path: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`, `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
 - Viewport tooling glue: `docs/adr/0168-viewport-tooling-host-helpers-and-arbitration-v1.md`
 - Component ecosystem conventions: `docs/adr/0163-component-ecosystem-authoring-conventions-v1.md`
-

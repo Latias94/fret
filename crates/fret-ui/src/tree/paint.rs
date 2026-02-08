@@ -10,6 +10,29 @@ fn paint_cache_relax_view_cache_gating() -> bool {
     })
 }
 
+#[cfg(test)]
+thread_local! {
+    static PAINT_CACHE_ALLOW_HIT_TEST_ONLY_TEST_OVERRIDE: std::cell::Cell<Option<bool>> =
+        const { std::cell::Cell::new(None) };
+}
+
+fn paint_cache_allow_hit_test_only() -> bool {
+    #[cfg(test)]
+    if let Some(value) = PAINT_CACHE_ALLOW_HIT_TEST_ONLY_TEST_OVERRIDE.with(std::cell::Cell::get) {
+        return value;
+    }
+
+    static ALLOW: OnceLock<bool> = OnceLock::new();
+    *ALLOW.get_or_init(|| {
+        std::env::var_os("FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY").is_some_and(|v| !v.is_empty())
+    })
+}
+
+#[cfg(test)]
+fn set_paint_cache_allow_hit_test_only_for_test(value: Option<bool>) {
+    PAINT_CACHE_ALLOW_HIT_TEST_ONLY_TEST_OVERRIDE.with(|slot| slot.set(value));
+}
+
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn paint_all(
@@ -29,6 +52,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_cache_hits = 0;
             self.debug_stats.paint_cache_misses = 0;
             self.debug_stats.paint_cache_replayed_ops = 0;
+            self.debug_stats.paint_cache_hit_test_only_replay_allowed = 0;
+            self.debug_stats
+                .paint_cache_hit_test_only_replay_rejected_key_mismatch = 0;
             self.debug_stats.paint_cache_replay_time = Duration::default();
             self.debug_stats.paint_cache_bounds_translate_time = Duration::default();
             self.debug_stats.paint_cache_bounds_translated_nodes = 0;
@@ -249,6 +275,11 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_set_paint_cache_allow_hit_test_only_override(value: Option<bool>) {
+        set_paint_cache_allow_hit_test_only_for_test(value);
+    }
+
     #[stacksafe::stacksafe]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn paint_node(
@@ -276,8 +307,13 @@ impl<H: UiHost> UiTree<H> {
         };
         let sf = scale_factor;
 
-        let (invalidated, prev_cache) = match self.nodes.get(node) {
-            Some(n) => (n.invalidation.paint, n.paint_cache),
+        let (invalidated, hit_test_only_paint_invalidated, prev_cache) = match self.nodes.get(node)
+        {
+            Some(n) => (
+                n.invalidation.paint,
+                n.paint_invalidated_by_hit_test_only,
+                n.paint_cache,
+            ),
             None => return,
         };
 
@@ -324,6 +360,7 @@ impl<H: UiHost> UiTree<H> {
         let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
         let key = PaintCacheKey::new(bounds, sf, theme_revision, child_transform);
         let relax_view_cache_gating = paint_cache_relax_view_cache_gating();
+        let allow_hit_test_only = paint_cache_allow_hit_test_only();
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
@@ -336,7 +373,16 @@ impl<H: UiHost> UiTree<H> {
                 .saturating_add(key_started.elapsed());
         }
 
-        if cache_enabled && !invalidated {
+        let replay_allowed_by_hit_test_only_gate =
+            invalidated && allow_hit_test_only && hit_test_only_paint_invalidated;
+        let paint_cache_replay_allowed = !invalidated || replay_allowed_by_hit_test_only_gate;
+        if cache_enabled && paint_cache_replay_allowed {
+            if replay_allowed_by_hit_test_only_gate && self.debug_enabled {
+                self.debug_stats.paint_cache_hit_test_only_replay_allowed = self
+                    .debug_stats
+                    .paint_cache_hit_test_only_replay_allowed
+                    .saturating_add(1);
+            }
             let hit_check_started = self.debug_enabled.then(Instant::now);
             if let Some(prev) = prev_cache
                 && prev.generation == self.paint_cache.source_generation
@@ -410,6 +456,7 @@ impl<H: UiHost> UiTree<H> {
                             end: end as u32,
                         });
                         n.invalidation.paint = false;
+                        n.paint_invalidated_by_hit_test_only = false;
                         (prev, n.invalidation)
                     }) {
                         self.update_invalidation_counters(prev, next);
@@ -533,6 +580,18 @@ impl<H: UiHost> UiTree<H> {
                     return;
                 }
             }
+            if replay_allowed_by_hit_test_only_gate
+                && self.debug_enabled
+                && prev_cache.is_some_and(|prev| {
+                    prev.generation == self.paint_cache.source_generation && prev.key != key
+                })
+            {
+                self.debug_stats
+                    .paint_cache_hit_test_only_replay_rejected_key_mismatch = self
+                    .debug_stats
+                    .paint_cache_hit_test_only_replay_rejected_key_mismatch
+                    .saturating_add(1);
+            }
             self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
             if let Some(hit_check_started) = hit_check_started {
                 self.debug_stats.paint_cache_hit_check_time = self
@@ -548,6 +607,7 @@ impl<H: UiHost> UiTree<H> {
         if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
             let prev = n.invalidation;
             n.invalidation.paint = false;
+            n.paint_invalidated_by_hit_test_only = false;
             (prev, n.invalidation)
         }) {
             self.update_invalidation_counters(prev, next);
@@ -652,10 +712,29 @@ impl<H: UiHost> UiTree<H> {
                 crate::declarative::frame::element_record_for_node(app, window, node)
                     .map(|record| record.instance.kind_name())
             });
+            let element_path = if self.debug_enabled {
+                #[cfg(feature = "diagnostics")]
+                {
+                    self.window.and_then(|window| {
+                        element.and_then(|element| {
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.debug_path_for_element(element)
+                            })
+                        })
+                    })
+                }
+                #[cfg(not(feature = "diagnostics"))]
+                {
+                    None
+                }
+            } else {
+                None
+            };
             let record = UiDebugPaintWidgetHotspot {
                 node,
                 element,
                 element_kind,
+                element_path,
                 widget_type,
                 inclusive_time,
                 exclusive_time,

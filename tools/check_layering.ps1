@@ -169,7 +169,14 @@ foreach ($kv in $depsByFrom.GetEnumerator()) {
 }
 
 # 4) Backend crates must not depend on UI/component crates.
-foreach ($from in @("fret-render", "fret-platform", "fret-platform-native", "fret-platform-web")) {
+foreach ($from in @(
+    "fret-render",
+    "fret-render-core",
+    "fret-render-wgpu",
+    "fret-platform",
+    "fret-platform-native",
+    "fret-platform-web"
+)) {
     if (-not $depsByFrom.ContainsKey($from)) {
         continue
     }
