@@ -50,10 +50,19 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `docs/workstreams/crate-audits/fret-app.l0.md`
     - `docs/workstreams/crate-audits/fret-ui.l0.md`
 
-- [ ] BU-FR-audit-007 Decide audit levels + minimum gates per level (L0/L1/L2).
+- [x] BU-FR-audit-007 Decide audit levels + minimum gates per level (L0/L1/L2).
   - Goal: scale audits across a large workspace without blocking progress.
   - Start from:
     - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Minimum gates per audit level”)
+
+- [ ] BU-FR-skill-008 Evaluate skill coverage for fearless refactors and decide whether to add any missing “procedural” skills.
+  - Goal: make repeated tasks (audit snapshots, fixture-driven conformance, perf/diag gates) easy to run consistently.
+  - Start from:
+    - `.agents/skills/README.md`
+    - `.agents/skills/fret-crate-audits/SKILL.md`
+    - `.agents/skills/fret-boundary-checks/SKILL.md`
 
 ## M1 — Core contracts closure
 

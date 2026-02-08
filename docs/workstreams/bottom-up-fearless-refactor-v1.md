@@ -399,6 +399,17 @@ The directory/module reshuffles in this workstream are only the first pass. To c
 - **L2 — Closure audit (multi-day)**: contract closure + portability review + perf/interaction gates,
   plus alignment updates if ADR-covered behavior is touched.
 
+### Minimum gates per audit level (recommended)
+
+These are intentionally small “default minima” so audits remain landable.
+If a change touches a hot path (dispatch/layout/paint) or interaction semantics, add additional gates.
+
+| level | minimum gates | typical outputs |
+| --- | --- | --- |
+| L0 | `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate <crate>` | 3–10 hazards + a short next-steps list |
+| L1 | L0 + `pwsh -NoProfile -File tools/check_layering.ps1` + `cargo fmt` + `cargo nextest run -p <crate>` | at least one new regression gate, plus 3–8 landable refactor steps |
+| L2 | L1 + `cargo clippy --workspace --all-targets -- -D warnings` + at least one `fretboard diag` suite or perf gate (as applicable) | contract closure notes, portability review, and ADR alignment updates if touched |
+
 ### What “Rust best practices” means in this repo (non-normative)
 
 We prioritize changes that reduce risk and improve reviewability over micro-optimizations.
@@ -459,6 +470,17 @@ Gate tiers (suggested; tune to your machine/CI budgets):
 
 - Fast (developer inner loop): layering + fmt + a small nextest subset for the touched crate(s).
 - Full (pre-merge / nightly): layering + fmt + clippy + wider nextest coverage + at least one diag suite.
+
+## 6.2) Skills (recommended)
+
+Repo-local skills exist to make the refactor loop repeatable for humans and AI.
+When doing work under this workstream, prefer using the following skills as “procedural checklists”:
+
+- `fret-boundary-checks`: layering + largest-files drift + quick crate snapshots.
+- `fret-crate-audits`: L0/L1/L2 audit workflow and artifact expectations.
+- `fret-diag-workflow`: turn regressions into reproducible `fretboard diag` gates.
+- `fret-app-architecture-and-effects`: async/effects boundaries; avoid UI-thread blocking.
+- UI-focused skills as needed (`fret-overlays-and-focus`, `fret-text-input-and-ime`, `fret-layout-and-style`, `fret-scroll-and-virtualization`).
 
 ## 7) Initial “mis-modularization” targets (concrete examples)
 
