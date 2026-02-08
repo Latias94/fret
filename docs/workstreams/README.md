@@ -85,3 +85,5 @@ Active workstreams:
 - `docs/workstreams/router-v1-todo.md`
 - `docs/workstreams/router-tanstack-parity-v1.md`
 - `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- `docs/workstreams/router-ui-v1.md`
+- `docs/workstreams/router-ui-v1-todo.md`
