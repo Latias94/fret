@@ -120,6 +120,7 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-copy.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json` (`[!]` if click targeting is occluded by prompt chrome)

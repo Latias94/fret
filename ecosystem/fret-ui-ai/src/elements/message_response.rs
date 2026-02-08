@@ -4,11 +4,14 @@ use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use fret_markdown::BlockId;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+
+use crate::elements::CodeBlockCopyButton;
 
 /// Assistant response renderer (Markdown-first).
 ///
@@ -111,6 +114,9 @@ impl MessageResponse {
 
         let mut components = fret_markdown::MarkdownComponents::<H>::default();
         components.on_link_activate = self.on_link_activate;
+        // AI Elements places copy affordances in the header actions area. Avoid showing the
+        // default `fret-code-view` copy button so we don't render duplicates.
+        components.code_block_ui.show_copy_button = false;
         if components.code_block_ui.max_height.is_none() {
             let max_height = theme
                 .metric_by_key("fret.ai.message.code_block.max_height")
@@ -195,6 +201,18 @@ impl MessageResponse {
                     v
                 });
 
+                let copy = {
+                    let mut btn = CodeBlockCopyButton::new(info.code.clone());
+                    if let Some(prefix) = test_id_prefix.clone() {
+                        btn = btn
+                            .test_id(Arc::<str>::from(format!("{prefix}code-copy-{ordinal}")))
+                            .copied_marker_test_id(Arc::<str>::from(format!(
+                                "{prefix}code-copied-{ordinal}"
+                            )));
+                    }
+                    btn.into_element(cx)
+                };
+
                 let label = if is_expanded { "Collapse" } else { "Expand" };
 
                 let on_activate: OnActivate = Arc::new({
@@ -220,7 +238,13 @@ impl MessageResponse {
                     btn = btn.test_id(Arc::<str>::from(format!("{prefix}code-expand-{ordinal}")));
                 }
 
-                btn.into_element(cx)
+                let expand = btn.into_element(cx);
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |_cx| vec![copy, expand],
+                )
             }));
         }
 

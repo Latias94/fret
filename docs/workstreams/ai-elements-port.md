@@ -67,7 +67,7 @@ an interactive chat demo:
 - `AiChat`: a default composition shell (transcript + scroll affordance + prompt input + optional
   empty/download parts), intended as a “good starting point” for apps.
 - `MessageResponse`: markdown rendering backed by `ecosystem/fret-markdown` with streaming-friendly
-  updates and code-block actions (expand/collapse).
+  updates and code-block actions (copy + expand/collapse).
 - `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
 - `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
   calls, sources list, citation highlight selection).
