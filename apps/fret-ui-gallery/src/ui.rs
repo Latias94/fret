@@ -17713,6 +17713,7 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     use std::collections::HashSet;
     use std::sync::Arc;
 
+    use fret_icons::ids;
     use fret_runtime::Model;
     use fret_ui::action::ActionCx;
     use fret_ui::element::SemanticsProps;
@@ -17723,6 +17724,7 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     struct FileTreeModels {
         expanded: Option<Model<HashSet<Arc<str>>>>,
         selected: Option<Model<Option<Arc<str>>>>,
+        last_action: Option<Model<Option<Arc<str>>>>,
     }
 
     let expanded = cx.with_state(FileTreeModels::default, |st| st.expanded.clone());
@@ -17749,11 +17751,37 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         }
     };
 
+    let last_action = cx.with_state(FileTreeModels::default, |st| st.last_action.clone());
+    let last_action = match last_action {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(FileTreeModels::default, |st| {
+                st.last_action = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
+    let last_action_value = cx.watch_model(&last_action).layout().cloned().flatten();
 
     let tree = ui_ai::FileTree::new([
         ui_ai::FileTreeFolder::new("src", "src")
             .test_id("ui-ai-file-tree-folder-src")
+            .action(
+                ui_ai::FileTreeAction::new(
+                    ids::ui::COPY,
+                    "Copy path",
+                    Arc::new({
+                        let last_action = last_action.clone();
+                        move |host, _action_cx: ActionCx, path| {
+                            let _ = host.models_mut().update(&last_action, |v| *v = Some(path));
+                        }
+                    }),
+                )
+                .test_id("ui-ai-file-tree-folder-src-action-copy"),
+            )
             .children([
                 ui_ai::FileTreeFile::new("src/lib.rs", "lib.rs")
                     .test_id("ui-ai-file-tree-file-lib")
@@ -17811,6 +17839,17 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         )
     });
 
+    let action_marker = last_action_value.is_some().then(|| {
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Generic,
+                test_id: Some(Arc::<str>::from("ui-ai-file-tree-action-marker")),
+                ..Default::default()
+            },
+            move |_cx| vec![],
+        )
+    });
+
     vec![stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -17822,6 +17861,7 @@ fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
                 tree,
                 selected_label,
                 selected_marker.unwrap_or_else(|| cx.text("")),
+                action_marker.unwrap_or_else(|| cx.text("")),
             ]
         },
     )]

@@ -69,7 +69,7 @@ Status legend:
 | --- | --- | --- | --- |
 | `code-block` | Prototype | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`; demo + diag gate exist. |
 | `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
-| `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) + future path to UI Kit virtualization for large outlines. |
+| `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Not started | `fret-ui-ai` | Add only after code-block is stable. |
 | `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
@@ -130,10 +130,15 @@ Existing gates (UI Gallery `ai_code_block_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
 
-Planned next gate:
+Existing gates (UI Gallery `ai_transcript_torture`):
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
 - `tools/diag-scripts/ui-gallery-ai-transcript-scroll-button.json`
+
+Existing gates (UI Gallery `ai_file_tree_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
+- `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 

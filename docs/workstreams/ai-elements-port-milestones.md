@@ -84,7 +84,7 @@ Acceptance criteria:
 Status: In progress (FileTree v0 + CodeBlock/Snippet v0 shipped; parity pending).
 Notes:
 
-- `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gate.
+- `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gates (`ui-gallery-ai-file-tree-demo-toggle.json`, `ui-gallery-ai-file-tree-demo-actions.json`).
 - `CodeBlock` / `Snippet` v0 are ported with a UI Gallery demo + diag gate (`ui-gallery-ai-code-block-demo-copy.json`).
 - Remaining work in this milestone focuses on `CodeBlock` / `Snippet` parity and a large-tree
   strategy (likely via UI Kit primitives + virtualization).

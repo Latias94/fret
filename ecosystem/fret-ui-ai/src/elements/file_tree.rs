@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{
+    Color, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
+};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
@@ -17,12 +20,13 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
-    ui,
 };
 
 pub type OnFileTreeSelect = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 pub type OnFileTreeExpandedChange =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<[Arc<str>]>) + 'static>;
+pub type OnFileTreeActionActivate =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -264,6 +268,7 @@ pub struct FileTreeFolder {
     pub path: Arc<str>,
     pub name: Arc<str>,
     pub children: Vec<FileTreeItem>,
+    pub actions: Vec<FileTreeAction>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -273,6 +278,7 @@ impl FileTreeFolder {
             path: path.into(),
             name: name.into(),
             children: Vec::new(),
+            actions: Vec::new(),
             test_id: None,
         }
     }
@@ -287,6 +293,16 @@ impl FileTreeFolder {
         self
     }
 
+    pub fn action(mut self, action: FileTreeAction) -> Self {
+        self.actions.push(action);
+        self
+    }
+
+    pub fn actions(mut self, actions: impl IntoIterator<Item = FileTreeAction>) -> Self {
+        self.actions = actions.into_iter().collect();
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
         self
@@ -298,6 +314,7 @@ pub struct FileTreeFile {
     pub path: Arc<str>,
     pub name: Arc<str>,
     pub icon: Option<fret_icons::IconId>,
+    pub actions: Vec<FileTreeAction>,
     pub test_id: Option<Arc<str>>,
 }
 
@@ -307,12 +324,69 @@ impl FileTreeFile {
             path: path.into(),
             name: name.into(),
             icon: None,
+            actions: Vec::new(),
             test_id: None,
         }
     }
 
     pub fn icon(mut self, icon: fret_icons::IconId) -> Self {
         self.icon = Some(icon);
+        self
+    }
+
+    pub fn action(mut self, action: FileTreeAction) -> Self {
+        self.actions.push(action);
+        self
+    }
+
+    pub fn actions(mut self, actions: impl IntoIterator<Item = FileTreeAction>) -> Self {
+        self.actions = actions.into_iter().collect();
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
+#[derive(Clone)]
+pub struct FileTreeAction {
+    icon: fret_icons::IconId,
+    label: Arc<str>,
+    on_activate: OnFileTreeActionActivate,
+    disabled: bool,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for FileTreeAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FileTreeAction")
+            .field("icon", &self.icon)
+            .field("label", &self.label)
+            .field("disabled", &self.disabled)
+            .field("test_id", &self.test_id.as_deref())
+            .finish()
+    }
+}
+
+impl FileTreeAction {
+    pub fn new(
+        icon: fret_icons::IconId,
+        label: impl Into<Arc<str>>,
+        on_activate: OnFileTreeActionActivate,
+    ) -> Self {
+        Self {
+            icon,
+            label: label.into(),
+            on_activate,
+            disabled: false,
+            test_id: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -354,12 +428,141 @@ impl FileTreeName {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        ui::text(cx, self.name)
-            .flex_1()
-            .min_w_0()
-            .truncate()
-            .into_element(cx)
+        let theme = Theme::global(&*cx.app).clone();
+
+        cx.text_props(fret_ui::element::TextProps {
+            layout: fret_ui::element::LayoutStyle {
+                size: fret_ui::element::SizeStyle {
+                    width: fret_ui::element::Length::Fill,
+                    height: fret_ui::element::Length::Auto,
+                    min_width: Some(Px(0.0)),
+                    ..Default::default()
+                },
+                flex: fret_ui::element::FlexItemStyle {
+                    grow: 1.0,
+                    shrink: 1.0,
+                    basis: fret_ui::element::Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            text: self.name,
+            style: Some(TextStyle {
+                font: FontId::monospace(),
+                size: theme.metric_required("metric.font.mono_size"),
+                weight: FontWeight::NORMAL,
+                slant: Default::default(),
+                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                letter_spacing_em: None,
+            }),
+            color: Some(theme.color_required("foreground")),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+        })
     }
+}
+
+fn render_actions<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    row_path: Arc<str>,
+    actions: Vec<FileTreeAction>,
+) -> Option<AnyElement> {
+    if actions.is_empty() {
+        return None;
+    }
+
+    let muted = resolve_muted(theme);
+    let hover_bg = alpha(muted, 0.5);
+    let icon_fg = resolve_muted_fg(theme);
+
+    let group = cx.container(
+        ContainerProps {
+            layout: decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().ml_auto().flex_shrink_0(),
+            ),
+            ..Default::default()
+        },
+        move |cx| {
+            let buttons = actions
+                .into_iter()
+                .enumerate()
+                .map(|(i, action)| {
+                    let key: Arc<str> = Arc::from(format!("action-{i}"));
+                    let row_path = row_path.clone();
+                    cx.keyed(key, |cx| {
+                        let label = action.label.clone();
+                        let icon = action.icon;
+                        let disabled = action.disabled;
+                        let test_id = action.test_id.clone();
+                        let on_activate = action.on_activate.clone();
+                        let row_path = row_path.clone();
+
+                        control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                            cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
+                                on_activate(host, action_cx, row_path.clone());
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }));
+
+                            let mut pressable = PressableProps::default();
+                            pressable.enabled = !disabled;
+                            pressable.a11y = PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(label.clone()),
+                                test_id: test_id.clone(),
+                                ..Default::default()
+                            };
+
+                            let bg = if disabled {
+                                None
+                            } else if st.hovered || st.pressed {
+                                Some(hover_bg)
+                            } else {
+                                None
+                            };
+
+                            let mut chrome = ContainerProps::default();
+                            chrome.layout = decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(20.0)))
+                                    .h_px(MetricRef::Px(Px(20.0)))
+                                    .flex_shrink_0(),
+                            );
+                            chrome.background = bg;
+                            chrome.corner_radii = fret_core::Corners::all(
+                                MetricRef::radius(Radius::Sm).resolve(theme),
+                            );
+                            chrome.border = Edges::all(Px(0.0));
+                            chrome.padding = Edges::all(Px(2.0));
+
+                            let icon = decl_icon::icon_with(
+                                cx,
+                                icon,
+                                Some(Px(16.0)),
+                                Some(ColorRef::Color(icon_fg)),
+                            );
+
+                            (pressable, chrome, move |_cx| vec![icon])
+                        })
+                    })
+                })
+                .collect::<Vec<_>>();
+
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().flex_shrink_0())
+                    .gap(Space::N1)
+                    .items(Items::Center),
+                move |_cx| buttons,
+            )]
+        },
+    );
+
+    Some(group)
 }
 
 fn render_items<H: UiHost + 'static>(
@@ -525,6 +728,7 @@ fn render_folder<H: UiHost + 'static>(
         .into_element(cx);
 
         let name = FileTreeName::new(folder.name.clone()).into_element(cx);
+        let actions = render_actions(cx, theme, folder.path.clone(), folder.actions.clone());
 
         let row_contents = stack::hstack(
             cx,
@@ -532,7 +736,13 @@ fn render_folder<H: UiHost + 'static>(
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
                 .items(Items::Center),
-            move |_cx| vec![chevron, folder_icon, name],
+            move |_cx| {
+                let mut out = vec![chevron, folder_icon, name];
+                if let Some(actions) = actions.clone() {
+                    out.push(actions);
+                }
+                out
+            },
         );
 
         (pressable, chrome, move |_cx| vec![row_contents])
@@ -673,6 +883,7 @@ fn render_file<H: UiHost + 'static>(
             .color(ColorRef::Color(resolve_muted_fg(theme)))
             .into_element(cx);
         let name = FileTreeName::new(file.name.clone()).into_element(cx);
+        let actions = render_actions(cx, theme, file.path.clone(), file.actions.clone());
 
         let row_contents = stack::hstack(
             cx,
@@ -680,7 +891,13 @@ fn render_file<H: UiHost + 'static>(
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
                 .items(Items::Center),
-            move |_cx| vec![spacer, icon, name],
+            move |_cx| {
+                let mut out = vec![spacer, icon, name];
+                if let Some(actions) = actions.clone() {
+                    out.push(actions);
+                }
+                out
+            },
         );
 
         (pressable, chrome, move |_cx| vec![row_contents])

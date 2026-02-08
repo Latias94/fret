@@ -597,6 +597,7 @@ It exists to validate:
 
 - nested expand/collapse behavior (folder nodes),
 - selection intent emission (`on_select`),
+- nested row actions do not trigger folder toggle/selection,
 - stable `test_id` anchors for `fretboard diag` gates.
 "#;
 
