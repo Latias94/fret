@@ -58,6 +58,37 @@ fn unwrapped_layout_cache_max_text_len_bytes() -> usize {
     })
 }
 
+fn measure_shaping_cache_entries() -> usize {
+    static ENTRIES: OnceLock<usize> = OnceLock::new();
+    *ENTRIES.get_or_init(|| {
+        // Default: 4096 entries. This cache is the main defense against `TextService::measure`
+        // reshaping thrash when a layout pass touches many unique strings (common in editor
+        // surfaces) and when wrap widths churn during interactive resize.
+        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(4096)
+            .max(64)
+            .min(65_536)
+    })
+}
+
+fn measure_shaping_cache_min_text_len_bytes() -> usize {
+    static MIN_BYTES: OnceLock<usize> = OnceLock::new();
+    *MIN_BYTES.get_or_init(|| {
+        // Default: cache only "meaningfully expensive" paragraphs (e.g. long editor lines).
+        //
+        // Short UI labels (menus/tabs/buttons) are typically cheap to shape, and caching every
+        // distinct label can bloat the cache and degrade cache locality across long-lived
+        // reuse-launch perf suites.
+        std::env::var("FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(128)
+            .min(1_048_576)
+    })
+}
+
 struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
@@ -1980,6 +2011,8 @@ impl TextSystem {
             }
         }
 
+        let measure_shaping_entries = measure_shaping_cache_entries();
+
         Self {
             font_system,
             parley_shaper,
@@ -1999,8 +2032,10 @@ impl TextSystem {
             unwrapped_layout_set: HashSet::new(),
             shape_cache: HashMap::new(),
             measure_cache: HashMap::new(),
-            measure_shaping_cache: HashMap::new(),
-            measure_shaping_fifo: VecDeque::new(),
+            // Pre-reserve to avoid HashMap rehash spikes on editor pages that touch thousands of
+            // unique text strings during a single resize/layout sequence.
+            measure_shaping_cache: HashMap::with_capacity(measure_shaping_entries.min(65_536)),
+            measure_shaping_fifo: VecDeque::with_capacity(measure_shaping_entries.min(65_536)),
 
             mask_atlas,
             color_atlas,
@@ -2766,7 +2801,7 @@ impl TextSystem {
         };
 
         let metrics = if let Some(max_width) = max_width_for_fast {
-            const MEASURE_SHAPING_CACHE_LIMIT: usize = 512;
+            let allow_shaping_cache = text.len() >= measure_shaping_cache_min_text_len_bytes();
 
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
@@ -2786,61 +2821,92 @@ impl TextSystem {
                 scale_bits: constraints.scale_factor.to_bits(),
             };
 
-            let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
-                self.measure_shaping_cache.get(&shaping_key)
-                && hit.text.as_ref() == text
-                && hit.spans.is_none()
-            {
-                (
-                    hit.width_px,
-                    hit.baseline_px,
-                    hit.line_height_px,
-                    hit.clusters.clone(),
-                )
+            let max_width_px = max_width.0 * scale;
+
+            if allow_shaping_cache {
+                let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                    self.measure_shaping_cache.get(&shaping_key)
+                    && hit.text.as_ref() == text
+                    && hit.spans.is_none()
+                {
+                    (
+                        hit.width_px,
+                        hit.baseline_px,
+                        hit.line_height_px,
+                        hit.clusters.clone(),
+                    )
+                } else {
+                    let line = self
+                        .parley_shaper
+                        .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
+                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+
+                    let existed = self
+                        .measure_shaping_cache
+                        .insert(
+                            shaping_key.clone(),
+                            TextMeasureShapingEntry {
+                                text: Arc::<str>::from(text),
+                                spans: None,
+                                width_px: line.width,
+                                baseline_px: line.baseline,
+                                line_height_px: line.line_height,
+                                clusters: clusters.clone(),
+                            },
+                        )
+                        .is_some();
+                    if !existed {
+                        self.measure_shaping_fifo.push_back(shaping_key.clone());
+                        let limit = measure_shaping_cache_entries();
+                        while self.measure_shaping_fifo.len() > limit {
+                            let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                                break;
+                            };
+                            self.measure_shaping_cache.remove(&evict);
+                        }
+                    }
+
+                    (line.width, line.baseline, line.line_height, clusters)
+                };
+
+                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                    (1, width_px.max(0.0))
+                } else {
+                    match constraints.wrap {
+                        TextWrap::Word => {
+                            word_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                        }
+                        TextWrap::Grapheme => {
+                            grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                        }
+                        TextWrap::None => unreachable!(),
+                    }
+                };
+                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             } else {
                 let line = self
                     .parley_shaper
                     .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
-                let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+                let width_px = line.width;
+                let baseline_px = line.baseline;
+                let line_height_px = line.line_height;
+                let clusters = line.clusters;
 
-                let existed = self.measure_shaping_cache.contains_key(&shaping_key);
-                self.measure_shaping_cache.insert(
-                    shaping_key.clone(),
-                    TextMeasureShapingEntry {
-                        text: Arc::<str>::from(text),
-                        spans: None,
-                        width_px: line.width,
-                        baseline_px: line.baseline,
-                        line_height_px: line.line_height,
-                        clusters: clusters.clone(),
-                    },
-                );
-                if !existed {
-                    self.measure_shaping_fifo.push_back(shaping_key.clone());
-                    while self.measure_shaping_fifo.len() > MEASURE_SHAPING_CACHE_LIMIT {
-                        let Some(evict) = self.measure_shaping_fifo.pop_front() else {
-                            break;
-                        };
-                        self.measure_shaping_cache.remove(&evict);
+                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                    (1, width_px.max(0.0))
+                } else {
+                    match constraints.wrap {
+                        TextWrap::Word => {
+                            word_wrap_line_stats(text, clusters.as_slice(), max_width_px)
+                        }
+                        TextWrap::Grapheme => {
+                            grapheme_wrap_line_stats(text, clusters.as_slice(), max_width_px)
+                        }
+                        TextWrap::None => unreachable!(),
                     }
-                }
-
-                (line.width, line.baseline, line.line_height, clusters)
-            };
-
-            let max_width_px = max_width.0 * scale;
-            let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                (1, width_px.max(0.0))
-            } else {
-                match constraints.wrap {
-                    TextWrap::Word => word_wrap_line_stats(text, clusters.as_ref(), max_width_px),
-                    TextWrap::Grapheme => {
-                        grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                    }
-                    TextWrap::None => unreachable!(),
-                }
-            };
-            metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                };
+                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+            }
         } else {
             let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
                 &mut self.parley_shaper,
@@ -2921,7 +2987,7 @@ impl TextSystem {
         };
 
         let metrics = if let Some(max_width) = max_width_for_fast {
-            const MEASURE_SHAPING_CACHE_LIMIT: usize = 512;
+            let allow_shaping_cache = rich.text.len() >= measure_shaping_cache_min_text_len_bytes();
 
             let shaping_key = TextMeasureShapingKey {
                 text_hash,
@@ -2941,18 +3007,75 @@ impl TextSystem {
                 scale_bits: constraints.scale_factor.to_bits(),
             };
 
-            let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
-                self.measure_shaping_cache.get(&shaping_key)
-                && hit.text.as_ref() == rich.text.as_ref()
-                && hit.spans.as_ref().is_some_and(|s| {
-                    Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
-                }) {
-                (
-                    hit.width_px,
-                    hit.baseline_px,
-                    hit.line_height_px,
-                    hit.clusters.clone(),
-                )
+            let max_width_px = max_width.0 * scale;
+            let text = rich.text.as_ref();
+
+            if allow_shaping_cache {
+                let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                    self.measure_shaping_cache.get(&shaping_key)
+                    && hit.text.as_ref() == rich.text.as_ref()
+                    && hit.spans.as_ref().is_some_and(|s| {
+                        Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
+                    }) {
+                    (
+                        hit.width_px,
+                        hit.baseline_px,
+                        hit.line_height_px,
+                        hit.clusters.clone(),
+                    )
+                } else {
+                    let line = self.parley_shaper.shape_single_line_metrics(
+                        TextInputRef::Attributed {
+                            text: rich.text.as_ref(),
+                            base: base_style,
+                            spans: rich.spans.as_ref(),
+                        },
+                        scale,
+                    );
+                    let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+
+                    let existed = self
+                        .measure_shaping_cache
+                        .insert(
+                            shaping_key.clone(),
+                            TextMeasureShapingEntry {
+                                text: rich.text.clone(),
+                                spans: Some(rich.spans.clone()),
+                                width_px: line.width,
+                                baseline_px: line.baseline,
+                                line_height_px: line.line_height,
+                                clusters: clusters.clone(),
+                            },
+                        )
+                        .is_some();
+                    if !existed {
+                        self.measure_shaping_fifo.push_back(shaping_key.clone());
+                        let limit = measure_shaping_cache_entries();
+                        while self.measure_shaping_fifo.len() > limit {
+                            let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                                break;
+                            };
+                            self.measure_shaping_cache.remove(&evict);
+                        }
+                    }
+
+                    (line.width, line.baseline, line.line_height, clusters)
+                };
+
+                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                    (1, width_px.max(0.0))
+                } else {
+                    match constraints.wrap {
+                        TextWrap::Word => {
+                            word_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                        }
+                        TextWrap::Grapheme => {
+                            grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                        }
+                        TextWrap::None => unreachable!(),
+                    }
+                };
+                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
             } else {
                 let line = self.parley_shaper.shape_single_line_metrics(
                     TextInputRef::Attributed {
@@ -2962,47 +3085,26 @@ impl TextSystem {
                     },
                     scale,
                 );
-                let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+                let width_px = line.width;
+                let baseline_px = line.baseline;
+                let line_height_px = line.line_height;
+                let clusters = line.clusters;
 
-                let existed = self.measure_shaping_cache.contains_key(&shaping_key);
-                self.measure_shaping_cache.insert(
-                    shaping_key.clone(),
-                    TextMeasureShapingEntry {
-                        text: rich.text.clone(),
-                        spans: Some(rich.spans.clone()),
-                        width_px: line.width,
-                        baseline_px: line.baseline,
-                        line_height_px: line.line_height,
-                        clusters: clusters.clone(),
-                    },
-                );
-                if !existed {
-                    self.measure_shaping_fifo.push_back(shaping_key.clone());
-                    while self.measure_shaping_fifo.len() > MEASURE_SHAPING_CACHE_LIMIT {
-                        let Some(evict) = self.measure_shaping_fifo.pop_front() else {
-                            break;
-                        };
-                        self.measure_shaping_cache.remove(&evict);
+                let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                    (1, width_px.max(0.0))
+                } else {
+                    match constraints.wrap {
+                        TextWrap::Word => {
+                            word_wrap_line_stats(text, clusters.as_slice(), max_width_px)
+                        }
+                        TextWrap::Grapheme => {
+                            grapheme_wrap_line_stats(text, clusters.as_slice(), max_width_px)
+                        }
+                        TextWrap::None => unreachable!(),
                     }
-                }
-
-                (line.width, line.baseline, line.line_height, clusters)
-            };
-
-            let max_width_px = max_width.0 * scale;
-            let text = rich.text.as_ref();
-            let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
-                (1, width_px.max(0.0))
-            } else {
-                match constraints.wrap {
-                    TextWrap::Word => word_wrap_line_stats(text, clusters.as_ref(), max_width_px),
-                    TextWrap::Grapheme => {
-                        grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
-                    }
-                    TextWrap::None => unreachable!(),
-                }
-            };
-            metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+                };
+                metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+            }
         } else {
             let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
                 &mut self.parley_shaper,
