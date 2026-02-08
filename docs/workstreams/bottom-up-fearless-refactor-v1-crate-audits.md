@@ -21,10 +21,10 @@ Template for per-crate notes:
 
 | crate | status | note |
 | --- | --- | --- |
-| `fret-core` | Not started | |
-| `fret-runtime` | Not started | |
-| `fret-app` | Not started | |
-| `fret-ui` | Not started | |
+| `fret-core` | L0 | `docs/workstreams/crate-audits/fret-core.l0.md` |
+| `fret-runtime` | L0 | `docs/workstreams/crate-audits/fret-runtime.l0.md` |
+| `fret-app` | L0 | `docs/workstreams/crate-audits/fret-app.l0.md` |
+| `fret-ui` | L0 | `docs/workstreams/crate-audits/fret-ui.l0.md` |
 | `fret-render-core` | Not started | |
 | `fret-render-wgpu` | Not started | |
 | `fret-render` | Not started | |
@@ -54,4 +54,3 @@ App audits focus on “golden path” quality and diagnostics, not on long-lived
 
 - `fretboard`
 - `fret-ui-gallery`
-

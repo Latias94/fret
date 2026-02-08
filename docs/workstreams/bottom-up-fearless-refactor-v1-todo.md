@@ -45,6 +45,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
     - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+    - `docs/workstreams/crate-audits/fret-core.l0.md`
+    - `docs/workstreams/crate-audits/fret-runtime.l0.md`
+    - `docs/workstreams/crate-audits/fret-app.l0.md`
+    - `docs/workstreams/crate-audits/fret-ui.l0.md`
 
 - [ ] BU-FR-audit-007 Decide audit levels + minimum gates per level (L0/L1/L2).
   - Goal: scale audits across a large workspace without blocking progress.
