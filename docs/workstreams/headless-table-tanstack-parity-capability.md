@@ -23,6 +23,78 @@ Last updated: 2026-02-08
 
 ---
 
+## Core instance surface (Table/Row/Column/Header/Cell)
+
+This section turns the upstream “core” public instance surfaces into an explicit capability
+checklist. The goal is to ensure Fret is **not weaker** than TanStack `table-core` even if we do not
+mirror the exact JS instance object model.
+
+Upstream source of truth:
+
+- `repo-ref/table/packages/table-core/src/core/table.ts`
+- `repo-ref/table/packages/table-core/src/core/row.ts`
+- `repo-ref/table/packages/table-core/src/core/column.ts`
+- `repo-ref/table/packages/table-core/src/core/headers.ts`
+- `repo-ref/table/packages/table-core/src/core/cell.ts`
+
+Mapping conventions:
+
+- When TanStack exposes instance methods on `table/row/column/header/cell`, Fret may express the
+  same capability via:
+  - a pure derived model (`RowModel`, header groups, column ordering),
+  - a snapshot (`CoreModelSnapshot`),
+  - or a targeted helper on `Table` that returns the observable outcome.
+- When the capability is “UI query heavy” (widths/starts, pin-family splits), prefer the
+  snapshot-style inventories to prevent consumers from re-computing and drifting.
+
+### Table core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `table.getAllColumns()` | `Table::column_tree()` (nested `ColumnDef` tree) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `table.getAllFlatColumns()` | `Table::all_flat_columns()` (preorder DFS; no columnOrder) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`all_flat_columns`) + `visibility_ordering.json` |
+| `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
+| `table.getColumn(columnId)` | `Table::column(column_id)` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column`) |
+| `table.getCoreRowModel()` | `Table::core_row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRowModel()` | `Table::row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
+| `table.getRow(rowId, searchAll?)` | `Table::row_by_id(row_id, search_all)` | Aligned | `row_id_lookup.json` + `tanstack_v8_row_id_lookup_parity.rs` |
+| `table.getState()` | `Table::state()` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
+| `table.options.renderFallbackValue` | `Table::render_fallback_value()` + `Table::cell_render_value(..)` | Aligned | `render_fallback.json` |
+| `table._queue(cb)` (auto-reset scheduling) | modeled via state-transition parity gates (no runtime queue yet) | Partial | `auto_reset.json` + `docs/workstreams/headless-table-tanstack-parity.md` notes |
+
+### Row core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `row.id/index/depth/parentId/subRows` | `RowModel` arena fields | Aligned | `selection_tree.json` + `tanstack_v8_selection_tree_parity.rs` |
+| `row.getLeafRows()` | `RowModel::leaf_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getParentRow()/getParentRows()` | `RowModel::parent_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
+| `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`cell_value`) |
+| `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
+| `row.getAllCells()` | `Table::row_cells(row_key)` (snapshot of ids + flags + pin splits) | Partial | `headers_cells.json` / `column_pinning.json` |
+| `row.getUniqueValues(columnId)` | no dedicated surface yet (could be expressed via `faceting` or a future per-row helper) | Missing | N/A |
+
+### Column core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `column.id/depth/parent/columns` | `ColumnDef` tree (`Table::column_tree`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `column.getFlatColumns()` | `Table::all_flat_columns()` (table-level equivalent) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` |
+| `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Partial | parity fixtures (ordering/visibility) |
+
+### Header + cell core surface
+
+| Upstream API | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| Header groups (`getHeaderGroups`, pin-family variants) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
+| Flat/leaf/footer inventories | `Table::{flat_headers,leaf_headers,footer_groups}` (+ pin-family variants) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `header.getSize()/getStart()` | `CoreModelSnapshot.header_sizing` (versioned inventory by header id) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.id` | `CoreModelSnapshot.cells[*].{all,visible,left,center,right}[].id` | Aligned | `headers_cells.json` |
+| `cell.getIsGrouped/isPlaceholder/isAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
+| `cell.getValue()/renderValue()` | `Table::{cell_value,cell_render_value}` | Partial | helper exists; not snapshot-serialized today |
+
+---
+
 ## Capability gap snapshot (what can still make us weaker)
 
 This section is intentionally short and action-oriented. It is the “capability parity”
