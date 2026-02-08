@@ -121,6 +121,22 @@ struct LayoutSwitchCase {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
+enum LayoutResizableRecipe {
+    Demo,
+    DemoWithHandle,
+    Handle,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutResizableCase {
+    id: String,
+    web_name: String,
+    recipe: LayoutResizableRecipe,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
 enum LayoutRadioGroupRecipe {
     RowGeometry,
     IndicatorOffset,
@@ -3986,9 +4002,8 @@ fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
     );
 }
 
-#[test]
-fn web_vs_fret_layout_resizable_demo_geometry_matches_web() {
-    let web = read_web_golden("resizable-demo");
+fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_group = web_find_by_class_tokens(&theme.root, &["max-w-md", "rounded-lg", "border"])
@@ -4027,6 +4042,11 @@ fn web_vs_fret_layout_resizable_demo_geometry_matches_web() {
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
+    let group_label: Arc<str> = Arc::from(format!("Golden:{}:group", web_name));
+    let one_label: Arc<str> = Arc::from(format!("Golden:{}:one", web_name));
+    let two_label: Arc<str> = Arc::from(format!("Golden:{}:two", web_name));
+    let three_label: Arc<str> = Arc::from(format!("Golden:{}:three", web_name));
+
     let snap = run_fret_root(bounds, |cx| {
         let model_outer: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.5, 0.5]);
         let model_inner: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
@@ -4037,7 +4057,7 @@ fn web_vs_fret_layout_resizable_demo_geometry_matches_web() {
         fn mk_center(
             cx: &mut fret_ui::ElementContext<'_, App>,
             theme: &Theme,
-            label: &'static str,
+            label: Arc<str>,
             text: &'static str,
             fixed_height: Option<Px>,
         ) -> AnyElement {
@@ -4070,22 +4090,16 @@ fn web_vs_fret_layout_resizable_demo_geometry_matches_web() {
             cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::Panel,
-                    label: Some(Arc::from(label)),
+                    label: Some(label),
                     ..Default::default()
                 },
                 move |_cx| vec![node],
             )
         }
 
-        let one = mk_center(
-            cx,
-            &theme,
-            "Golden:resizable-demo:one",
-            "One",
-            Some(Px(200.0)),
-        );
-        let two = mk_center(cx, &theme, "Golden:resizable-demo:two", "Two", None);
-        let three = mk_center(cx, &theme, "Golden:resizable-demo:three", "Three", None);
+        let one = mk_center(cx, &theme, one_label.clone(), "One", Some(Px(200.0)));
+        let two = mk_center(cx, &theme, two_label.clone(), "Two", None);
+        let three = mk_center(cx, &theme, three_label.clone(), "Three", None);
 
         let inner = fret_ui_shadcn::ResizablePanelGroup::new(model_inner)
             .axis(fret_core::Axis::Vertical)
@@ -4132,47 +4146,40 @@ fn web_vs_fret_layout_resizable_demo_geometry_matches_web() {
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-demo:group")),
+                label: Some(group_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![frame],
         )]
     });
 
-    let group = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-demo:group"),
-    )
-    .expect("fret group");
-    let one = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-demo:one"),
-    )
-    .expect("fret one");
-    let two = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-demo:two"),
-    )
-    .expect("fret two");
-    let three = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-demo:three"),
-    )
-    .expect("fret three");
+    let group = find_semantics(&snap, SemanticsRole::Panel, Some(group_label.as_ref()))
+        .expect("fret group");
+    let one =
+        find_semantics(&snap, SemanticsRole::Panel, Some(one_label.as_ref())).expect("fret one");
+    let two =
+        find_semantics(&snap, SemanticsRole::Panel, Some(two_label.as_ref())).expect("fret two");
+    let three = find_semantics(&snap, SemanticsRole::Panel, Some(three_label.as_ref()))
+        .expect("fret three");
 
-    assert_rect_close_px("resizable-demo group", group.bounds, web_group.rect, 2.0);
-    assert_rect_close_px("resizable-demo one", one.bounds, web_one.rect, 2.0);
-    assert_rect_close_px("resizable-demo two", two.bounds, web_two.rect, 2.0);
-    assert_rect_close_px("resizable-demo three", three.bounds, web_three.rect, 2.0);
+    assert_rect_close_px(
+        &format!("{web_name} group"),
+        group.bounds,
+        web_group.rect,
+        2.0,
+    );
+    assert_rect_close_px(&format!("{web_name} one"), one.bounds, web_one.rect, 2.0);
+    assert_rect_close_px(&format!("{web_name} two"), two.bounds, web_two.rect, 2.0);
+    assert_rect_close_px(
+        &format!("{web_name} three"),
+        three.bounds,
+        web_three.rect,
+        2.0,
+    );
 }
 
-#[test]
-fn web_vs_fret_layout_resizable_demo_with_handle_geometry_matches_web() {
-    let web = read_web_golden("resizable-demo-with-handle");
+fn assert_resizable_demo_with_handle_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_group = web_find_by_class_tokens(&theme.root, &["max-w-md", "rounded-lg", "border"])
@@ -4182,6 +4189,8 @@ fn web_vs_fret_layout_resizable_demo_with_handle_geometry_matches_web() {
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
+
+    let group_label: Arc<str> = Arc::from(format!("Golden:{}:group", web_name));
 
     let snap = run_fret_root(bounds, |cx| {
         let model_outer: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.5, 0.5]);
@@ -4254,31 +4263,26 @@ fn web_vs_fret_layout_resizable_demo_with_handle_geometry_matches_web() {
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-demo-with-handle:group")),
+                label: Some(group_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![frame],
         )]
     });
 
-    let group = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-demo-with-handle:group"),
-    )
-    .expect("fret group");
+    let group = find_semantics(&snap, SemanticsRole::Panel, Some(group_label.as_ref()))
+        .expect("fret group");
 
     assert_rect_close_px(
-        "resizable-demo-with-handle group",
+        &format!("{web_name} group"),
         group.bounds,
         web_group.rect,
         2.0,
     );
 }
 
-#[test]
-fn web_vs_fret_layout_resizable_handle_geometry_matches_web() {
-    let web = read_web_golden("resizable-handle");
+fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_group = web_find_by_class_tokens(
@@ -4301,6 +4305,10 @@ fn web_vs_fret_layout_resizable_handle_geometry_matches_web() {
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
+    let group_label: Arc<str> = Arc::from(format!("Golden:{}:group", web_name));
+    let left_label: Arc<str> = Arc::from(format!("Golden:{}:left", web_name));
+    let right_label: Arc<str> = Arc::from(format!("Golden:{}:right", web_name));
+
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
         let theme = Theme::global(&*cx.app).clone();
@@ -4319,7 +4327,7 @@ fn web_vs_fret_layout_resizable_handle_geometry_matches_web() {
         let left = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-handle:left")),
+                label: Some(left_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![left_box],
@@ -4336,7 +4344,7 @@ fn web_vs_fret_layout_resizable_handle_geometry_matches_web() {
         let right = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-handle:right")),
+                label: Some(right_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![right_box],
@@ -4374,52 +4382,44 @@ fn web_vs_fret_layout_resizable_handle_geometry_matches_web() {
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-handle:group")),
+                label: Some(group_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![frame],
         )]
     });
 
-    let group = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-handle:group"),
-    )
-    .expect("fret group");
+    let group = find_semantics(&snap, SemanticsRole::Panel, Some(group_label.as_ref()))
+        .expect("fret group");
 
-    assert_rect_close_px("resizable-handle group", group.bounds, web_group.rect, 2.0);
+    assert_rect_close_px(
+        &format!("{web_name} group"),
+        group.bounds,
+        web_group.rect,
+        2.0,
+    );
 
-    let left = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-handle:left"),
-    )
-    .expect("fret left");
-    let right = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-handle:right"),
-    )
-    .expect("fret right");
+    let left =
+        find_semantics(&snap, SemanticsRole::Panel, Some(left_label.as_ref())).expect("fret left");
+    let right = find_semantics(&snap, SemanticsRole::Panel, Some(right_label.as_ref()))
+        .expect("fret right");
 
     assert_close_px(
-        "resizable-handle left x",
+        &format!("{web_name} left x"),
         left.bounds.origin.x,
         web_left.rect.x,
         2.0,
     );
     assert_close_px(
-        "resizable-handle right x",
+        &format!("{web_name} right x"),
         right.bounds.origin.x,
         web_right.rect.x,
         2.0,
     );
 }
 
-#[test]
-fn web_vs_fret_layout_resizable_vertical_geometry_matches_web() {
-    let web = read_web_golden("resizable-vertical");
+fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_group = web_find_by_class_tokens(
@@ -4442,6 +4442,10 @@ fn web_vs_fret_layout_resizable_vertical_geometry_matches_web() {
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
+    let group_label: Arc<str> = Arc::from(format!("Golden:{}:group", web_name));
+    let top_label: Arc<str> = Arc::from(format!("Golden:{}:top", web_name));
+    let bottom_label: Arc<str> = Arc::from(format!("Golden:{}:bottom", web_name));
+
     let snap = run_fret_root(bounds, |cx| {
         let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![0.25, 0.75]);
         let theme = Theme::global(&*cx.app).clone();
@@ -4460,7 +4464,7 @@ fn web_vs_fret_layout_resizable_vertical_geometry_matches_web() {
         let top = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-vertical:top")),
+                label: Some(top_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![top_box],
@@ -4477,7 +4481,7 @@ fn web_vs_fret_layout_resizable_vertical_geometry_matches_web() {
         let bottom = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-vertical:bottom")),
+                label: Some(bottom_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![bottom_box],
@@ -4515,51 +4519,72 @@ fn web_vs_fret_layout_resizable_vertical_geometry_matches_web() {
         vec![cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:resizable-vertical:group")),
+                label: Some(group_label.clone()),
                 ..Default::default()
             },
             move |_cx| vec![frame],
         )]
     });
 
-    let group = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-vertical:group"),
-    )
-    .expect("fret group");
+    let group = find_semantics(&snap, SemanticsRole::Panel, Some(group_label.as_ref()))
+        .expect("fret group");
     assert_rect_close_px(
-        "resizable-vertical group",
+        &format!("{web_name} group"),
         group.bounds,
         web_group.rect,
         2.0,
     );
 
-    let top = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-vertical:top"),
-    )
-    .expect("fret top");
-    let bottom = find_semantics(
-        &snap,
-        SemanticsRole::Panel,
-        Some("Golden:resizable-vertical:bottom"),
-    )
-    .expect("fret bottom");
+    let top =
+        find_semantics(&snap, SemanticsRole::Panel, Some(top_label.as_ref())).expect("fret top");
+    let bottom = find_semantics(&snap, SemanticsRole::Panel, Some(bottom_label.as_ref()))
+        .expect("fret bottom");
 
     assert_close_px(
-        "resizable-vertical top y",
+        &format!("{web_name} top y"),
         top.bounds.origin.y,
         web_header.rect.y,
         2.0,
     );
     assert_close_px(
-        "resizable-vertical bottom y",
+        &format!("{web_name} bottom y"),
         bottom.bounds.origin.y,
         web_content.rect.y,
         2.0,
     );
+}
+
+#[test]
+fn web_vs_fret_layout_resizable_geometry_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_resizable_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutResizableCase> =
+        serde_json::from_str(raw).expect("layout resizable fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
+
+    for case in suite.cases {
+        eprintln!(
+            "layout resizable case={} web_name={}",
+            case.id, case.web_name
+        );
+        match case.recipe {
+            LayoutResizableRecipe::Demo => {
+                assert_resizable_demo_geometry_matches_web(&case.web_name)
+            }
+            LayoutResizableRecipe::DemoWithHandle => {
+                assert_resizable_demo_with_handle_geometry_matches_web(&case.web_name)
+            }
+            LayoutResizableRecipe::Handle => {
+                assert_resizable_handle_geometry_matches_web(&case.web_name)
+            }
+            LayoutResizableRecipe::Vertical => {
+                assert_resizable_vertical_geometry_matches_web(&case.web_name)
+            }
+        }
+    }
 }
 
 #[test]
