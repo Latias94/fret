@@ -20,7 +20,7 @@ use fret_runtime::{CommandId, Effect};
 use fret_runtime::{Model, WeakModel};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::PressableProps;
+use fret_ui::element::{PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -347,6 +347,76 @@ where
     render(cx, &snap)
 }
 
+pub fn router_outlet_with_test_id<R>(
+    cx: &mut ElementContext<'_, App>,
+    snapshot: &Model<RouterUiSnapshot<R>>,
+    test_id: impl Into<Arc<str>>,
+    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+) -> AnyElement
+where
+    R: Clone + 'static,
+{
+    router_outlet(cx, snapshot, render)
+        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+}
+
+#[derive(Debug, Clone)]
+pub struct RouterOutlet<R>
+where
+    R: Clone + 'static,
+{
+    snapshot: Model<RouterUiSnapshot<R>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl<R> RouterOutlet<R>
+where
+    R: Clone + 'static,
+{
+    pub fn new(snapshot: Model<RouterUiSnapshot<R>>) -> Self {
+        Self {
+            snapshot,
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let elem = router_outlet(cx, &self.snapshot, render);
+        match self.test_id {
+            Some(test_id) => elem.attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+            None => elem,
+        }
+    }
+
+    pub fn into_element_by_leaf(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let mut render = Some(render);
+        let mut not_found = Some(not_found);
+        self.into_element(cx, move |cx, snap| {
+            if snap.is_not_found {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            }
+            match snap.leaf_route() {
+                Some(route) => (render.take().expect("render should be callable"))(cx, route, snap),
+                None => (not_found.take().expect("not_found should be callable"))(cx, snap),
+            }
+        })
+    }
+}
+
 pub fn router_link<R, H>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
@@ -358,6 +428,45 @@ where
     H: HistoryAdapter + 'static,
 {
     router_link_with_props(cx, store, link, PressableProps::default(), children)
+}
+
+pub fn router_link_to<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    route: &R,
+    params: &[PathParam],
+    search: SearchMap,
+    fragment: Option<String>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> Result<AnyElement, RouterBuildLocationError>
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let app: &App = &*cx.app;
+    let link = store.link_to(app, action, route, params, search, fragment)?;
+    Ok(router_link(cx, store, link, children))
+}
+
+pub fn router_link_to_with_test_id<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    route: &R,
+    params: &[PathParam],
+    search: SearchMap,
+    fragment: Option<String>,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> Result<AnyElement, RouterBuildLocationError>
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let app: &App = &*cx.app;
+    let link = store.link_to(app, action, route, params, search, fragment)?;
+    Ok(router_link_with_test_id(cx, store, link, test_id, children))
 }
 
 /// Build a low-level router link pressable with explicit `PressableProps`.
@@ -404,6 +513,33 @@ where
     let mut props = PressableProps::default();
     props.a11y.test_id = Some(test_id.into());
     router_link_with_props(cx, store, link, props, children)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RouterLinkContextMenuAction {
+    CopyLink,
+    OpenInNewWindow,
+}
+
+#[derive(Debug, Clone)]
+pub struct RouterLinkContextMenuItem {
+    pub action: RouterLinkContextMenuAction,
+    pub label: Arc<str>,
+}
+
+impl RouterLink {
+    pub fn default_context_menu_items(&self) -> [RouterLinkContextMenuItem; 2] {
+        [
+            RouterLinkContextMenuItem {
+                action: RouterLinkContextMenuAction::CopyLink,
+                label: Arc::from("Copy link"),
+            },
+            RouterLinkContextMenuItem {
+                action: RouterLinkContextMenuAction::OpenInNewWindow,
+                label: Arc::from("Open in new window"),
+            },
+        ]
+    }
 }
 
 #[cfg(test)]
