@@ -50,7 +50,7 @@ pub use router_state::{
     HistoryAdapter, RouteBeforeLoadFn, RouteHookContext, RouteHooks, RouteHooksTable,
     RouteLoaderFn, RouteMatchSnapshot, RoutePrefetchIntent, Router, RouterBlockReason,
     RouterBuildLocationError, RouterEvent, RouterGuardContext, RouterGuardDecision, RouterGuardFn,
-    RouterState, RouterTransition, RouterTransitionCause, RouterUpdate,
+    RouterNavigateToError, RouterState, RouterTransition, RouterTransitionCause, RouterUpdate,
     RouterUpdateWithPrefetchIntents,
 };
 pub use search::{

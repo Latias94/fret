@@ -38,6 +38,30 @@ impl std::fmt::Display for RouterBuildLocationError {
 
 impl std::error::Error for RouterBuildLocationError {}
 
+#[derive(Debug, Clone)]
+pub enum RouterNavigateToError {
+    BuildLocation(RouterBuildLocationError),
+    SearchValidation(RouteSearchValidationFailure),
+}
+
+impl std::fmt::Display for RouterNavigateToError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BuildLocation(err) => write!(f, "build location failed: {err}"),
+            Self::SearchValidation(err) => write!(f, "route search validation failed: {err}"),
+        }
+    }
+}
+
+impl std::error::Error for RouterNavigateToError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::BuildLocation(err) => Some(err),
+            Self::SearchValidation(err) => Some(err),
+        }
+    }
+}
+
 pub trait HistoryAdapter {
     fn current(&self) -> &RouteLocation;
     fn refresh(&mut self) {}
@@ -816,6 +840,37 @@ where
         }
     }
 
+    pub fn navigate_to(
+        &mut self,
+        action: NavigationAction,
+        route: &R,
+        params: &[crate::PathParam],
+        search: crate::SearchMap,
+        fragment: Option<String>,
+    ) -> Result<RouterUpdate, RouterNavigateToError> {
+        let location = self
+            .build_location(route, params, search, fragment)
+            .map_err(RouterNavigateToError::BuildLocation)?;
+        self.navigate(action, Some(location))
+            .map_err(RouterNavigateToError::SearchValidation)
+    }
+
+    pub fn navigate_to_with_prefetch_intents(
+        &mut self,
+        action: NavigationAction,
+        route: &R,
+        params: &[crate::PathParam],
+        search: crate::SearchMap,
+        fragment: Option<String>,
+    ) -> Result<RouterUpdateWithPrefetchIntents<R>, RouterNavigateToError> {
+        let location = self
+            .build_location(route, params, search, fragment)
+            .map_err(RouterNavigateToError::BuildLocation)?;
+
+        self.navigate_with_prefetch_intents(action, Some(location))
+            .map_err(RouterNavigateToError::SearchValidation)
+    }
+
     pub fn max_redirect_hops(&self) -> usize {
         self.max_redirect_hops
     }
@@ -1170,8 +1225,8 @@ mod tests {
         RouterUpdate, RouterUpdateWithPrefetchIntents,
     };
     use crate::{
-        MemoryHistory, NavigationAction, RouteLocation, RouteNode, RouteSearchTable, RouteTree,
-        SearchMap, SearchValidationError, SearchValidationMode,
+        MemoryHistory, NavigationAction, PathParam, RouteLocation, RouteNode, RouteSearchTable,
+        RouteTree, SearchMap, SearchValidationError, SearchValidationMode,
     };
     use std::sync::{Arc, Mutex};
 
@@ -1354,6 +1409,87 @@ mod tests {
         assert!(matches!(
             transition.cause,
             super::RouterTransitionCause::Redirect { .. }
+        ));
+    }
+
+    #[test]
+    fn router_navigate_to_builds_location_and_navigates() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            User,
+        }
+
+        fn validate_root(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Ok(search.clone().with("lang", Some("en".to_string())))
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::User, "users/:id").unwrap()]),
+        ));
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, validate_root);
+        let search_table = Arc::new(search_table);
+
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let update = router
+            .navigate_to(
+                NavigationAction::Push,
+                &RouteId::User,
+                &[PathParam {
+                    name: "id".to_string(),
+                    value: "42".to_string(),
+                }],
+                SearchMap::new(),
+                None,
+            )
+            .expect("navigate_to should succeed");
+        assert!(update.changed());
+        assert_eq!(router.state().location.to_url(), "/users/42?lang=en");
+    }
+
+    #[test]
+    fn router_navigate_to_errors_when_params_missing() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            User,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::User, "users/:id").unwrap()]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let err = router
+            .navigate_to(
+                NavigationAction::Push,
+                &RouteId::User,
+                &[],
+                SearchMap::new(),
+                None,
+            )
+            .expect_err("expected navigate_to to fail");
+        assert!(matches!(
+            err,
+            super::RouterNavigateToError::BuildLocation(
+                super::RouterBuildLocationError::MissingPathParams
+            )
         ));
     }
 
