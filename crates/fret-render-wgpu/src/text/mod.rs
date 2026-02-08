@@ -1432,6 +1432,9 @@ pub struct TextSystem {
     perf_frame_shape_cache_hits: u64,
     perf_frame_shape_cache_misses: u64,
     perf_frame_shapes_created: u64,
+    perf_frame_unwrapped_layout_cache_hits: u64,
+    perf_frame_unwrapped_layout_cache_misses: u64,
+    perf_frame_unwrapped_layouts_created: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1763,6 +1766,9 @@ impl TextSystem {
         self.perf_frame_shape_cache_hits = 0;
         self.perf_frame_shape_cache_misses = 0;
         self.perf_frame_shapes_created = 0;
+        self.perf_frame_unwrapped_layout_cache_hits = 0;
+        self.perf_frame_unwrapped_layout_cache_misses = 0;
+        self.perf_frame_unwrapped_layouts_created = 0;
         self.mask_atlas.begin_frame_diagnostics();
         self.color_atlas.begin_frame_diagnostics();
         self.subpixel_atlas.begin_frame_diagnostics();
@@ -1780,6 +1786,10 @@ impl TextSystem {
             blob_cache_entries: self.blob_cache.len() as u64,
             shape_cache_entries: self.shape_cache.len() as u64,
             measure_cache_buckets: self.measure_cache.len() as u64,
+            unwrapped_layout_cache_entries: self.unwrapped_layout_cache.len() as u64,
+            frame_unwrapped_layout_cache_hits: self.perf_frame_unwrapped_layout_cache_hits,
+            frame_unwrapped_layout_cache_misses: self.perf_frame_unwrapped_layout_cache_misses,
+            frame_unwrapped_layouts_created: self.perf_frame_unwrapped_layouts_created,
             frame_cache_resets: self.perf_frame_cache_resets,
             frame_blob_cache_hits: self.perf_frame_blob_cache_hits,
             frame_blob_cache_misses: self.perf_frame_blob_cache_misses,
@@ -2010,6 +2020,9 @@ impl TextSystem {
             perf_frame_shape_cache_hits: 0,
             perf_frame_shape_cache_misses: 0,
             perf_frame_shapes_created: 0,
+            perf_frame_unwrapped_layout_cache_hits: 0,
+            perf_frame_unwrapped_layout_cache_misses: 0,
+            perf_frame_unwrapped_layouts_created: 0,
         }
     }
 
@@ -3275,9 +3288,15 @@ impl TextSystem {
         let key = TextUnwrappedKey::from_blob_key(blob_key);
 
         if let Some(hit) = self.unwrapped_layout_cache.get(&key).cloned() {
+            self.perf_frame_unwrapped_layout_cache_hits = self
+                .perf_frame_unwrapped_layout_cache_hits
+                .saturating_add(1);
             self.touch_unwrapped_lru(&key, max_entries);
             return hit;
         }
+        self.perf_frame_unwrapped_layout_cache_misses = self
+            .perf_frame_unwrapped_layout_cache_misses
+            .saturating_add(1);
 
         let scale = if scale.is_finite() {
             scale.max(1.0)
@@ -3286,6 +3305,8 @@ impl TextSystem {
         };
         let shaped = self.parley_shaper.shape_single_line(input, scale);
         let shaped = Arc::new(shaped);
+        self.perf_frame_unwrapped_layouts_created =
+            self.perf_frame_unwrapped_layouts_created.saturating_add(1);
         self.unwrapped_layout_cache
             .insert(key.clone(), shaped.clone());
         self.touch_unwrapped_lru(&key, max_entries);
