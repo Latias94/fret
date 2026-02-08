@@ -5,9 +5,9 @@ use fret_kit::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryError, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_router::{
-    MemoryHistory, NavigationAction, RouteHooks, RouteLocation, RouteNode, RouteSearchTable,
-    RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchValidationMode,
-    prefetch_intent_query_key, route_query_key,
+    MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation, RouteNode,
+    RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
+    SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
@@ -355,10 +355,24 @@ fn on_command(
             NavigationAction::Push,
             Some(RouteLocation::parse("/settings")),
         ),
-        RouterQueryDemoMsg::NavigateUser => st.router.navigate_with_prefetch_intents(
-            NavigationAction::Push,
-            Some(RouteLocation::parse("/users/42")),
-        ),
+        RouterQueryDemoMsg::NavigateUser => {
+            let location = st
+                .router
+                .build_location(
+                    &RouteId::User,
+                    &[PathParam {
+                        name: "id".to_string(),
+                        value: "42".to_string(),
+                    }],
+                    SearchMap::new()
+                        .with_typed("tab", Some("profile".to_string()))
+                        .with_typed("debug", Some(true)),
+                    None,
+                )
+                .expect("router should build a user location");
+            st.router
+                .navigate_with_prefetch_intents(NavigationAction::Push, Some(location))
+        }
         RouterQueryDemoMsg::Back => st
             .router
             .navigate_with_prefetch_intents(NavigationAction::Back, None),
