@@ -11,6 +11,27 @@
 
 Fret is the precision fretboard for your Rust UI: a GPU-first framework that turns application logic into crisp, fluid interactions.
 
+Modular by design, ecosystem included — start fast for apps today, and scale to editor-grade workflows over time.
+
+This repo focuses on the **core framework** (`crates/`) and incubates components + tooling in-tree (`ecosystem/`, `apps/`).
+Long-term, ecosystem crates may move to a separate components repository.
+
+## What you can build with Fret
+
+- **General-purpose desktop apps**: productivity tools, dashboards, developer utilities.
+- **Editor-grade tools**: docking layouts, tear-off windows, panels, command palette, rich interaction.
+- **Viewport-heavy apps**: embed one or more GPU viewports (render targets) inside a UI.
+- **Web demos/apps** via wasm (WebGPU path).
+
+## Why Fret (high-signal features)
+
+- **Modular, backend-friendly architecture**: portable core + pluggable platform/runner/render backends to integrate with other ecosystems and GPU stacks.
+- **Ecosystem included**: shadcn-aligned UI surface, icons, docking UI, markdown, tables, code editor, node graph, charts, and more.
+- **Fast onboarding**: templates + a consistent demo runner (`fretboard`) for native and web.
+- **Editor-grade foundations (in progress)**: docking/multi-window workflows, viewport embedding, and predictable overlays.
+- **Desktop-first + wasm in mind**: Windows/macOS/Linux now, with an explicit path to WebGPU in the browser.
+- **Debuggability as a feature**: scripted interaction repros + portable diagnostics bundles to make UI bugs shareable and CI-friendly.
+
 ## Project Direction
 
 Fret draws inspiration from:
@@ -19,15 +40,6 @@ Fret draws inspiration from:
 - Mature web UI design systems (shadcn/Radix patterns) translated into Rust-native APIs.
 
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
-
-## What Stands Out
-
-- Multi-window editor UX: docking, tear-off windows, cross-window drag, multi-viewport workflows.
-- Cross-platform direction: desktop-first (`winit`), with explicit web/wasm runner surfaces.
-- Modular architecture: clear split between platform, UI mechanism layer, and renderer.
-- GPU-first rendering path: retained scene + backend contracts + `wgpu` backend implementation.
-- Documentation/ADR-driven contracts: hard-to-change boundaries are written first, then implemented.
-- Ecosystem-first expansion: shadcn components today, Material 3 in progress, more packs over time.
 
 ## Quick Start
 

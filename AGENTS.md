@@ -1,5 +1,17 @@
 # Repository Guidelines
 
+## Start here (quick context pointers)
+
+- Project positioning (user-facing): `README.md`
+- Canonical docs index: `docs/README.md`
+- Architecture overview: `docs/architecture.md`
+- “Open-this-while-working” index: `docs/golden-architecture.md`
+- UI closure map (contracts → code → tests): `docs/ui-closure-map.md`
+- Runtime contract checklist (fret-ui): `docs/runtime-contract-matrix.md`
+- shadcn parity tracker (declarative-only): `docs/shadcn-declarative-progress.md`
+- Diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
+- `repo-ref/` policy + pinned SHAs: `docs/repo-ref.md`
+
 ## Project Structure & Module Organization
 
 - Canonical overview: `docs/README.md` and `docs/repo-structure.md`.
