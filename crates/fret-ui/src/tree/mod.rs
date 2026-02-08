@@ -1586,6 +1586,7 @@ pub struct UiTree<H: UiHost> {
     interactive_resize_active: bool,
     interactive_resize_stable_frames: u8,
     interactive_resize_last_updated_frame: Option<FrameId>,
+    interactive_resize_last_bounds_delta: Option<(fret_core::Px, fret_core::Px)>,
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
 
@@ -2025,6 +2026,7 @@ impl<H: UiHost> Default for UiTree<H> {
             interactive_resize_active: false,
             interactive_resize_stable_frames: 0,
             interactive_resize_last_updated_frame: None,
+            interactive_resize_last_bounds_delta: None,
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,
@@ -3476,10 +3478,21 @@ impl<H: UiHost> UiTree<H> {
         let changed = bounds_changed || scale_changed;
 
         if changed {
+            self.interactive_resize_last_bounds_delta = if bounds_changed {
+                prev_bounds.map(|prev| {
+                    let dw = (bounds.size.width.0 - prev.size.width.0).abs();
+                    let dh = (bounds.size.height.0 - prev.size.height.0).abs();
+                    (fret_core::Px(dw), fret_core::Px(dh))
+                })
+            } else {
+                None
+            };
             self.interactive_resize_active = true;
             self.interactive_resize_stable_frames = 0;
             return;
         }
+
+        self.interactive_resize_last_bounds_delta = None;
 
         if !self.interactive_resize_active {
             return;
@@ -3519,9 +3532,26 @@ impl<H: UiHost> UiTree<H> {
         if !self.interactive_resize_active() {
             return width;
         }
-        let bucket_px = text_wrap_width_bucket_px();
+        let mut bucket_px = text_wrap_width_bucket_px();
         if bucket_px <= 1 {
-            return width;
+            // Default interactive-resize behavior: for small width jitters, quantize wrap widths so
+            // we don't churn wrapped text layout every frame while the user is live-resizing.
+            //
+            // This intentionally does not apply to "stress" resizes that jump hundreds of pixels,
+            // where we want accurate layout and can accept the one-off cost.
+            //
+            // The env knob still takes precedence; this is only a default for the common
+            // "drag jitter" class.
+            let small_step = self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0);
+            if !small_step {
+                return width;
+            }
+            bucket_px = text_wrap_width_small_step_bucket_px();
+            if bucket_px <= 1 {
+                return width;
+            }
         }
         match wrap {
             fret_core::TextWrap::Word | fret_core::TextWrap::Grapheme => {
@@ -7399,6 +7429,22 @@ fn text_wrap_width_bucket_px() -> u8 {
             .ok()
             .and_then(|v| v.parse::<u8>().ok())
             .unwrap_or(0)
+            .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_bucket_px() -> u8 {
+    static BUCKET_PX: OnceLock<u8> = OnceLock::new();
+    *BUCKET_PX.get_or_init(|| {
+        // Default: 32px. Used only for small-step interactive resizes when no explicit bucketing
+        // policy is configured via `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
+        //
+        // Set to 0/1 to disable the default small-step bucketing, or to another small value to
+        // tune the tradeoff between resize smoothness and layout accuracy during live-resizing.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(32)
             .min(64)
     })
 }
