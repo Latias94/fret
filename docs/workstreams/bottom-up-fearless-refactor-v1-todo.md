@@ -72,9 +72,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/README.md`
     - `crates/fret-app/README.md`
 
-- [ ] BU-FR-core-013 Write down an explicit async policy per layer (core vs app vs backends vs ecosystem) and add at least one regression gate.
+- [~] BU-FR-core-013 Write down an explicit async policy per layer (core vs app vs backends vs ecosystem) and add at least one regression gate.
   - Goal: prevent Tokio/executor coupling from leaking into core crates and prevent UI-thread blocking regressions.
   - References: `docs/integrating-tokio-and-reqwest.md`, `docs/integrating-sqlite-and-sqlx.md`.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md` (section “Async policy”)
 
 - [ ] BU-FR-core-014 Define a v1 “serialization stability” checklist for core persisted formats.
   - Target: settings/keymap/layout and any persisted docking state formats.
@@ -162,6 +164,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: remove ambiguous `keymap.rs` / `keymap/` split and enable incremental internal splits by responsibility.
   - Evidence:
     - `crates/fret-runtime/src/keymap/mod.rs`
+
+- [x] BU-FR-core-028 Convert `fret-runtime` model store into a directory subsystem (`model/mod.rs`).
+  - Goal: split the large model store implementation by responsibility while keeping the stable re-export surface unchanged.
+  - Evidence:
+    - `crates/fret-runtime/src/model/mod.rs`
+    - `crates/fret-runtime/src/model/store.rs`
+    - `crates/fret-runtime/src/model/handle.rs`
+    - `crates/fret-runtime/src/model/host.rs`
+    - `crates/fret-runtime/src/model/debug.rs`
+    - `crates/fret-runtime/src/model/error.rs`
 
 ## M2 — UI runtime closure
 

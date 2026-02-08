@@ -9,7 +9,7 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 ## Snapshot (from `tools/audit_crate.ps1`)
 
 - Largest files:
-  - `crates/fret-runtime/src/model.rs`
+  - `crates/fret-runtime/src/model/store.rs`
   - `crates/fret-runtime/src/keymap/mod.rs`
   - `crates/fret-runtime/src/menu/wire.rs`
   - `crates/fret-runtime/src/window_command_gating.rs`
@@ -28,7 +28,7 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 
 ## Recommended next steps (L1 candidates)
 
-1. Convert `crates/fret-runtime/src/model.rs` into a `model/` directory module split by responsibility.
+1. (Done) Convert the model store into a `model/` directory module split by responsibility.
+   - Evidence: `crates/fret-runtime/src/model/mod.rs`
 2. Convert `crates/fret-runtime/src/menu/wire.rs` into smaller wire-format submodules (v1/v2 + patch ops) if it continues to grow.
 3. Add a v1 “serialization stability checklist” item for `fret-runtime` config surfaces (ties to `BU-FR-core-014`).
-
