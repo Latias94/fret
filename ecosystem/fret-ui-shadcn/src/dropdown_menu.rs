@@ -26,7 +26,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
+    ui, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
 };
 
 use crate::overlay_motion;
@@ -1214,7 +1214,15 @@ impl DropdownMenu {
             // behaviors like submenu close delays).
             let trigger = cx.keyed(("dropdown-menu-trigger", overlay_id), |cx| trigger(cx));
             let trigger_id = trigger.id;
-            menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
+            let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+            let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+            menu::trigger::wire_open_or_focus_on_arrow_keys(
+                cx,
+                trigger_id,
+                self.open.clone(),
+                first_item_focus_id.clone(),
+                last_item_focus_id.clone(),
+            );
             let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
@@ -1243,10 +1251,7 @@ impl DropdownMenu {
                 let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
-                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_request = first_item_focus_id.clone();
-                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-                let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -3191,8 +3196,8 @@ mod tests {
         TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::{Effect, FrameId};
-    use fret_ui::UiTree;
     use fret_ui::element::PressableA11y;
+    use fret_ui::UiTree;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
 
@@ -3622,46 +3627,42 @@ mod tests {
                             let trigger_id_out = trigger_id_out_for_render.clone();
                             // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
                             // menu so trigger semantics remain visible while open.
-                            vec![
-                                DropdownMenu::new(open)
-                                    .modal(false)
-                                    .arrow(false)
-                                    .into_element(
-                                        cx,
-                                        move |cx| {
-                                            cx.pressable_with_id_props(move |cx, _st, id| {
-                                                let _ = cx
-                                                    .app
-                                                    .models_mut()
-                                                    .update(&trigger_id_out, |v| *v = Some(id));
-                                                (
-                                                    PressableProps {
-                                                        layout: {
-                                                            let mut layout = LayoutStyle::default();
-                                                            layout.size.width =
-                                                                Length::Px(Px(120.0));
-                                                            layout.size.height =
-                                                                Length::Px(Px(40.0));
-                                                            layout
-                                                        },
-                                                        enabled: true,
-                                                        focusable: true,
-                                                        a11y: PressableA11y {
-                                                            label: Some(Arc::from("Trigger")),
-                                                            ..Default::default()
-                                                        },
+                            vec![DropdownMenu::new(open)
+                                .modal(false)
+                                .arrow(false)
+                                .into_element(
+                                    cx,
+                                    move |cx| {
+                                        cx.pressable_with_id_props(move |cx, _st, id| {
+                                            let _ = cx
+                                                .app
+                                                .models_mut()
+                                                .update(&trigger_id_out, |v| *v = Some(id));
+                                            (
+                                                PressableProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.size.width = Length::Px(Px(120.0));
+                                                        layout.size.height = Length::Px(Px(40.0));
+                                                        layout
+                                                    },
+                                                    enabled: true,
+                                                    focusable: true,
+                                                    a11y: PressableA11y {
+                                                        label: Some(Arc::from("Trigger")),
                                                         ..Default::default()
                                                     },
-                                                    vec![cx.container(
-                                                        ContainerProps::default(),
-                                                        |_cx| Vec::new(),
-                                                    )],
-                                                )
-                                            })
-                                        },
-                                        move |_cx| entries.clone(),
-                                    ),
-                            ]
+                                                    ..Default::default()
+                                                },
+                                                vec![cx
+                                                    .container(ContainerProps::default(), |_cx| {
+                                                        Vec::new()
+                                                    })],
+                                            )
+                                        })
+                                    },
+                                    move |_cx| entries.clone(),
+                                )]
                         },
                     )]
                 })
@@ -3847,28 +3848,26 @@ mod tests {
             bounds,
             "dropdown-menu-dismiss-handler",
             move |cx| {
-                vec![
-                    DropdownMenu::new(open)
-                        .on_dismiss_request(on_dismiss_request)
-                        .into_element(
-                            cx,
-                            |cx| {
-                                cx.container(
-                                    ContainerProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
-                                        },
-                                        ..Default::default()
+                vec![DropdownMenu::new(open)
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
                                     },
-                                    |_cx| Vec::new(),
-                                )
-                            },
-                            move |_cx| entries,
-                        ),
-                ]
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )
+                        },
+                        move |_cx| entries,
+                    )]
             },
         );
         ui.set_root(root);
@@ -4489,6 +4488,84 @@ mod tests {
             vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
         );
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dropdown_menu_arrow_down_moves_focus_into_menu_when_already_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out,
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            ],
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            Rc::new(Cell::new(None)),
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            ],
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+
+        assert_eq!(
+            ui.focus(),
+            Some(alpha.id),
+            "ArrowDown on open trigger should move focus to first menu item"
+        );
     }
 
     #[test]
