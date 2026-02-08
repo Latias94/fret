@@ -111,6 +111,23 @@ struct LeafColumnsSnapshot {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+enum ColumnPinPosition {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct ColumnCapabilitySnapshot {
+    can_hide: bool,
+    can_pin: bool,
+    pin_position: Option<ColumnPinPosition>,
+    pinned_index: i32,
+    can_resize: bool,
+    is_visible: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct RowModelIdSnapshot {
     root: Vec<String>,
     flat: Vec<String>,
@@ -124,7 +141,9 @@ struct CoreRowsSnapshot {
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CoreModelExpect {
+    schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
+    column_capabilities: BTreeMap<String, ColumnCapabilitySnapshot>,
     leaf_columns: LeafColumnsSnapshot,
     header_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
@@ -190,7 +209,13 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
 }
 
 fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -> CoreModelExpect {
+    let conv_pin = |p: fret_ui_headless::table::ColumnPinPosition| match p {
+        fret_ui_headless::table::ColumnPinPosition::Left => ColumnPinPosition::Left,
+        fret_ui_headless::table::ColumnPinPosition::Right => ColumnPinPosition::Right,
+    };
+
     CoreModelExpect {
+        schema_version: snapshot.schema_version,
         column_tree: snapshot
             .column_tree
             .into_iter()
@@ -203,6 +228,23 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                     .into_iter()
                     .map(|s| s.as_ref().to_string())
                     .collect(),
+            })
+            .collect(),
+        column_capabilities: snapshot
+            .column_capabilities
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.as_ref().to_string(),
+                    ColumnCapabilitySnapshot {
+                        can_hide: v.can_hide,
+                        can_pin: v.can_pin,
+                        pin_position: v.pin_position.map(conv_pin),
+                        pinned_index: v.pinned_index,
+                        can_resize: v.can_resize,
+                        is_visible: v.is_visible,
+                    },
+                )
             })
             .collect(),
         leaf_columns: LeafColumnsSnapshot {

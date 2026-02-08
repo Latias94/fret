@@ -260,10 +260,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): initial core snapshot schema (column tree + leaf sets + header groups + row ids + cell ids).
     - Evidence: `ecosystem/fret-ui-headless/src/table/core_model.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::core_model_snapshot`)
-  - Remaining: extend the snapshot with a consumer-facing capability inventory (so UI code doesn't re-implement
-    TanStack policies) and version the schema when we add more fields.
-    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` (expects `core_model`)
-    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
+  - Update (parity-gated): add `schema_version` + `column_capabilities` inventory for leaf columns:
+    `getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Remaining: broaden schema to include a fuller column/header/cell capability inventory (and keep versioning strict).
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
   - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.

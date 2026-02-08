@@ -3010,6 +3010,25 @@ impl<'a, TData> Table<'a, TData> {
 
         let column_tree = self.column_tree_snapshot();
 
+        let mut column_capabilities: std::collections::BTreeMap<
+            Arc<str>,
+            super::ColumnCapabilitySnapshot,
+        > = std::collections::BTreeMap::new();
+        for col in self.ordered_columns() {
+            let id = col.id.clone();
+            column_capabilities.insert(
+                id.clone(),
+                super::ColumnCapabilitySnapshot {
+                    can_hide: self.column_can_hide(id.as_ref()).unwrap_or(false),
+                    can_pin: self.column_can_pin(id.as_ref()).unwrap_or(false),
+                    pin_position: self.column_pin_position(id.as_ref()),
+                    pinned_index: self.column_pinned_index(id.as_ref()).unwrap_or(0),
+                    can_resize: self.column_can_resize(id.as_ref()).unwrap_or(false),
+                    is_visible: self.is_column_visible(id.as_ref()).unwrap_or(false),
+                },
+            );
+        }
+
         let all_leaf = self
             .ordered_columns()
             .into_iter()
@@ -3046,7 +3065,9 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         super::CoreModelSnapshot {
+            schema_version: 1,
             column_tree,
+            column_capabilities,
             leaf_columns: super::LeafColumnsSnapshot {
                 all: all_leaf,
                 visible,

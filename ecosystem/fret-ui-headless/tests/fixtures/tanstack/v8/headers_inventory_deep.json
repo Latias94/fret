@@ -1889,6 +1889,7 @@
           }
         },
         "core_model": {
+          "schema_version": 1,
           "column_tree": [
             {
               "id": "name",
@@ -1956,6 +1957,48 @@
               "child_ids": []
             }
           ],
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "left",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "right",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -4757,6 +4800,7 @@
           }
         },
         "core_model": {
+          "schema_version": 1,
           "column_tree": [
             {
               "id": "name",
@@ -4824,6 +4868,48 @@
               "child_ids": []
             }
           ],
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": "left",
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -7280,6 +7366,7 @@
           }
         },
         "core_model": {
+          "schema_version": 1,
           "column_tree": [
             {
               "id": "name",
@@ -7347,6 +7434,48 @@
               "child_ids": []
             }
           ],
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": false
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -9788,6 +9917,7 @@
           }
         },
         "core_model": {
+          "schema_version": 1,
           "column_tree": [
             {
               "id": "name",
@@ -9855,6 +9985,48 @@
               "child_ids": []
             }
           ],
+          "column_capabilities": {
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "name",
@@ -12350,6 +12522,7 @@
           }
         },
         "core_model": {
+          "schema_version": 1,
           "column_tree": [
             {
               "id": "name",
@@ -12417,6 +12590,48 @@
               "child_ids": []
             }
           ],
+          "column_capabilities": {
+            "status": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "mem_mb": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "cpu2": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            },
+            "name": {
+              "can_hide": true,
+              "can_pin": true,
+              "pin_position": null,
+              "pinned_index": 0,
+              "can_resize": true,
+              "is_visible": true
+            }
+          },
           "leaf_columns": {
             "all": [
               "status",

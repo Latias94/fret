@@ -702,6 +702,7 @@ type FixtureSnapshot = {
       >
     }
     core_model?: {
+      schema_version?: number
       column_tree: {
         id: string
         depth: number
@@ -712,6 +713,17 @@ type FixtureSnapshot = {
         all: string[]
         visible: string[]
       }
+      column_capabilities?: Record<
+        string,
+        {
+          can_hide: boolean
+          can_pin: boolean
+          pin_position: "left" | "right" | null
+          pinned_index: number
+          can_resize: boolean
+          is_visible: boolean
+        }
+      >
       leaf_columns: {
         all: string[]
         visible: string[]
@@ -2486,6 +2498,47 @@ function snapshotColumnTree(columns: any[], parent_id: string | null = null): {
     out.push({ id, depth, parent_id, child_ids: childIds })
     if (c.columns && c.columns.length) {
       out.push(...snapshotColumnTree(c.columns, id))
+    }
+  }
+
+  return out
+}
+
+function snapshotLeafColumnCapabilities(table: any): Record<
+  string,
+  {
+    can_hide: boolean
+    can_pin: boolean
+    pin_position: "left" | "right" | null
+    pinned_index: number
+    can_resize: boolean
+    is_visible: boolean
+  }
+> {
+  const out: Record<
+    string,
+    {
+      can_hide: boolean
+      can_pin: boolean
+      pin_position: "left" | "right" | null
+      pinned_index: number
+      can_resize: boolean
+      is_visible: boolean
+    }
+  > = {}
+
+  const leaf = table.getAllLeafColumns?.() ?? []
+  for (const col of leaf) {
+    const id = String(col.id)
+    const pinned = col.getIsPinned?.()
+    const pin_position = pinned === "left" ? "left" : pinned === "right" ? "right" : null
+    out[id] = {
+      can_hide: Boolean(col.getCanHide?.()),
+      can_pin: Boolean(col.getCanPin?.()),
+      pin_position,
+      pinned_index: Number(col.getPinnedIndex?.() ?? 0),
+      can_resize: Boolean(col.getCanResize?.()),
+      is_visible: Boolean(col.getIsVisible?.()),
     }
   }
 
@@ -4861,7 +4914,9 @@ function snapshotColumnPinning(
             visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
           },
           core_model: {
+            schema_version: 1,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4986,7 +5041,9 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
+            schema_version: 1,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5041,11 +5098,13 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
+        schema_version: 1,
         column_tree: snapshotColumnTree(table.getAllColumns()),
         flat_columns: {
           all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
           visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
         },
+        column_capabilities: snapshotLeafColumnCapabilities(table),
         leaf_columns: {
           all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
           visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),

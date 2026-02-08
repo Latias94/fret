@@ -33,6 +33,9 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
 - **Core snapshot completeness**: `CoreModelSnapshot` is still “structure + ids” heavy.
   - Gap: lacks a first-class, versioned inventory of column/header/cell capabilities that UI consumers typically
     query on instances (e.g. `getCanResize`, `getIsPlaceholder`, pin-family splits).
+  - Update: an initial, versioned `column_capabilities` inventory for **leaf columns** is now parity-gated
+    (`getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`).
+    Remaining: expand the same approach across header/cell capabilities (and decide the minimal row surface).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:
   - Closed (initial): a documented + gated integration pattern exists for “rebuild per frame, keep memo cache”
