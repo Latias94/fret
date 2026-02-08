@@ -7287,3 +7287,93 @@ Action:
 
 Evidence (v23 baseline check; repeat=3):
 - `target/fret-diag-perf-ui-gallery-steady-v23-r2` (PASS; baseline `ui-gallery-steady.macos-m4.v23.json`)
+
+---
+
+## 2026-02-08 — Fix editor resize hitches: normalize Canvas nowrap text fingerprints
+
+Commits:
+- `667d8317b` (`perf(fret-ui): normalize nowrap canvas text keys`)
+
+Problem:
+- Editor resize jitter was paint-dominant because `CanvasCache` treated `CanvasTextConstraints.max_width` as part of
+  the hosted/shared text cache fingerprint. Code editor rows pass `wrap=None` and `max_width=viewport_width`, so
+  interactive resize produced per-row cache misses and repeated `prepare_str` work every frame.
+
+Change:
+- In `crates/fret-ui/src/canvas.rs`, normalize `max_width` away when:
+  - `wrap=TextWrap::None`, and
+  - `overflow!=TextOverflow::Ellipsis`.
+- Apply to both:
+  - hosted text fingerprint (`HostedTextFingerprint.constraints`), and
+  - shared text key (`CanvasTextConstraintsKey`).
+
+### Gate: editor resize jitter (existing baseline v1)
+
+Command:
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3`
+
+Result:
+- PASS (`passes=2/3`)
+- Out dir: `target/fret-diag-resize-probes-gate-1770516398`
+- Worst totals (per attempt; us):
+  - attempt-1: `total=12680`, `layout=3698`, `solve=550` (FAILED old layout threshold only; total still far below)
+  - attempt-2: `total=12834`, `layout=2025`, `solve=325`
+  - attempt-3: `total=12757`, `layout=2321`, `solve=314`
+
+Interpretation:
+- This is the “step-function” improvement we needed: editor resize is no longer paying per-row text prepare under
+  width jitter. The remaining budget is now primarily layout plumbing, not Canvas text churn.
+
+### Baseline refresh: tighten the editor resize contract (v2)
+
+Command:
+- `tools/perf/diag_perf_baseline_select.sh \`
+  `--baseline-out docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json \`
+  `--suite ui-code-editor-resize-probes \`
+  `--preset docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json \`
+  `--candidates 2 --validate-runs 3 --repeat 7 --warmup-frames 5 --headroom-pct 20 \`
+  `--work-dir target/fret-diag-baseline-select-ui-code-editor-resize-probes-v2 \`
+  `--launch-bin target/release/fret-ui-gallery`
+
+Selection:
+- Summary: `target/fret-diag-baseline-select-ui-code-editor-resize-probes-v2/selection-summary.json`
+- Winner: candidate-2 (`fail_total=0`, `resize_p90=13284`, `threshold_sum=16308`)
+
+New thresholds (v2; us):
+- `max_top_total_us=16308`
+- `max_top_layout_us=3432`
+- `max_top_solve_us=372`
+
+### Gate: editor resize jitter (new baseline v2)
+
+Command:
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3`
+
+Result:
+- PASS (`passes=3/3`)
+- Out dir: `target/fret-diag-resize-probes-gate-1770517451`
+- Example max (attempt-1; us): `total=12648`, `layout=1990`, `solve=315`
+
+### Global sanity: P0 resize probes
+
+Command:
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3`
+
+Result:
+- PASS (`passes=2/3`)
+- Out dir: `target/fret-diag-resize-probes-gate-1770516598`
+
+### Steady suite check (baseline v23)
+
+Command:
+- `cargo run -q -p fretboard -- diag perf ui-gallery-steady \`
+  `--dir target/fret-diag-perf-ui-gallery-steady-after-canvas-nowrapkey-r2 \`
+  `--reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 15 --json \`
+  `--perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v23.json \`
+  `--env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \`
+  `--env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 \`
+  `--launch -- target/release/fret-ui-gallery`
+
+Result:
+- PASS (no threshold failures)

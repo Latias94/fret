@@ -60,6 +60,9 @@ Conventions:
   - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
     - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
     - Evidence: perf log entry `2026-02-08` (editor resize gate delta).
+  - [x] Normalize Canvas hosted/shared text fingerprints to ignore `max_width` for nowrap+non-ellipsis.
+    - Implementation: `perf(fret-ui): normalize nowrap canvas text keys` (commit `667d8317b`).
+    - Evidence: perf log entry `2026-02-08` (editor resize jitter drops to ~13ms worst-frame).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
@@ -118,7 +121,7 @@ Execution plan:
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh`.
 - [x] Add an editor-grade resize jitter probe suite (so resize work stays bounded on text-heavy surfaces).
   - Suite: `ui-code-editor-resize-probes` (`tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`).
-  - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json`.
+  - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`.
 - [x] Create a commit-addressable perf log:

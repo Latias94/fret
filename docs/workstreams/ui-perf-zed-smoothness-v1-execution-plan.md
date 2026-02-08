@@ -30,7 +30,7 @@ The intent is to stop drifting into “endless experiments” by pinning:
 - Seed policy preset (steady suite): `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
 - P0 resize probes baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`.
 - Seed policy preset (resize probes): `docs/workstreams/perf-baselines/policies/ui-resize-probes.v1.json`.
-- Editor resize jitter baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json`.
+- Editor resize jitter baseline (macOS M4 profile): `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
 - Seed policy preset (editor resize probes): `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
 - Baseline selection automation (anti-outlier): `tools/perf/diag_perf_baseline_select.sh`.
 - Resize probes gate runner: `tools/perf/diag_resize_probes_gate.sh`.
