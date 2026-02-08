@@ -352,6 +352,64 @@ fn render_transform_affects_hit_testing() {
 }
 
 #[test]
+fn hit_test_gate_is_layout_transparent_for_intrinsic_sizing() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "hit-test-gate-layout-transparent",
+        |cx| {
+            let mut container_props = crate::element::ContainerProps::default();
+            container_props.layout.position = crate::element::PositionStyle::Absolute;
+            container_props.layout.inset.left = Some(Px(10.0));
+            container_props.layout.inset.top = Some(Px(10.0));
+
+            let container = cx.container(container_props, |cx| vec![cx.text("x")]);
+
+            let mut gate_layout = crate::element::LayoutStyle::default();
+            gate_layout.position = crate::element::PositionStyle::Absolute;
+            gate_layout.inset.left = Some(Px(10.0));
+            gate_layout.inset.top = Some(Px(30.0));
+            gate_layout.overflow = crate::element::Overflow::Visible;
+
+            let gate = cx.hit_test_gate_props(
+                crate::element::HitTestGateProps {
+                    layout: gate_layout,
+                    hit_test: false,
+                },
+                |cx| vec![cx.text("x")],
+            );
+
+            vec![container, gate]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let children = ui.children(root);
+    assert_eq!(children.len(), 2);
+
+    let container_bounds = ui.debug_node_bounds(children[0]).expect("container bounds");
+    let gate_bounds = ui.debug_node_bounds(children[1]).expect("gate bounds");
+
+    assert_eq!(container_bounds.size, gate_bounds.size);
+    assert_eq!(gate_bounds.size, Size::new(Px(10.0), Px(10.0)));
+}
+
+#[test]
 fn key_hook_runs_for_focused_text_input() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

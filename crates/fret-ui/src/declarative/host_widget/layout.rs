@@ -54,6 +54,7 @@ impl ElementHostWidget {
             ElementInstance::SemanticFlex(_) => false,
             ElementInstance::FocusScope(_) => false,
             ElementInstance::InteractivityGate(_) => false,
+            ElementInstance::HitTestGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
@@ -76,6 +77,7 @@ impl ElementHostWidget {
             ElementInstance::SemanticFlex(_) => true,
             ElementInstance::FocusScope(_) => true,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
+            ElementInstance::HitTestGate(p) => p.hit_test,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
             ElementInstance::ViewCache(_) => true,
@@ -124,6 +126,7 @@ impl ElementHostWidget {
             ElementInstance::SemanticFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
             ElementInstance::FocusScope(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::HitTestGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ViewCache(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -354,6 +357,19 @@ impl ElementHostWidget {
 
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
                 // presence/interactivity gating handled via host widget flags.
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::HitTestGate(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                // Pass-through wrapper (layout like Opacity/VisualTransform), but with hit-test
+                // gating handled via host widget flags.
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::EffectLayer(props) => {

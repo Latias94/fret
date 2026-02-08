@@ -3256,6 +3256,24 @@ impl<H: UiHost> UiTree<H> {
         });
     }
 
+    pub(crate) fn sync_hit_test_gate_widget(&mut self, node: NodeId, hit_test: bool) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_HIT_TEST_GATE_SYNC").is_some() {
+            eprintln!("sync_hit_test_gate_widget: node={node:?} hit_test={hit_test}");
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_hit_test_gate(hit_test);
+        });
+    }
+
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;

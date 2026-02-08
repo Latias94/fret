@@ -22,11 +22,12 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
-    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
-    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
-    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
+    GridProps, HitTestGateProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle,
+    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
+    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
+    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
+    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -1006,6 +1007,37 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let built = f(cx);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::InteractivityGate(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn hit_test_gate<I>(&mut self, hit_test: bool, f: impl FnOnce(&mut Self) -> I) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.hit_test_gate_props(
+            HitTestGateProps {
+                hit_test,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn hit_test_gate_props<I>(
+        &mut self,
+        props: HitTestGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::HitTestGate(props), children)
         })
     }
 

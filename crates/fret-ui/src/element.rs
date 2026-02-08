@@ -65,6 +65,16 @@ pub enum ElementKind {
     /// or fully absent from layout/paint, without deleting the subtree (so per-element state can be
     /// preserved).
     InteractivityGate(InteractivityGateProps),
+    /// A transparent wrapper that gates pointer hit-testing for a subtree without affecting focus
+    /// traversal or semantics.
+    ///
+    /// When `hit_test == false`, the subtree remains present for layout/paint and can still
+    /// participate in keyboard focus traversal, but pointer hit-testing will ignore the subtree
+    /// (click-through behavior).
+    ///
+    /// This is intended to support editor-grade "peek through" surfaces (ImGui-style
+    /// `NoMouseInputs`) without making the subtree inert for keyboard navigation.
+    HitTestGate(HitTestGateProps),
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0119).
     EffectLayer(EffectLayerProps),
@@ -594,6 +604,25 @@ impl Default for InteractivityGateProps {
             layout: LayoutStyle::default(),
             present: true,
             interactive: true,
+        }
+    }
+}
+
+/// Gate pointer hit-testing for a subtree without affecting focus traversal.
+///
+/// This is intentionally narrower than `InteractivityGateProps`: it does not change whether the
+/// subtree participates in focus traversal or semantics snapshots.
+#[derive(Debug, Clone, Copy)]
+pub struct HitTestGateProps {
+    pub layout: LayoutStyle,
+    pub hit_test: bool,
+}
+
+impl Default for HitTestGateProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            hit_test: true,
         }
     }
 }
