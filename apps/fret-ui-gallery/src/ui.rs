@@ -16625,6 +16625,7 @@ fn preview_data_table_torture(
             let columns: Arc<[ColumnDef<Row>]> = Arc::from(vec![
                 ColumnDef::new("name")
                     .sort_by(|a: &Row, b: &Row| a.name.cmp(&b.name))
+                    .filter_by(|row: &Row, q| row.name.as_ref().contains(q))
                     .size(220.0),
                 ColumnDef::new("status")
                     .sort_by(|a: &Row, b: &Row| a.status.cmp(&b.status))
@@ -16723,11 +16724,38 @@ fn preview_data_table_torture(
         }
     };
 
+    let name_filter_text: Arc<str> = {
+        let value = cx
+            .app
+            .models()
+            .read(&state, |st| {
+                st.column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == "name")
+                    .map(|f| f.value.clone())
+            })
+            .ok()
+            .flatten();
+        match value {
+            None => Arc::<str>::from("NameFilter: <none>"),
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    Arc::<str>::from(format!("NameFilter: {s}"))
+                } else {
+                    Arc::<str>::from(format!("NameFilter: {v}"))
+                }
+            }
+        }
+    };
+
     let toolbar_columns = columns.clone();
     let toolbar =
         shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
             Arc::<str>::from(col.id.as_ref())
-        });
+        })
+        .column_filter("name")
+        .column_filter_placeholder("Filter name...")
+        .column_filter_a11y_label("Name filter");
 
     let header = stack::vstack(
         cx,
@@ -16755,6 +16783,12 @@ fn preview_data_table_torture(
                         .role(fret_core::SemanticsRole::Text)
                         .label(global_filter_text.clone())
                         .test_id("ui-gallery-data-table-torture-global-filter"),
+                ),
+                cx.text(name_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(name_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-name-filter"),
                 ),
                 toolbar.clone().into_element(cx),
             ]

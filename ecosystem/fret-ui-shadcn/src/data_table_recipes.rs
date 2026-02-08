@@ -181,6 +181,7 @@ impl Clone for ColumnPinningBinding {
 #[derive(Default)]
 struct DataTableToolbarState {
     filter_model: Option<Model<String>>,
+    column_filter_model: Option<Model<String>>,
     columns_open: Option<Model<bool>>,
     pinning_open: Option<Model<bool>>,
     column_visibility: Vec<ColumnVisibilityBinding>,
@@ -200,6 +201,9 @@ pub struct DataTableToolbar<TData> {
     columns: Arc<[ColumnDef<TData>]>,
     column_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
     filter_placeholder: Arc<str>,
+    column_filter: Option<ColumnId>,
+    column_filter_placeholder: Arc<str>,
+    column_filter_a11y_label: Arc<str>,
 }
 
 impl<TData> std::fmt::Debug for DataTableToolbar<TData> {
@@ -221,11 +225,33 @@ impl<TData> DataTableToolbar<TData> {
             columns: columns.into(),
             column_label: Arc::new(column_label),
             filter_placeholder: Arc::from("Filter..."),
+            column_filter: None,
+            column_filter_placeholder: Arc::from("Filter..."),
+            column_filter_a11y_label: Arc::from("Column filter"),
         }
     }
 
     pub fn filter_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.filter_placeholder = placeholder.into();
+        self
+    }
+
+    /// Adds a single per-column text filter input bound to `TableState.column_filters`.
+    ///
+    /// This is a v1 convenience surface intended to match the common TanStack/shadcn recipes
+    /// where one “primary” column gets a dedicated filter input (e.g. “Filter emails...”).
+    pub fn column_filter(mut self, column_id: impl Into<ColumnId>) -> Self {
+        self.column_filter = Some(column_id.into());
+        self
+    }
+
+    pub fn column_filter_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.column_filter_placeholder = placeholder.into();
+        self
+    }
+
+    pub fn column_filter_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.column_filter_a11y_label = label.into();
         self
     }
 
@@ -257,6 +283,29 @@ impl<TData> DataTableToolbar<TData> {
                     st.filter_model = Some(m_for_state);
                 });
                 m
+            }
+        };
+
+        let column_filter_model = cx.with_state(DataTableToolbarState::default, |st| {
+            st.column_filter_model.clone()
+        });
+        let column_filter_model = match (self.column_filter.as_ref(), column_filter_model) {
+            (Some(_), Some(m)) => Some(m),
+            (None, _) => None,
+            (Some(column_id), None) => {
+                let initial = state_value
+                    .column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == column_id.as_ref())
+                    .and_then(|f| f.value.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let m = cx.app.models_mut().insert(initial);
+                let m_for_state = m.clone();
+                cx.with_state(DataTableToolbarState::default, move |st| {
+                    st.column_filter_model = Some(m_for_state);
+                });
+                Some(m)
             }
         };
 
@@ -355,6 +404,41 @@ impl<TData> DataTableToolbar<TData> {
             .unwrap_or_default();
         sync_global_filter(&mut *cx.app, &self.state, &filter_value);
 
+        if let (Some(column_id), Some(model)) =
+            (self.column_filter.as_ref(), column_filter_model.as_ref())
+        {
+            let value = cx.watch_model(model).layout().cloned().unwrap_or_default();
+            let _ = cx.app.models_mut().update(&self.state, |st| {
+                let next = normalized_global_filter(&value);
+                let existing = st
+                    .column_filters
+                    .iter()
+                    .position(|f| f.column.as_ref() == column_id.as_ref());
+
+                match (existing, next) {
+                    (None, None) => {}
+                    (Some(idx), None) => {
+                        st.column_filters.remove(idx);
+                        st.pagination.page_index = 0;
+                    }
+                    (Some(idx), Some(next)) => {
+                        if st.column_filters[idx].value != next {
+                            st.column_filters[idx].value = next;
+                            st.pagination.page_index = 0;
+                        }
+                    }
+                    (None, Some(next)) => {
+                        st.column_filters
+                            .push(fret_ui_headless::table::ColumnFilter {
+                                column: column_id.clone(),
+                                value: next,
+                            });
+                        st.pagination.page_index = 0;
+                    }
+                }
+            });
+        }
+
         let desired_visibility: HashMap<ColumnId, bool> = bindings
             .iter()
             .map(|b| {
@@ -445,11 +529,19 @@ impl<TData> DataTableToolbar<TData> {
             move |_cx| pin_items.clone(),
         );
 
-        let filter = Input::new(filter_model)
+        let global_filter = Input::new(filter_model)
             .a11y_label("Global filter")
             .a11y_role(SemanticsRole::TextField)
             .placeholder(self.filter_placeholder.clone())
             .into_element(cx);
+
+        let column_filter = column_filter_model.map(|m| {
+            Input::new(m)
+                .a11y_label(self.column_filter_a11y_label.clone())
+                .a11y_role(SemanticsRole::TextField)
+                .placeholder(self.column_filter_placeholder.clone())
+                .into_element(cx)
+        });
 
         let selected_text: Option<AnyElement> = (selected_count > 0).then(|| {
             let mut text =
@@ -467,7 +559,13 @@ impl<TData> DataTableToolbar<TData> {
                 .items_center()
                 .gap_x(Space::N2),
             move |_cx| {
-                let mut children = vec![filter, cols_menu, pin_menu];
+                let mut children = Vec::new();
+                children.push(global_filter);
+                if let Some(filter) = column_filter.clone() {
+                    children.push(filter);
+                }
+                children.push(cols_menu);
+                children.push(pin_menu);
                 if let Some(sel) = selected_text.clone() {
                     children.push(sel);
                 }
