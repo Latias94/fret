@@ -74,6 +74,7 @@ Provide a UI primitive that renders based on the current match chain:
   - takes a `RouterUiStore` snapshot model
   - chooses an element subtree based on the leaf match (or a nested segment)
   - supports a `NotFound` fallback
+  - optional: app-owned `pending/error` composition via a status resolver
 
 Goal: authoring code can stay declarative and match-driven rather than stringly.
 
@@ -87,6 +88,10 @@ As an initial step, `fret-router-ui` can also expose a lightweight helper:
 Snapshot helpers include:
 
 - `RouterUiSnapshot::match_depth()` / `match_at(i)` / `route_at(i)`
+
+Outlet composition helpers include:
+
+- `RouterLeafStatus` and `RouterOutlet::into_element_by_leaf_with_status(...)`
 
 ### 3) Link-style navigation helpers (desktop)
 

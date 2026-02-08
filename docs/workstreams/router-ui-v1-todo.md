@@ -38,6 +38,7 @@ Status legend:
 - `[x]` Add a `RouterOutlet` element wrapper (optional sugar):
   - renders by leaf route id (match chain)
   - supports a `NotFound` fallback
+- `[x]` Add app-owned `pending/error` outlet composition sugar (`RouterLeafStatus`, `RouterOutlet::into_element_by_leaf_with_status`).
 - `[x]` Add diagnostics hooks:
   - optional `test_id` (`router_outlet_with_test_id`, `RouterOutlet::test_id`, `router_link_with_test_id`)
   - last transition is surfaced via `RouterUiSnapshot::last_transition`

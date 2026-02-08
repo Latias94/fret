@@ -384,6 +384,13 @@ where
         .attach_semantics(SemanticsDecoration::default().test_id(test_id))
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RouterLeafStatus {
+    Ready,
+    Pending,
+    Error { message: Arc<str> },
+}
+
 #[derive(Debug, Clone)]
 pub struct RouterOutlet<R>
 where
@@ -436,6 +443,48 @@ where
             match snap.leaf_route() {
                 Some(route) => (render.take().expect("render should be callable"))(cx, route, snap),
                 None => (not_found.take().expect("not_found should be callable"))(cx, snap),
+            }
+        })
+    }
+
+    pub fn into_element_by_leaf_with_status(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        status: impl FnOnce(&App, &RouterUiSnapshot<R>, &R) -> RouterLeafStatus,
+        ready: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        pending: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        error: impl FnOnce(
+            &mut ElementContext<'_, App>,
+            &R,
+            &RouterUiSnapshot<R>,
+            Arc<str>,
+        ) -> AnyElement,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let mut status = Some(status);
+        let mut ready = Some(ready);
+        let mut pending = Some(pending);
+        let mut error = Some(error);
+        let mut not_found = Some(not_found);
+        self.into_element(cx, move |cx, snap| {
+            if snap.is_not_found {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            }
+
+            let Some(route) = snap.leaf_route() else {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            };
+
+            match (status.take().expect("status should be callable"))(&*cx.app, snap, route) {
+                RouterLeafStatus::Ready => {
+                    (ready.take().expect("ready should be callable"))(cx, route, snap)
+                }
+                RouterLeafStatus::Pending => {
+                    (pending.take().expect("pending should be callable"))(cx, route, snap)
+                }
+                RouterLeafStatus::Error { message } => {
+                    (error.take().expect("error should be callable"))(cx, route, snap, message)
+                }
             }
         })
     }
