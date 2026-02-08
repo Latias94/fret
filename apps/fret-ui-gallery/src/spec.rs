@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
+use fret_kit::mvu::KeyedMessageRouter;
 use fret_runtime::CommandId;
 
-#[cfg(not(target_arch = "wasm32"))]
-use fret_kit::mvu::KeyedMessageRouter;
+#[cfg(target_arch = "wasm32")]
+use std::cell::RefCell;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::Mutex;
 
@@ -1858,6 +1859,16 @@ fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>
     f(&mut guard)
 }
 
+#[cfg(target_arch = "wasm32")]
+fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
+    thread_local! {
+        static ROUTER: RefCell<KeyedMessageRouter<u64, u64>> =
+            RefCell::new(KeyedMessageRouter::new(CMD_DATA_GRID_ROW_PREFIX.to_string()));
+    }
+
+    ROUTER.with(|router| f(&mut *router.borrow_mut()))
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
@@ -1872,14 +1883,12 @@ pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
-    Some(CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}")))
+    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
 }
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    command
-        .strip_prefix(CMD_DATA_GRID_ROW_PREFIX)
-        .and_then(|suffix| suffix.parse::<u64>().ok())
+    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
 }
 
 pub(crate) fn page_meta(
