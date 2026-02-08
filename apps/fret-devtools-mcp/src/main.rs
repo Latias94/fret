@@ -451,6 +451,38 @@ impl FretDevtoolsMcp {
     }
 
     #[tool(
+        description = "Compare two bundles (bundle.json paths or containing dirs) and return a JSON report."
+    )]
+    async fn fret_diag_compare(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<CompareBundlesRequestV1>,
+    ) -> Result<Json<CompareBundlesResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let a_src = resolve_repo_path(&repo_root, &params.0.a);
+        let b_src = resolve_repo_path(&repo_root, &params.0.b);
+        let a_bundle = resolve_bundle_json_path(&a_src);
+        let b_bundle = resolve_bundle_json_path(&b_src);
+
+        let opts = fret_diag::api::CompareOptionsV1 {
+            warmup_frames: params.0.warmup_frames.unwrap_or(0),
+            eps_px: params.0.eps_px.unwrap_or(0.5),
+            ignore_bounds: params.0.ignore_bounds.unwrap_or(false),
+            ignore_scene_fingerprint: params.0.ignore_scene_fingerprint.unwrap_or(false),
+        };
+        let report = fret_diag::api::compare_bundles_to_json(&a_bundle, &b_bundle, opts)?;
+        let ok = report.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+
+        Ok(Json(CompareBundlesResultV1 {
+            schema_version: 1,
+            ok,
+            report_json: serde_json::to_string_pretty(&report).unwrap_or_else(|_| "{}".to_string()),
+        }))
+    }
+
+    #[tool(
         description = "Request a screenshot capture and wait for screenshot.result (returns JSON text)."
     )]
     async fn fret_diag_screenshot_request(
@@ -785,6 +817,29 @@ struct PackLastBundleZipBytesResultV1 {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+struct CompareBundlesRequestV1 {
+    /// Bundle A path (bundle.json file or containing directory). Relative paths are resolved against the repo root.
+    a: String,
+    /// Bundle B path (bundle.json file or containing directory). Relative paths are resolved against the repo root.
+    b: String,
+    #[serde(default)]
+    warmup_frames: Option<u64>,
+    #[serde(default)]
+    eps_px: Option<f32>,
+    #[serde(default)]
+    ignore_bounds: Option<bool>,
+    #[serde(default)]
+    ignore_scene_fingerprint: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct CompareBundlesResultV1 {
+    schema_version: u32,
+    ok: bool,
+    report_json: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct SessionsListV1 {
     schema_version: u32,
     sessions: Vec<SessionInfoV1>,
@@ -1019,6 +1074,26 @@ fn repo_root_from_manifest_dir() -> Option<PathBuf> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let apps_dir = manifest_dir.parent()?;
     apps_dir.parent().map(|p| p.to_path_buf())
+}
+
+fn resolve_repo_path(repo_root: &Path, raw: &str) -> PathBuf {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return repo_root.to_path_buf();
+    }
+    let p = PathBuf::from(raw);
+    if p.is_absolute() {
+        p
+    } else {
+        repo_root.join(p)
+    }
+}
+
+fn resolve_bundle_json_path(src: &Path) -> PathBuf {
+    if src.is_file() {
+        return src.to_path_buf();
+    }
+    src.join("bundle.json")
 }
 
 fn bundle_json_from_bundle_dumped_payload(
