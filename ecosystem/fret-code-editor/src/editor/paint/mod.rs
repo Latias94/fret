@@ -608,107 +608,168 @@ pub(super) fn cached_row_text_with_range(
     let range_for_return = range.clone();
     let base: String = st.buffer.slice_to_string(range.clone()).unwrap_or_default();
 
-    let (text, fold_map) = if st.display_wrap_cols.is_none() && st.preedit.is_none() {
+    let (text, fold_map) = if st.preedit.is_none() {
         let line = st.display_map.display_row_line(row);
         let folds = st.line_folds.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
         let inlays = st.line_inlays.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
 
         if folds.is_empty() && inlays.is_empty() {
             (Arc::<str>::from(base), None)
-        } else if fret_code_editor_view::validate_fold_spans(&base, folds).is_err()
-            || fret_code_editor_view::validate_inlay_spans(&base, inlays).is_err()
-        {
-            (Arc::<str>::from(base), None)
         } else {
-            // Materialize fold placeholders and injected inlays into a single display string.
-            // Inlays whose insertion point lands inside a folded range are skipped.
-            let mut removed = 0usize;
-            let mut added = 0usize;
-            for span in folds.iter() {
-                removed = removed.saturating_add(span.range.end.saturating_sub(span.range.start));
-                added = added.saturating_add(span.placeholder.len());
-            }
-            for span in inlays.iter() {
-                added = added.saturating_add(span.text.len());
-            }
+            // Fold/inlay spans are line-local. Validate against the full logical line, then
+            // translate to row-local offsets within the current wrapped slice.
+            let line_start = st.buffer.line_start(line).unwrap_or(range.start);
+            let row_start_in_line = range.start.saturating_sub(line_start);
+            let row_end_in_line = range.end.saturating_sub(line_start).max(row_start_in_line);
 
-            let cap = base
-                .len()
-                .saturating_sub(removed)
-                .saturating_add(added)
-                .max(1);
-            let mut out = String::with_capacity(cap);
-
-            let mut spans = Vec::<super::geom::RowFoldSpan>::new();
-            let mut cursor = 0usize;
-            let mut display_cursor = 0usize;
-            let mut fold_idx = 0usize;
-            let mut inlay_idx = 0usize;
-
-            while cursor < base.len() || fold_idx < folds.len() || inlay_idx < inlays.len() {
-                while inlay_idx < inlays.len() && inlays[inlay_idx].byte < cursor {
-                    // Inlays inside a folded span are skipped by advancing past the fold jump.
-                    inlay_idx = inlay_idx.saturating_add(1);
-                }
-
-                let next_fold = folds.get(fold_idx).map(|s| s.range.start);
-                let next_inlay = inlays.get(inlay_idx).map(|s| s.byte);
-                let next = match (next_fold, next_inlay) {
-                    (Some(a), Some(b)) => a.min(b),
-                    (Some(a), None) => a,
-                    (None, Some(b)) => b,
-                    (None, None) => base.len(),
-                }
-                .min(base.len());
-
-                if cursor < next {
-                    out.push_str(&base[cursor..next]);
-                    let delta = next.saturating_sub(cursor);
-                    cursor = next;
-                    display_cursor = display_cursor.saturating_add(delta);
-                    continue;
-                }
-
-                while let Some(inlay) = inlays.get(inlay_idx)
-                    && inlay.byte == cursor
-                {
-                    let start = display_cursor;
-                    let len = inlay.text.len();
-                    out.push_str(inlay.text.as_ref());
-                    spans.push(super::geom::RowFoldSpan {
-                        buffer_range: cursor..cursor,
-                        display_range: start..start.saturating_add(len),
+            let line_text_owned = st.buffer.line_text(line).unwrap_or_default();
+            let line_text = line_text_owned.as_str();
+            if fret_code_editor_view::validate_fold_spans(line_text, folds).is_err()
+                || fret_code_editor_view::validate_inlay_spans(line_text, inlays).is_err()
+            {
+                (Arc::<str>::from(base), None)
+            } else {
+                let mut row_folds: Vec<FoldSpan> = Vec::new();
+                for fold in folds.iter() {
+                    let start = fold.range.start.min(line_text.len());
+                    let end = fold.range.end.min(line_text.len()).max(start);
+                    if start < row_start_in_line || start >= row_end_in_line {
+                        continue;
+                    }
+                    let local_start = start.saturating_sub(row_start_in_line).min(base.len());
+                    let local_end = end
+                        .min(row_end_in_line)
+                        .saturating_sub(row_start_in_line)
+                        .min(base.len())
+                        .max(local_start);
+                    if local_start >= local_end {
+                        continue;
+                    }
+                    row_folds.push(FoldSpan {
+                        range: local_start..local_end,
+                        placeholder: Arc::clone(&fold.placeholder),
                     });
-                    display_cursor = display_cursor.saturating_add(len);
-                    inlay_idx = inlay_idx.saturating_add(1);
                 }
 
-                if let Some(fold) = folds.get(fold_idx)
-                    && fold.range.start == cursor
-                {
-                    let start = display_cursor;
-                    let len = fold.placeholder.len();
-                    out.push_str(fold.placeholder.as_ref());
-                    spans.push(super::geom::RowFoldSpan {
-                        buffer_range: fold.range.clone(),
-                        display_range: start..start.saturating_add(len),
+                let mut row_inlays: Vec<InlaySpan> = Vec::new();
+                for inlay in inlays.iter() {
+                    let byte = inlay.byte.min(line_text.len());
+                    if byte < row_start_in_line || byte >= row_end_in_line {
+                        continue;
+                    }
+                    let inside_fold = folds.iter().any(|f| {
+                        let start = f.range.start.min(line_text.len());
+                        let end = f.range.end.min(line_text.len()).max(start);
+                        start < byte && byte < end
                     });
-                    display_cursor = display_cursor.saturating_add(len);
-                    cursor = fold.range.end.min(base.len()).max(fold.range.start);
-                    fold_idx = fold_idx.saturating_add(1);
-                    continue;
+                    if inside_fold {
+                        continue;
+                    }
+                    let local = byte.saturating_sub(row_start_in_line).min(base.len());
+                    row_inlays.push(InlaySpan {
+                        byte: local,
+                        text: Arc::clone(&inlay.text),
+                    });
                 }
 
-                if cursor >= base.len() {
-                    break;
-                }
+                if row_folds.is_empty() && row_inlays.is_empty() {
+                    (Arc::<str>::from(base), None)
+                } else {
+                    // Materialize fold placeholders and injected inlays into a single display string.
+                    // Inlays whose insertion point lands inside a folded range are skipped.
+                    let mut removed = 0usize;
+                    let mut added = 0usize;
+                    for span in row_folds.iter() {
+                        removed =
+                            removed.saturating_add(span.range.end.saturating_sub(span.range.start));
+                        added = added.saturating_add(span.placeholder.len());
+                    }
+                    for span in row_inlays.iter() {
+                        added = added.saturating_add(span.text.len());
+                    }
 
-                // If we reach here, we failed to make progress (should be unreachable after validation).
-                break;
+                    let cap = base
+                        .len()
+                        .saturating_sub(removed)
+                        .saturating_add(added)
+                        .max(1);
+                    let mut out = String::with_capacity(cap);
+
+                    let mut spans = Vec::<super::geom::RowFoldSpan>::new();
+                    let mut cursor = 0usize;
+                    let mut display_cursor = 0usize;
+                    let mut fold_idx = 0usize;
+                    let mut inlay_idx = 0usize;
+
+                    while cursor < base.len()
+                        || fold_idx < row_folds.len()
+                        || inlay_idx < row_inlays.len()
+                    {
+                        while inlay_idx < row_inlays.len() && row_inlays[inlay_idx].byte < cursor {
+                            // Inlays inside a folded span are skipped by advancing past the fold jump.
+                            inlay_idx = inlay_idx.saturating_add(1);
+                        }
+
+                        let next_fold = row_folds.get(fold_idx).map(|s| s.range.start);
+                        let next_inlay = row_inlays.get(inlay_idx).map(|s| s.byte);
+                        let next = match (next_fold, next_inlay) {
+                            (Some(a), Some(b)) => a.min(b),
+                            (Some(a), None) => a,
+                            (None, Some(b)) => b,
+                            (None, None) => base.len(),
+                        }
+                        .min(base.len());
+
+                        if cursor < next {
+                            out.push_str(&base[cursor..next]);
+                            let delta = next.saturating_sub(cursor);
+                            cursor = next;
+                            display_cursor = display_cursor.saturating_add(delta);
+                            continue;
+                        }
+
+                        while let Some(inlay) = row_inlays.get(inlay_idx)
+                            && inlay.byte == cursor
+                        {
+                            let start = display_cursor;
+                            let len = inlay.text.len();
+                            out.push_str(inlay.text.as_ref());
+                            spans.push(super::geom::RowFoldSpan {
+                                buffer_range: cursor..cursor,
+                                display_range: start..start.saturating_add(len),
+                            });
+                            display_cursor = display_cursor.saturating_add(len);
+                            inlay_idx = inlay_idx.saturating_add(1);
+                        }
+
+                        if let Some(fold) = row_folds.get(fold_idx)
+                            && fold.range.start == cursor
+                        {
+                            let start = display_cursor;
+                            let len = fold.placeholder.len();
+                            out.push_str(fold.placeholder.as_ref());
+                            spans.push(super::geom::RowFoldSpan {
+                                buffer_range: fold.range.clone(),
+                                display_range: start..start.saturating_add(len),
+                            });
+                            display_cursor = display_cursor.saturating_add(len);
+                            cursor = fold.range.end.min(base.len()).max(fold.range.start);
+                            fold_idx = fold_idx.saturating_add(1);
+                            continue;
+                        }
+
+                        if cursor >= base.len() {
+                            break;
+                        }
+
+                        // If we reach here, we failed to make progress (should be unreachable after validation).
+                        break;
+                    }
+
+                    let map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
+                    (Arc::<str>::from(out), map)
+                }
             }
-
-            let map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
-            (Arc::<str>::from(out), map)
         }
     } else {
         (Arc::<str>::from(base), None)

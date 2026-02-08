@@ -8,6 +8,7 @@
 use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
 use fret_text_nav as text_nav;
+use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -61,6 +62,8 @@ pub struct DisplayMap {
     line_to_first_row: Vec<usize>,
     row_to_line: Vec<usize>,
     row_start_col: Vec<usize>,
+    line_folds: Vec<Arc<[FoldSpan]>>,
+    line_inlays: Vec<Arc<[InlaySpan]>>,
 }
 
 impl DisplayMap {
@@ -69,9 +72,44 @@ impl DisplayMap {
     /// `wrap_cols` counts Unicode scalar values within a logical line (newline excluded).
     /// When `None`, display rows match logical lines.
     pub fn new(buf: &TextBuffer, wrap_cols: Option<usize>) -> Self {
+        let empty_folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let empty_inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        Self::new_with_decorations(buf, wrap_cols, &empty_folds, &empty_inlays)
+    }
+
+    /// Build a display map from the current buffer state, including view-layer fold/inlay
+    /// decorations (ADR 0200).
+    ///
+    /// v1 notes:
+    /// - Folds and inlays participate in wrapped row-breaking.
+    /// - Inlays whose insertion point lands inside a folded span are ignored.
+    /// - Fold placeholders and inlay text are treated as atomic units for wrapping (no split).
+    pub fn new_with_decorations(
+        buf: &TextBuffer,
+        wrap_cols: Option<usize>,
+        folds_by_line: &HashMap<usize, Arc<[FoldSpan]>>,
+        inlays_by_line: &HashMap<usize, Arc<[InlaySpan]>>,
+    ) -> Self {
         let wrap_cols = wrap_cols.filter(|v| *v > 0);
 
         let line_count = buf.line_count().max(1);
+
+        let mut line_folds: Vec<Arc<[FoldSpan]>> = Vec::with_capacity(line_count);
+        let mut line_inlays: Vec<Arc<[InlaySpan]>> = Vec::with_capacity(line_count);
+        for line in 0..line_count {
+            line_folds.push(
+                folds_by_line
+                    .get(&line)
+                    .cloned()
+                    .unwrap_or_else(|| Arc::<[FoldSpan]>::from([])),
+            );
+            line_inlays.push(
+                inlays_by_line
+                    .get(&line)
+                    .cloned()
+                    .unwrap_or_else(|| Arc::<[InlaySpan]>::from([])),
+            );
+        }
 
         if wrap_cols.is_none() {
             let mut line_to_first_row = Vec::with_capacity(line_count);
@@ -88,6 +126,8 @@ impl DisplayMap {
                 line_to_first_row,
                 row_to_line,
                 row_start_col,
+                line_folds,
+                line_inlays,
             };
         }
 
@@ -95,18 +135,39 @@ impl DisplayMap {
         let mut row_to_line = Vec::new();
         let mut row_start_col = Vec::new();
 
+        let wrap = wrap_cols.unwrap_or(usize::MAX).max(1);
+
         for line in 0..line_count {
             line_to_first_row.push(row_to_line.len());
 
-            let cols = buf.line_char_count(line);
-            let rows_for_line = match wrap_cols {
-                None => 1,
-                Some(wrap) => ((cols.max(1) + wrap - 1) / wrap).max(1),
-            };
+            let folds = line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
+            let inlays = line_inlays.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
 
-            for row_in_line in 0..rows_for_line {
+            if folds.is_empty() && inlays.is_empty() {
+                let cols = buf.line_char_count(line);
+                let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
+                for row_in_line in 0..rows_for_line {
+                    row_to_line.push(line);
+                    row_start_col.push(row_in_line * wrap);
+                }
+                continue;
+            }
+
+            let line_text_owned = buf.line_text(line).unwrap_or_default();
+            let line_text = line_text_owned.as_str();
+            let folds = validate_fold_spans(line_text, folds)
+                .is_ok()
+                .then_some(folds)
+                .unwrap_or(&[]);
+            let inlays = validate_inlay_spans(line_text, inlays)
+                .is_ok()
+                .then_some(inlays)
+                .unwrap_or(&[]);
+
+            let starts = compute_wrapped_row_start_cols(line_text, folds, inlays, wrap);
+            for start in starts {
                 row_to_line.push(line);
-                row_start_col.push(row_in_line * wrap_cols.unwrap_or(usize::MAX));
+                row_start_col.push(start);
             }
         }
 
@@ -120,6 +181,8 @@ impl DisplayMap {
             line_to_first_row,
             row_to_line,
             row_start_col,
+            line_folds,
+            line_inlays,
         }
     }
 
@@ -355,41 +418,446 @@ impl DisplayMap {
     /// Map a UTF-8 byte index in the buffer to a wrapped display coordinate.
     pub fn byte_to_display_point(&self, buf: &TextBuffer, byte: usize) -> DisplayPoint {
         let pt = byte_to_display_point(buf, byte);
-        let Some(wrap) = self.wrap_cols else {
-            return pt;
-        };
+        if self.line_to_first_row.is_empty() {
+            return DisplayPoint::new(0, 0);
+        }
 
         let line = pt.row.min(self.line_to_first_row.len().saturating_sub(1));
-        let line_first = *self.line_to_first_row.get(line).unwrap_or(&0);
-        let line_last_excl = self
-            .line_to_first_row
-            .get(line + 1)
-            .copied()
-            .unwrap_or_else(|| self.row_to_line.len());
-        let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
+        let line_first = self.line_first_display_row(line);
+        let folds_empty = self
+            .line_folds
+            .get(line)
+            .is_some_and(|v| v.as_ref().is_empty());
+        let inlays_empty = self
+            .line_inlays
+            .get(line)
+            .is_some_and(|v| v.as_ref().is_empty());
 
-        let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
-        let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
-        DisplayPoint::new(line_first + row_in_line, col_in_row)
+        match self.wrap_cols {
+            None => {
+                if folds_empty && inlays_empty {
+                    return pt;
+                }
+
+                let line_start = buf.line_start(line).unwrap_or(0);
+                let line_text_owned = buf.line_text(line).unwrap_or_default();
+                let line_text = line_text_owned.as_str();
+                let byte = byte.min(buf.len_bytes());
+                let line_local = byte.saturating_sub(line_start).min(line_text.len());
+
+                let folds = self.line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
+                let inlays = self
+                    .line_inlays
+                    .get(line)
+                    .map(|v| v.as_ref())
+                    .unwrap_or(&[]);
+                let folds = validate_fold_spans(line_text, folds)
+                    .is_ok()
+                    .then_some(folds)
+                    .unwrap_or(&[]);
+                let inlays = validate_inlay_spans(line_text, inlays)
+                    .is_ok()
+                    .then_some(inlays)
+                    .unwrap_or(&[]);
+
+                let col_in_line = decorated_byte_to_col(line_text, folds, inlays, line_local);
+                DisplayPoint::new(line, col_in_line)
+            }
+            Some(wrap) => {
+                let line_last_excl = self
+                    .line_to_first_row
+                    .get(line + 1)
+                    .copied()
+                    .unwrap_or_else(|| self.row_to_line.len());
+                let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
+
+                if folds_empty && inlays_empty {
+                    let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
+                    let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
+                    return DisplayPoint::new(line_first + row_in_line, col_in_row);
+                }
+
+                let line_start = buf.line_start(line).unwrap_or(0);
+                let line_text_owned = buf.line_text(line).unwrap_or_default();
+                let line_text = line_text_owned.as_str();
+                let byte = byte.min(buf.len_bytes());
+                let line_local = byte.saturating_sub(line_start).min(line_text.len());
+
+                let folds = self.line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
+                let inlays = self
+                    .line_inlays
+                    .get(line)
+                    .map(|v| v.as_ref())
+                    .unwrap_or(&[]);
+                let folds = validate_fold_spans(line_text, folds)
+                    .is_ok()
+                    .then_some(folds)
+                    .unwrap_or(&[]);
+                let inlays = validate_inlay_spans(line_text, inlays)
+                    .is_ok()
+                    .then_some(inlays)
+                    .unwrap_or(&[]);
+
+                let col_in_line = decorated_byte_to_col(line_text, folds, inlays, line_local);
+                let rows = self.line_display_row_range(line);
+                let row_in_line =
+                    find_row_for_line_col(&self.row_start_col[rows.clone()], col_in_line)
+                        .min(rows_for_line.saturating_sub(1));
+                let display_row = rows.start.saturating_add(row_in_line);
+                let row_start_col = *self.row_start_col.get(display_row).unwrap_or(&0);
+                DisplayPoint::new(display_row, col_in_line.saturating_sub(row_start_col))
+            }
+        }
     }
 
     /// Map a wrapped display coordinate to a UTF-8 byte index in the buffer.
     ///
     /// If the point is out of bounds, this clamps to the nearest representable position.
     pub fn display_point_to_byte(&self, buf: &TextBuffer, mut pt: DisplayPoint) -> usize {
-        let Some(_wrap) = self.wrap_cols else {
-            return display_point_to_byte(buf, pt);
-        };
-
         if self.row_to_line.is_empty() {
             return 0;
         }
         pt.row = pt.row.min(self.row_to_line.len().saturating_sub(1));
         let line = self.row_to_line[pt.row];
-        let row_start_col = self.row_start_col[pt.row];
+        let folds_empty = self
+            .line_folds
+            .get(line)
+            .is_some_and(|v| v.as_ref().is_empty());
+        let inlays_empty = self
+            .line_inlays
+            .get(line)
+            .is_some_and(|v| v.as_ref().is_empty());
+
+        if self.wrap_cols.is_none() && folds_empty && inlays_empty {
+            return display_point_to_byte(buf, DisplayPoint::new(line, pt.col));
+        }
+
+        let row_start_col = *self.row_start_col.get(pt.row).unwrap_or(&0);
         let col_in_line = row_start_col.saturating_add(pt.col);
-        buf.byte_at_line_col(line, col_in_line)
+
+        if folds_empty && inlays_empty {
+            return buf.byte_at_line_col(line, col_in_line);
+        }
+
+        let line_start = buf.line_start(line).unwrap_or(0);
+        let line_text_owned = buf.line_text(line).unwrap_or_default();
+        let line_text = line_text_owned.as_str();
+
+        let folds = self.line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
+        let inlays = self
+            .line_inlays
+            .get(line)
+            .map(|v| v.as_ref())
+            .unwrap_or(&[]);
+        let folds = validate_fold_spans(line_text, folds)
+            .is_ok()
+            .then_some(folds)
+            .unwrap_or(&[]);
+        let inlays = validate_inlay_spans(line_text, inlays)
+            .is_ok()
+            .then_some(inlays)
+            .unwrap_or(&[]);
+
+        let byte_in_line = decorated_col_to_byte(line_text, folds, inlays, col_in_line);
+        line_start.saturating_add(byte_in_line).min(buf.len_bytes())
     }
+}
+
+fn find_row_for_line_col(row_start_cols: &[usize], col_in_line: usize) -> usize {
+    // Upper bound, then step back.
+    let mut lo = 0usize;
+    let mut hi = row_start_cols.len();
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        if row_start_cols[mid] <= col_in_line {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    lo.saturating_sub(1)
+}
+
+fn compute_wrapped_row_start_cols(
+    line_text: &str,
+    folds: &[FoldSpan],
+    inlays: &[InlaySpan],
+    wrap_cols: usize,
+) -> Vec<usize> {
+    let wrap_cols = wrap_cols.max(1);
+    let mut starts = vec![0usize];
+
+    let mut col = 0usize;
+    let mut in_row = 0usize;
+
+    let mut cursor = 0usize;
+    let mut fold_idx = 0usize;
+    let mut inlay_idx = 0usize;
+
+    while cursor < line_text.len() || fold_idx < folds.len() || inlay_idx < inlays.len() {
+        while inlay_idx < inlays.len() && inlays[inlay_idx].byte < cursor {
+            // Inlays inside a folded span are skipped by advancing past the fold jump.
+            inlay_idx = inlay_idx.saturating_add(1);
+        }
+
+        let next_fold = folds.get(fold_idx).map(|s| s.range.start);
+        let next_inlay = inlays.get(inlay_idx).map(|s| s.byte);
+        let next = match (next_fold, next_inlay) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => line_text.len(),
+        }
+        .min(line_text.len());
+
+        if cursor < next {
+            // Buffer text is splittable at scalar boundaries.
+            let segment = &line_text[cursor..next];
+            let mut rem = segment.chars().count();
+            while rem > 0 {
+                let remaining = wrap_cols.saturating_sub(in_row);
+                if remaining == 0 {
+                    starts.push(col);
+                    in_row = 0;
+                    continue;
+                }
+                let take = remaining.min(rem);
+                rem = rem.saturating_sub(take);
+                col = col.saturating_add(take);
+                in_row = in_row.saturating_add(take);
+                if in_row == wrap_cols && rem > 0 {
+                    starts.push(col);
+                    in_row = 0;
+                }
+            }
+            cursor = next;
+            continue;
+        }
+
+        if let Some(inlay) = inlays.get(inlay_idx)
+            && inlay.byte == cursor
+        {
+            // Atomic: never split inlay text across wrapped rows.
+            let token_cols = inlay.text.chars().count();
+            let remaining = wrap_cols.saturating_sub(in_row);
+            if in_row > 0 && token_cols > remaining {
+                starts.push(col);
+                in_row = 0;
+            }
+
+            col = col.saturating_add(token_cols);
+            if token_cols >= wrap_cols {
+                // Overflow consumes the row; next token starts a fresh row.
+                starts.push(col);
+                in_row = 0;
+            } else {
+                in_row = in_row.saturating_add(token_cols);
+                if in_row == wrap_cols {
+                    starts.push(col);
+                    in_row = 0;
+                }
+            }
+
+            inlay_idx = inlay_idx.saturating_add(1);
+            continue;
+        }
+
+        if let Some(fold) = folds.get(fold_idx)
+            && fold.range.start == cursor
+        {
+            // Atomic: never split fold placeholders across wrapped rows.
+            let token_cols = fold.placeholder.chars().count();
+            let remaining = wrap_cols.saturating_sub(in_row);
+            if in_row > 0 && token_cols > remaining {
+                starts.push(col);
+                in_row = 0;
+            }
+
+            col = col.saturating_add(token_cols);
+            if token_cols >= wrap_cols {
+                starts.push(col);
+                in_row = 0;
+            } else {
+                in_row = in_row.saturating_add(token_cols);
+                if in_row == wrap_cols {
+                    starts.push(col);
+                    in_row = 0;
+                }
+            }
+
+            let start = cursor;
+            let end = fold.range.end.min(line_text.len()).max(start);
+            cursor = end;
+            fold_idx = fold_idx.saturating_add(1);
+            continue;
+        }
+
+        break;
+    }
+
+    // Remove the trailing empty row start if we ended exactly at a row boundary.
+    if starts.len() > 1 && starts.last().is_some_and(|v| *v == col) {
+        starts.pop();
+    }
+    if starts.is_empty() {
+        starts.push(0);
+    }
+    starts
+}
+
+fn decorated_byte_to_col(
+    line_text: &str,
+    folds: &[FoldSpan],
+    inlays: &[InlaySpan],
+    byte: usize,
+) -> usize {
+    let byte = clamp_to_char_boundary(line_text, byte.min(line_text.len()));
+
+    let mut col = 0usize;
+    let mut cursor = 0usize;
+    let mut fold_idx = 0usize;
+    let mut inlay_idx = 0usize;
+
+    while cursor <= line_text.len() {
+        while inlay_idx < inlays.len() && inlays[inlay_idx].byte < cursor {
+            inlay_idx = inlay_idx.saturating_add(1);
+        }
+
+        let next_fold = folds.get(fold_idx).map(|s| s.range.start);
+        let next_inlay = inlays.get(inlay_idx).map(|s| s.byte);
+        let next = match (next_fold, next_inlay) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => line_text.len(),
+        }
+        .min(line_text.len());
+
+        if byte < next {
+            return col.saturating_add(line_text[cursor..byte].chars().count());
+        }
+
+        if cursor < next {
+            col = col.saturating_add(line_text[cursor..next].chars().count());
+            cursor = next;
+        }
+
+        if let Some(inlay) = inlays.get(inlay_idx)
+            && inlay.byte == cursor
+        {
+            if byte == cursor {
+                return col;
+            }
+            col = col.saturating_add(inlay.text.chars().count());
+            inlay_idx = inlay_idx.saturating_add(1);
+            continue;
+        }
+
+        if let Some(fold) = folds.get(fold_idx)
+            && fold.range.start == cursor
+        {
+            let start = cursor;
+            let end = fold.range.end.min(line_text.len()).max(start);
+            if byte < end {
+                return col;
+            }
+            col = col.saturating_add(fold.placeholder.chars().count());
+            cursor = end;
+            fold_idx = fold_idx.saturating_add(1);
+            continue;
+        }
+
+        if cursor >= line_text.len() {
+            break;
+        }
+
+        cursor = (cursor + 1).min(line_text.len());
+    }
+
+    col
+}
+
+fn byte_offset_for_col(slice: &str, col: usize) -> usize {
+    if col == 0 {
+        return 0;
+    }
+    let mut remaining = col;
+    for (i, _) in slice.char_indices() {
+        if remaining == 0 {
+            return i;
+        }
+        remaining = remaining.saturating_sub(1);
+    }
+    slice.len()
+}
+
+fn decorated_col_to_byte(
+    line_text: &str,
+    folds: &[FoldSpan],
+    inlays: &[InlaySpan],
+    col: usize,
+) -> usize {
+    let mut cursor = 0usize;
+    let mut cursor_col = 0usize;
+    let mut fold_idx = 0usize;
+    let mut inlay_idx = 0usize;
+
+    while cursor <= line_text.len() {
+        while inlay_idx < inlays.len() && inlays[inlay_idx].byte < cursor {
+            inlay_idx = inlay_idx.saturating_add(1);
+        }
+
+        let next_fold = folds.get(fold_idx).map(|s| s.range.start);
+        let next_inlay = inlays.get(inlay_idx).map(|s| s.byte);
+        let next = match (next_fold, next_inlay) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => line_text.len(),
+        }
+        .min(line_text.len());
+
+        if cursor < next {
+            let segment = &line_text[cursor..next];
+            let seg_cols = segment.chars().count();
+            if col < cursor_col.saturating_add(seg_cols) {
+                let local_col = col.saturating_sub(cursor_col);
+                let offset = byte_offset_for_col(segment, local_col);
+                return cursor.saturating_add(offset).min(line_text.len());
+            }
+            cursor_col = cursor_col.saturating_add(seg_cols);
+            cursor = next;
+        }
+
+        if let Some(inlay) = inlays.get(inlay_idx)
+            && inlay.byte == cursor
+        {
+            let inlay_cols = inlay.text.chars().count();
+            if col < cursor_col.saturating_add(inlay_cols) {
+                return cursor;
+            }
+            cursor_col = cursor_col.saturating_add(inlay_cols);
+            inlay_idx = inlay_idx.saturating_add(1);
+            continue;
+        }
+
+        if let Some(fold) = folds.get(fold_idx)
+            && fold.range.start == cursor
+        {
+            let placeholder_cols = fold.placeholder.chars().count();
+            if col < cursor_col.saturating_add(placeholder_cols) {
+                return cursor;
+            }
+            cursor_col = cursor_col.saturating_add(placeholder_cols);
+            cursor = fold.range.end.min(line_text.len()).max(fold.range.start);
+            fold_idx = fold_idx.saturating_add(1);
+            continue;
+        }
+
+        break;
+    }
+
+    line_text.len()
 }
 
 /// Map a UTF-8 byte index in the buffer to a `(row, col)` display coordinate.
@@ -735,6 +1203,7 @@ mod tests {
 mod display_map_tests {
     use super::*;
     use fret_code_editor_buffer::{DocId, TextBuffer};
+    use std::collections::HashMap;
 
     fn fragments_to_string(buf: &TextBuffer, fragments: &[DisplayRowFragment]) -> String {
         let mut out = String::new();
@@ -917,5 +1386,66 @@ mod display_map_tests {
             map.display_row_byte_range(&buf, 1),
             (1 + "😃".len())..buf.len_bytes()
         );
+    }
+
+    #[test]
+    fn display_map_wrap_with_fold_placeholders_breaks_on_folded_text() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let mut folds_by_line: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        folds_by_line.insert(
+            0,
+            Arc::from([FoldSpan {
+                range: 1..4,
+                placeholder: Arc::<str>::from("…"),
+            }]),
+        );
+        let inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+
+        let map = DisplayMap::new_with_decorations(&buf, Some(2), &folds_by_line, &inlays_by_line);
+
+        // Folded line "a…ef" is 4 columns, so it wraps into 2 rows.
+        assert_eq!(map.row_count(), 2);
+        assert_eq!(map.display_row_byte_range(&buf, 0), 0..4);
+        assert_eq!(map.display_row_byte_range(&buf, 1), 4..6);
+
+        // Bytes inside the folded range clamp to the fold start column.
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 1), DisplayPoint::new(0, 1));
+        assert_eq!(map.byte_to_display_point(&buf, 2), DisplayPoint::new(0, 1));
+        assert_eq!(map.byte_to_display_point(&buf, 3), DisplayPoint::new(0, 1));
+        assert_eq!(map.byte_to_display_point(&buf, 4), DisplayPoint::new(1, 0));
+
+        // Columns inside the placeholder map back to the fold start byte.
+        assert_eq!(map.display_point_to_byte(&buf, DisplayPoint::new(0, 1)), 1);
+        assert_eq!(map.display_point_to_byte(&buf, DisplayPoint::new(1, 0)), 4);
+    }
+
+    #[test]
+    fn display_map_wrap_counts_inlays_in_row_breaks() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let folds_by_line: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let mut inlays_by_line: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        inlays_by_line.insert(
+            0,
+            Arc::from([InlaySpan {
+                byte: 1,
+                text: Arc::<str>::from("<inlay>"),
+            }]),
+        );
+
+        let map = DisplayMap::new_with_decorations(&buf, Some(8), &folds_by_line, &inlays_by_line);
+
+        // Line "a<inlay>bcdef" is 13 columns, so it wraps into 2 rows at 8 columns.
+        assert_eq!(map.row_count(), 2);
+
+        for byte in 0..=buf.len_bytes() {
+            let pt = map.byte_to_display_point(&buf, byte);
+            let back = map.display_point_to_byte(&buf, pt);
+            assert_eq!(back, byte);
+        }
     }
 }

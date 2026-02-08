@@ -305,7 +305,12 @@ struct BaselineMeasureCache {
 
 impl CodeEditorState {
     fn refresh_display_map(&mut self) {
-        self.display_map = DisplayMap::new(&self.buffer, self.display_wrap_cols);
+        self.display_map = DisplayMap::new_with_decorations(
+            &self.buffer,
+            self.display_wrap_cols,
+            &self.line_folds,
+            &self.line_inlays,
+        );
     }
 }
 
@@ -474,6 +479,7 @@ impl CodeEditorHandle {
         }
         st.folds_epoch = st.folds_epoch.saturating_add(1);
         input::clamp_selection_out_of_folds(&mut st);
+        st.refresh_display_map();
 
         st.row_text_cache_folds_epoch = st.folds_epoch;
         st.row_text_cache_tick = 0;
@@ -495,6 +501,7 @@ impl CodeEditorHandle {
         st.line_folds.clear();
         st.folds_epoch = st.folds_epoch.saturating_add(1);
         input::clamp_selection_out_of_folds(&mut st);
+        st.refresh_display_map();
 
         st.row_text_cache_folds_epoch = st.folds_epoch;
         st.row_text_cache_tick = 0;
@@ -517,6 +524,7 @@ impl CodeEditorHandle {
         }
         st.inlays_epoch = st.inlays_epoch.saturating_add(1);
         input::clamp_selection_out_of_folds(&mut st);
+        st.refresh_display_map();
 
         st.row_text_cache_inlays_epoch = st.inlays_epoch;
         st.row_text_cache_tick = 0;
@@ -538,6 +546,7 @@ impl CodeEditorHandle {
         st.line_inlays.clear();
         st.inlays_epoch = st.inlays_epoch.saturating_add(1);
         input::clamp_selection_out_of_folds(&mut st);
+        st.refresh_display_map();
 
         st.row_text_cache_inlays_epoch = st.inlays_epoch;
         st.row_text_cache_tick = 0;
@@ -553,7 +562,7 @@ impl CodeEditorHandle {
 
     pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
         let mut st = self.state.borrow_mut();
-        if st.display_wrap_cols.is_some() || st.preedit.is_some() {
+        if st.preedit.is_some() {
             return None;
         }
         let row = st.display_map.line_first_display_row(line);
