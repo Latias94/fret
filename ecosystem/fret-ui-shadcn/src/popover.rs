@@ -552,7 +552,9 @@ impl Popover {
                 .copied()
                 .unwrap_or(false);
 
-            let auto_focus = self.auto_focus.unwrap_or(trigger_is_shadcn_trigger);
+            let auto_focus = self
+                .auto_focus
+                .unwrap_or(trigger_is_shadcn_trigger && !open_on_hover);
 
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
             let modal = matches!(self.modal_mode, PopoverModalMode::Modal);
@@ -4791,6 +4793,139 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services, 3);
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn popover_open_on_hover_does_not_move_focus_into_content_by_default() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_focusable_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "popover-open-on-hover-focus-behavior",
+                    |cx| {
+                        let trigger_id = trigger_id.clone();
+                        let content_focusable_id = content_focusable_id.clone();
+                        let trigger = PopoverTrigger::new(cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                trigger_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        ))
+                        .auto_toggle(false)
+                        .into_element(cx);
+
+                        let popover = Popover::new(open.clone())
+                            .open_on_hover(true)
+                            .hover_open_delay_frames(0)
+                            .hover_close_delay_frames(0)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                |cx| {
+                                    let focusable = cx.pressable_with_id(
+                                        PressableProps {
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            content_focusable_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+                                    PopoverContent::new(vec![focusable]).into_element(cx)
+                                },
+                            );
+                        vec![popover]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center(trigger_bounds),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let content_focusable_element = content_focusable_id.get().expect("content focusable id");
+        let content_focusable_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_focusable_element)
+                .expect("content focusable node");
+
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "hover-open should not move focus into popover content by default"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(content_focusable_node),
+            "hover-open should keep content unfocused unless auto_focus is explicitly enabled"
+        );
     }
 
     #[test]
