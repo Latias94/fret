@@ -61,6 +61,41 @@ pub enum DropdownMenuSide {
     Left,
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct DropdownMenuOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn dropdown_menu_open_change_events(
+    state: &mut DropdownMenuOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 #[derive(Debug, Clone)]
 pub enum DropdownMenuEntry {
     Item(DropdownMenuItem),
@@ -1046,6 +1081,8 @@ pub struct DropdownMenu {
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -1059,6 +1096,11 @@ impl std::fmt::Debug for DropdownMenu {
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -1082,7 +1124,41 @@ impl DropdownMenu {
             arrow_padding_override: None,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
+    }
+
+    /// Creates a dropdown menu with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        #[derive(Default)]
+        struct OpenModelState {
+            model: Option<Model<bool>>,
+        }
+
+        let open = if let Some(model) = open {
+            model
+        } else {
+            let existing = cx.with_state(OpenModelState::default, |st| st.model.clone());
+            if let Some(model) = existing {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(default_open);
+                cx.with_state(OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            }
+        };
+
+        Self::new(open)
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
@@ -1167,6 +1243,21 @@ impl DropdownMenu {
         self
     }
 
+    /// Called when the effective open state changes (Base UI / Radix `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -1194,6 +1285,20 @@ impl DropdownMenu {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(DropdownMenuOpenChangeCallbackState::default, |state| {
+                    dropdown_menu_open_change_events(state, is_open, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) =
+                (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -3284,6 +3389,75 @@ mod tests {
     use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
+
+    #[test]
+    fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = DropdownMenu::new_controllable(cx, None, true);
+            let open = cx
+                .watch_model(&menu.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(open);
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = DropdownMenuOpenChangeCallbackState::default();
+
+        let (changed, completed) =
+            dropdown_menu_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) =
+            dropdown_menu_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) =
+            dropdown_menu_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn dropdown_menu_open_change_events_complete_without_animation() {
+        let mut state = DropdownMenuOpenChangeCallbackState::default();
+
+        let _ = dropdown_menu_open_change_events(&mut state, false, false, false);
+        let (changed, completed) =
+            dropdown_menu_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
 
     #[test]
     fn estimated_menu_panel_height_clamps_to_max_height() {
