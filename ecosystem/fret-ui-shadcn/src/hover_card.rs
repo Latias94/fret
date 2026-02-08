@@ -29,7 +29,9 @@ use crate::overlay_motion;
 const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
-const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+// A short lease prevents hover-driven close from firing immediately after pointer interactions
+// (e.g. click/drag), while still allowing the card to close promptly once the interaction ends.
+const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = 2;
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
     fn visit(node: &AnyElement, best: &mut Option<Size>) {
@@ -350,7 +352,7 @@ impl HoverCard {
                 );
                 model
             };
-            let pointer_down_on_content_now = cx
+            let mut pointer_down_on_content_now = cx
                 .watch_model(&pointer_down_on_content)
                 .layout()
                 .copied()
@@ -380,6 +382,15 @@ impl HoverCard {
                 .copied()
                 .unwrap_or(0);
             let interaction_lease_active = interaction_lease_now > 0;
+            if pointer_down_on_content_now && !interaction_lease_active {
+                // If we miss `PointerUp` (e.g. due to a descendant capturing pointer), treat an
+                // expired lease as a conservative “no longer interacting” signal.
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&pointer_down_on_content, |v| *v = false);
+                pointer_down_on_content_now = false;
+            }
 
             let overlay_hovered =
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
@@ -400,7 +411,7 @@ impl HoverCard {
                 cx,
                 open_now,
                 hovered,
-                pointer_down_on_content_now || interaction_lease_active,
+                pointer_down_on_content_now && !has_text_selection,
                 has_text_selection,
                 cfg,
             );
@@ -445,8 +456,15 @@ impl HoverCard {
             let out = vec![trigger];
             if debug_trace {
                 eprintln!(
-                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={}",
-                    cx.frame_id.0, open_now, update.open, motion.present, hovered
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={} pointer_down={} lease={} has_text_selection={}",
+                    cx.frame_id.0,
+                    open_now,
+                    update.open,
+                    motion.present,
+                    hovered,
+                    pointer_down_on_content_now,
+                    interaction_lease_now,
+                    has_text_selection
                 );
             }
             if !motion.present {
@@ -593,6 +611,35 @@ impl HoverCard {
                                             .update(&pointer_down_model_for_up, |v| *v = false);
                                         let _ = host.models_mut().update(
                                             &interaction_lease_model_for_up,
+                                            |v| {
+                                                *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                            },
+                                        );
+                                        host.request_redraw(cx.window);
+                                        false
+                                    },
+                                ));
+
+                                let pointer_down_model_for_move =
+                                    pointer_down_on_content_model.clone();
+                                let interaction_lease_model_for_move =
+                                    interaction_lease_model.clone();
+                                cx.pointer_region_on_pointer_move(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost, cx: ActionCx, mv| {
+                                        if mv.buttons.left || mv.buttons.right || mv.buttons.middle
+                                        {
+                                            return false;
+                                        }
+
+                                        // If a descendant captures pointer, this region may miss
+                                        // the `PointerUp` hook. Use a no-buttons move as a
+                                        // conservative “interaction ended” signal.
+                                        host.release_pointer_capture();
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&pointer_down_model_for_move, |v| *v = false);
+                                        let _ = host.models_mut().update(
+                                            &interaction_lease_model_for_move,
                                             |v| {
                                                 *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
                                             },
@@ -1723,6 +1770,19 @@ mod tests {
         assert_ne!(
             anchor, caret,
             "expected selectable text to have an active selection after double click"
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: select_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
         );
 
         let outside = Point::new(Px(400.0), Px(400.0));
