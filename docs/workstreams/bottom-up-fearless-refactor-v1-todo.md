@@ -195,6 +195,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-runtime/src/window_command_gating/snapshot.rs`
     - `crates/fret-runtime/src/window_command_gating/helpers.rs`
 
+- [x] BU-FR-core-031 Split `fret-runtime` menubar wire decoding into submodules (`menu/wire/*`).
+  - Goal: isolate v1/v2 wire structs, patch ops decoding, and config parsing while keeping the stable exports unchanged.
+  - Evidence:
+    - `crates/fret-runtime/src/menu/wire/mod.rs`
+    - `crates/fret-runtime/src/menu/wire/load.rs`
+    - `crates/fret-runtime/src/menu/wire/v1.rs`
+    - `crates/fret-runtime/src/menu/wire/v2.rs`
+    - `crates/fret-runtime/src/menu/wire/patch_v1.rs`
+    - `crates/fret-runtime/src/menu/wire/patch_v2.rs`
+    - `crates/fret-runtime/src/menu/wire/config_v1.rs`
+    - `crates/fret-runtime/src/menu/wire/config_v2.rs`
+
 ## M2 — UI runtime closure
 
 - [x] BU-FR-ui-020 Create a “top 10 refactor hazards” list for `crates/fret-ui` and the gates that cover them.

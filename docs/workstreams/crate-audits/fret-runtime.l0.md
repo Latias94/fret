@@ -10,11 +10,12 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 
 - Largest files:
   - `crates/fret-runtime/src/model/store.rs`
-  - `crates/fret-runtime/src/keymap/types.rs`
-  - `crates/fret-runtime/src/menu/wire.rs`
-  - `crates/fret-runtime/src/window_command_gating/tests.rs`
   - `crates/fret-runtime/src/capabilities.rs`
   - `crates/fret-runtime/src/when_expr.rs`
+  - `crates/fret-runtime/src/window_command_gating/tests.rs`
+  - `crates/fret-runtime/src/input.rs`
+  - `crates/fret-runtime/src/keymap/tests.rs`
+  - `crates/fret-runtime/src/menu/wire/patch_v2.rs`
 - Direct deps (workspace): `fret-core`, `fret-i18n`
 - Direct deps (external): `serde`, `serde_json`, `slotmap`, `thiserror`
 - Kernel forbidden deps spot check: ok (no obvious executor/backend deps)
@@ -30,5 +31,6 @@ Portable runtime contracts: models, effects, commands/keymap/menubar, window ser
 
 1. (Done) Convert the model store into a `model/` directory module split by responsibility.
    - Evidence: `crates/fret-runtime/src/model/mod.rs`
-2. Convert `crates/fret-runtime/src/menu/wire.rs` into smaller wire-format submodules (v1/v2 + patch ops) if it continues to grow.
+2. (Done) Split menubar wire formats into focused submodules (`menu/wire/*`) for v1/v2 + patch/config decoding.
+   - Evidence: `crates/fret-runtime/src/menu/wire/mod.rs`
 3. Add a v1 “serialization stability checklist” item for `fret-runtime` config surfaces (ties to `BU-FR-core-014`).
