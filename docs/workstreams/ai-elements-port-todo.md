@@ -69,6 +69,7 @@ Status legend:
 | --- | --- | --- | --- |
 | `code-block` | Prototype | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`; demo + diag gate exist. |
 | `snippet` | Prototype | `fret-ui-ai` | Inline copyable surface; demo + diag gate exist. |
+| `artifact` | Prototype | `fret-ui-ai` | Artifact container surfaces (`Artifact*`) + UI Gallery demo + diag gate exist. |
 | `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) with per-row actions (`FileTreeAction`) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Prototype | `fret-ui-ai` | Commit disclosure surface (`Commit*` parts) + copy feedback + file rows; demo + diag gate exist. |
 | `stack-trace` | Prototype | `fret-ui-ai` | Stack trace disclosure surface (`StackTrace`) + parsed frames + copy feedback; demo + diag gate exist. |
@@ -77,7 +78,7 @@ Status legend:
 | `test-results` | Prototype | `fret-ui-ai` | Test results surface (`TestResults*`) + suite disclosure (`TestSuite`) + UI Gallery demo + diag gate exist. |
 | `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
 | `web-preview` | Not started | n/a | Needs embedded webview; out of scope unless there is a host. |
-| `artifact` / `agent` / `sandbox` / `package-info` / `environment-variables` / `stack-trace` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+| `agent` / `sandbox` / `package-info` / `environment-variables` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
 
 ### Utilities
 
@@ -127,6 +128,10 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json` (`[!]` if click targeting is occluded by prompt chrome)
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json` (`[!]` if hover/click targeting is occluded by prompt chrome)
 
+Existing gates (UI Gallery `ai_artifact_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
+
 Existing gates (UI Gallery `ai_code_block_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-code-block-demo-copy.json`
@@ -165,6 +170,7 @@ Prioritize thin adapters over new engines:
 - [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
 - [~] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
   - `Commit` v0 is implemented with a UI Gallery demo + diag gate.
+  - `Artifact` v0 is implemented with a UI Gallery demo + diag gate.
   - `StackTrace` v0 is implemented with a UI Gallery demo + diag gate.
   - `TestResults` v0 is implemented with a UI Gallery demo + diag gate.
 - [x] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.

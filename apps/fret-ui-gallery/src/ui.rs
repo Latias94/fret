@@ -705,6 +705,7 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
@@ -17711,6 +17712,176 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
         exported.unwrap_or_else(|| cx.text("")),
     ]
+}
+
+fn preview_ai_artifact_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct ArtifactModels {
+        visible: Option<Model<bool>>,
+        clicks: Option<Model<u32>>,
+    }
+
+    let visible = cx.with_state(ArtifactModels::default, |st| st.visible.clone());
+    let visible = match visible {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(ArtifactModels::default, |st| {
+                st.visible = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let clicks = cx.with_state(ArtifactModels::default, |st| st.clicks.clone());
+    let clicks = match clicks {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u32);
+            cx.with_state(ArtifactModels::default, |st| {
+                st.clicks = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let is_visible = cx
+        .get_model_copied(&visible, Invalidation::Layout)
+        .unwrap_or(true);
+    let click_count = cx
+        .get_model_copied(&clicks, Invalidation::Layout)
+        .unwrap_or(0);
+
+    let reset = {
+        let visible = visible.clone();
+        let clicks = clicks.clone();
+        shadcn::Button::new("Reset")
+            .variant(shadcn::ButtonVariant::Outline)
+            .test_id("ui-ai-artifact-demo-reset")
+            .on_activate(Arc::new(move |host, action_cx, _reason| {
+                let _ = host.models_mut().update(&visible, |v| *v = true);
+                let _ = host.models_mut().update(&clicks, |v| *v = 0);
+                host.request_redraw(action_cx.window);
+            }))
+            .into_element(cx)
+    };
+
+    let controls = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items(Items::Center)
+            .justify(Justify::Between),
+        move |cx| {
+            vec![
+                reset,
+                cx.text(format!("Action clicks: {click_count}"))
+                    .attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-ai-artifact-demo-click-count"),
+                    ),
+            ]
+        },
+    );
+
+    let artifact = is_visible.then(|| {
+        let close = {
+            let visible = visible.clone();
+            ui_ai::ArtifactClose::new()
+                .test_id("ui-ai-artifact-close")
+                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&visible, |v| *v = false);
+                    host.request_redraw(action_cx.window);
+                }))
+                .into_element(cx)
+        };
+
+        let copy_action = {
+            let clicks = clicks.clone();
+            ui_ai::ArtifactAction::new()
+                .tooltip("Copy")
+                .label("Copy")
+                .icon(fret_icons::ids::ui::COPY)
+                .test_id("ui-ai-artifact-action-copy")
+                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&clicks, |v| *v = v.saturating_add(1));
+                    host.request_redraw(action_cx.window);
+                }))
+                .into_element(cx)
+        };
+
+        let actions = ui_ai::ArtifactActions::new([copy_action, close])
+            .test_id("ui-ai-artifact-actions")
+            .into_element(cx);
+
+        let title = ui_ai::ArtifactTitle::new("Generated file")
+            .test_id("ui-ai-artifact-title")
+            .into_element(cx);
+        let description = ui_ai::ArtifactDescription::new("A small artifact container with actions.")
+            .test_id("ui-ai-artifact-description")
+            .into_element(cx);
+        let left = stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N0p5),
+            move |_cx| vec![title, description],
+        );
+
+        let header = ui_ai::ArtifactHeader::new([left, actions])
+            .test_id("ui-ai-artifact-header")
+            .into_element(cx);
+
+        let code: Arc<str> = Arc::from(
+            "fn main() {\n    println!(\"artifact demo\");\n}\n\n// Long line to exercise horizontal overflow:\n// 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\n",
+        );
+
+        let block = ui_ai::CodeBlock::new(code.clone())
+            .language("rust")
+            .header_right([ui_ai::CodeBlockCopyButton::new(code)
+                .test_id("ui-ai-artifact-code-copy")
+                .copied_marker_test_id("ui-ai-artifact-code-copied-marker")
+                .into_element(cx)])
+            .test_id("ui-ai-artifact-code-block")
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+        let content_body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N3),
+            move |cx| vec![cx.text("Content"), block],
+        );
+
+        let content = ui_ai::ArtifactContent::new([content_body])
+            .viewport_test_id("ui-ai-artifact-content-viewport")
+            .into_element(cx);
+
+        ui_ai::Artifact::new([header, content])
+            .test_id_root("ui-ai-artifact-root")
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            let mut out = vec![cx.text("Artifact (AI Elements)"), controls];
+            if let Some(artifact) = artifact {
+                out.push(artifact);
+            }
+            out
+        },
+    )]
 }
 
 fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {

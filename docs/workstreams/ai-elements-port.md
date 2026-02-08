@@ -74,6 +74,7 @@ an interactive chat demo:
 - `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
   conversation/message parts for app composition.
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
+- `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
 - `FileTree`: AI Elements-aligned nested file tree surface (small trees; per-row actions; no virtualization yet).
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
@@ -91,6 +92,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
+  - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`

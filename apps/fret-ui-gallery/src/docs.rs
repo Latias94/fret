@@ -588,6 +588,29 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_ARTIFACT_DEMO: &str = r#"
+## AI artifact (demo)
+
+This page is a small demo for the AI Elements-aligned `Artifact` container surfaces in `fret-ui-ai`:
+
+- `Artifact` root (rounded border + shadow + overflow hidden)
+- `ArtifactHeader` + `ArtifactTitle` + `ArtifactDescription`
+- `ArtifactActions` + `ArtifactAction` + `ArtifactClose` (icon buttons + optional tooltips)
+- `ArtifactContent` (scrollable content region)
+
+It exists to validate:
+
+- header/content composition outcomes,
+- action button + tooltip wrapping,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ARTIFACT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Artifact, ArtifactHeader, ArtifactContent, ArtifactAction, ArtifactClose};
+```
+"#;
+
 pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
 ## AI file tree (demo)
 

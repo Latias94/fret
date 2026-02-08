@@ -1,5 +1,6 @@
 mod ai_chat;
 mod ai_conversation;
+mod artifact;
 mod code_block;
 mod commit;
 mod conversation;
@@ -24,6 +25,7 @@ mod tool_call_block;
 
 pub use ai_chat::*;
 pub use ai_conversation::*;
+pub use artifact::*;
 pub use code_block::*;
 pub use commit::*;
 pub use conversation::*;

@@ -71,11 +71,13 @@ pub mod export;
 pub mod model;
 
 pub use elements::{
-    AiChat, AiConversationTranscript, CodeBlock, CodeBlockCopyButton, CodeBlockFilename, Commit,
-    CommitActions, CommitAuthor, CommitAuthorAvatar, CommitContent, CommitCopyButton, CommitFile,
-    CommitFileAdditions, CommitFileChanges, CommitFileDeletions, CommitFileIcon, CommitFileInfo,
-    CommitFilePath, CommitFileStatus, CommitFileStatusKind, CommitFiles, CommitHash, CommitHeader,
-    CommitInfo, CommitMessage, CommitMetadata, CommitSeparator, CommitTimestamp, Conversation,
+    AiChat, AiConversationTranscript, Artifact, ArtifactAction, ArtifactActions, ArtifactClose,
+    ArtifactContent, ArtifactDescription, ArtifactHeader, ArtifactTitle, CodeBlock,
+    CodeBlockCopyButton, CodeBlockFilename, Commit, CommitActions, CommitAuthor,
+    CommitAuthorAvatar, CommitContent, CommitCopyButton, CommitFile, CommitFileAdditions,
+    CommitFileChanges, CommitFileDeletions, CommitFileIcon, CommitFileInfo, CommitFilePath,
+    CommitFileStatus, CommitFileStatusKind, CommitFiles, CommitHash, CommitHeader, CommitInfo,
+    CommitMessage, CommitMetadata, CommitSeparator, CommitTimestamp, Conversation,
     ConversationDownload, ConversationEmptyState, ConversationMessage, ConversationScrollButton,
     ConversationTranscript, FileTree, FileTreeAction, FileTreeFile, FileTreeFolder, FileTreeIcon,
     FileTreeItem, FileTreeName, HttpMethod, InlineCitation, Message, MessageAction,
