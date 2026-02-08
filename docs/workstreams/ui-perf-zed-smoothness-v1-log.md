@@ -7862,3 +7862,26 @@ Results:
 - `ui-code-editor-resize-probes`: PASS (gate).
 - `ui-resize-probes`: PASS (gate).
 - `ui-gallery-steady`: PASS (baseline; failures=0).
+
+## 2026-02-08 13:32:06 (commit `828c945d4`)
+
+Change:
+- No code change; repeat gate attempts=3 to validate tail stability after merging the remote refactor.
+
+Suites:
+- `ui-resize-probes` (gate, attempts=3)
+- `ui-code-editor-resize-probes` (gate, attempts=3)
+
+Commands:
+```powershell
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-post-merge-828c945d4-p0-a3
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/fret-diag-resize-probes-gate-post-merge-828c945d4-editor-a3
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/fret-diag-resize-probes-gate-post-merge-828c945d4-p0-a3/summary.json`
+- `ui-code-editor-resize-probes`: `target/fret-diag-resize-probes-gate-post-merge-828c945d4-editor-a3/summary.json`
+
+Results:
+- `ui-resize-probes`: PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes`: PASS (passes=3/3; required=2).
