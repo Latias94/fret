@@ -21,9 +21,31 @@
 //! outcome). This module is intended for non-overlay transitions (e.g. collapsible height motion)
 //! or for authoring new presence-like drivers.
 
+use fret_core::{Px, Size};
 use fret_ui::{ElementContext, UiHost};
 
 pub use crate::headless::transition::{TransitionOutput, TransitionTimeline};
+
+/// Shared transition profile for binary open/close state machines.
+///
+/// This mirrors the common Base UI/Radix pattern where components keep a mounted/present state
+/// while transitioning between two boolean states and expose a progress value for style mapping.
+#[derive(Clone, Copy)]
+pub struct TransitionProfile {
+    pub open_ticks: u64,
+    pub close_ticks: u64,
+    pub ease: fn(f32) -> f32,
+}
+
+impl TransitionProfile {
+    pub fn new(open_ticks: u64, close_ticks: u64, ease: fn(f32) -> f32) -> Self {
+        Self {
+            open_ticks,
+            close_ticks,
+            ease,
+        }
+    }
+}
 
 /// Drive a transition using the UI runtime's monotonic clock (same duration for open/close).
 pub fn drive_transition<H: UiHost>(
@@ -64,4 +86,47 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
         close_ticks,
         ease,
     )
+}
+
+/// Drive a transition using a reusable [`TransitionProfile`].
+pub fn drive_transition_with_profile<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    profile: TransitionProfile,
+) -> TransitionOutput {
+    drive_transition_with_durations_and_easing(
+        cx,
+        open,
+        profile.open_ticks,
+        profile.close_ticks,
+        profile.ease,
+    )
+}
+
+/// Linear interpolation for pixel values.
+pub fn lerp_px(from: Px, to: Px, t: f32) -> Px {
+    let t = t.clamp(0.0, 1.0);
+    Px(from.0 + (to.0 - from.0) * t)
+}
+
+/// Linear interpolation for sizes.
+pub fn lerp_size(from: Size, to: Size, t: f32) -> Size {
+    Size::new(
+        lerp_px(from.width, to.width, t),
+        lerp_px(from.height, to.height, t),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lerp_px_is_clamped_and_monotonic() {
+        assert_eq!(lerp_px(Px(0.0), Px(10.0), -1.0), Px(0.0));
+        assert_eq!(lerp_px(Px(0.0), Px(10.0), 0.0), Px(0.0));
+        assert_eq!(lerp_px(Px(0.0), Px(10.0), 0.5), Px(5.0));
+        assert_eq!(lerp_px(Px(0.0), Px(10.0), 1.0), Px(10.0));
+        assert_eq!(lerp_px(Px(0.0), Px(10.0), 2.0), Px(10.0));
+    }
 }
