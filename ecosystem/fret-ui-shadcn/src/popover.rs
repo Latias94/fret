@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Edges, Px, Rect, SemanticsRole, Size};
+use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
@@ -13,6 +13,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::{scheduling, style as decl_style};
+use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
@@ -113,6 +114,36 @@ pub enum PopoverModalMode {
 const POPOVER_OPEN_ON_HOVER_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
 const POPOVER_OPEN_ON_HOVER_DEFAULT_CLOSE_DELAY_FRAMES: u32 = 0;
+const POPOVER_OPEN_ON_HOVER_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
+
+#[derive(Default)]
+struct PopoverHoverLastPointerModelState {
+    model: Option<Model<Option<Point>>>,
+}
+
+fn popover_hover_last_pointer_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    popover_id: fret_ui::elements::GlobalElementId,
+) -> Model<Option<Point>> {
+    let existing = cx.with_state_for(
+        popover_id,
+        PopoverHoverLastPointerModelState::default,
+        |st| st.model.clone(),
+    );
+    if let Some(model) = existing {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(None::<Point>);
+        cx.with_state_for(
+            popover_id,
+            PopoverHoverLastPointerModelState::default,
+            |st| {
+                st.model = Some(model.clone());
+            },
+        );
+        model
+    }
+}
 
 /// shadcn/ui `Popover` (v4).
 ///
@@ -491,21 +522,42 @@ impl Popover {
             }
 
             let open_on_hover = self.open_on_hover;
+            let hover_last_pointer =
+                open_on_hover.then(|| popover_hover_last_pointer_model(cx, popover_id));
             let hover_open_delay_frames = self.hover_open_delay_frames;
             let hover_close_delay_frames = self.hover_close_delay_frames;
 
             let trigger = if open_on_hover {
                 let open = self.open.clone();
+                let hover_last_pointer = hover_last_pointer
+                    .clone()
+                    .expect("hover pointer model should exist when open_on_hover=true");
                 let cfg = HoverIntentConfig::new(
                     hover_open_delay_frames as u64,
                     hover_close_delay_frames as u64,
                 );
                 cx.hover_region(HoverRegionProps::default(), move |cx, trigger_hovered| {
-                    let overlay_hovered =
+                    let (overlay_hovered, anchor_bounds, floating_bounds) =
                         cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
-                            st.overlay_hovered
+                            (st.overlay_hovered, st.anchor_bounds, st.floating_bounds)
                         });
-                    let hovered = trigger_hovered || overlay_hovered;
+                    let pointer_in_corridor = cx
+                        .watch_model(&hover_last_pointer)
+                        .layout()
+                        .copied()
+                        .unwrap_or(None)
+                        .zip(anchor_bounds)
+                        .zip(floating_bounds)
+                        .is_some_and(|((pointer, anchor), floating)| {
+                            safe_hover::safe_hover_contains(
+                                pointer,
+                                anchor,
+                                floating,
+                                POPOVER_OPEN_ON_HOVER_SAFE_CORRIDOR_BUFFER,
+                            )
+                        });
+
+                    let hovered = trigger_hovered || overlay_hovered || pointer_in_corridor;
 
                     let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
                     let frame_tick = cx.app.frame_id().0;
@@ -584,6 +636,8 @@ impl Popover {
             if open_on_hover && !overlay_presence.present {
                 cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
                     st.overlay_hovered = false;
+                    st.anchor_bounds = None;
+                    st.floating_bounds = None;
                 });
             }
 
@@ -631,6 +685,8 @@ impl Popover {
                         if open_on_hover {
                             cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
                                 st.overlay_hovered = false;
+                                st.anchor_bounds = None;
+                                st.floating_bounds = None;
                             });
                         }
                         if modal {
@@ -740,6 +796,12 @@ impl Popover {
                             placement,
                         )
                     };
+                    if open_on_hover {
+                        cx.with_state_for(popover_id, PopoverHoverSharedState::default, |st| {
+                            st.anchor_bounds = Some(anchor);
+                            st.floating_bounds = Some(layout.rect);
+                        });
+                    }
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
                     let allow_intrinsic_wrapper = !arrow && !constrained_height;
@@ -900,7 +962,7 @@ impl Popover {
                     options = options.initial_focus(initial_focus);
                 }
 
-                let request = radix_popover::popover_request_with_anchor_and_dismiss_handler(
+                let mut request = radix_popover::popover_request_with_anchor_and_dismiss_handler(
                     trigger_id,
                     trigger_id,
                     Some(anchor_id),
@@ -910,6 +972,20 @@ impl Popover {
                     on_dismiss_request_for_request,
                     overlay_children,
                 );
+                if open_on_hover {
+                    let hover_last_pointer = hover_last_pointer
+                        .clone()
+                        .expect("hover pointer model should exist when open_on_hover=true");
+                    request.dismissible_on_pointer_move = Some(Arc::new(move |host, _acx, mv| {
+                        if mv.pointer_type == fret_core::PointerType::Touch {
+                            return false;
+                        }
+                        let _ = host
+                            .models_mut()
+                            .update(&hover_last_pointer, |v| *v = Some(mv.position));
+                        false
+                    }));
+                }
                 radix_popover::request_popover(cx, request);
             }
 
@@ -931,9 +1007,11 @@ struct PopoverHoverIntentDriverState {
     intent: fret_ui_kit::primitives::hover_intent::HoverIntentState,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct PopoverHoverSharedState {
     overlay_hovered: bool,
+    anchor_bounds: Option<Rect>,
+    floating_bounds: Option<Rect>,
 }
 
 /// shadcn/ui `PopoverTrigger` (v4).
@@ -4926,6 +5004,178 @@ mod tests {
             Some(content_focusable_node),
             "hover-open should keep content unfocused unless auto_focus is explicitly enabled"
         );
+    }
+
+    #[test]
+    fn popover_open_on_hover_keeps_open_while_pointer_moves_through_safe_corridor() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_probe_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "popover-open-on-hover-safe-corridor",
+                    |cx| {
+                        let trigger_id = trigger_id.clone();
+                        let content_probe_id = content_probe_id.clone();
+                        let trigger = PopoverTrigger::new(cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                trigger_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        ))
+                        .auto_toggle(false)
+                        .into_element(cx);
+
+                        let popover = Popover::new(open.clone())
+                            .open_on_hover(true)
+                            .hover_open_delay_frames(0)
+                            .hover_close_delay_frames(0)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                |cx| {
+                                    let probe = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: false,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            content_probe_id.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
+                                    PopoverContent::new(vec![probe]).into_element(cx)
+                                },
+                            );
+                        vec![popover]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center(trigger_bounds),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let content_probe_element = content_probe_id.get().expect("content probe element id");
+        let content_probe_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_probe_element)
+                .expect("content probe node");
+        let content_probe_bounds = ui
+            .debug_node_bounds(content_probe_node)
+            .expect("content probe bounds");
+
+        let transit_point = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 + 2.0),
+        );
+        assert!(
+            !trigger_bounds.contains(transit_point),
+            "transit point should be outside trigger bounds"
+        );
+        assert!(
+            !content_probe_bounds.contains(transit_point),
+            "transit point should be outside floating content bounds"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: transit_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(760.0), Px(560.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 4);
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 
     #[test]
