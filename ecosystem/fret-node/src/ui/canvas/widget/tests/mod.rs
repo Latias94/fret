@@ -1071,8 +1071,12 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     assert_eq!(after.selected_edges.len(), 0);
 }
 
-#[derive(Default)]
-struct NullServices;
+#[cfg(any())]
+mod legacy_inline_harness {
+    use super::*;
+
+    #[derive(Default)]
+    struct NullServices;
 
 impl fret_core::TextService for NullServices {
     fn prepare(
@@ -1588,6 +1592,8 @@ fn read_node_pos(
         .ok()
         .flatten()
         .unwrap_or_default()
+}
+
 }
 
 #[test]
