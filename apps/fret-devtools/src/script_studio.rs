@@ -1,6 +1,74 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+/// Best-effort discovery of JSON Pointers that are convenient to edit in Script Studio.
+///
+/// This is intentionally heuristic and tolerant of invalid/partial scripts.
+pub fn collect_common_json_pointers(script_text: &str) -> Vec<String> {
+    let v: serde_json::Value = match serde_json::from_str(script_text) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut out: Vec<String> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let mut push = |p: String| {
+        if seen.insert(p.clone()) {
+            out.push(p);
+        }
+    };
+
+    // Common root-level pointers.
+    if v.get("schema_version").is_some() {
+        push("/schema_version".to_string());
+    }
+    if v.get("name").is_some() {
+        push("/name".to_string());
+    }
+    if v.get("steps").is_some() {
+        push("/steps".to_string());
+    }
+
+    let steps = v.get("steps").and_then(|x| x.as_array());
+    let Some(steps) = steps else { return out };
+
+    for (i, step) in steps.iter().enumerate() {
+        let Some(obj) = step.as_object() else {
+            continue;
+        };
+
+        let prefix = format!("/steps/{i}");
+        push(prefix.clone());
+
+        // Common step fields.
+        for key in [
+            "type",
+            "target",
+            "predicate",
+            "container",
+            "from",
+            "to",
+            "menu",
+            "item",
+            "a",
+            "b",
+        ] {
+            if obj.contains_key(key) {
+                push(format!("{prefix}/{key}"));
+            }
+        }
+
+        // Common nested values.
+        if obj.contains_key("path") {
+            push(format!("{prefix}/path"));
+            push(format!("{prefix}/path/0"));
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScriptOrigin {
     WorkspaceTools,
@@ -304,5 +372,31 @@ mod tests {
             v.pointer("/steps/0/target/kind").and_then(|x| x.as_str()),
             Some("test_id")
         );
+    }
+
+    #[test]
+    fn collect_common_json_pointers_discovers_step_slots() {
+        let script = serde_json::json!({
+            "schema_version": 2,
+            "steps": [
+                {"type":"click","target":{"kind":"node_id","node": 1}, "button":"left"},
+                {"type":"assert","predicate":{"kind":"exists","target":{"kind":"test_id","id":"x"}}},
+                {"type":"drag_to","from":{"kind":"test_id","id":"a"},"to":{"kind":"test_id","id":"b"}},
+                {"type":"assert","predicate":{"kind":"bounds_overlapping_x","a":{"kind":"test_id","id":"a"},"b":{"kind":"test_id","id":"b"},"eps_px": 0.0}},
+                {"type":"click_path","path":[{"kind":"test_id","id":"x"}]},
+            ]
+        });
+
+        let pointers =
+            collect_common_json_pointers(&serde_json::to_string_pretty(&script).unwrap());
+        assert!(pointers.contains(&"/schema_version".to_string()));
+        assert!(pointers.contains(&"/steps".to_string()));
+        assert!(pointers.contains(&"/steps/0/target".to_string()));
+        assert!(pointers.contains(&"/steps/1/predicate".to_string()));
+        assert!(pointers.contains(&"/steps/2/from".to_string()));
+        assert!(pointers.contains(&"/steps/2/to".to_string()));
+        assert!(pointers.contains(&"/steps/3/a".to_string()));
+        assert!(pointers.contains(&"/steps/3/b".to_string()));
+        assert!(pointers.contains(&"/steps/4/path/0".to_string()));
     }
 }
