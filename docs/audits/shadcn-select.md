@@ -47,6 +47,8 @@ examples in `repo-ref/ui`.
 - Pass: Select behaves like a Radix-style menu overlay: outside pointer-down is consumed (non-click-through).
 - Pass: root-level disabled gate now forces closed-state render semantics (content hidden and trigger
   not exposed as expanded), even when the controlled `open` model is `true`.
+- Pass: Open lifecycle callbacks are available via `Select::on_open_change` and
+  `Select::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 
 ### Visual parity (shadcn)
 
@@ -67,6 +69,8 @@ examples in `repo-ref/ui`.
 
 - `cargo test -p fret-ui-shadcn --lib select`
 - Contract test: `select_disabled_hides_content_even_when_open_model_true`
+- Contract test: `select_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `select_open_change_events_complete_without_animation`
 - Trigger chrome + focus ring gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
   (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`,
   `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
