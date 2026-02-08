@@ -3105,6 +3105,17 @@ impl<'a, TData> Table<'a, TData> {
         let center_visible = center.into_iter().map(|c| c.id.clone()).collect::<Vec<_>>();
         let right_visible = right.into_iter().map(|c| c.id.clone()).collect::<Vec<_>>();
 
+        let all_flat = self
+            .all_flat_columns()
+            .into_iter()
+            .map(|c| c.id.clone())
+            .collect::<Vec<_>>();
+        let visible_flat = self
+            .visible_flat_columns()
+            .into_iter()
+            .map(|c| c.id.clone())
+            .collect::<Vec<_>>();
+
         let header_groups = self.header_groups();
         let left_header_groups = self.left_header_groups();
         let center_header_groups = self.center_header_groups();
@@ -3150,9 +3161,13 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         super::CoreModelSnapshot {
-            schema_version: 2,
+            schema_version: 3,
             column_tree,
             column_capabilities,
+            flat_columns: super::FlatColumnsSnapshot {
+                all: all_flat,
+                visible: visible_flat,
+            },
             leaf_columns: super::LeafColumnsSnapshot {
                 all: all_leaf,
                 visible,

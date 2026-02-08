@@ -188,6 +188,7 @@ struct CoreModelExpect {
     schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
     column_capabilities: BTreeMap<String, ColumnCapabilitySnapshot>,
+    flat_columns: FlatColumnsExpect,
     leaf_columns: LeafColumnsSnapshot,
     header_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
@@ -207,8 +208,6 @@ struct FlatColumnsExpect {
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     headers_cells: HeadersCellsExpect,
-    #[serde(default)]
-    flat_columns: Option<FlatColumnsExpect>,
     core_model: CoreModelExpect,
 }
 
@@ -284,6 +283,20 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                 )
             })
             .collect(),
+        flat_columns: FlatColumnsExpect {
+            all: snapshot
+                .flat_columns
+                .all
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+            visible: snapshot
+                .flat_columns
+                .visible
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+        },
         leaf_columns: LeafColumnsSnapshot {
             all: snapshot
                 .leaf_columns
@@ -530,26 +543,6 @@ fn tanstack_v8_headers_inventory_deep_parity() {
                 "snapshot {} cells mismatch for row {}",
                 snap.id,
                 row_id
-            );
-        }
-
-        if let Some(expected) = snap.expect.flat_columns.as_ref() {
-            let all: Vec<String> = table
-                .all_flat_columns()
-                .into_iter()
-                .map(|c| c.id.to_string())
-                .collect();
-            let visible: Vec<String> = table
-                .visible_flat_columns()
-                .into_iter()
-                .map(|c| c.id.to_string())
-                .collect();
-
-            assert_eq!(
-                FlatColumnsExpect { all, visible },
-                expected.clone(),
-                "snapshot {} flat_columns mismatch",
-                snap.id
             );
         }
 

@@ -2024,7 +2024,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -2092,6 +2092,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -5259,7 +5283,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -5327,6 +5351,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -8141,7 +8189,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -8209,6 +8257,29 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -10994,7 +11065,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -11062,6 +11133,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -13921,7 +14016,7 @@
           }
         },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -13989,6 +14084,30 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ],
+            "visible": [
+              "name",
+              "metrics",
+              "stats",
+              "perf",
+              "cpu",
+              "cpu2",
+              "mem",
+              "mem_mb",
+              "status"
+            ]
+          },
           "column_capabilities": {
             "status": {
               "can_hide": true,

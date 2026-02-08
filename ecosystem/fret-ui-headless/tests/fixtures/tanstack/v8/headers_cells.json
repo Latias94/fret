@@ -1295,26 +1295,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -1360,6 +1342,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -3243,26 +3243,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -3308,6 +3290,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "mem_mb": {
               "can_hide": true,
@@ -4908,24 +4908,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -4971,6 +4955,22 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -6457,24 +6457,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -6520,6 +6504,22 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -8301,26 +8301,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -8366,6 +8348,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "cpu": {
               "can_hide": true,
@@ -10267,26 +10267,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -10332,6 +10314,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "mem_mb": {
               "can_hide": true,
@@ -11900,26 +11900,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -11965,6 +11947,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -13381,26 +13381,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -13446,6 +13428,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "name": {
               "can_hide": true,
@@ -15110,26 +15110,8 @@
             }
           }
         },
-        "flat_columns": {
-          "all": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ],
-          "visible": [
-            "name",
-            "stats",
-            "perf",
-            "cpu",
-            "mem",
-            "mem_mb"
-          ]
-        },
         "core_model": {
-          "schema_version": 2,
+          "schema_version": 3,
           "column_tree": [
             {
               "id": "name",
@@ -15175,6 +15157,24 @@
               "child_ids": []
             }
           ],
+          "flat_columns": {
+            "all": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ],
+            "visible": [
+              "name",
+              "stats",
+              "perf",
+              "cpu",
+              "mem",
+              "mem_mb"
+            ]
+          },
           "column_capabilities": {
             "cpu": {
               "can_hide": true,

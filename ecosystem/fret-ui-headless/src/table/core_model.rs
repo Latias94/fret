@@ -37,6 +37,12 @@ pub struct LeafColumnsSnapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FlatColumnsSnapshot {
+    pub all: Vec<Arc<str>>,
+    pub visible: Vec<Arc<str>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RowModelIdSnapshot {
     pub root: Vec<Arc<str>>,
     pub flat: Vec<Arc<str>>,
@@ -53,6 +59,7 @@ pub struct CoreModelSnapshot {
     pub schema_version: u32,
     pub column_tree: Vec<ColumnNodeSnapshot>,
     pub column_capabilities: BTreeMap<Arc<str>, ColumnCapabilitySnapshot>,
+    pub flat_columns: FlatColumnsSnapshot,
     pub leaf_columns: LeafColumnsSnapshot,
     pub header_groups: Vec<HeaderGroupSnapshot>,
     pub left_header_groups: Vec<HeaderGroupSnapshot>,

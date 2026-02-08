@@ -269,7 +269,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): initial core snapshot schema (column tree + leaf sets + header groups + row ids + cell ids).
     - Evidence: `ecosystem/fret-ui-headless/src/table/core_model.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::core_model_snapshot`)
-  - Update (parity-gated): bump core snapshot to `schema_version: 2` and add `column_capabilities`
+  - Update (parity-gated): bump core snapshot to `schema_version: 3` and add `column_capabilities`
     inventory for leaf columns:
     `getCanHide/getCanPin/getIsPinned/getPinnedIndex/getCanResize/getIsVisible`.
     - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,

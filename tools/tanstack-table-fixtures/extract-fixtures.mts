@@ -4908,13 +4908,13 @@ function snapshotColumnPinning(
             right_leaf_headers,
             cells,
           },
-          flat_columns: {
-            all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
-            visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
-          },
           core_model: {
-            schema_version: 2,
+            schema_version: 3,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            flat_columns: {
+              all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            },
             column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5041,8 +5041,12 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
-            schema_version: 2,
+            schema_version: 3,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            flat_columns: {
+              all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+              visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            },
             column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5099,7 +5103,7 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
-        schema_version: 2,
+        schema_version: 3,
         column_tree: snapshotColumnTree(table.getAllColumns()),
         flat_columns: {
           all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
