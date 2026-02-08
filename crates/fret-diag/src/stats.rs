@@ -10533,6 +10533,8 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-markdown-editor-viewport";
+
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -10544,6 +10546,10 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     let mut examined_snapshots: u64 = 0;
     let mut ui_gallery_snapshots: u64 = 0;
     let mut last_observed: Option<serde_json::Value> = None;
+    let mut disabled_semantics_matched: u64 = 0;
+    let mut disabled_semantics_checked: u64 = 0;
+    let mut disabled_focus_violation: Option<serde_json::Value> = None;
+    let mut disabled_composition_violation: Option<serde_json::Value> = None;
 
     // State machine:
     // 0: waiting for editable baseline snapshot
@@ -10562,6 +10568,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
     let mut disabled_samples: u64 = 0;
 
     let mut violation: Option<serde_json::Value> = None;
+    let mut failed: bool = false;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -10629,6 +10636,107 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
 
+            if !enabled {
+                disabled_semantics_checked = disabled_semantics_checked.saturating_add(1);
+
+                let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+                if let Some(viewport_node_id) = viewport_node_id {
+                    let nodes = s
+                        .get("debug")
+                        .and_then(|v| v.get("semantics"))
+                        .and_then(|v| v.get("nodes"))
+                        .and_then(|v| v.as_array())
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[]);
+
+                    if !nodes.is_empty() {
+                        let parents = semantics_parent_map(s);
+
+                        let mut cur = viewport_node_id;
+                        let mut text_field: Option<&serde_json::Value> = None;
+                        for _ in 0..128 {
+                            let node = nodes
+                                .iter()
+                                .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                            let Some(node) = node else {
+                                break;
+                            };
+                            if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                                text_field = Some(node);
+                                break;
+                            }
+                            let Some(parent) = parents.get(&cur).copied() else {
+                                break;
+                            };
+                            cur = parent;
+                        }
+
+                        if let Some(text_field) = text_field {
+                            disabled_semantics_matched =
+                                disabled_semantics_matched.saturating_add(1);
+
+                            let focused = text_field
+                                .get("flags")
+                                .and_then(|v| v.get("focused"))
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+
+                            if focused && disabled_focus_violation.is_none() {
+                                disabled_focus_violation = Some(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "viewport_test_id": VIEWPORT_TEST_ID,
+                                    "viewport_node": viewport_node_id,
+                                    "text_field_node": cur,
+                                    "focused": focused,
+                                }));
+                                failed = true;
+                            }
+
+                            let text_composition = text_field.get("text_composition");
+                            let composition = text_composition.and_then(|v| {
+                                if let Some(arr) = v.as_array()
+                                    && arr.len() == 2
+                                {
+                                    let a = arr[0].as_u64()?;
+                                    let b = arr[1].as_u64()?;
+                                    return Some((a, b));
+                                }
+                                if let Some(obj) = v.as_object() {
+                                    if let Some((a, b)) = obj.get("anchor").and_then(|a| {
+                                        Some((a.as_u64()?, obj.get("focus")?.as_u64()?))
+                                    }) {
+                                        return Some((a, b));
+                                    }
+                                    if let Some((a, b)) = obj.get("start").and_then(|a| {
+                                        Some((a.as_u64()?, obj.get("end")?.as_u64()?))
+                                    }) {
+                                        return Some((a, b));
+                                    }
+                                }
+                                None
+                            });
+                            let comp_norm =
+                                composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+                            if comp_norm.is_some() && disabled_composition_violation.is_none() {
+                                disabled_composition_violation = Some(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "viewport_test_id": VIEWPORT_TEST_ID,
+                                    "viewport_node": viewport_node_id,
+                                    "text_field_node": cur,
+                                    "text_composition": comp_norm.map(|(a,b)| [a,b]),
+                                }));
+                                failed = true;
+                            }
+                        }
+                    }
+                }
+            }
+
             match state {
                 0 if enabled && editable => {
                     edit_before_rev = rev;
@@ -10681,6 +10789,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
                 "buffer_revision": rev,
                 "text_len_bytes": len,
                 "selection_caret": caret,
+                "disabled_semantics_matched": disabled_semantics_matched,
                 "state": state,
             }));
         }
@@ -10704,6 +10813,7 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
         "ui_gallery_snapshots": ui_gallery_snapshots,
         "state": state,
         "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
         "editable_baseline": {
             "buffer_revision": edit_before_rev,
             "text_len_bytes": edit_before_len,
@@ -10715,6 +10825,10 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
             "selection_caret": disabled_caret,
             "samples": disabled_samples
         },
+        "disabled_semantics_checked": disabled_semantics_checked,
+        "disabled_semantics_matched": disabled_semantics_matched,
+        "disabled_focus_violation": disabled_focus_violation,
+        "disabled_composition_violation": disabled_composition_violation,
         "violation": violation,
     });
     write_json_value(&evidence_path, &payload)?;
@@ -10735,12 +10849,20 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks
         ));
     }
 
-    if state == 3 && disabled_samples >= 2 {
+    if failed {
+        return Err(format!(
+            "ui-gallery markdown editor disabled gate observed focus/composition while disabled\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 && disabled_samples >= 2 && disabled_semantics_matched > 0 {
         return Ok(());
     }
 
     Err(format!(
-        "ui-gallery markdown editor disabled gate failed (expected: disabled holds revision/len/caret stable)\n  bundle: {}\n  evidence: {}",
+        "ui-gallery markdown editor disabled gate failed (expected: disabled holds revision/len/caret stable, and is not focused with no composition)\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))

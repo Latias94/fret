@@ -11991,7 +11991,11 @@ mod tests {
                                     "text_len_bytes": 42,
                                     "selection": { "caret": 3 }
                                 }}
-                            }
+                            },
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [3,3] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
                         },
                         {
                             "tick_id": 2,
@@ -12005,7 +12009,11 @@ mod tests {
                                     "text_len_bytes": 42,
                                     "selection": { "caret": 3 }
                                 }}
-                            }
+                            },
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": false }, "text_selection": [3,3] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
                         },
                         {
                             "tick_id": 3,
@@ -12019,7 +12027,11 @@ mod tests {
                                     "text_len_bytes": 42,
                                     "selection": { "caret": 3 }
                                 }}
-                            }
+                            },
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": false }, "text_selection": [3,3] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
                         },
                         {
                             "tick_id": 4,
@@ -12033,7 +12045,11 @@ mod tests {
                                     "text_len_bytes": 42,
                                     "selection": { "caret": 3 }
                                 }}
-                            }
+                            },
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": false }, "text_selection": [3,3] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
                         }
                     ]
                 }
