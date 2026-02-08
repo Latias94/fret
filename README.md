@@ -124,10 +124,9 @@ Reference implementation:
 - `apps/fret-examples/src/todo_demo.rs`
 - `docs/examples/todo-app-golden-path.md`
 
-UI placeholder links:
-
-- TODO app screenshot (placeholder): `https://placehold.co/1280x720/png?text=Fret+Todo+Demo+UI+Placeholder`
-- Components gallery screenshot (placeholder): `https://placehold.co/1280x720/png?text=Fret+Components+Gallery+Placeholder`
+![Fret gallery 01](screenshots/gallery-01.png)
+![Fret gallery 02](screenshots/gallery-02.png)
+![Fret gallery 03](screenshots/gallery-03.png)
 
 ## Ecosystem Coverage (Incubating)
 
