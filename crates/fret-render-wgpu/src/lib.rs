@@ -33,8 +33,7 @@ pub use svg_cache::{CachedSvgImage, SvgImageCache, SvgRasterKind};
 pub use targets::{RenderTargetDescriptor, RenderTargetRegistry};
 pub use text::TextFontFamilyConfig;
 
-fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
-    let raw = std::env::var("FRET_WGPU_BACKEND").ok()?;
+fn parse_wgpu_backends(raw: &str) -> Option<wgpu::Backends> {
     let mut backends = wgpu::Backends::empty();
 
     for part in raw.split([',', '|', '+', ' ']) {
@@ -54,6 +53,11 @@ fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
     }
 
     (!backends.is_empty()).then_some(backends)
+}
+
+fn parse_wgpu_backends_from_env() -> Option<wgpu::Backends> {
+    let raw = std::env::var("FRET_WGPU_BACKEND").ok()?;
+    parse_wgpu_backends(&raw)
 }
 
 fn create_wgpu_instance() -> wgpu::Instance {
@@ -145,5 +149,40 @@ impl WgpuContext {
         self.instance
             .create_surface(target)
             .map_err(|source| RenderError::CreateSurfaceFailed { source })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_wgpu_backends_reports_none_for_empty_or_unknown() {
+        assert_eq!(parse_wgpu_backends(""), None);
+        assert_eq!(parse_wgpu_backends("   "), None);
+        assert_eq!(parse_wgpu_backends("unknown"), None);
+        assert_eq!(parse_wgpu_backends("unknown,  ,wat"), None);
+    }
+
+    #[test]
+    fn parse_wgpu_backends_supports_separators_and_synonyms() {
+        assert_eq!(
+            parse_wgpu_backends("dx12,vk|metal + gl opengl"),
+            Some(
+                wgpu::Backends::DX12
+                    | wgpu::Backends::VULKAN
+                    | wgpu::Backends::METAL
+                    | wgpu::Backends::GL
+            )
+        );
+    }
+
+    #[test]
+    fn parse_wgpu_backends_all_is_strict_override() {
+        assert_eq!(parse_wgpu_backends("all"), Some(wgpu::Backends::all()));
+        assert_eq!(
+            parse_wgpu_backends("dx12, all, vk"),
+            Some(wgpu::Backends::all())
+        );
     }
 }
