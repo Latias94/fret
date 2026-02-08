@@ -16704,6 +16704,25 @@ fn preview_data_table_torture(
         }
     };
 
+    let global_filter_text: Arc<str> = {
+        let global_filter = cx
+            .app
+            .models()
+            .read(&state, |st| st.global_filter.clone())
+            .ok()
+            .flatten();
+        match global_filter {
+            None => Arc::<str>::from("GlobalFilter: <none>"),
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    Arc::<str>::from(format!("GlobalFilter: {s}"))
+                } else {
+                    Arc::<str>::from(format!("GlobalFilter: {v}"))
+                }
+            }
+        }
+    };
+
     let toolbar_columns = columns.clone();
     let toolbar =
         shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
@@ -16730,6 +16749,12 @@ fn preview_data_table_torture(
                         .role(fret_core::SemanticsRole::Text)
                         .label(pinning_text.clone())
                         .test_id("ui-gallery-data-table-torture-pinning"),
+                ),
+                cx.text(global_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(global_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-global-filter"),
                 ),
                 toolbar.clone().into_element(cx),
             ]

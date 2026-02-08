@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
@@ -445,6 +446,8 @@ impl<TData> DataTableToolbar<TData> {
         );
 
         let filter = Input::new(filter_model)
+            .a11y_label("Global filter")
+            .a11y_role(SemanticsRole::TextField)
             .placeholder(self.filter_placeholder.clone())
             .into_element(cx);
 

@@ -904,17 +904,22 @@ Next UI parity targets (capability, not exact DOM behavior):
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json` (asserts `mem_mb ▲2`)
     - [ ] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
       - Sub-milestones:
-        - [ ] HTP-ui-dt-021 Gate global filter input: changing the input filters visible rows and resets `page_index`.
+        - [x] HTP-ui-dt-021 Gate global filter input: typing updates `TableState.global_filter` (UI wiring).
+          - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` global filter input sets
+            a stable a11y label so scripts can target it deterministically).
+          - Gallery: `apps/fret-ui-gallery/src/ui.rs` adds a stable global filter status row
+            (`GlobalFilter: <none>` / `GlobalFilter: ...`) for assertions.
+          - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json`.
         - [ ] HTP-ui-dt-022 Add a per-column text filter control (wires `TableState.column_filters`).
         - [ ] HTP-ui-dt-023 Add a faceted filter control for a categorical column (menu of unique values).
           - Prefer headless-backed faceting when the caller can provide a facet key/label mapping.
           - Accept a static option list fallback (still drives `column_filters`) to keep the recipe usable
             in apps that already own their domain option inventories.
         - [ ] HTP-ui-dt-024 Add a “Reset filters” affordance (clears global + column filters and resets `page_index`).
-      - Gates (planned):
+      - Gates:
         - `tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json`
-        - `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
-        - `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
+        - (planned) `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
+        - (planned) `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
     - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
       - Scope note: sticky rendering + split layout are already wired in `table_virtualized` (HTP-ui-colpin-010).
         This milestone focuses on *UI entrypoints* that let users drive `TableState.column_pinning`.
