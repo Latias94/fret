@@ -51,6 +51,10 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
+- Pass: Controlled/uncontrolled open state parity is available via
+  `ContextMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
+- Pass: Open lifecycle callbacks are available via `ContextMenu::on_open_change` and
+  `ContextMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `ContextMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
@@ -88,6 +92,10 @@ _None tracked at this time._
 ## Validation
 
 - Contract test: `context_menu_items_have_collection_position_metadata_excluding_separators`
+- Contract test: `context_menu_new_controllable_uses_controlled_model_when_provided`
+- Contract test: `context_menu_new_controllable_applies_default_open`
+- Contract test: `context_menu_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `context_menu_open_change_events_complete_without_animation`
 - Interaction test: `context_menu_opens_on_shift_f10`
 - Interaction test: `context_menu_opens_on_context_menu_key`
 - Interaction test: `context_menu_disabled_blocks_pointer_and_keyboard_open`
