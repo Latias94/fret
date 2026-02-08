@@ -7885,3 +7885,16 @@ Artifacts:
 Results:
 - `ui-resize-probes`: PASS (passes=3/3; required=2).
 - `ui-code-editor-resize-probes`: PASS (passes=3/3; required=2).
+
+## 2026-02-08 15:12:59 (commit `b9a8b1074`)
+
+Change:
+- Docs-only alignment: document current interactive-resize wrapped-text caching knobs and the current `TextSystem::release`
+  eager-eviction behavior in ADR 0006; add a follow-up TODO to consider renderer-owned retention (LRU) for released blobs.
+
+Suites:
+- None (no perf run; tracking-only update).
+
+Notes:
+- This entry is intended to keep the perf workstream “contract surface” (ADR + TODOs) in sync with the actual
+  implementation choices before deeper refactors (text layout reuse, resize scheduling, GPU attribution).
