@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-07
+Last updated: 2026-02-08
 
 This is the checkbox tracker companion to:
 
@@ -282,3 +282,49 @@ Evidence anchors:
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+
+---
+
+## M10 — Markdown Editor v0 (source mode) (downstream validation)
+
+This milestone is defined in `docs/workstreams/code-editor-ecosystem-v1.md` (“Downstream Milestone:
+Markdown Editor v0”).
+
+- [x] Define a minimal interaction control surface for `fret-code-editor`:
+  - `CodeEditorInteractionOptions` (policy surface) + input gating.
+  - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorInteractionOptions`, `CodeEditorState::set_interaction`),
+    `ecosystem/fret-code-editor/src/editor/input/mod.rs` (edit/undo/redo gating).
+- [x] Add a UI Gallery toggle + diag coverage for read-only behavior (typing does not mutate the buffer).
+  - UI: `apps/fret-ui-gallery/src/ui.rs` (Mode: edit/read-only/disabled buttons).
+  - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-read-only-baseline.json`.
+  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits`).
+- [x] Add Markdown syntax highlighting support (feature-gated; prefer `fret-syntax/lang-md`).
+  - Evidence: `ecosystem/fret-code-editor/Cargo.toml` (`syntax-markdown`), `apps/fret-ui-gallery/Cargo.toml` (enables feature),
+    `apps/fret-ui-gallery/src/ui.rs` (`handle.set_language(Some(\"markdown\"))`).
+- [x] Add a UI Gallery “markdown_editor_source” page:
+  - code editor configured for Markdown (soft wrap toggle),
+  - split preview via `fret-markdown`.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MARKDOWN_EDITOR_SOURCE`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`).
+- [x] Add a read-only regression gate for the Markdown editor page (typing does not mutate the buffer).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-read-only-baseline.json`.
+  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits`).
+- [x] Add a soft-wrap toggle stability gate for the Markdown editor page (caret/revision remain stable).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json`.
+  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable`).
+- [x] Add a Markdown editor word-boundary regression (ADR 0194 baseline via UnicodeWord) using semantics selection.
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json`.
+  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_word_boundary`).
+- [x] Add a Markdown editor a11y composition regression (ADR 0071 range invariants; synthetic preedit injection).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`.
+  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition`).
+- [~] Add a minimal diag script suite that validates the Markdown editor milestone end-to-end:
+  - [x] Read-only blocks edits (buffer revision stable).
+  - [x] Soft-wrap toggle does not mutate caret/revision/len.
+  - [x] Word-boundary navigation/select behavior baseline (ADR 0194, UnicodeWord).
+  - [x] A11y composition ranges baseline (ADR 0071; synthetic preedit injection).
+  - [x] Soft-wrap caret/selection mapping remains stable under edits (not just toggles).
+    - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`.
+    - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable`).
+  - [!] Deferred: Web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
+    - Decision: skip for now (too flaky for a stable suite gate).

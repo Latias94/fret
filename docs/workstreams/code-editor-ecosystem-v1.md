@@ -1,7 +1,13 @@
 # Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-07
+Last updated: 2026-02-08
+
+Recent changes (2026-02-08):
+
+- Code editor interaction: add `CodeEditorInteractionOptions` (editor/read-only/disabled) and gate input/edit/undo/redo so downstream consumers can control interaction policy without pushing it into `crates/fret-ui` (ADR 0066).
+- UI Gallery: add “Markdown Editor (Source)” downstream milestone page (source editor + `fret-markdown` preview) with best-effort Markdown syntax highlighting (`syntax-markdown` feature).
+- Diagnostics: add scripted repros + fretboard gates for Markdown source editor read-only behavior and soft-wrap toggle stability.
 
 Recent changes (2026-02-07):
 
@@ -189,6 +195,41 @@ Deferred (Web/WASM IME):
 - Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 
 ---
+
+## Downstream Milestone: Markdown Editor v0 (source mode)
+
+This workstream needs a concrete, app-shaped milestone to validate the editor ecosystem surfaces
+without prematurely baking “editor policy” into `crates/fret-ui` (ADR 0066). The v0 Markdown editor
+is that milestone: it exercises the code editor contracts in a way that is representative of
+editor-grade workflows, while keeping the UX surface intentionally small.
+
+### Scope (v0)
+
+- **Source-mode editing** only (no WYSIWYG): Markdown is edited as plain text using `fret-code-editor`.
+- **Syntax highlighting**: Markdown + fenced code blocks (best-effort; incremental visible-window strategy).
+- **Soft wrap**: stable caret/selection/hit-test mapping under wrap.
+- **IME correctness**: native + web bridge seams remain stable (ADR 0195), including cursor-area feedback.
+- **Selection/navigation**: word boundaries, double/triple click, and baseline commands (ADR 0194).
+- **Interaction control**: surfaces can be configured as:
+  - editable,
+  - read-only (select/copy/nav, but no mutations),
+  - disabled (no focus/IME routing, no selection updates).
+- **Optional preview** (nice-to-have): a second panel that renders the current buffer via `fret-markdown`,
+  using `fret-code-view` for fenced blocks. The preview is explicitly *not* required for the editor
+  contract validation.
+
+### Non-goals (v0)
+
+- WYSIWYG / ProseMirror-class behavior (inline widgets, block reflow semantics, “source maps” to rendered nodes).
+- Multi-cursor, multi-selection, or complex edit transforms.
+- LSP integration, diagnostics, formatting, or code actions.
+- Full Markdown spec parity (tables/footnotes/task lists can be validated later).
+
+### Why this milestone matters
+
+If the code editor surfaces can reliably power a minimal Markdown source editor, then the ecosystem
+contracts are likely “good enough” for broader editor-grade use cases (logs, diffs, config editors,
+note-taking) without forcing a `fret-ui` rewrite.
 
 ## Architectural Principles (performance-first, Fret-aligned)
 
