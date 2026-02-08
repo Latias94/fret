@@ -1,14 +1,34 @@
 use super::*;
+use serde::Deserialize;
 
-#[test]
-fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing() {
+#[derive(Debug, Clone, Deserialize)]
+struct TooltipObserverFixture {
+    name: String,
+    open: bool,
+    interactive: bool,
+    trigger: bool,
+    has_dismiss_request: bool,
+    has_pointer_move: bool,
+    expect_wants_pointer_down_outside_events: bool,
+    expect_wants_pointer_move_events: bool,
+}
+
+fn run_tooltip_observer_fixture(name: &str) {
+    let fixtures: Vec<TooltipObserverFixture> =
+        serde_json::from_str(include_str!("fixtures/tooltip_observers.json"))
+            .expect("tooltip observer fixtures");
+    let fx = fixtures
+        .iter()
+        .find(|fx| fx.name == name)
+        .unwrap_or_else(|| panic!("missing tooltip observer fixture: {name}"));
+
     let window = AppWindowId::default();
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
     let base_open = app.models_mut().insert(false);
-    let open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(fx.open);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -17,10 +37,19 @@ fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing()
     );
 
     // Base root (required so the window exists and rendering can proceed).
-    render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+    let trigger =
+        render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
 
-    // Install a tooltip layer that is still `present` but `open=false` (closing animation).
     begin_frame(&mut app, window);
+
+    let on_dismiss_request: Option<fret_ui::action::OnDismissRequest> = fx
+        .has_dismiss_request
+        .then_some(Arc::new(|_host, _cx, _req| {}));
+    let on_pointer_move: Option<fret_ui::action::OnDismissiblePointerMove> = fx
+        .has_pointer_move
+        .then_some(Arc::new(|_host, _cx, _move| false));
+
+    // Install a tooltip layer (possibly closing: present=true, open=false).
     let tooltip_id = GlobalElementId(0x44);
     request_tooltip_for_window(
         &mut app,
@@ -28,12 +57,12 @@ fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing()
         TooltipRequest {
             id: tooltip_id,
             root_name: tooltip_root_name(tooltip_id),
-            interactive: true,
-            trigger: None,
+            interactive: fx.interactive,
+            trigger: fx.trigger.then_some(trigger),
             open,
             present: true,
-            on_dismiss_request: None,
-            on_pointer_move: None,
+            on_dismiss_request,
+            on_pointer_move,
             children: Vec::new(),
         },
     );
@@ -56,163 +85,38 @@ fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing()
         .find(|l| l.id == layer)
         .expect("tooltip debug layer info");
 
-    assert!(info.visible);
-    assert!(!info.blocks_underlay_input);
-    assert!(!info.hit_testable);
+    assert!(info.visible, "case={}", fx.name);
+    assert!(!info.blocks_underlay_input, "case={}", fx.name);
+    assert!(!info.hit_testable, "case={}", fx.name);
     assert_eq!(
         info.pointer_occlusion,
-        fret_ui::tree::PointerOcclusion::None
+        fret_ui::tree::PointerOcclusion::None,
+        "case={}",
+        fx.name
     );
-    assert!(
-        !info.wants_pointer_down_outside_events,
-        "expected tooltip to stop requesting outside-press observers during close transitions"
+    assert_eq!(
+        info.wants_pointer_down_outside_events, fx.expect_wants_pointer_down_outside_events,
+        "case={}",
+        fx.name
     );
-    assert!(
-        !info.wants_pointer_move_events,
-        "expected tooltip to stop requesting pointer-move observers during close transitions"
+    assert_eq!(
+        info.wants_pointer_move_events, fx.expect_wants_pointer_move_events,
+        "case={}",
+        fx.name
     );
+}
+
+#[test]
+fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing() {
+    run_tooltip_observer_fixture("closing_open_false_even_if_interactive");
 }
 
 #[test]
 fn tooltip_does_not_request_observers_by_default() {
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-
-    let _open = app.models_mut().insert(true);
-
-    let mut services = FakeServices;
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        fret_core::Size::new(Px(300.0), Px(200.0)),
-    );
-
-    // Base root (required so the window exists and rendering can proceed).
-    begin_frame(&mut app, window);
-    let base = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "base",
-        |_| Vec::new(),
-    );
-    ui.set_root(base);
-
-    // Tooltips are click-through and should not install outside-press / pointer-move observers
-    // unless the request explicitly opts into them.
-    begin_frame(&mut app, window);
-    let id = GlobalElementId(0xdead);
-    let open = app.models_mut().insert(true);
-    request_tooltip_for_window(
-        &mut app,
-        window,
-        TooltipRequest {
-            id,
-            root_name: tooltip_root_name(id),
-            interactive: true,
-            trigger: Some(id),
-            open: open.clone(),
-            present: true,
-            on_dismiss_request: None,
-            on_pointer_move: None,
-            children: Vec::new(),
-        },
-    );
-
-    render(&mut ui, &mut app, &mut services, window, bounds);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let layer = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
-            overlays.tooltips.get(&(window, id)).map(|t| t.layer)
-        })
-        .expect("tooltip layer");
-
-    let info = ui
-        .debug_layers_in_paint_order()
-        .into_iter()
-        .find(|l| l.id == layer)
-        .expect("tooltip debug layer info");
-
-    assert!(info.visible);
-    assert!(!info.blocks_underlay_input);
-    assert!(!info.hit_testable);
-    assert!(!info.wants_pointer_down_outside_events);
-    assert!(!info.wants_pointer_move_events);
+    run_tooltip_observer_fixture("default_no_observers");
 }
 
 #[test]
 fn tooltip_does_not_request_observers_while_closing() {
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-
-    let _open = app.models_mut().insert(false);
-
-    let mut services = FakeServices;
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        fret_core::Size::new(Px(300.0), Px(200.0)),
-    );
-
-    // Base root (required so the window exists and rendering can proceed).
-    begin_frame(&mut app, window);
-    let base = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "base",
-        |_| Vec::new(),
-    );
-    ui.set_root(base);
-
-    // Install a tooltip layer that is still present but non-interactive (closing animation).
-    begin_frame(&mut app, window);
-    let id = GlobalElementId(0xdead);
-    let open = app.models_mut().insert(false);
-    let handler: fret_ui::action::OnDismissRequest = Arc::new(|_host, _cx, _req| {});
-    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
-        Arc::new(|_host, _cx, _move| false);
-    request_tooltip_for_window(
-        &mut app,
-        window,
-        TooltipRequest {
-            id,
-            root_name: tooltip_root_name(id),
-            interactive: false,
-            trigger: Some(id),
-            open: open.clone(),
-            present: true,
-            on_dismiss_request: Some(handler),
-            on_pointer_move: Some(on_pointer_move),
-            children: Vec::new(),
-        },
-    );
-
-    render(&mut ui, &mut app, &mut services, window, bounds);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let layer = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
-            overlays.tooltips.get(&(window, id)).map(|t| t.layer)
-        })
-        .expect("tooltip layer");
-
-    let info = ui
-        .debug_layers_in_paint_order()
-        .into_iter()
-        .find(|l| l.id == layer)
-        .expect("tooltip debug layer info");
-
-    assert!(info.visible);
-    assert!(!info.blocks_underlay_input);
-    assert!(!info.hit_testable);
-    assert!(!info.wants_pointer_down_outside_events);
-    assert!(!info.wants_pointer_move_events);
+    run_tooltip_observer_fixture("closing_handlers_do_not_install_observers");
 }

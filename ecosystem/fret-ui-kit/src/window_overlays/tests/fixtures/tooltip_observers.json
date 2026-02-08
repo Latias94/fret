@@ -1,0 +1,33 @@
+[
+  {
+    "name": "default_no_observers",
+    "open": true,
+    "interactive": true,
+    "trigger": true,
+    "has_dismiss_request": false,
+    "has_pointer_move": false,
+    "expect_wants_pointer_down_outside_events": false,
+    "expect_wants_pointer_move_events": false
+  },
+  {
+    "name": "closing_open_false_even_if_interactive",
+    "open": false,
+    "interactive": true,
+    "trigger": false,
+    "has_dismiss_request": false,
+    "has_pointer_move": false,
+    "expect_wants_pointer_down_outside_events": false,
+    "expect_wants_pointer_move_events": false
+  },
+  {
+    "name": "closing_handlers_do_not_install_observers",
+    "open": false,
+    "interactive": false,
+    "trigger": true,
+    "has_dismiss_request": true,
+    "has_pointer_move": true,
+    "expect_wants_pointer_down_outside_events": false,
+    "expect_wants_pointer_move_events": false
+  }
+]
+

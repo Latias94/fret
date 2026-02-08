@@ -450,6 +450,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs`
     - `ecosystem/fret-ui-kit/src/window_overlays/tests/tooltip.rs`
     - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
+    - `ecosystem/fret-ui-kit/src/window_overlays/tests/fixtures/tooltip_observers.json`
 
 - [ ] BU-FR-eco-044 L0 audit `fret-ui-shadcn`, and plan conversion of huge web-vs-fret conformance sources into data-driven harnesses.
   - Targets:
