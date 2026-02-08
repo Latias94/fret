@@ -501,6 +501,26 @@ where
         self.build_location(route, params, crate::SearchMap::new(), None)
     }
 
+    pub fn href_to(
+        &self,
+        route: &R,
+        params: &[crate::PathParam],
+        search: crate::SearchMap,
+        fragment: Option<String>,
+    ) -> Result<String, RouterBuildLocationError> {
+        Ok(self
+            .build_location(route, params, search, fragment)?
+            .to_url())
+    }
+
+    pub fn href_to_route(
+        &self,
+        route: &R,
+        params: &[crate::PathParam],
+    ) -> Result<String, RouterBuildLocationError> {
+        Ok(self.build_location_for_route(route, params)?.to_url())
+    }
+
     fn route_before_load_decision(
         &self,
         cause: RouterTransitionCause,
@@ -1491,6 +1511,50 @@ mod tests {
                 super::RouterBuildLocationError::MissingPathParams
             )
         ));
+    }
+
+    #[test]
+    fn router_href_to_formats_path_and_stabilizes_search() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            User,
+        }
+
+        fn validate_root(
+            _location: &RouteLocation,
+            search: &SearchMap,
+        ) -> Result<SearchMap, SearchValidationError> {
+            Ok(search.clone().with("lang", Some("en".to_string())))
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::User, "users/:id").unwrap()]),
+        ));
+
+        let mut search_table = RouteSearchTable::new();
+        search_table.insert(RouteId::Root, validate_root);
+        let search_table = Arc::new(search_table);
+
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        let href = router
+            .href_to(
+                &RouteId::User,
+                &[PathParam {
+                    name: "id".to_string(),
+                    value: "42".to_string(),
+                }],
+                SearchMap::new().with_typed("debug", Some(true)),
+                Some("section-1".to_string()),
+            )
+            .expect("href_to should succeed");
+
+        assert_eq!(href, "/users/42?debug=true&lang=en#section-1");
     }
 
     #[test]
