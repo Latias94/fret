@@ -184,6 +184,12 @@ Undo/redo:
 - Fold regions + placeholder rendering.
 - Inlays (e.g. type hints) as injected display fragments.
 
+Decision note (v1 + current v2 direction):
+
+- While inline IME preedit is active, fold placeholders and inlays are suppressed (do not compose).
+- Revisit composition only after preedit is modeled as a first-class injected display fragment and the DisplayMap can compose
+  multiple fragment sources under a single, deterministic buffer↔display↔a11y mapping surface.
+
 ### Phase 3: “Composable rows / embedded widgets (if required)”
 
 - Adopt ADR 0192 retained windowed hosts for composable per-row subtrees (when needed).
