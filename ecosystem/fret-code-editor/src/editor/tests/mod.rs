@@ -51,6 +51,7 @@ fn replace_buffer_resets_state() {
                 RowTextCacheEntry {
                     text: Arc::from("hello"),
                     range: 0..5,
+                    fold_map: None,
                 },
                 1,
             ),
@@ -63,6 +64,7 @@ fn replace_buffer_resets_state() {
                     row_range: 0..5,
                     blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![(0, Px(0.0))],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: None,
@@ -164,6 +166,7 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
         row_range: 0..buffer.len_bytes(),
         blob: fret_core::TextBlobId::default(),
         caret_stops: Vec::new(),
+        fold_map: None,
         caret_rect_top: None,
         caret_rect_height: None,
         preedit: Some(RowPreeditMapping {
@@ -182,6 +185,93 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     // After the injected preedit shifts by `preedit_len`.
     assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
     assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
+}
+
+#[test]
+fn row_fold_map_maps_between_buffer_and_display() {
+    let map = geom::RowFoldMap::new(vec![geom::RowFoldSpan {
+        buffer_range: 1..4,
+        // U+2026 is 3 bytes in UTF-8, so a placeholder "…" at offset 1 occupies [1,4).
+        display_range: 1..4,
+    }]);
+
+    assert_eq!(map.buffer_local_to_display_local(0), 0);
+    assert_eq!(map.buffer_local_to_display_local(1), 1);
+    assert_eq!(map.buffer_local_to_display_local(2), 1);
+    assert_eq!(map.buffer_local_to_display_local(3), 1);
+    assert_eq!(map.buffer_local_to_display_local(4), 4);
+    assert_eq!(map.buffer_local_to_display_local(5), 5);
+
+    assert_eq!(map.display_local_to_buffer_local(0), 0);
+    assert_eq!(map.display_local_to_buffer_local(1), 1);
+    assert_eq!(map.display_local_to_buffer_local(2), 1);
+    assert_eq!(map.display_local_to_buffer_local(3), 1);
+    assert_eq!(map.display_local_to_buffer_local(4), 4);
+    assert_eq!(map.display_local_to_buffer_local(5), 5);
+}
+
+#[test]
+fn row_fold_map_handles_inlay_insertions() {
+    let map = geom::RowFoldMap::new(vec![geom::RowFoldSpan {
+        buffer_range: 2..2,
+        display_range: 2..6,
+    }]);
+
+    assert_eq!(map.buffer_local_to_display_local(2), 2);
+    assert_eq!(map.buffer_local_to_display_local(3), 7);
+
+    assert_eq!(map.display_local_to_buffer_local(2), 2);
+    assert_eq!(map.display_local_to_buffer_local(3), 2);
+    assert_eq!(map.display_local_to_buffer_local(6), 2);
+    assert_eq!(map.display_local_to_buffer_local(7), 3);
+}
+
+#[test]
+fn caret_left_right_skips_folded_ranges() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        input::move_caret_right(&mut st, false);
+        assert_eq!(st.selection.caret(), 4);
+
+        input::move_caret_left(&mut st, false);
+        assert_eq!(st.selection.caret(), 1);
+    }
+}
+
+#[test]
+fn enabling_folds_snaps_caret_out_of_folded_range() {
+    let handle = CodeEditorHandle::new("abcdef");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+    }
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.caret(), 1);
 }
 
 #[test]
@@ -208,6 +298,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: None,
@@ -228,6 +319,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: None,
@@ -248,6 +340,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
                         (3, Px(30.0)),
                         (4, Px(40.0)),
                     ],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: None,
@@ -289,6 +382,7 @@ fn row_geom_cache_is_shifted_across_single_line_soft_wrap_edits() {
                         row_range: range.clone(),
                         blob: fret_core::TextBlobId::default(),
                         caret_stops: vec![(0, Px(0.0))],
+                        fold_map: None,
                         caret_rect_top: None,
                         caret_rect_height: None,
                         preedit: None,
@@ -373,6 +467,7 @@ fn row_geom_cache_is_byte_shifted_for_single_line_non_wrap_edits() {
                         row_range: range.clone(),
                         blob: fret_core::TextBlobId::default(),
                         caret_stops: vec![(0, Px(0.0))],
+                        fold_map: None,
                         caret_rect_top: None,
                         caret_rect_height: None,
                         preedit: None,
@@ -552,6 +647,7 @@ fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
                     row_range: 0..3,
                     blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: Some(RowPreeditMapping {
@@ -588,6 +684,7 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
                     row_range: 0..3,
                     blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![(0, Px(0.0)), (1, Px(100.0)), (2, Px(200.0)), (3, Px(300.0))],
+                    fold_map: None,
                     caret_rect_top: None,
                     caret_rect_height: None,
                     preedit: Some(RowPreeditMapping {

@@ -12,22 +12,26 @@ use std::ops::Range;
 use std::sync::Arc;
 
 mod folds;
+mod inlays;
 
 pub use folds::{
-    FoldSpan, FoldSpanError, folded_byte_to_col, folded_col_count, folded_col_to_byte,
-    validate_fold_spans,
+    FoldSpan, FoldSpanError, apply_fold_spans, folded_byte_to_col, folded_col_count,
+    folded_col_to_byte, validate_fold_spans,
 };
+pub use inlays::{InlaySpan, InlaySpanError, apply_inlay_spans, validate_inlay_spans};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DisplayRowFragment {
     Buffer { range: Range<usize> },
     Placeholder { text: Arc<str>, maps_to: usize },
+    Inlay { text: Arc<str>, maps_to: usize },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DisplayRowFragmentsError {
     UnsupportedWithWrap,
     InvalidFoldSpans(FoldSpanError),
+    InvalidInlaySpans(InlaySpanError),
     MissingLineText,
 }
 
@@ -253,6 +257,98 @@ impl DisplayMap {
                 range: cursor..line_range.end,
             });
         }
+        Ok(out)
+    }
+
+    /// Return display-row text fragments for unwrapped mapping, including fold placeholders and
+    /// injected inlay text (ADR 0200).
+    ///
+    /// This is intentionally restricted to the unwrapped baseline until we define the combined
+    /// wrap+fold/inlay semantics.
+    pub fn display_row_fragments_unwrapped_with_inlays(
+        &self,
+        buf: &TextBuffer,
+        display_row: usize,
+        folds: &[FoldSpan],
+        inlays: &[InlaySpan],
+    ) -> Result<Vec<DisplayRowFragment>, DisplayRowFragmentsError> {
+        if self.wrap_cols.is_some() {
+            return Err(DisplayRowFragmentsError::UnsupportedWithWrap);
+        }
+
+        if self.row_to_line.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let row = display_row.min(self.row_to_line.len().saturating_sub(1));
+        let line = self.row_to_line[row];
+        let Some(line_range) = buf.line_byte_range(line) else {
+            return Ok(Vec::new());
+        };
+
+        let Some(line_text) = buf.line_text(line) else {
+            return Err(DisplayRowFragmentsError::MissingLineText);
+        };
+        validate_fold_spans(&line_text, folds)
+            .map_err(DisplayRowFragmentsError::InvalidFoldSpans)?;
+        validate_inlay_spans(&line_text, inlays)
+            .map_err(DisplayRowFragmentsError::InvalidInlaySpans)?;
+
+        let mut out = Vec::<DisplayRowFragment>::new();
+
+        let mut fold_idx = 0usize;
+        let mut inlay_idx = 0usize;
+        let mut cursor = 0usize;
+
+        while cursor < line_text.len() || fold_idx < folds.len() || inlay_idx < inlays.len() {
+            let next_fold = folds.get(fold_idx).map(|s| s.range.start);
+            let next_inlay = inlays.get(inlay_idx).map(|s| s.byte);
+            let next = match (next_fold, next_inlay) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            }
+            .unwrap_or(line_text.len());
+
+            if cursor < next {
+                out.push(DisplayRowFragment::Buffer {
+                    range: line_range.start.saturating_add(cursor)
+                        ..line_range.start.saturating_add(next),
+                });
+                cursor = next;
+                continue;
+            }
+
+            if let Some(inlay) = inlays.get(inlay_idx)
+                && inlay.byte == cursor
+            {
+                out.push(DisplayRowFragment::Inlay {
+                    text: Arc::clone(&inlay.text),
+                    maps_to: line_range.start.saturating_add(inlay.byte),
+                });
+                inlay_idx = inlay_idx.saturating_add(1);
+                continue;
+            }
+
+            if let Some(fold) = folds.get(fold_idx)
+                && fold.range.start == cursor
+            {
+                let start = cursor;
+                let end = fold.range.end.min(line_text.len()).max(start);
+                out.push(DisplayRowFragment::Placeholder {
+                    text: Arc::clone(&fold.placeholder),
+                    maps_to: line_range.start.saturating_add(start),
+                });
+                cursor = end;
+                fold_idx = fold_idx.saturating_add(1);
+                continue;
+            }
+
+            // If we reach here, we failed to make progress (should be unreachable after validation).
+            break;
+        }
+
         Ok(out)
     }
 
@@ -650,6 +746,9 @@ mod display_map_tests {
                 DisplayRowFragment::Placeholder { text, .. } => {
                     out.push_str(text.as_ref());
                 }
+                DisplayRowFragment::Inlay { text, .. } => {
+                    out.push_str(text.as_ref());
+                }
             }
         }
         out
@@ -736,6 +835,42 @@ mod display_map_tests {
             fragments,
             vec![
                 DisplayRowFragment::Buffer { range: 0..1 },
+                DisplayRowFragment::Placeholder {
+                    text: std::sync::Arc::<str>::from("…"),
+                    maps_to: 1,
+                },
+                DisplayRowFragment::Buffer { range: 4..6 },
+            ]
+        );
+    }
+
+    #[test]
+    fn display_row_fragments_unwrapped_with_inlays_inserts_inlay_fragments() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef\n".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, None);
+
+        let folds = vec![FoldSpan {
+            range: 1..4,
+            placeholder: std::sync::Arc::<str>::from("…"),
+        }];
+        let inlays = vec![InlaySpan {
+            byte: 1,
+            text: std::sync::Arc::<str>::from("<inlay>"),
+        }];
+
+        let fragments = map
+            .display_row_fragments_unwrapped_with_inlays(&buf, 0, &folds, &inlays)
+            .expect("fragments");
+        assert_eq!(fragments_to_string(&buf, &fragments), "a<inlay>…ef");
+        assert_eq!(
+            fragments,
+            vec![
+                DisplayRowFragment::Buffer { range: 0..1 },
+                DisplayRowFragment::Inlay {
+                    text: std::sync::Arc::<str>::from("<inlay>"),
+                    maps_to: 1,
+                },
                 DisplayRowFragment::Placeholder {
                     text: std::sync::Arc::<str>::from("…"),
                     maps_to: 1,

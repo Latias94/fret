@@ -150,6 +150,42 @@ pub fn folded_col_to_byte(text: &str, spans: &[FoldSpan], col: usize) -> usize {
     cursor.saturating_add(offset).min(text.len())
 }
 
+/// Apply fold spans to a line of text, replacing each folded range with its placeholder.
+///
+/// This is a pure helper (no buffer access). Callers should validate fold spans first if they
+/// need a structured error.
+pub fn apply_fold_spans(text: &str, spans: &[FoldSpan]) -> Result<String, FoldSpanError> {
+    validate_fold_spans(text, spans)?;
+
+    let mut removed = 0usize;
+    let mut added = 0usize;
+    for span in spans {
+        removed = removed.saturating_add(span.range.end.saturating_sub(span.range.start));
+        added = added.saturating_add(span.placeholder.len());
+    }
+    let cap = text
+        .len()
+        .saturating_sub(removed)
+        .saturating_add(added)
+        .max(1);
+    let mut out = String::with_capacity(cap);
+
+    let mut cursor = 0usize;
+    for span in spans {
+        let start = span.range.start.min(text.len());
+        let end = span.range.end.min(text.len()).max(start);
+        if cursor < start {
+            out.push_str(&text[cursor..start]);
+        }
+        out.push_str(span.placeholder.as_ref());
+        cursor = end;
+    }
+    if cursor < text.len() {
+        out.push_str(&text[cursor..]);
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,5 +261,15 @@ mod tests {
             validate_fold_spans(text, &spans),
             Err(FoldSpanError::NotSortedOrOverlapping)
         );
+    }
+
+    #[test]
+    fn apply_fold_spans_builds_folded_text() {
+        let text = "abcdef";
+        let spans = vec![FoldSpan {
+            range: 1..4,
+            placeholder: Arc::<str>::from("…"),
+        }];
+        assert_eq!(apply_fold_spans(text, &spans).unwrap(), "a…ef");
     }
 }

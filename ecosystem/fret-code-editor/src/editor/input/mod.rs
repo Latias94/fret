@@ -499,7 +499,8 @@ pub(super) fn delete_forward(st: &mut CodeEditorState) {
 
 pub(super) fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = st.buffer.prev_char_boundary(caret);
+    let mut new = st.buffer.prev_char_boundary(caret);
+    new = clamp_byte_out_of_folds(st, new, FoldSnap::Start);
     st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
@@ -513,7 +514,8 @@ pub(super) fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
 
 pub(super) fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = st.buffer.next_char_boundary(caret);
+    let mut new = st.buffer.next_char_boundary(caret);
+    new = clamp_byte_out_of_folds(st, new, FoldSnap::End);
     st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
@@ -547,6 +549,11 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
         && geom.preedit.is_some() == st.preedit.is_some()
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
+        let local = geom
+            .fold_map
+            .as_ref()
+            .map(|m| m.display_local_to_buffer_local(local))
+            .unwrap_or(local);
         let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
         st.buffer
             .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()))
@@ -558,6 +565,7 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
         st.display_map
             .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col))
     };
+    let next = clamp_byte_out_of_folds(st, next, FoldSnap::Start);
     if extend {
         st.selection.focus = next;
     } else {
@@ -613,7 +621,8 @@ pub(super) fn apply_and_record_edit(
         && before_wrap_cols == st.display_wrap_cols
         && delta.lines.old_count == 1
         && delta.lines.new_count == 1
-        && delta.lines.start == before_line;
+        && delta.lines.start == before_line
+        && st.line_folds.is_empty();
     if can_shift_row_geom_cache {
         let after_line_rows = st.display_map.line_display_row_range(before_line);
         if after_line_rows.start == before_line_rows.start {
@@ -636,6 +645,7 @@ pub(super) fn apply_and_record_edit(
     }
     st.row_geom_cache_rev = st.buffer.revision();
     st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+    st.row_geom_cache_folds_epoch = st.folds_epoch;
 
     let (buffer_tx, inverse_selection, coalesce_key) = {
         let group = st.undo_group.as_ref().expect("undo group must exist");
@@ -769,6 +779,7 @@ pub(super) fn undo(st: &mut CodeEditorState) -> bool {
         st.refresh_display_map();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -807,6 +818,7 @@ pub(super) fn redo(st: &mut CodeEditorState) -> bool {
         st.refresh_display_map();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -842,6 +854,11 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
     } else {
         move_word_right_in_buffer(&st.buffer, caret, mode)
     };
+    let next = if dir < 0 {
+        clamp_byte_out_of_folds(st, next, FoldSnap::Start)
+    } else {
+        clamp_byte_out_of_folds(st, next, FoldSnap::End)
+    };
 
     if extend {
         if st.selection.is_caret() {
@@ -856,6 +873,78 @@ pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> boo
     }
     st.preedit = None;
     true
+}
+
+pub(super) fn clamp_selection_out_of_folds(st: &mut CodeEditorState) {
+    if st.display_wrap_cols.is_some() || st.preedit.is_some() || st.line_folds.is_empty() {
+        return;
+    }
+
+    if st.selection.is_caret() {
+        let caret = st.selection.caret().min(st.buffer.len_bytes());
+        let caret = clamp_byte_out_of_folds(st, caret, FoldSnap::Start);
+        st.selection = Selection {
+            anchor: caret,
+            focus: caret,
+        };
+        return;
+    }
+
+    let normalized = st.selection.normalized();
+    let start = clamp_byte_out_of_folds(st, normalized.start, FoldSnap::Start);
+    let end = clamp_byte_out_of_folds(st, normalized.end, FoldSnap::End);
+    let (anchor, focus) = if st.selection.anchor <= st.selection.focus {
+        (start, end)
+    } else {
+        (end, start)
+    };
+    st.selection.anchor = anchor;
+    st.selection.focus = focus;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FoldSnap {
+    Start,
+    End,
+}
+
+fn clamp_byte_out_of_folds(st: &CodeEditorState, byte: usize, snap: FoldSnap) -> usize {
+    if st.display_wrap_cols.is_some() || st.preedit.is_some() || st.line_folds.is_empty() {
+        return byte;
+    }
+
+    let line = st.buffer.line_index_at_byte(byte);
+    let Some(folds) = st.line_folds.get(&line) else {
+        return byte;
+    };
+
+    let Some(line_range) = st.buffer.line_byte_range(line) else {
+        return byte;
+    };
+    if byte <= line_range.start || byte >= line_range.end {
+        return byte;
+    }
+
+    let Some(line_text) = st.buffer.line_text(line) else {
+        return byte;
+    };
+    if fret_code_editor_view::validate_fold_spans(&line_text, folds.as_ref()).is_err() {
+        return byte;
+    }
+
+    let local = byte.saturating_sub(line_range.start);
+    for span in folds.iter() {
+        let start = span.range.start;
+        let end = span.range.end.max(start);
+        if local > start && local < end {
+            return match snap {
+                FoldSnap::Start => line_range.start.saturating_add(start),
+                FoldSnap::End => line_range.start.saturating_add(end),
+            };
+        }
+    }
+
+    byte
 }
 
 pub(super) fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool {

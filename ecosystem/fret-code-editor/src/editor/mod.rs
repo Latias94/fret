@@ -9,8 +9,8 @@ use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, move_word_left_in_buffer, move_word_right_in_buffer,
-    select_word_range_in_buffer,
+    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, move_word_left_in_buffer,
+    move_word_right_in_buffer, select_word_range_in_buffer,
 };
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
@@ -252,13 +252,21 @@ struct CodeEditorState {
     drag_autoscroll_viewport_pos: Option<fret_core::Point>,
     last_bounds: Option<Rect>,
     cache_stats: CodeEditorCacheStats,
+    line_folds: HashMap<usize, Arc<[FoldSpan]>>,
+    folds_epoch: u64,
+    line_inlays: HashMap<usize, Arc<[InlaySpan]>>,
+    inlays_epoch: u64,
     row_text_cache_rev: fret_code_editor_buffer::Revision,
     row_text_cache_wrap_cols: Option<usize>,
+    row_text_cache_folds_epoch: u64,
+    row_text_cache_inlays_epoch: u64,
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (RowTextCacheEntry, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
     row_geom_cache_rev: fret_code_editor_buffer::Revision,
     row_geom_cache_wrap_cols: Option<usize>,
+    row_geom_cache_folds_epoch: u64,
+    row_geom_cache_inlays_epoch: u64,
     row_geom_cache_tick: u64,
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
@@ -282,6 +290,7 @@ struct CodeEditorState {
 struct RowTextCacheEntry {
     text: Arc<str>,
     range: Range<usize>,
+    fold_map: Option<geom::RowFoldMap>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -331,13 +340,21 @@ impl CodeEditorHandle {
                 drag_autoscroll_viewport_pos: None,
                 last_bounds: None,
                 cache_stats: CodeEditorCacheStats::default(),
+                line_folds: HashMap::new(),
+                folds_epoch: 0,
+                line_inlays: HashMap::new(),
+                inlays_epoch: 0,
                 row_text_cache_rev: fret_code_editor_buffer::Revision(0),
                 row_text_cache_wrap_cols: None,
+                row_text_cache_folds_epoch: 0,
+                row_text_cache_inlays_epoch: 0,
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
                 row_geom_cache_rev: fret_code_editor_buffer::Revision(0),
                 row_geom_cache_wrap_cols: None,
+                row_geom_cache_folds_epoch: 0,
+                row_geom_cache_inlays_epoch: 0,
                 row_geom_cache_tick: 0,
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
@@ -448,6 +465,102 @@ impl CodeEditorHandle {
         st.undo_group = None;
     }
 
+    pub fn set_line_folds(&self, line: usize, spans: Vec<FoldSpan>) {
+        let mut st = self.state.borrow_mut();
+        if spans.is_empty() {
+            st.line_folds.remove(&line);
+        } else {
+            st.line_folds.insert(line, Arc::from(spans));
+        }
+        st.folds_epoch = st.folds_epoch.saturating_add(1);
+        input::clamp_selection_out_of_folds(&mut st);
+
+        st.row_text_cache_folds_epoch = st.folds_epoch;
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+        st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
+
+    pub fn clear_all_folds(&self) {
+        let mut st = self.state.borrow_mut();
+        if st.line_folds.is_empty() {
+            return;
+        }
+        st.line_folds.clear();
+        st.folds_epoch = st.folds_epoch.saturating_add(1);
+        input::clamp_selection_out_of_folds(&mut st);
+
+        st.row_text_cache_folds_epoch = st.folds_epoch;
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+        st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
+
+    pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
+        let mut st = self.state.borrow_mut();
+        if spans.is_empty() {
+            st.line_inlays.remove(&line);
+        } else {
+            st.line_inlays.insert(line, Arc::from(spans));
+        }
+        st.inlays_epoch = st.inlays_epoch.saturating_add(1);
+        input::clamp_selection_out_of_folds(&mut st);
+
+        st.row_text_cache_inlays_epoch = st.inlays_epoch;
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+        st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+
+        st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
+
+    pub fn clear_all_inlays(&self) {
+        let mut st = self.state.borrow_mut();
+        if st.line_inlays.is_empty() {
+            return;
+        }
+        st.line_inlays.clear();
+        st.inlays_epoch = st.inlays_epoch.saturating_add(1);
+        input::clamp_selection_out_of_folds(&mut st);
+
+        st.row_text_cache_inlays_epoch = st.inlays_epoch;
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+        st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+
+        st.row_geom_cache_inlays_epoch = st.inlays_epoch;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
+
+    pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
+        let mut st = self.state.borrow_mut();
+        if st.display_wrap_cols.is_some() || st.preedit.is_some() {
+            return None;
+        }
+        let row = st.display_map.line_first_display_row(line);
+        let (_, text, _) = paint::cached_row_text_with_range(&mut st, row, 64);
+        Some(text.as_ref().to_string())
+    }
+
     pub fn replace_buffer(&self, buffer: TextBuffer) {
         let mut st = self.state.borrow_mut();
         st.buffer = buffer;
@@ -460,13 +573,21 @@ impl CodeEditorHandle {
         st.drag_pointer = None;
         st.last_bounds = None;
         st.cache_stats = CodeEditorCacheStats::default();
+        st.line_folds.clear();
+        st.folds_epoch = st.folds_epoch.saturating_add(1);
+        st.line_inlays.clear();
+        st.inlays_epoch = st.inlays_epoch.saturating_add(1);
         st.refresh_display_map();
         st.row_text_cache_rev = st.buffer.revision();
+        st.row_text_cache_folds_epoch = st.folds_epoch;
+        st.row_text_cache_inlays_epoch = st.inlays_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_inlays_epoch = st.inlays_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -514,9 +635,12 @@ impl CodeEditorHandle {
         }
         st.display_wrap_cols = cols;
         st.refresh_display_map();
+        input::clamp_selection_out_of_folds(&mut st);
         st.caret_preferred_x = None;
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_folds_epoch = st.folds_epoch;
+        st.row_geom_cache_inlays_epoch = st.inlays_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -604,6 +728,7 @@ impl CodeEditor {
         let cell_w = cx.with_state(|| Cell::new(Px(0.0)), |c| c.clone());
         let scroll_dir = cx.with_state(|| Cell::new(1i32), |c| c.clone());
 
+        let handle = self.handle.clone();
         let editor_state = self.handle.state.clone();
         let overscan = self.overscan;
         let torture = self.torture;
@@ -635,11 +760,8 @@ impl CodeEditor {
                 a11y_text_selection,
                 a11y_text_composition,
             ) = {
+                handle.set_soft_wrap_cols(soft_wrap_cols);
                 let mut st = editor_state.borrow_mut();
-                if st.display_wrap_cols != soft_wrap_cols {
-                    st.display_wrap_cols = soft_wrap_cols;
-                    st.refresh_display_map();
-                }
                 let content_len = st.display_map.row_count();
                 let inherited_mode = cx
                     .app
