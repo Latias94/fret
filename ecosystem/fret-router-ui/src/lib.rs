@@ -18,8 +18,9 @@ use fret_router::{
 };
 use fret_runtime::{CommandId, Effect};
 use fret_runtime::{Model, WeakModel};
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
+use fret_ui::element::PressableProps;
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -268,6 +269,40 @@ where
             host.request_redraw(window);
         })
     }
+
+    pub fn prefetch_link_on_hover_change(&self, link: RouterLink) -> OnHoverChange {
+        let window = self.window;
+        let router: WeakModel<Router<R, H>> = self.router.downgrade();
+        let intents: WeakModel<Vec<RoutePrefetchIntent<R>>> = self.intents.downgrade();
+        Arc::new(move |host, _cx, hovered| {
+            if !hovered {
+                return;
+            }
+
+            let Some(router) = router.upgrade() else {
+                return;
+            };
+            let Some(intents_model) = intents.upgrade() else {
+                return;
+            };
+
+            let to = link.to.clone();
+            let result = host
+                .models_mut()
+                .update(&router, |router| router.prefetch_intents_for_location(&to));
+
+            let Ok(result) = result else {
+                return;
+            };
+            let Ok(intents) = result else {
+                host.request_redraw(window);
+                return;
+            };
+
+            let _ = host.models_mut().update(&intents_model, |v| *v = intents);
+            host.request_redraw(window);
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -310,6 +345,27 @@ where
         .get_model_cloned(snapshot, Invalidation::Layout)
         .expect("router snapshot model should be readable");
     render(cx, &snap)
+}
+
+pub fn router_link<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let on_activate = store.navigate_link_on_activate(link.clone());
+    let on_hover = store.prefetch_link_on_hover_change(link);
+    let children: Vec<AnyElement> = children.into_iter().collect();
+
+    cx.pressable_with_id_props(|cx, _state, _id| {
+        cx.pressable_on_activate(on_activate);
+        cx.pressable_on_hover_change(on_hover);
+        (PressableProps::default(), children)
+    })
 }
 
 #[cfg(test)]
