@@ -64,6 +64,7 @@ Rationale:
 Start with:
 
 - a canonical `SearchMap` representation (stable ordering, duplicate keys preserved)
+- a lightweight typed codec seam (`SearchValue`) that apps can implement for enums/newtypes
 - per-route `validate_search` hooks that return either:
   - a validated/stabilized `SearchMap`, or
   - a route-specific typed view wrapper (manual impl)

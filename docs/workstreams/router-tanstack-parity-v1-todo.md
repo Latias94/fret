@@ -36,6 +36,8 @@ Status legend:
 ## Phase 2 - Search validation and stabilization
 
 - `[x]` Define canonical `SearchMap` representation (stable + duplicates preserved).
+- `[x]` Add lightweight typed search helpers:
+  - `SearchValue` + `SearchMap::{first_typed, values_typed, with_typed}`
 - `[x]` Add per-route `validate_search(parent_search, raw_search)` hook.
 - `[x]` Define error handling policy:
   - “throw” vs “recover with raw search” (TanStack has both)
