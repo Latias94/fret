@@ -55,6 +55,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, textarea geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_textarea_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_textarea_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, switch + radio-group layout):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_switch_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_radio_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
