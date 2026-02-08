@@ -107,8 +107,9 @@ Conventions:
   - [ ] perf thresholds,
   - [ ] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
-  - [ ] hovered node summary + bounds,
-  - [ ] focus node summary,
+  - [x] hover events (`inspect.hover`) with node id + selector JSON,
+  - [x] focus events (`inspect.focus`) with summary + path (best-effort),
+  - [ ] hovered node bounds + viewport overlay hooks,
   - [ ] overlay barrier root id + blocking roots summary.
 - [ ] Add at least one “dogfood” demo workflow:
   - [ ] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
