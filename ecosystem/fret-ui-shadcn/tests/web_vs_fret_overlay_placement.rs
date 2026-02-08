@@ -27,6 +27,51 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Deserialize)]
+struct FixtureSuite<T> {
+    schema_version: u32,
+    cases: Vec<T>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SonnerToastKind {
+    Message,
+    Success,
+    Info,
+    Warning,
+    Error,
+    Promise,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SonnerToastCase {
+    id: String,
+    web_name: String,
+    kind: SonnerToastKind,
+    title: String,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    action_label: Option<String>,
+    #[serde(default)]
+    action_command: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum OverlayPlacementSmokeRecipe {
+    PopoverDemo,
+    DatePickerDemo,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct OverlayPlacementSmokeCase {
+    id: String,
+    web_name: String,
+    recipe: OverlayPlacementSmokeRecipe,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
 }
@@ -6115,155 +6160,85 @@ fn assert_viewport_anchored_overlay_placement_matches(
 }
 
 #[test]
-fn web_vs_fret_popover_demo_overlay_placement_matches() {
-    assert_overlay_placement_matches(
-        "popover-demo",
-        Some("dialog"),
-        |cx, open| {
-            fret_ui_shadcn::Popover::new(open.clone()).into_element(
-                cx,
-                |cx| {
-                    fret_ui_shadcn::Button::new("Open popover")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .into_element(cx)
-                },
-                |cx| {
-                    let content = fret_ui_shadcn::PopoverContent::new(Vec::new())
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .w_px(Px(320.0))
-                                .h_px(Px(245.33334)),
+fn web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/overlay_placement_smoke_cases_v1.json"
+    ));
+    let suite: FixtureSuite<OverlayPlacementSmokeCase> =
+        serde_json::from_str(raw).expect("overlay placement smoke fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
+
+    for case in suite.cases {
+        match case.recipe {
+            OverlayPlacementSmokeRecipe::PopoverDemo => {
+                assert_overlay_placement_matches(
+                    &case.web_name,
+                    Some("dialog"),
+                    |cx, open| {
+                        fret_ui_shadcn::Popover::new(open.clone()).into_element(
+                            cx,
+                            |cx| {
+                                fret_ui_shadcn::Button::new("Open popover")
+                                    .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                                    .into_element(cx)
+                            },
+                            |cx| {
+                                let content = fret_ui_shadcn::PopoverContent::new(Vec::new())
+                                    .refine_layout(
+                                        fret_ui_kit::LayoutRefinement::default()
+                                            .w_px(Px(320.0))
+                                            .h_px(Px(245.33334)),
+                                    )
+                                    .into_element(cx);
+                                if case.web_name == "popover-demo"
+                                    && std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
+                                        .ok()
+                                        .is_some_and(|v| v == "1")
+                                {
+                                    eprintln!(
+                                        "popover-demo content container px size={:?}",
+                                        first_container_px_size(&content)
+                                    );
+                                }
+                                content
+                            },
                         )
-                        .into_element(cx);
-                    if std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
-                        .ok()
-                        .is_some_and(|v| v == "1")
-                    {
-                        eprintln!(
-                            "popover-demo content container px size={:?}",
-                            first_container_px_size(&content)
-                        );
-                    }
-                    content
-                },
-            )
-        },
-        SemanticsRole::Button,
-        Some("Open popover"),
-        SemanticsRole::Dialog,
-    );
-}
+                    },
+                    SemanticsRole::Button,
+                    Some("Open popover"),
+                    SemanticsRole::Dialog,
+                );
+            }
+            OverlayPlacementSmokeRecipe::DatePickerDemo => {
+                assert_overlay_placement_matches(
+                    &case.web_name,
+                    Some("dialog"),
+                    |cx, open| {
+                        use fret_ui_headless::calendar::CalendarMonth;
+                        use fret_ui_kit::{LayoutRefinement, MetricRef};
+                        use time::Month;
 
-#[test]
-fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
-    assert_overlay_placement_matches(
-        "popover-demo.vp1440x240",
-        Some("dialog"),
-        |cx, open| {
-            fret_ui_shadcn::Popover::new(open.clone()).into_element(
-                cx,
-                |cx| {
-                    fret_ui_shadcn::Button::new("Open popover")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .into_element(cx)
-                },
-                |cx| {
-                    fret_ui_shadcn::PopoverContent::new(Vec::new())
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .w_px(Px(320.0))
-                                .h_px(Px(245.33334)),
-                        )
-                        .into_element(cx)
-                },
-            )
-        },
-        SemanticsRole::Button,
-        Some("Open popover"),
-        SemanticsRole::Dialog,
-    );
-}
+                        let month: Model<CalendarMonth> = cx
+                            .app
+                            .models_mut()
+                            .insert(CalendarMonth::new(2026, Month::January));
+                        let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
-#[test]
-fn web_vs_fret_popover_demo_overlay_placement_matches_mobile_tiny_viewport() {
-    assert_overlay_placement_matches(
-        "popover-demo.vp375x240",
-        Some("dialog"),
-        |cx, open| {
-            fret_ui_shadcn::Popover::new(open.clone()).into_element(
-                cx,
-                |cx| {
-                    fret_ui_shadcn::Button::new("Open popover")
-                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                        .into_element(cx)
-                },
-                |cx| {
-                    fret_ui_shadcn::PopoverContent::new(Vec::new())
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .w_px(Px(320.0))
-                                .h_px(Px(245.33334)),
-                        )
-                        .into_element(cx)
-                },
-            )
-        },
-        SemanticsRole::Button,
-        Some("Open popover"),
-        SemanticsRole::Dialog,
-    );
-}
-
-#[test]
-fn web_vs_fret_date_picker_demo_open_overlay_placement_matches() {
-    assert_overlay_placement_matches(
-        "date-picker-demo",
-        Some("dialog"),
-        |cx, open| {
-            use fret_ui_headless::calendar::CalendarMonth;
-            use fret_ui_kit::{LayoutRefinement, MetricRef};
-            use time::Month;
-
-            let month: Model<CalendarMonth> = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::new(2026, Month::January));
-            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-
-            fret_ui_shadcn::DatePicker::new(open.clone(), month, selected)
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
-                .into_element(cx)
-        },
-        SemanticsRole::Button,
-        Some("Pick a date"),
-        SemanticsRole::Dialog,
-    );
-}
-
-#[test]
-fn web_vs_fret_date_picker_demo_open_overlay_placement_matches_mobile_tiny_viewport() {
-    assert_overlay_placement_matches(
-        "date-picker-demo.vp375x240",
-        Some("dialog"),
-        |cx, open| {
-            use fret_ui_headless::calendar::CalendarMonth;
-            use fret_ui_kit::{LayoutRefinement, MetricRef};
-            use time::Month;
-
-            let month: Model<CalendarMonth> = cx
-                .app
-                .models_mut()
-                .insert(CalendarMonth::new(2026, Month::January));
-            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
-
-            fret_ui_shadcn::DatePicker::new(open.clone(), month, selected)
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
-                .into_element(cx)
-        },
-        SemanticsRole::Button,
-        Some("Pick a date"),
-        SemanticsRole::Dialog,
-    );
+                        fret_ui_shadcn::DatePicker::new(open.clone(), month, selected)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
+                            )
+                            .into_element(cx)
+                    },
+                    SemanticsRole::Button,
+                    Some("Pick a date"),
+                    SemanticsRole::Dialog,
+                );
+            }
+        }
+    }
 }
 
 #[test]
@@ -24115,223 +24090,47 @@ fn assert_sonner_toast_rect_matches_web(
 }
 
 #[test]
-fn web_vs_fret_sonner_demo_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-demo");
-    assert_sonner_toast_rect_matches_web("sonner-demo", &web, |sonner, host, window| {
-        let _ = sonner.toast_message(
-            host,
-            window,
-            "Event has been created",
-            fret_ui_shadcn::ToastMessageOptions::new()
-                .description("Sunday, December 03, 2023 at 9:00 AM")
-                .action("Undo", "sonner.toast.undo"),
-        );
-    });
-}
+fn web_vs_fret_sonner_open_toast_rect_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/sonner_toast_open_cases_v1.json"
+    ));
+    let suite: FixtureSuite<SonnerToastCase> =
+        serde_json::from_str(raw).expect("sonner toast fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
 
-#[test]
-fn web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-demo.vp1440x240");
-    assert_sonner_toast_rect_matches_web("sonner-demo.vp1440x240", &web, |sonner, host, window| {
-        let _ = sonner.toast_message(
-            host,
-            window,
-            "Event has been created",
-            fret_ui_shadcn::ToastMessageOptions::new()
-                .description("Sunday, December 03, 2023 at 9:00 AM")
-                .action("Undo", "sonner.toast.undo"),
-        );
-    });
-}
+    for case in suite.cases {
+        let web = read_web_golden_open(&case.web_name);
+        assert_sonner_toast_rect_matches_web(&case.web_name, &web, move |sonner, host, window| {
+            let mut opts = fret_ui_shadcn::ToastMessageOptions::new();
+            if let Some(desc) = &case.description {
+                opts = opts.description(desc.clone());
+            }
+            if let (Some(label), Some(cmd)) = (&case.action_label, &case.action_command) {
+                opts = opts.action(label.clone(), fret_runtime::CommandId::new(cmd.clone()));
+            }
 
-#[test]
-fn web_vs_fret_sonner_types_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types");
-    assert_sonner_toast_rect_matches_web("sonner-types", &web, |sonner, host, window| {
-        let _ = sonner.toast_message(
-            host,
-            window,
-            "Event has been created",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_message(
-                host,
-                window,
-                "Event has been created",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_default_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.default");
-    assert_sonner_toast_rect_matches_web("sonner-types.default", &web, |sonner, host, window| {
-        let _ = sonner.toast_message(
-            host,
-            window,
-            "Event has been created",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_success_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.success");
-    assert_sonner_toast_rect_matches_web("sonner-types.success", &web, |sonner, host, window| {
-        let _ = sonner.toast_success_message(
-            host,
-            window,
-            "Event has been created",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_info_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.info");
-    assert_sonner_toast_rect_matches_web("sonner-types.info", &web, |sonner, host, window| {
-        let _ = sonner.toast_info_message(
-            host,
-            window,
-            "Be at the area 10 minutes before the event time",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_warning_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.warning");
-    assert_sonner_toast_rect_matches_web("sonner-types.warning", &web, |sonner, host, window| {
-        let _ = sonner.toast_warning_message(
-            host,
-            window,
-            "Event start time cannot be earlier than 8am",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_error_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.error");
-    assert_sonner_toast_rect_matches_web("sonner-types.error", &web, |sonner, host, window| {
-        let _ = sonner.toast_error_message(
-            host,
-            window,
-            "Event has not been created",
-            fret_ui_shadcn::ToastMessageOptions::new(),
-        );
-    });
-}
-
-#[test]
-fn web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.promise-loading");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.promise-loading",
-        &web,
-        |sonner, host, window| {
-            let _promise = sonner.toast_promise(host, window, "Loading...");
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240-default");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240-default",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_message(
-                host,
-                window,
-                "Event has been created",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240-success");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240-success",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_success_message(
-                host,
-                window,
-                "Event has been created",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240-info");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240-info",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_info_message(
-                host,
-                window,
-                "Be at the area 10 minutes before the event time",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240-warning");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240-warning",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_warning_message(
-                host,
-                window,
-                "Event start time cannot be earlier than 8am",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
-}
-
-#[test]
-fn web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web() {
-    let web = read_web_golden_open("sonner-types.vp1440x240-error");
-    assert_sonner_toast_rect_matches_web(
-        "sonner-types.vp1440x240-error",
-        &web,
-        |sonner, host, window| {
-            let _ = sonner.toast_error_message(
-                host,
-                window,
-                "Event has not been created",
-                fret_ui_shadcn::ToastMessageOptions::new(),
-            );
-        },
-    );
+            match case.kind {
+                SonnerToastKind::Message => {
+                    let _ = sonner.toast_message(host, window, case.title.clone(), opts);
+                }
+                SonnerToastKind::Success => {
+                    let _ = sonner.toast_success_message(host, window, case.title.clone(), opts);
+                }
+                SonnerToastKind::Info => {
+                    let _ = sonner.toast_info_message(host, window, case.title.clone(), opts);
+                }
+                SonnerToastKind::Warning => {
+                    let _ = sonner.toast_warning_message(host, window, case.title.clone(), opts);
+                }
+                SonnerToastKind::Error => {
+                    let _ = sonner.toast_error_message(host, window, case.title.clone(), opts);
+                }
+                SonnerToastKind::Promise => {
+                    let _promise = sonner.toast_promise(host, window, case.title.clone());
+                }
+            }
+        });
+    }
 }

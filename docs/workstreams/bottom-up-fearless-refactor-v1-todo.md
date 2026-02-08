@@ -37,6 +37,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Target examples: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
+  - Evidence (fixture-driven slice):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_sonner_open_toast_rect_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, overlay placement smoke):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_smoke_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures`)
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
