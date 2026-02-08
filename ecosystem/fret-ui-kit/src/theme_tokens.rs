@@ -17,3 +17,10 @@ pub mod metric {
     /// facade keeps its own fallback default unless the token is configured.
     pub const COMPONENT_IMUI_DRAG_THRESHOLD_PX: &str = "component.imui.drag_threshold_px";
 }
+
+pub mod number {
+    /// Additional alpha multiplier applied by the `imui` facade's scoped disable helper.
+    ///
+    /// This aligns with Dear ImGui's `ImGuiStyle::DisabledAlpha` default (`0.60f`).
+    pub const COMPONENT_IMUI_DISABLED_ALPHA: &str = "component.imui.disabled_alpha";
+}

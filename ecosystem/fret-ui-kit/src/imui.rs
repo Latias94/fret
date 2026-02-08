@@ -728,11 +728,90 @@ const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
 
 // ImGui default: `MouseDragThreshold = 6`.
 const DEFAULT_DRAG_THRESHOLD_PX: f32 = 6.0;
+// ImGui default: `ImGuiStyle::DisabledAlpha = 0.60f`.
+const DEFAULT_DISABLED_ALPHA: f32 = 0.60;
 const LONG_PRESS_DELAY: Duration = Duration::from_millis(450);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
 
+#[derive(Default)]
+struct ImUiDisabledScopeStore {
+    depth: Rc<Cell<u32>>,
+}
+
 fn drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
     fret_runtime::DragKindId(DRAG_KIND_MASK | element.0)
+}
+
+fn disabled_scope_depth_for<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Rc<Cell<u32>> {
+    cx.app
+        .with_global_mut_untracked(ImUiDisabledScopeStore::default, |st, _app| st.depth.clone())
+}
+
+fn imui_is_disabled<H: UiHost>(cx: &mut ElementContext<'_, H>) -> bool {
+    disabled_scope_depth_for(cx).get() > 0
+}
+
+fn disabled_alpha_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
+    let theme = fret_ui::Theme::global(&*cx.app);
+    let v = theme
+        .number_by_key(crate::theme_tokens::number::COMPONENT_IMUI_DISABLED_ALPHA)
+        .unwrap_or(DEFAULT_DISABLED_ALPHA);
+    v.clamp(0.0, 1.0)
+}
+
+struct DisabledScopeGuard {
+    depth: Rc<Cell<u32>>,
+    active: bool,
+}
+
+impl DisabledScopeGuard {
+    fn push(depth: Rc<Cell<u32>>) -> Self {
+        depth.set(depth.get().saturating_add(1));
+        Self {
+            depth,
+            active: true,
+        }
+    }
+}
+
+impl Drop for DisabledScopeGuard {
+    fn drop(&mut self) {
+        if !self.active {
+            return;
+        }
+        let v = self.depth.get();
+        self.depth.set(v.saturating_sub(1));
+    }
+}
+
+fn pressable_state_for_enabled(
+    enabled: bool,
+    state: fret_ui::element::PressableState,
+) -> fret_ui::element::PressableState {
+    if enabled {
+        state
+    } else {
+        fret_ui::element::PressableState::default()
+    }
+}
+
+fn sanitize_response_for_enabled(enabled: bool, response: &mut ResponseExt) {
+    if enabled {
+        return;
+    }
+    response.core.hovered = false;
+    response.core.pressed = false;
+    response.core.focused = false;
+    response.core.clicked = false;
+    response.core.changed = false;
+    response.nav_highlighted = false;
+    response.secondary_clicked = false;
+    response.double_clicked = false;
+    response.long_pressed = false;
+    response.press_holding = false;
+    response.context_menu_requested = false;
+    response.context_menu_anchor = None;
+    response.drag = DragResponse::default();
 }
 
 fn drag_threshold_sq_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
@@ -1321,9 +1400,66 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.add(element);
     }
 
+    /// Disable all `imui`-facade interactions within the closure and dim visuals (ImGui-style
+    /// `BeginDisabled/EndDisabled`).
+    ///
+    /// Notes:
+    /// - This is scoped to the closure (Rust-friendly) rather than a manual begin/end pair.
+    /// - The disabled alpha multiplier is controlled by theme number
+    ///   `component.imui.disabled_alpha` (default `0.60`).
+    pub fn disabled_scope(
+        &mut self,
+        disabled: bool,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        if !disabled {
+            f(self);
+            return;
+        }
+
+        let was_disabled = self.with_cx_mut(|cx| imui_is_disabled(cx));
+        if was_disabled {
+            f(self);
+            return;
+        }
+
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| {
+            let depth = disabled_scope_depth_for(cx);
+            let _guard = DisabledScopeGuard::push(depth);
+            let alpha = disabled_alpha_for(cx);
+            cx.pointer_region(PointerRegionProps::default(), |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
+                cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
+                vec![cx.opacity(alpha, |cx| {
+                    vec![cx.interactivity_gate(true, false, |cx| {
+                        let mut out = Vec::new();
+                        let mut ui = ImUiFacade {
+                            cx,
+                            out: &mut out,
+                            build_focus,
+                        };
+                        f(&mut ui);
+                        out
+                    })]
+                })]
+            })
+        });
+        self.add(element);
+    }
+
+    pub fn begin_disabled(
+        &mut self,
+        disabled: bool,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.disabled_scope(disabled, f);
+    }
+
     pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::button(self, label);
-        self.record_focusable(resp.id, true);
+        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        self.record_focusable(resp.id, enabled);
         resp
     }
 
@@ -1336,7 +1472,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         label: impl Into<Arc<str>>,
         options: MenuItemOptions,
     ) -> ResponseExt {
-        let enabled = options.enabled;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_ex(self, label, options);
         self.record_focusable(resp.id, enabled);
         resp
@@ -1348,7 +1484,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         checked: bool,
         options: MenuItemOptions,
     ) -> ResponseExt {
-        let enabled = options.enabled;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_checkbox_ex(
             self, label, checked, options,
         );
@@ -1362,7 +1498,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         checked: bool,
         options: MenuItemOptions,
     ) -> ResponseExt {
-        let enabled = options.enabled;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::menu_item_radio_ex(self, label, checked, options);
         self.record_focusable(resp.id, enabled);
@@ -1375,7 +1511,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         open: &fret_runtime::Model<bool>,
     ) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close(self, label, open);
-        self.record_focusable(resp.id, true);
+        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        self.record_focusable(resp.id, enabled);
         resp
     }
 
@@ -1385,7 +1522,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         label: impl Into<Arc<str>>,
     ) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close_popup(self, popup_id, label);
-        self.record_focusable(resp.id, true);
+        let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        self.record_focusable(resp.id, enabled);
         resp
     }
 
@@ -1398,7 +1536,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         model: &fret_runtime::Model<String>,
         options: InputTextOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_model_ex(self, model, options);
         self.record_focusable(resp.id, focusable);
         resp
@@ -1413,7 +1552,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         model: &fret_runtime::Model<String>,
         options: TextAreaOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::textarea_model_ex(self, model, options);
         self.record_focusable(resp.id, focusable);
         resp
@@ -1433,7 +1573,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         model: &fret_runtime::Model<bool>,
         options: ToggleOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::toggle_model_ex(self, label, model, options);
         self.record_focusable(resp.id, focusable);
         resp
@@ -1453,7 +1594,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         model: &fret_runtime::Model<bool>,
         options: SwitchOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::switch_model_ex(self, label, model, options);
         self.record_focusable(resp.id, focusable);
         resp
@@ -1473,7 +1615,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         model: &fret_runtime::Model<f32>,
         options: SliderOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::slider_f32_model_ex(self, label, model, options);
         self.record_focusable(resp.id, focusable);
@@ -1496,7 +1639,8 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         items: &[Arc<str>],
         options: SelectOptions,
     ) -> ResponseExt {
-        let focusable = options.enabled && options.focusable;
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
+        let focusable = enabled && options.focusable;
         let resp =
             <Self as UiWriterImUiFacadeExt<H>>::select_model_ex(self, label, model, items, options);
         self.record_focusable(resp.id, focusable);
@@ -1771,6 +1915,84 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         });
         self.extend(elements);
         result.expect("imui push_id closure should produce a result")
+    }
+
+    /// Disable all `imui`-facade interactions within the closure and dim visuals (ImGui-style
+    /// `BeginDisabled/EndDisabled`).
+    ///
+    /// Notes:
+    /// - This helper is scoped to the closure (Rust-friendly) rather than a manual begin/end pair.
+    /// - Nested disabled scopes do not multiply opacity; only the outermost disabled scope applies
+    ///   the visual dimming.
+    /// - The disabled alpha multiplier is controlled by theme number
+    ///   `component.imui.disabled_alpha` (default `0.60`).
+    fn disabled_scope(
+        &mut self,
+        disabled: bool,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        if !disabled {
+            let elements = self.with_cx_mut(|cx| {
+                let mut out = Vec::new();
+                let mut ui = ImUiFacade {
+                    cx,
+                    out: &mut out,
+                    build_focus: None,
+                };
+                f(&mut ui);
+                out
+            });
+            self.extend(elements);
+            return;
+        }
+
+        enum Built {
+            Inline(Vec<AnyElement>),
+            Wrapped(AnyElement),
+        }
+
+        let built = self.with_cx_mut(|cx| {
+            let depth = disabled_scope_depth_for(cx);
+            let was_disabled = depth.get() > 0;
+            let _guard = DisabledScopeGuard::push(depth);
+
+            let build_children = |cx: &mut ElementContext<'_, H>| {
+                let mut out = Vec::new();
+                let mut ui = ImUiFacade {
+                    cx,
+                    out: &mut out,
+                    build_focus: None,
+                };
+                f(&mut ui);
+                out
+            };
+
+            if was_disabled {
+                Built::Inline(build_children(cx))
+            } else {
+                let alpha = disabled_alpha_for(cx);
+                Built::Wrapped(cx.pointer_region(PointerRegionProps::default(), |cx| {
+                    cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
+                    cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
+                    vec![cx.opacity(alpha, |cx| {
+                        vec![cx.interactivity_gate(true, false, |cx| build_children(cx))]
+                    })]
+                }))
+            }
+        });
+
+        match built {
+            Built::Inline(elements) => self.extend(elements),
+            Built::Wrapped(element) => self.add(element),
+        }
+    }
+
+    fn begin_disabled(
+        &mut self,
+        disabled: bool,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.disabled_scope(disabled, f);
     }
 
     fn text(&mut self, text: impl Into<Arc<str>>) {
@@ -2613,7 +2835,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
             let close_popup = options.close_popup.clone();
             let test_id = options.test_id.clone();
-            let enabled = options.enabled;
+            let enabled = options.enabled && !imui_is_disabled(cx);
             let label_for_visuals = label.clone();
             let role = role;
             let checked = checked;
@@ -2676,67 +2898,69 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     cx.pressable_clear_on_pointer_up();
                     cx.key_clear_on_key_down_for(id);
 
-                    let close_popup = close_popup.clone();
-                    cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                        if let Some(open) = close_popup.as_ref() {
-                            let _ = host.update_model(open, |v| *v = false);
-                        }
-                        host.record_transient_event(acx, KEY_CLICKED);
-                        host.notify(acx);
-                    }));
+                    let state = pressable_state_for_enabled(enabled, state);
 
-                    let nav_items = cx
-                        .inherited_state::<ImUiMenuNavState>()
-                        .map(|st| st.items.clone());
                     if enabled {
+                        let close_popup = close_popup.clone();
+                        cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                            if let Some(open) = close_popup.as_ref() {
+                                let _ = host.update_model(open, |v| *v = false);
+                            }
+                            host.record_transient_event(acx, KEY_CLICKED);
+                            host.notify(acx);
+                        }));
+
+                        let nav_items = cx
+                            .inherited_state::<ImUiMenuNavState>()
+                            .map(|st| st.items.clone());
                         if let Some(nav_items) = nav_items.as_ref() {
                             nav_items.borrow_mut().push(id);
                         }
-                    }
-                    if let Some(nav_items) = nav_items {
-                        let item_id = id;
-                        cx.key_on_key_down_for(
-                            id,
-                            Arc::new(move |host, acx, down| {
-                                if down.repeat {
-                                    return false;
-                                }
-                                if down.modifiers != fret_core::Modifiers::default() {
-                                    return false;
-                                }
-
-                                let (dir, jump_to) = match down.key {
-                                    KeyCode::ArrowDown => (1isize, None),
-                                    KeyCode::ArrowUp => (-1isize, None),
-                                    KeyCode::Home => (0isize, Some(0usize)),
-                                    KeyCode::End => (0isize, Some(usize::MAX)),
-                                    _ => return false,
-                                };
-
-                                let items = nav_items.borrow();
-                                if items.is_empty() {
-                                    return false;
-                                }
-                                let len = items.len();
-                                let idx = items.iter().position(|id| *id == item_id);
-                                let next_idx = if let Some(jump) = jump_to {
-                                    if jump == usize::MAX {
-                                        len - 1
-                                    } else {
-                                        jump.min(len - 1)
+                        if let Some(nav_items) = nav_items {
+                            let item_id = id;
+                            cx.key_on_key_down_for(
+                                id,
+                                Arc::new(move |host, acx, down| {
+                                    if down.repeat {
+                                        return false;
                                     }
-                                } else {
-                                    let current =
-                                        idx.unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
-                                    ((current as isize + dir + len as isize) % len as isize)
-                                        as usize
-                                };
+                                    if down.modifiers != fret_core::Modifiers::default() {
+                                        return false;
+                                    }
 
-                                host.request_focus(items[next_idx]);
-                                host.notify(acx);
-                                true
-                            }),
-                        );
+                                    let (dir, jump_to) = match down.key {
+                                        KeyCode::ArrowDown => (1isize, None),
+                                        KeyCode::ArrowUp => (-1isize, None),
+                                        KeyCode::Home => (0isize, Some(0usize)),
+                                        KeyCode::End => (0isize, Some(usize::MAX)),
+                                        _ => return false,
+                                    };
+
+                                    let items = nav_items.borrow();
+                                    if items.is_empty() {
+                                        return false;
+                                    }
+                                    let len = items.len();
+                                    let idx = items.iter().position(|id| *id == item_id);
+                                    let next_idx = if let Some(jump) = jump_to {
+                                        if jump == usize::MAX {
+                                            len - 1
+                                        } else {
+                                            jump.min(len - 1)
+                                        }
+                                    } else {
+                                        let current = idx
+                                            .unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
+                                        ((current as isize + dir + len as isize) % len as isize)
+                                            as usize
+                                    };
+
+                                    host.request_focus(items[next_idx]);
+                                    host.notify(acx);
+                                    true
+                                }),
+                            );
+                        }
                     }
 
                     response.core.hovered = state.hovered;
@@ -2747,6 +2971,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     response.id = Some(id);
                     response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                     response.core.rect = cx.last_bounds_for_element(id);
+                    sanitize_response_for_enabled(enabled, &mut response);
 
                     Vec::<AnyElement>::new()
                 });
@@ -2793,7 +3018,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = !imui_is_disabled(cx);
             let mut props = fret_ui::element::PressableProps::default();
+            props.enabled = enabled;
+            props.focusable = enabled;
             props.a11y = fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(label.clone()),
@@ -2831,20 +3059,22 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     host.notify(acx);
                 }));
 
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
+                if enabled {
+                    cx.key_on_key_down_for(
+                        id,
+                        Arc::new(move |host, acx, down| {
+                            let is_menu_key = down.key == KeyCode::ContextMenu;
+                            let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                            if !(is_menu_key || is_shift_f10) {
+                                return false;
+                            }
 
-                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
+                            host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
+                            host.notify(acx);
+                            true
+                        }),
+                    );
+                }
 
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
                     if down.button != MouseButton::Left {
@@ -3005,6 +3235,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     });
                 }
                 response.core.rect = cx.last_bounds_for_element(id);
+                sanitize_response_for_enabled(enabled, &mut response);
 
                 vec![cx.text(label.clone())]
             })
@@ -3024,11 +3255,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = !imui_is_disabled(cx);
             let value = cx
                 .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(false);
 
             let mut props = fret_ui::element::PressableProps::default();
+            props.enabled = enabled;
+            props.focusable = enabled;
             props.a11y = fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Checkbox),
                 label: Some(label.clone()),
@@ -3069,20 +3303,22 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     host.notify(acx);
                 }));
 
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
+                if enabled {
+                    cx.key_on_key_down_for(
+                        id,
+                        Arc::new(move |host, acx, down| {
+                            let is_menu_key = down.key == KeyCode::ContextMenu;
+                            let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                            if !(is_menu_key || is_shift_f10) {
+                                return false;
+                            }
 
-                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
+                            host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
+                            host.notify(acx);
+                            true
+                        }),
+                    );
+                }
 
                 cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
                     if down.button != MouseButton::Left {
@@ -3240,6 +3476,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     });
                 }
                 response.core.rect = cx.last_bounds_for_element(id);
+                sanitize_response_for_enabled(enabled, &mut response);
 
                 let prefix: Arc<str> = if value {
                     Arc::from("[x] ")
@@ -3290,13 +3527,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = options.enabled && !imui_is_disabled(cx);
             let value = cx
                 .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(false);
 
             let mut props = PressableProps::default();
-            props.enabled = options.enabled;
-            props.focusable = options.focusable;
+            props.enabled = enabled;
+            props.focusable = enabled && options.focusable;
             props.a11y = crate::primitives::switch::switch_a11y(
                 options.a11y_label.clone().or_else(|| Some(label.clone())),
                 value,
@@ -3325,6 +3563,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.core.rect = cx.last_bounds_for_element(id);
+                sanitize_response_for_enabled(enabled, &mut response);
 
                 let prefix: Arc<str> = if value {
                     Arc::from("[on] ")
@@ -3362,9 +3601,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let step = options.step;
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = options.enabled && !imui_is_disabled(cx);
             let mut props = PressableProps::default();
-            props.enabled = options.enabled;
-            props.focusable = options.focusable;
+            props.enabled = enabled;
+            props.focusable = enabled && options.focusable;
             props.layout.size.width = Length::Fill;
             props.layout.size.height = Length::Px(Px(24.0));
 
@@ -3439,47 +3679,49 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     PressablePointerUpResult::Continue
                 }));
 
-                let model_for_key = model.clone();
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        let (min, max) = slider_normalize_range(min, max);
-                        let step = slider_step_or_default(step);
-                        let delta = match down.key {
-                            KeyCode::ArrowLeft | KeyCode::ArrowDown => Some(-step),
-                            KeyCode::ArrowRight | KeyCode::ArrowUp => Some(step),
-                            KeyCode::PageDown => Some(-step * 10.0),
-                            KeyCode::PageUp => Some(step * 10.0),
-                            _ => None,
-                        };
-
-                        let mut changed = false;
-                        let _ = host.update_model(&model_for_key, |value: &mut f32| {
-                            let current = slider_clamp_and_snap(*value, min, max, step);
-                            let next = match down.key {
-                                KeyCode::Home => min,
-                                KeyCode::End => max,
-                                _ => {
-                                    let Some(delta) = delta else {
-                                        return;
-                                    };
-                                    slider_clamp_and_snap(current + delta, min, max, step)
-                                }
+                if enabled {
+                    let model_for_key = model.clone();
+                    cx.key_on_key_down_for(
+                        id,
+                        Arc::new(move |host, acx, down| {
+                            let (min, max) = slider_normalize_range(min, max);
+                            let step = slider_step_or_default(step);
+                            let delta = match down.key {
+                                KeyCode::ArrowLeft | KeyCode::ArrowDown => Some(-step),
+                                KeyCode::ArrowRight | KeyCode::ArrowUp => Some(step),
+                                KeyCode::PageDown => Some(-step * 10.0),
+                                KeyCode::PageUp => Some(step * 10.0),
+                                _ => None,
                             };
-                            if (current - next).abs() > f32::EPSILON {
-                                *value = next;
-                                changed = true;
+
+                            let mut changed = false;
+                            let _ = host.update_model(&model_for_key, |value: &mut f32| {
+                                let current = slider_clamp_and_snap(*value, min, max, step);
+                                let next = match down.key {
+                                    KeyCode::Home => min,
+                                    KeyCode::End => max,
+                                    _ => {
+                                        let Some(delta) = delta else {
+                                            return;
+                                        };
+                                        slider_clamp_and_snap(current + delta, min, max, step)
+                                    }
+                                };
+                                if (current - next).abs() > f32::EPSILON {
+                                    *value = next;
+                                    changed = true;
+                                }
+                            });
+
+                            if changed {
+                                host.record_transient_event(acx, KEY_CHANGED);
+                                host.notify(acx);
                             }
-                        });
 
-                        if changed {
-                            host.record_transient_event(acx, KEY_CHANGED);
-                            host.notify(acx);
-                        }
-
-                        changed
-                    }),
-                );
+                            changed
+                        }),
+                    );
+                }
 
                 let current = cx
                     .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| {
@@ -3495,6 +3737,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.id = Some(id);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.core.rect = cx.last_bounds_for_element(id);
+                sanitize_response_for_enabled(enabled, &mut response);
 
                 vec![cx.text(Arc::from(format!("{label}: {current:.2}")))]
             })
@@ -3522,6 +3765,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     ) -> ResponseExt {
         let label = label.into();
         let model = model.clone();
+        let enabled = options.enabled && self.with_cx_mut(|cx| !imui_is_disabled(cx));
 
         let selected = self.with_cx_mut(|cx| {
             cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
@@ -3556,14 +3800,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             ui.menu_item_ex(
                 trigger_text,
                 MenuItemOptions {
-                    enabled: options.enabled,
+                    enabled,
                     test_id: options.test_id.clone(),
                     ..Default::default()
                 },
             )
         });
 
-        if options.enabled && trigger.clicked() {
+        if enabled && trigger.clicked() {
             if let Some(anchor) = trigger.core.rect {
                 self.open_popup_at(popup_scope_id.as_ref(), anchor);
             }
@@ -3612,7 +3856,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             },
         );
 
-        if !options.enabled && popup_opened {
+        if !enabled && popup_opened {
             self.close_popup(popup_scope_id.as_ref());
         }
 
@@ -3622,9 +3866,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         });
 
         let mut response = trigger;
-        response.core.changed = response.id.is_some_and(|id| {
-            self.with_cx_mut(|cx| model_value_changed_for(cx, id, selected_now.clone()))
-        });
+        response.core.changed = enabled
+            && response.id.is_some_and(|id| {
+                self.with_cx_mut(|cx| model_value_changed_for(cx, id, selected_now.clone()))
+            });
         response
     }
 
@@ -3641,6 +3886,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = options.enabled && !imui_is_disabled(cx);
             cx.scope(|cx| {
                 let id = cx.root_id();
                 let current = cx
@@ -3648,14 +3894,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .unwrap_or_default();
 
                 response.id = Some(id);
-                response.core.focused = cx.is_focused_element(id);
-                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.focused = enabled && cx.is_focused_element(id);
+                response.core.changed = enabled && text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);
 
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
                 let mut props = fret_ui::element::TextInputProps::new(model.clone());
-                props.enabled = options.enabled;
-                props.focusable = options.focusable;
+                props.enabled = enabled;
+                props.focusable = enabled && options.focusable;
                 props.a11y_label = options.a11y_label.clone();
                 props.a11y_role = options.a11y_role;
                 props.test_id = options.test_id.clone();
@@ -3687,6 +3933,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let enabled = options.enabled && !imui_is_disabled(cx);
             cx.scope(|cx| {
                 let id = cx.root_id();
                 let current = cx
@@ -3694,14 +3941,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .unwrap_or_default();
 
                 response.id = Some(id);
-                response.core.focused = cx.is_focused_element(id);
-                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.focused = enabled && cx.is_focused_element(id);
+                response.core.changed = enabled && text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);
 
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
                 let mut props = fret_ui::element::TextAreaProps::new(model.clone());
-                props.enabled = options.enabled;
-                props.focusable = options.focusable;
+                props.enabled = enabled;
+                props.focusable = enabled && options.focusable;
                 props.a11y_label = options.a11y_label.clone();
                 props.test_id = options.test_id.clone();
                 props.min_height = options.min_height;
