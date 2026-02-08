@@ -38,6 +38,8 @@ Key upstream notes:
 
 - Pass: Hover open/close is implemented via `HoverRegion` + `HoverIntentState`.
 - Pass: Open-on-keyboard-focus is implemented via `ElementContext::is_focused_element(trigger_id)`.
+- Pass: Provider-level close delay is supported via `TooltipProvider::close_delay_duration_ms(...)`
+  / `TooltipProvider::close_delay_duration_frames(...)` (Base UI `closeDelay` parity).
 
 ### Placement & portal behavior
 
@@ -72,3 +74,4 @@ Key upstream notes:
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
   `fret_tooltip_tracks_trigger_when_underlay_scrolls`).
 - Contract test: `tooltip_track_cursor_axis_projects_anchor_center_as_expected`.
+- Contract test: `tooltip_aliases_map_to_existing_fields`.

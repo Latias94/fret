@@ -208,6 +208,7 @@ fn tooltip_anchor_with_cursor_axis(
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TooltipProvider {
     delay_duration_frames: u32,
+    close_delay_duration_frames: u32,
     skip_delay_duration_frames: u32,
     disable_hoverable_content: bool,
 }
@@ -222,12 +223,42 @@ impl TooltipProvider {
         self
     }
 
+    /// Base UI-compatible close delay (`closeDelay`), in ticks/frames.
+    pub fn close_delay_duration_frames(mut self, frames: u32) -> Self {
+        self.close_delay_duration_frames = frames;
+        self
+    }
+
+    /// Base UI-compatible alias (`delay`), in milliseconds.
+    pub fn delay_duration_ms(mut self, millis: u64) -> Self {
+        self.delay_duration_frames = millis as u32;
+        self
+    }
+
+    /// Base UI-compatible close delay (`closeDelay`), in milliseconds.
+    pub fn close_delay_duration_ms(mut self, millis: u64) -> Self {
+        self.close_delay_duration_frames = millis as u32;
+        self
+    }
+
     pub fn skip_delay_duration_frames(mut self, frames: u32) -> Self {
         self.skip_delay_duration_frames = frames;
         self
     }
 
+    /// Base UI-compatible alias (`skipDelayDuration`), in milliseconds.
+    pub fn skip_delay_duration_ms(mut self, millis: u64) -> Self {
+        self.skip_delay_duration_frames = millis as u32;
+        self
+    }
+
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content = disable;
+        self
+    }
+
+    /// Base UI-compatible alias (`disableHoverablePopup`).
+    pub fn disable_hoverable_popup(mut self, disable: bool) -> Self {
         self.disable_hoverable_content = disable;
         self
     }
@@ -257,6 +288,7 @@ impl TooltipProvider {
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
             )
+            .close_delay_duration_ticks(self.close_delay_duration_frames as u64)
             .disable_hoverable_content(self.disable_hoverable_content),
             |cx| f(cx).into_iter().collect::<Elements>(),
         )
@@ -338,8 +370,20 @@ impl Tooltip {
         self
     }
 
+    /// Base UI-compatible alias (`delay`), in milliseconds.
+    pub fn open_delay_ms(mut self, millis: u64) -> Self {
+        self.open_delay_frames_override = Some(millis as u32);
+        self
+    }
+
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames_override = Some(frames);
+        self
+    }
+
+    /// Base UI-compatible alias (`closeDelay`), in milliseconds.
+    pub fn close_delay_ms(mut self, millis: u64) -> Self {
+        self.close_delay_frames_override = Some(millis as u32);
         self
     }
 
@@ -347,6 +391,12 @@ impl Tooltip {
     ///
     /// Default: inherited from `TooltipProvider`.
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content_override = Some(disable);
+        self
+    }
+
+    /// Base UI-compatible alias (`disableHoverablePopup`).
+    pub fn disable_hoverable_popup(mut self, disable: bool) -> Self {
         self.disable_hoverable_content_override = Some(disable);
         self
     }
@@ -636,7 +686,9 @@ impl Tooltip {
                 radix_tooltip::TooltipInteractionConfig {
                     disable_hoverable_content,
                     open_delay_ticks_override: open_delay_frames_override.map(|v| v as u64),
-                    close_delay_ticks_override: close_delay_frames_override.map(|v| v as u64),
+                    close_delay_ticks_override: close_delay_frames_override
+                        .map(|v| v as u64)
+                        .or(provider_cfg.close_delay_duration_ticks),
                     safe_hover_buffer: Px(5.0),
                 },
             );
@@ -1213,6 +1265,42 @@ mod tests {
 
         assert_eq!(center_of(both).x, Px(100.0));
         assert_eq!(center_of(both).y, Px(200.0));
+    }
+
+    #[test]
+    fn tooltip_aliases_map_to_existing_fields() {
+        let mut app = App::new();
+        let trigger = AnyElement::new(
+            fret_ui::elements::GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+        let content = AnyElement::new(
+            fret_ui::elements::GlobalElementId(2),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+
+        let tooltip = Tooltip::new(trigger, content)
+            .open_delay_ms(120)
+            .close_delay_ms(80)
+            .disable_hoverable_popup(true);
+        assert_eq!(tooltip.open_delay_frames_override, Some(120));
+        assert_eq!(tooltip.close_delay_frames_override, Some(80));
+        assert_eq!(tooltip.disable_hoverable_content_override, Some(true));
+
+        let provider = TooltipProvider::new()
+            .delay_duration_ms(200)
+            .close_delay_duration_ms(150)
+            .skip_delay_duration_ms(300)
+            .disable_hoverable_popup(true);
+        assert_eq!(provider.delay_duration_frames, 200);
+        assert_eq!(provider.close_delay_duration_frames, 150);
+        assert_eq!(provider.skip_delay_duration_frames, 300);
+        assert!(provider.disable_hoverable_content);
+
+        // Keep `app` live so this test mirrors normal construction context style.
+        let _ = app.models_mut();
     }
 
     fn render_tooltip_frame(
