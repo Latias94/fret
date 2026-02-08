@@ -69,9 +69,12 @@ struct MenubarTriggerHoverSwitchState {
     installed: bool,
     hovered: Option<Model<bool>>,
     timer: Option<Model<Option<TimerToken>>>,
+    patient_click_sticky: Option<Model<bool>>,
+    patient_click_timer: Option<Model<Option<TimerToken>>>,
 }
 
-const DEFAULT_HOVER_SWITCH_DELAY: Duration = Duration::from_millis(90);
+const DEFAULT_HOVER_SWITCH_DELAY: Duration = Duration::from_millis(100);
+const PATIENT_CLICK_THRESHOLD: Duration = Duration::from_millis(500);
 
 /// Build an Alt+Key handler for menu mnemonics (Windows/Linux in-window menubars).
 ///
@@ -345,6 +348,8 @@ fn hover_switch_on_timer_handler(
     open: Model<bool>,
     hovered: Model<bool>,
     timer: Model<Option<TimerToken>>,
+    patient_click_sticky: Model<bool>,
+    patient_click_timer: Model<Option<TimerToken>>,
 ) -> OnTimer {
     Arc::new(move |host, acx, token| {
         let armed = host.models_mut().read(&timer, |v| *v).ok().flatten();
@@ -393,7 +398,102 @@ fn hover_switch_on_timer_handler(
                 open: open_for_state,
             });
         });
+        arm_patient_click_sticky(
+            host,
+            acx.window,
+            &patient_click_sticky,
+            &patient_click_timer,
+        );
 
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
+fn clear_patient_click_sticky(
+    host: &mut dyn UiActionHost,
+    patient_click_sticky: &Model<bool>,
+    patient_click_timer: &Model<Option<TimerToken>>,
+) {
+    cancel_hover_switch_timer(host, patient_click_timer);
+    let _ = host
+        .models_mut()
+        .update(patient_click_sticky, |v| *v = false);
+}
+
+fn arm_patient_click_sticky(
+    host: &mut dyn UiActionHost,
+    window: fret_core::AppWindowId,
+    patient_click_sticky: &Model<bool>,
+    patient_click_timer: &Model<Option<TimerToken>>,
+) {
+    let _ = host
+        .models_mut()
+        .update(patient_click_sticky, |v| *v = true);
+    let _ = arm_hover_switch_timer(host, window, PATIENT_CLICK_THRESHOLD, patient_click_timer);
+}
+
+fn clear_patient_click_sticky_for_ui_host<H: UiHost>(
+    host: &mut H,
+    patient_click_sticky: &Model<bool>,
+    patient_click_timer: &Model<Option<TimerToken>>,
+) {
+    let pending = host
+        .models_mut()
+        .read(patient_click_timer, |v| *v)
+        .ok()
+        .flatten();
+    if let Some(token) = pending {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+    let _ = host.models_mut().update(patient_click_timer, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(patient_click_sticky, |v| *v = false);
+}
+
+fn arm_patient_click_sticky_for_ui_host<H: UiHost>(
+    host: &mut H,
+    window: fret_core::AppWindowId,
+    patient_click_sticky: &Model<bool>,
+    patient_click_timer: &Model<Option<TimerToken>>,
+) {
+    clear_patient_click_sticky_for_ui_host(host, patient_click_sticky, patient_click_timer);
+    let _ = host
+        .models_mut()
+        .update(patient_click_sticky, |v| *v = true);
+    let token = host.next_timer_token();
+    host.push_effect(Effect::SetTimer {
+        window: Some(window),
+        token,
+        after: PATIENT_CLICK_THRESHOLD,
+        repeat: None,
+    });
+    let _ = host
+        .models_mut()
+        .update(patient_click_timer, |v| *v = Some(token));
+}
+
+fn patient_click_on_timer_handler(
+    patient_click_sticky: Model<bool>,
+    patient_click_timer: Model<Option<TimerToken>>,
+) -> OnTimer {
+    Arc::new(move |host, acx, token| {
+        let armed = host
+            .models_mut()
+            .read(&patient_click_timer, |v| *v)
+            .ok()
+            .flatten();
+        if armed != Some(token) {
+            return false;
+        }
+
+        let _ = host
+            .models_mut()
+            .update(&patient_click_timer, |v| *v = None);
+        let _ = host
+            .models_mut()
+            .update(&patient_click_sticky, |v| *v = false);
         host.request_redraw(acx.window);
         true
     })
@@ -470,6 +570,50 @@ fn ensure_hover_switch_models<H: UiHost>(
     };
 
     (hovered, timer)
+}
+
+fn ensure_patient_click_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger_id: GlobalElementId,
+) -> (Model<bool>, Model<Option<TimerToken>>) {
+    let sticky = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        st.patient_click_sticky.clone()
+    });
+    let sticky = if let Some(sticky) = sticky {
+        sticky
+    } else {
+        let sticky = cx.app.models_mut().insert(false);
+        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+            st.patient_click_sticky = Some(sticky.clone());
+        });
+        sticky
+    };
+
+    let timer = cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+        st.patient_click_timer.clone()
+    });
+    let timer = if let Some(timer) = timer {
+        timer
+    } else {
+        let timer = cx.app.models_mut().insert(None);
+        cx.with_state_for(trigger_id, MenubarTriggerHoverSwitchState::default, |st| {
+            st.patient_click_timer = Some(timer.clone());
+        });
+        timer
+    };
+
+    (sticky, timer)
+}
+
+/// Ensure per-trigger patient-click models exist.
+///
+/// These models back Base UI aligned "stick-if-open" behavior for hover-opened menus.
+#[track_caller]
+pub fn ensure_trigger_patient_click_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger_id: GlobalElementId,
+) -> (Model<bool>, Model<Option<TimerToken>>) {
+    ensure_patient_click_models(cx, trigger_id)
 }
 
 /// Ensure a per-menubar active-trigger model exists.
@@ -668,6 +812,8 @@ pub fn sync_trigger_row_state<H: UiHost>(
     group_active: Model<Option<MenubarActiveTrigger>>,
     trigger_id: GlobalElementId,
     open: Model<bool>,
+    patient_click_sticky: Model<bool>,
+    patient_click_timer: Model<Option<TimerToken>>,
     enabled: bool,
     _hovered: bool,
     pressed: bool,
@@ -690,6 +836,15 @@ pub fn sync_trigger_row_state<H: UiHost>(
                 open.clone(),
                 hovered_model.clone(),
                 hover_timer.clone(),
+                patient_click_sticky.clone(),
+                patient_click_timer.clone(),
+            ),
+        );
+        cx.timer_add_on_timer_for(
+            trigger_id,
+            patient_click_on_timer_handler(
+                patient_click_sticky.clone(),
+                patient_click_timer.clone(),
             ),
         );
 
@@ -712,6 +867,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
         && is_open
     {
         let _ = cx.app.models_mut().update(&open, |v| *v = false);
+        clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
     }
 
     if active_value
@@ -720,6 +876,7 @@ pub fn sync_trigger_row_state<H: UiHost>(
         && !is_open
     {
         let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
+        clear_patient_click_sticky_for_ui_host(cx.app, &patient_click_sticky, &patient_click_timer);
     }
 
     if active_value.is_none() && is_open {
@@ -730,6 +887,12 @@ pub fn sync_trigger_row_state<H: UiHost>(
                 open: open_for_state,
             });
         });
+        arm_patient_click_sticky_for_ui_host(
+            cx.app,
+            cx.window,
+            &patient_click_sticky,
+            &patient_click_timer,
+        );
     }
 
     let active_value = cx.watch_model(&group_active).cloned().flatten();
@@ -751,6 +914,12 @@ pub fn sync_trigger_row_state<H: UiHost>(
                 open: open_for_state,
             });
         });
+        arm_patient_click_sticky_for_ui_host(
+            cx.app,
+            cx.window,
+            &patient_click_sticky,
+            &patient_click_timer,
+        );
     }
 }
 
@@ -819,6 +988,8 @@ mod tests {
 
         let hovered_b = host.models_mut().insert(false);
         let timer_b: Model<Option<TimerToken>> = host.models_mut().insert(None);
+        let patient_click_sticky = host.models_mut().insert(false);
+        let patient_click_timer: Model<Option<TimerToken>> = host.models_mut().insert(None);
 
         let on_hover = hover_switch_on_hover_change_handler(
             group_active.clone(),
@@ -845,6 +1016,8 @@ mod tests {
             open_b.clone(),
             hovered_b.clone(),
             timer_b.clone(),
+            patient_click_sticky,
+            patient_click_timer,
         );
         on_timer(
             &mut host,
@@ -895,6 +1068,8 @@ mod tests {
 
         let hovered_b = host.models_mut().insert(false);
         let timer_b: Model<Option<TimerToken>> = host.models_mut().insert(None);
+        let patient_click_sticky = host.models_mut().insert(false);
+        let patient_click_timer: Model<Option<TimerToken>> = host.models_mut().insert(None);
 
         let on_hover = hover_switch_on_hover_change_handler(
             group_active.clone(),
@@ -935,6 +1110,8 @@ mod tests {
             open_b.clone(),
             hovered_b.clone(),
             timer_b.clone(),
+            patient_click_sticky,
+            patient_click_timer,
         );
         on_timer(
             &mut host,
@@ -1379,8 +1556,16 @@ mod tests {
                 trigger,
                 open: open.clone(),
             }));
+        let patient_click_sticky = host.models_mut().insert(false);
+        let patient_click_timer: Model<Option<TimerToken>> = host.models_mut().insert(None);
 
-        let on_activate = toggle_on_activate(group_active.clone(), trigger, open.clone());
+        let on_activate = toggle_on_activate(
+            group_active.clone(),
+            trigger,
+            open.clone(),
+            patient_click_sticky,
+            patient_click_timer,
+        );
         on_activate(
             &mut host,
             ActionCx {
@@ -1396,6 +1581,125 @@ mod tests {
         let active = host.models_mut().get_cloned(&group_active).flatten();
         assert!(active.is_some_and(|a| a.trigger == trigger));
     }
+
+    #[test]
+    fn toggle_ignores_close_click_while_patient_click_sticky() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let trigger = GlobalElementId(1);
+        let open = host.models_mut().insert(true);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger,
+                open: open.clone(),
+            }));
+        let patient_click_sticky = host.models_mut().insert(true);
+        let patient_click_timer: Model<Option<TimerToken>> = host.models_mut().insert(None);
+
+        let on_activate = toggle_on_activate(
+            group_active.clone(),
+            trigger,
+            open.clone(),
+            patient_click_sticky,
+            patient_click_timer,
+        );
+        on_activate(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger,
+            },
+            fret_ui::action::ActivateReason::Pointer,
+        );
+
+        let is_open = host.models_mut().read(&open, |v| *v).ok().unwrap_or(false);
+        assert!(is_open, "expected sticky click to keep menu open");
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        assert!(active.is_some_and(|a| a.trigger == trigger));
+    }
+
+    #[test]
+    fn toggle_closes_after_patient_click_sticky_expires() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let trigger = GlobalElementId(1);
+        let open = host.models_mut().insert(true);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger,
+                open: open.clone(),
+            }));
+        let patient_click_sticky = host.models_mut().insert(false);
+        let patient_click_timer: Model<Option<TimerToken>> = host.models_mut().insert(None);
+
+        let on_activate = toggle_on_activate(
+            group_active.clone(),
+            trigger,
+            open.clone(),
+            patient_click_sticky.clone(),
+            patient_click_timer.clone(),
+        );
+
+        arm_patient_click_sticky(
+            &mut host,
+            window,
+            &patient_click_sticky,
+            &patient_click_timer,
+        );
+
+        let token = host
+            .models_mut()
+            .read(&patient_click_timer, |v| *v)
+            .ok()
+            .flatten()
+            .expect("patient click timer token");
+        let on_timer = patient_click_on_timer_handler(
+            patient_click_sticky.clone(),
+            patient_click_timer.clone(),
+        );
+        let handled = on_timer(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger,
+            },
+            token,
+        );
+        assert!(handled);
+
+        let sticky = host
+            .models_mut()
+            .read(&patient_click_sticky, |v| *v)
+            .ok()
+            .unwrap_or(true);
+        assert!(!sticky, "expected patient click sticky to expire");
+
+        on_activate(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger,
+            },
+            fret_ui::action::ActivateReason::Pointer,
+        );
+
+        let is_open = host.models_mut().read(&open, |v| *v).ok().unwrap_or(true);
+        assert!(!is_open, "expected click after sticky expiry to close menu");
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        assert!(active.is_none(), "expected group active to clear on close");
+    }
 }
 
 /// Build an activation handler that toggles a trigger's menu and updates group active state.
@@ -1403,15 +1707,26 @@ pub fn toggle_on_activate(
     group_active: Model<Option<MenubarActiveTrigger>>,
     trigger_id: GlobalElementId,
     open: Model<bool>,
+    patient_click_sticky: Model<bool>,
+    patient_click_timer: Model<Option<TimerToken>>,
 ) -> OnActivate {
-    Arc::new(move |host, _cx, _reason| {
+    Arc::new(move |host, cx, _reason| {
         let cur = host.models_mut().get_cloned(&group_active).flatten();
         match cur {
             Some(cur) if cur.trigger == trigger_id => {
                 let is_open = host.models_mut().read(&open, |v| *v).ok().unwrap_or(false);
                 if is_open {
+                    let sticky = host
+                        .models_mut()
+                        .read(&patient_click_sticky, |v| *v)
+                        .ok()
+                        .unwrap_or(false);
+                    if sticky {
+                        return;
+                    }
                     let _ = host.models_mut().update(&open, |v| *v = false);
                     let _ = host.models_mut().update(&group_active, |v| *v = None);
+                    clear_patient_click_sticky(host, &patient_click_sticky, &patient_click_timer);
                 } else {
                     let _ = host.models_mut().update(&open, |v| *v = true);
                     let open_for_state = open.clone();
@@ -1421,6 +1736,12 @@ pub fn toggle_on_activate(
                             open: open_for_state,
                         });
                     });
+                    arm_patient_click_sticky(
+                        host,
+                        cx.window,
+                        &patient_click_sticky,
+                        &patient_click_timer,
+                    );
                 }
             }
             prev => {
@@ -1435,6 +1756,12 @@ pub fn toggle_on_activate(
                         open: open_for_state,
                     });
                 });
+                arm_patient_click_sticky(
+                    host,
+                    cx.window,
+                    &patient_click_sticky,
+                    &patient_click_timer,
+                );
             }
         }
     })

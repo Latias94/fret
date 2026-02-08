@@ -1165,6 +1165,8 @@ impl MenubarMenuEntries {
             let test_id = self.menu.test_id.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
+                let (patient_click_sticky, patient_click_timer) =
+                    menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
                 if enabled {
                     menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, open.clone());
                 }
@@ -1187,6 +1189,8 @@ impl MenubarMenuEntries {
                     group_active.clone(),
                     trigger_id,
                     open.clone(),
+                    patient_click_sticky.clone(),
+                    patient_click_timer.clone(),
                     enabled,
                     st.hovered,
                     st.pressed,
@@ -1196,6 +1200,8 @@ impl MenubarMenuEntries {
                     group_active.clone(),
                     trigger_id,
                     open.clone(),
+                    patient_click_sticky,
+                    patient_click_timer,
                 ));
 
                 let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
