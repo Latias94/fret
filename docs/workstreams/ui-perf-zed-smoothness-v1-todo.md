@@ -10,6 +10,7 @@ scope: performance, profiling, data-structures, caching, input, layout, paint
 This file tracks milestones and concrete tasks for:
 
 - `docs/workstreams/ui-perf-zed-smoothness-v1.md`
+- GPUI/Zed gap reference (mechanism-first): `docs/workstreams/ui-perf-gpui-gap-v1.md`
 
 Conventions:
 
@@ -17,7 +18,11 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current priorities (updated 2026-02-07)
+## Current priorities (updated 2026-02-08)
+
+- [ ] Keep the GPUI gap map current and milestone-linked:
+  - Reference: `docs/workstreams/ui-perf-gpui-gap-v1.md`
+  - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
 
 - [ ] **P0 Resize-drag smoothness**: reduce `layout/solve` costs and eliminate avoidable secondary probes under
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.

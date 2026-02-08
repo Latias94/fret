@@ -15,6 +15,53 @@ Related:
 - Zed smoothness workstream: `docs/workstreams/ui-perf-zed-smoothness-v1.md`
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
 - Perf log: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
+- Perf workflow skill (how to run/gate/log): `.agents/skills/fret-perf-workflow/SKILL.md`
+
+---
+
+## Workstream contract (how we measure “closing the gap”)
+
+This workstream uses a strict “numbers or it didn’t happen” contract.
+
+Protocol:
+
+- Every gap item must map to at least one **probe** that can be run via `fretboard diag perf`.
+- Every milestone must be guarded by a **gate** (baseline + thresholds) and recorded in the perf log with:
+  - exact command line,
+  - suite/baseline version,
+  - artifacts directory,
+  - worst bundles (for tail explanation),
+  - commit hash (for rollback).
+
+Recommended default gate set (global sanity):
+
+- `ui-gallery-steady` (canonical baseline)
+- `ui-resize-probes` (attempts=3)
+- `ui-code-editor-resize-probes` (attempts=3)
+
+Evidence template (copy/paste into the perf log):
+
+```text
+## YYYY-MM-DD HH:MM:SS (commit `<hash>`)
+
+Change:
+- <what changed>
+
+Suite(s):
+- <suite list>
+
+Commands:
+<exact commands>
+
+Artifacts:
+- <out dir paths>
+
+Results:
+- <PASS/FAIL + key deltas>
+
+Worst bundles:
+- <paths>
+```
 
 ---
 
@@ -177,6 +224,77 @@ Evidence:
 - Perf log entries under:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`, `5ab4ba71`)
 
+---
+
+## Milestones (v1)
+
+These milestones are intentionally “mechanism-first” and map to measurable probes/gates.
+
+### M0: Measurement discipline (keep experiments reversible)
+
+Goal:
+
+- Every hot-path change lands with a probe/gate and a perf log entry.
+
+Acceptance:
+
+- `ui-gallery-steady` (canonical baseline) stays green.
+- `ui-resize-probes` and `ui-code-editor-resize-probes` are stable under attempts=3 on the primary dev machine(s).
+
+### M1: Resize-drag becomes predictable (bounded tail)
+
+Goal:
+
+- Keep resize-drag work bounded and predictable under both:
+  - stress resize (`ui-gallery-window-resize-stress-steady`), and
+  - width-jitter resize (`ui-gallery-window-resize-drag-jitter-steady`).
+
+Acceptance:
+
+- The `ui-resize-probes` gate is stable under attempts=3 (low tail flake) and worst bundles are explainable.
+
+### M2: “Text under width jitter” closes the GPUI amortization gap
+
+Goal:
+
+- Move from “wrap-width quantization as a stopgap” toward GPUI-like frame-to-frame layout reuse.
+
+Acceptance:
+
+- `ui-code-editor-resize-probes` stays under budget with lower `Text::prepare` churn signals and fewer rare tail spikes.
+
+### M3: Frame scratch / allocation discipline (arena-first)
+
+Goal:
+
+- Reduce allocator amplification on hot frames by moving scratch-heavy hot paths onto arenas/pools.
+
+Acceptance:
+
+- Key steady-state scripts show fewer tail outliers while maintaining correctness gates.
+
+### M4: GPU churn is explainable and bounded
+
+Goal:
+
+- When we do hitch, bundles clearly show whether it is CPU or GPU (uploads/evictions/intermediate pool thrash).
+
+Acceptance:
+
+- Deep triage runs (`FRET_DIAG_RENDERER_PERF=1`) produce consistent churn tables for the worst bundle(s), and fixes can be gated indirectly (CPU) while explained by churn deltas.
+
+### Recommended next steps (short-horizon)
+
+1) Keep the gate set stable after large refactors.
+   - Re-run: `ui-gallery-steady` + resize gates attempts=3.
+   - If `ui-resize-probes` tail becomes flaky, cut a new baseline with `tools/perf/diag_perf_baseline_select.sh`.
+2) Start “GPUI-like text reuse” as the next high-leverage gap closure.
+   - Target: reduce wrapped-text churn under width jitter without relying primarily on wrap-width quantization.
+   - Probe: `ui-code-editor-resize-probes` (plus the editor torture steady script for warm caches).
+3) Push “paint-only” frames as a first-class goal.
+   - Add/maintain an explicit gate check (where applicable) that asserts drag frames can be replayed from cache roots
+     without triggering extra layout/paint work.
+
 ## 1) What GPUI does that matters for smoothness
 
 The following are “load-bearing” for Zed feel. Each entry links to the GPUI reference location.
@@ -247,6 +365,17 @@ contract on top.
 ## 3) Primary performance gaps (GPUI vs Fret)
 
 This section is the actionable “gap list”.
+
+### Gap → probe / gate map (quick index)
+
+| Gap | Primary probe(s) | Gate / baseline |
+| --- | --- | --- |
+| Frame arena / scratch discipline | `ui-gallery-steady` (pick worst steady script), `ui-gallery-chrome-torture-steady` | `ui-gallery-steady` (canonical baseline) |
+| Timer work on interactive frames | `ui-gallery-hit-test-torture-stripes-move-sweep-steady` | pointer-move thresholds (`--max-pointer-move-*`) |
+| Text under width jitter | `ui-code-editor-resize-probes`, `ui-resize-probes` | `ui-code-editor-resize-probes` baseline + attempts=3 |
+| Resize tail predictability | `ui-resize-probes` | `ui-resize-probes` baseline + attempts=3 |
+| “Paint-only” drag frames (cache replay) | `ui-resize-probes` (and future “paint-only replay” checks) | `ui-resize-probes` + `--check-drag-cache-root-paint-only <test_id>` (when available/maintained) |
+| GPU churn / intermediate pool thrash | `ui-gallery-effects-blur-torture-steady`, `ui-gallery-effects-blur-thrash-steady` | deep triage only (`FRET_DIAG_RENDERER_PERF=1`); gate CPU separately |
 
 ### Gap A: No per-frame arena for UI “element allocations / scratch”
 
