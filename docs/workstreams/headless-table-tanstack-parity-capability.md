@@ -51,7 +51,7 @@ Mapping conventions:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `table.getAllColumns()` | `Table::column_tree()` (nested `ColumnDef` tree) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `table.getAllColumns()` | `Table::{column_tree,column_tree_snapshot}` (nested `ColumnDef` tree + snapshot) | Aligned | `headers_inventory_deep.json` |
 | `table.getAllFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (helper) | Aligned | `visibility_ordering.json` + `tanstack_v8_visibility_ordering_parity.rs` |
 | `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
 | `table.getColumn(columnId)` | `Table::column(column_id)` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column`) |
@@ -69,16 +69,16 @@ Mapping conventions:
 | `row.id/index/depth/parentId/subRows` | `RowModel` arena fields | Aligned | `selection_tree.json` + `tanstack_v8_selection_tree_parity.rs` |
 | `row.getLeafRows()` | `RowModel::leaf_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
 | `row.getParentRow()/getParentRows()` | `RowModel::parent_row_ids(row)` + lookup | Aligned | `selection_tree.json` |
-| `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`cell_value`) |
+| `row.getValue(columnId)` | `Table::cell_value(row_key, column_id)` (TanStackValue) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |
 | `row.renderValue(columnId)` | `Table::cell_render_value(row_key, column_id)` | Aligned | `render_fallback.json` |
 | `row.getAllCells()` | `CoreModelSnapshot.cells[row_id]` (preferred) + `Table::row_cells(row_key)` (helper) | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
-| `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_unique_values`) |
+| `row.getUniqueValues(columnId)` | `Table::row_unique_values(row_key, column_id)` (uses `column.unique_values_fn` or falls back to `getValue`) | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` |
 
 ### Column core surface
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `column.id/depth/parent/columns` | `ColumnDef` tree (`Table::column_tree`) | Partial | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_tree`) |
+| `column.id/depth/parent/columns` | `CoreModelSnapshot.column_tree` (preferred) + `Table::column_tree()` | Aligned | `headers_inventory_deep.json` |
 | `column.getFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (table-level equivalent) | Aligned | `visibility_ordering.json` |
 | `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Aligned | `visibility_ordering.json` |
 
@@ -91,7 +91,7 @@ Mapping conventions:
 | `header.getSize()/getStart()` | `CoreModelSnapshot.header_sizing` (versioned inventory by header id) | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
 | `cell.id` | `CoreModelSnapshot.cells[*].{all,visible,left,center,right}[].id` | Aligned | `headers_cells.json` |
 | `cell.getIsGrouped/isPlaceholder/isAggregated` | `CellSnapshot.{is_grouped,is_placeholder,is_aggregated}` | Aligned | `headers_cells.json` + `headers_inventory_deep.json` |
-| `cell.getValue()/renderValue()` | `Table::{cell_value,cell_render_value}` | Partial | helper exists; not snapshot-serialized today |
+| `cell.getValue()/renderValue()` | `Table::{cell_value,cell_render_value}` | Aligned | `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`, `render_fallback.json` |
 
 ---
 
@@ -131,15 +131,19 @@ Recently closed (no longer a gap):
 
 ---
 
-## Consumer-driven “must-have” surface (WIP)
+## Consumer-driven “must-have” surface
 
 Before we chase 1:1 instance method parity, we track what our current UI consumers *actually* need, so we can ensure
 we are not weaker than upstream while keeping the Rust surface idiomatic.
 
 - `fret-ui-kit` virtualized table: `ecosystem/fret-ui-kit/src/declarative/table.rs`
   - Uses the engine as a pure derived-model provider (build `Table`, read row models, compute rendering).
-  - Currently calls into: `Table::{core_row_model,pre_pagination_row_model,grouped_row_model,top_row_keys,center_row_keys,bottom_row_keys}`
-    plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
+  - Currently calls into:
+    - `Table::{core_row_model,row_model,pre_pagination_row_model,grouped_row_model}`
+    - `Table::{top_row_keys,center_row_keys,bottom_row_keys}` (row pinning display split)
+    - `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` (column pinning leaf splits)
+    - `pagination_bounds(..)` (pagination clamping)
+    - plus standalone helpers (`order_columns`, `split_pinned_columns`, visibility/pinning/sizing helpers).
 - `fret-ui-shadcn` DataTable: (TODO) identify the minimal required engine surface once it is wired to `fret-ui-headless`.
   - Note: current `fret-ui-shadcn` `DataTable*` recipes primarily mutate `TableState` directly
     (`ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`) and rely on `fret-ui-kit` for rendering.

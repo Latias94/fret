@@ -136,6 +136,16 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     assert_eq!(ctx.row_id.as_str(), "1");
     assert_eq!(ctx.column_id.as_ref(), "a");
     assert_eq!(ctx.id.as_ref(), "1_a");
+
+    // TanStack-style value accessors.
+    assert_eq!(
+        table.cell_value(RowKey(1), "a"),
+        Some(TanStackValue::Number(10.0))
+    );
+    assert_eq!(
+        table.row_unique_values(RowKey(1), "a"),
+        Some(vec![TanStackValue::Number(10.0)])
+    );
 }
 
 #[test]
