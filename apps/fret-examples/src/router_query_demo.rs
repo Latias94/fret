@@ -9,7 +9,10 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
-use fret_router_ui::{RouterLink, RouterUiStore, router_link_with_test_id, router_outlet};
+use fret_router_ui::{
+    RouterLeafStatus, RouterLink, RouterOutlet, RouterUiStore, router_link_to_with_test_id,
+    router_outlet,
+};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 
@@ -247,27 +250,45 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
             shadcn::Button::new("/")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateRoot))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/"),
+                ),
             shadcn::Button::new("/settings")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateSettings))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/settings"),
+                ),
             shadcn::Button::new("/users/42")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateUser))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/users-42"),
+                ),
             shadcn::Button::new("Back")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Back))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-back"),
+                ),
             shadcn::Button::new("Forward")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Forward))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-forward"),
+                ),
             shadcn::Button::new("Clear log")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::ClearLog))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-clear-log"),
+                ),
         ]
     })
     .gap(Space::N2)
@@ -275,12 +296,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .into_element(cx);
 
     let header_lines = ui::v_flex(cx, |cx| {
-        let settings_link = st
-            .router
-            .link_to_location(NavigationAction::Push, RouteLocation::parse("/settings"));
         let hover_intents = cx
             .get_model_cloned(&st.router.intents_model(), Invalidation::Layout)
             .expect("router intents model should be readable");
+        let nav_state_for_status = nav_state.clone();
+        let page_state_for_status = page_state.clone();
         [
             ui::h_flex(cx, |cx| {
                 [
@@ -337,13 +357,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
             .into_element(cx),
             {
                 let label = ui::raw_text(cx, "router_link: /settings").into_element(cx);
-                router_link_with_test_id(
+                router_link_to_with_test_id(
                     cx,
                     &st.router,
-                    settings_link,
+                    NavigationAction::Push,
+                    &RouteId::Settings,
+                    &[],
+                    SearchMap::new(),
+                    None,
                     "router-query-demo-link-settings",
                     [label],
                 )
+                .expect("settings link should build")
             },
             {
                 let (test_id, label) = if hover_intents.is_empty() {
@@ -361,6 +386,87 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                     .into_element(cx)
                     .attach_semantics(SemanticsDecoration::default().test_id(test_id))
             },
+            RouterOutlet::new(snapshot_model.clone())
+                .test_id("router-query-demo-outlet-status")
+                .into_element_by_leaf_with_status(
+                    cx,
+                    move |_app, _snap, route| {
+                        let state = match route {
+                            RouteId::Root => &nav_state_for_status,
+                            RouteId::Settings | RouteId::User => &page_state_for_status,
+                        };
+                        match state.status {
+                            QueryStatus::Idle | QueryStatus::Success => RouterLeafStatus::Ready,
+                            QueryStatus::Loading => RouterLeafStatus::Pending,
+                            QueryStatus::Error => RouterLeafStatus::Error {
+                                message: state
+                                    .error
+                                    .as_ref()
+                                    .map(|e| Arc::from(format!("{e}")))
+                                    .unwrap_or_else(|| Arc::from("<unknown error>")),
+                            },
+                        }
+                    },
+                    |cx, route, _snap| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Ready (Root)",
+                            RouteId::Settings => "Outlet: Ready (Settings)",
+                            RouteId::User => "Outlet: Ready (User)",
+                        };
+                        shadcn::Badge::new(label)
+                            .variant(shadcn::BadgeVariant::Default)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-ready"),
+                            )
+                    },
+                    |cx, route, _snap| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Pending (Root)",
+                            RouteId::Settings => "Outlet: Pending (Settings)",
+                            RouteId::User => "Outlet: Pending (User)",
+                        };
+                        shadcn::Badge::new(label)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-pending"),
+                            )
+                    },
+                    |cx, route, _snap, msg| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Error (Root)",
+                            RouteId::Settings => "Outlet: Error (Settings)",
+                            RouteId::User => "Outlet: Error (User)",
+                        };
+                        ui::h_flex(cx, |cx| {
+                            [
+                                shadcn::Badge::new(label)
+                                    .variant(shadcn::BadgeVariant::Destructive)
+                                    .into_element(cx),
+                                ui::raw_text(cx, msg).into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx)
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .test_id("router-query-demo-outlet-status-error"),
+                        )
+                    },
+                    |cx, _snap| {
+                        shadcn::Badge::new("Outlet: NotFound")
+                            .variant(shadcn::BadgeVariant::Destructive)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-not-found"),
+                            )
+                    },
+                ),
         ]
     })
     .gap(Space::N1)

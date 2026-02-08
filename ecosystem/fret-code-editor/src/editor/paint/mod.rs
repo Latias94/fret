@@ -39,12 +39,8 @@ pub(super) fn paint_row(
     // vertically center the glyph box within the row.
     let scale_factor = painter.scale_factor();
     let scale_bits = scale_factor.to_bits();
-    let max_width = rect.size.width;
     let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
-        cache.max_width == max_width
-            && cache.row_h == row_h
-            && cache.scale_bits == scale_bits
-            && &cache.text_style == text_style
+        cache.row_h == row_h && cache.scale_bits == scale_bits && &cache.text_style == text_style
     });
     let (metrics, measured_h) = if cached {
         let cache = st
@@ -55,7 +51,7 @@ pub(super) fn paint_row(
     } else {
         let (services, _) = painter.services_and_scene();
         let measure_constraints = fret_core::TextConstraints {
-            max_width: Some(max_width),
+            max_width: None,
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             scale_factor,
@@ -71,7 +67,6 @@ pub(super) fn paint_row(
             Px(row_h.0.max(16.0))
         };
         st.baseline_measure_cache = Some(BaselineMeasureCache {
-            max_width,
             row_h,
             scale_bits,
             text_style: text_style.clone(),

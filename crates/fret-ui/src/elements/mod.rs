@@ -19,7 +19,7 @@ pub use runtime::{NodeEntryRootOverwrite, WindowElementDiagnosticsSnapshot};
 
 pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, record_timer_target, record_transient_event,
-    set_pressed_pressable, timer_has_target, timer_target_node, update_hovered_hover_region,
+    set_pressed_pressable, timer_target_node, update_hovered_hover_region,
     update_hovered_pressable, with_observed_globals_for_element, with_observed_models_for_element,
     with_window_state,
 };

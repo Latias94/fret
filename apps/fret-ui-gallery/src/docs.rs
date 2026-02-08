@@ -588,6 +588,24 @@ use fret_ui_ai::{ConversationTranscript, PromptInput};
 ```
 "#;
 
+pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
+## AI file tree (demo)
+
+This page is a small demo for the AI Elements-aligned `FileTree` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- nested expand/collapse behavior (folder nodes),
+- selection intent emission (`on_select`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_FILE_TREE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{FileTree, FileTreeFile, FileTreeFolder};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 
