@@ -857,6 +857,20 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Retained table torture: `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
     - Data table torture: `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
 
+Next UI parity targets (capability, not exact DOM behavior):
+
+- [ ] HTP-ui-sort-010 Enable multi-sort input semantics in `table_virtualized` header activation:
+  - TanStack default: multi-sort when the input event matches `options.isMultiSortEvent` (typically Shift).
+  - Plan: wire pointer modifiers into the header sort toggle (component-owned pointer hook) and keep keyboard activation as single-sort.
+  - Gate: requires a diag/automation path that can express “modifier+click” (see `HTP-diag-010`) or an equivalent keyboard recipe.
+- [ ] HTP-diag-010 Extend the diag script protocol to support `modifiers` on `click` steps (so Shift-click is gateable).
+  - Motivation: current scripts can express modifier keys for `press_key`, but not pointer clicks.
+  - Target: `crates/fret-diag-protocol` `UiActionStepV2::Click` + runner plumbing + one table repro script.
+- [ ] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
+  - Column filters UI (per-column filtering + faceting-driven menus)
+  - Column pinning UI affordances (left/center/right sticky behavior)
+  - Multi-sort UX (Shift-click + “sort order” indicator when multiple columns are sorted)
+
 ---
 
 ## M6.5 鈥?Faceting parity
