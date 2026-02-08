@@ -44,6 +44,7 @@ pub mod ids {
         pub const ARROW_RIGHT: IconId = IconId::new_static("ui.arrow.right");
         pub const BOOK: IconId = IconId::new_static("ui.book");
         pub const CHECK: IconId = IconId::new_static("ui.check");
+        pub const COPY: IconId = IconId::new_static("ui.copy");
         pub const CHEVRON_LEFT: IconId = IconId::new_static("ui.chevron.left");
         pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");

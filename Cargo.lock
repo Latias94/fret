@@ -1811,6 +1811,7 @@ dependencies = [
 name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
+ "fret-code-view",
  "fret-core",
  "fret-icons",
  "fret-markdown",

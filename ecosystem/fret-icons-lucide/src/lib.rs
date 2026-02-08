@@ -58,6 +58,7 @@ mod semantic_ui {
         let _ = reg.alias(ids::ui::ARROW_RIGHT, IconId::new("lucide.arrow-right"));
         let _ = reg.alias(ids::ui::BOOK, IconId::new("lucide.book"));
         let _ = reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
+        let _ = reg.alias(ids::ui::COPY, IconId::new("lucide.copy"));
         let _ = reg.alias(ids::ui::CHEVRON_LEFT, IconId::new("lucide.chevron-left"));
         let _ = reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
         let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));

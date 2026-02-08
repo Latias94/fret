@@ -71,13 +71,14 @@ pub mod export;
 pub mod model;
 
 pub use elements::{
-    AiChat, AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
-    ConversationMessage, ConversationScrollButton, ConversationTranscript, FileTree, FileTreeFile,
-    FileTreeFolder, FileTreeIcon, FileTreeItem, FileTreeName, InlineCitation, Message,
-    MessageAction, MessageActionTemplate, MessageActions, MessageContent, MessageParts,
-    MessageResponse, MessageToolbar, OnFileTreeExpandedChange, OnFileTreeSelect, PromptInput,
-    SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,
-    ToolSectionTitle, ToolStatus,
+    AiChat, AiConversationTranscript, CodeBlock, CodeBlockCopyButton, CodeBlockFilename,
+    Conversation, ConversationDownload, ConversationEmptyState, ConversationMessage,
+    ConversationScrollButton, ConversationTranscript, FileTree, FileTreeFile, FileTreeFolder,
+    FileTreeIcon, FileTreeItem, FileTreeName, InlineCitation, Message, MessageAction,
+    MessageActionTemplate, MessageActions, MessageContent, MessageParts, MessageResponse,
+    MessageToolbar, OnFileTreeExpandedChange, OnFileTreeSelect, PromptInput, Snippet,
+    SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock, Tool, ToolCallBlock, ToolContent,
+    ToolHeader, ToolInput, ToolOutput, ToolSectionTitle, ToolStatus,
 };
 pub use export::messages_to_markdown;
 pub use model::{
