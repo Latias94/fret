@@ -91,6 +91,29 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     )
 }
 
+/// Drive a transition with separate durations/easing and explicit mount behavior.
+///
+/// When `animate_on_mount` is `false`, the first render snaps to the target state and only
+/// subsequent open/close changes animate.
+#[track_caller]
+pub fn drive_transition_with_durations_and_easing_with_mount_behavior<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+    animate_on_mount: bool,
+) -> TransitionOutput {
+    crate::declarative::transition::drive_transition_with_durations_and_easing_with_mount_behavior(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        ease,
+        animate_on_mount,
+    )
+}
+
 /// Drive a transition using a reusable [`TransitionProfile`].
 #[track_caller]
 pub fn drive_transition_with_profile<H: UiHost>(
@@ -104,6 +127,24 @@ pub fn drive_transition_with_profile<H: UiHost>(
         profile.open_ticks,
         profile.close_ticks,
         profile.ease,
+    )
+}
+
+/// Drive a transition using a reusable [`TransitionProfile`] and explicit mount behavior.
+#[track_caller]
+pub fn drive_transition_with_profile_and_mount_behavior<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    profile: TransitionProfile,
+    animate_on_mount: bool,
+) -> TransitionOutput {
+    drive_transition_with_durations_and_easing_with_mount_behavior(
+        cx,
+        open,
+        profile.open_ticks,
+        profile.close_ticks,
+        profile.ease,
+        animate_on_mount,
     )
 }
 
@@ -165,5 +206,40 @@ mod tests {
         assert!(!b.present);
         assert!(!b.animating);
         assert_eq!(b.progress, 0.0);
+    }
+
+    #[test]
+    fn wrapper_can_snap_on_mount_then_animate_on_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let open = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t3", |cx| {
+            drive_transition_with_profile_and_mount_behavior(
+                cx,
+                true,
+                TransitionProfile::new(6, 6, crate::headless::easing::smoothstep),
+                false,
+            )
+        });
+        assert!(open.present);
+        assert!(!open.animating);
+        assert_eq!(open.progress, 1.0);
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        let close = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t3", |cx| {
+            drive_transition_with_profile_and_mount_behavior(
+                cx,
+                false,
+                TransitionProfile::new(6, 6, crate::headless::easing::smoothstep),
+                false,
+            )
+        });
+        assert!(!close.present);
+        assert!(!close.animating);
+        assert_eq!(close.progress, 0.0);
     }
 }
