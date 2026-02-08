@@ -87,12 +87,14 @@ ColumnDef keys referenced by upstream feature implementations:
 P0 (core behavior parity, highest user-visible risk):
 
 - Cleared for current grouping scope: `HTP-grp-010` + `HTP-grp-030` are fixture-gated.
+- Remaining (still Partial in matrix): sorting edge-case coverage, pagination auto-reset trigger breadth,
+  and `columnSizingInfo` inventory + cross-feature interactions.
 
 P1 (capability breadth parity):
 
-- HTP-id-014/015: promote grouped/string RowId through remaining feature paths and state conversions.
-- HTP-filt-090/100: complete `getCanFilter` option-gate + controlled filtering hook parity surfaces.
-- HTP-state-020: lossless omitted-vs-explicit-default JSON round-trip semantics.
+- Cleared: `HTP-id-014/015`, `HTP-filt-090/100`, `HTP-state-020` are fixture-gated.
+- Remaining: `HTP-core-040` core snapshot introspection breadth (so UI consumers do not drift by
+  re-implementing traversal / inventory helpers).
 
 P2 (engineering guardrails for sustained parity):
 
@@ -108,7 +110,7 @@ P2 (engineering guardrails for sustained parity):
 - Milestone C (manual pipeline parity, done): `HTP-sort-050` closed with fixture-backed manualSorting/getSortedRowModel override assertions.
 - Milestone D (filter depth/meta parity, done): `HTP-filt-050` + `HTP-filt-060` + `HTP-filt-070` are parity-gated.
 - Milestone E (grouped row-model pipeline parity, done): `HTP-grp-030` closed with fixture-backed pipeline assertions.
-- Milestone F (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
+- Milestone F (ID/state hardening, done): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
 - Milestone G (guardrails): close HTP-cap-010 and HTP-base-004 (memo/perf rebuild-each-frame guardrails are done).
 
 ---
