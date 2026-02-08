@@ -143,6 +143,15 @@ Implemented helpers (optional):
 - `register_router_commands(&mut CommandRegistry)` registers `router.back` and `router.forward`.
 - `RouterUiStore::handle_router_command(...)` performs navigation via the store and updates snapshot/intents models.
 
+Default keybindings (recommended):
+
+- macOS: `Cmd+[` / `Cmd+]`
+- Windows/Linux: `Alt+Left` / `Alt+Right`
+
+Golden path: enable the `fret-kit` `router` feature to register router commands early enough for
+`with_default_config_files()` to install the default keybindings before applying layered
+`.fret/keymap.json` overrides.
+
 ## Evidence anchors (when implemented)
 
 - `ecosystem/fret-router-ui/src/lib.rs` (store + outlet/link primitives)

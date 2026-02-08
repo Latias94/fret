@@ -10,14 +10,16 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::AppWindowId;
+use fret_core::{AppWindowId, KeyCode, Modifiers};
 use fret_router::{
     HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
-use fret_runtime::{CommandId, CommandMeta, CommandRegistry, CommandScope, Effect};
-use fret_runtime::{Model, WeakModel, WhenExpr, WindowCommandAvailabilityService};
+use fret_runtime::{
+    CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, Effect, KeyChord,
+    Model, PlatformFilter, WeakModel, WhenExpr, WindowCommandAvailabilityService,
+};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableProps, SemanticsDecoration};
@@ -97,6 +99,38 @@ pub fn register_router_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Back")
             .with_category("Router")
             .with_description("Navigate back in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketLeft,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
             .with_when(WhenExpr::parse("router.can_back").expect("when expr should parse"))
             .with_scope(CommandScope::Window),
     );
@@ -105,6 +139,38 @@ pub fn register_router_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Forward")
             .with_category("Router")
             .with_description("Navigate forward in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketRight,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
             .with_when(WhenExpr::parse("router.can_forward").expect("when expr should parse"))
             .with_scope(CommandScope::Window),
     );

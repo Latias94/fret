@@ -1469,6 +1469,7 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "fret-launch",
+ "fret-router-ui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",

@@ -428,6 +428,11 @@ pub fn app_with_hooks<S: 'static>(
     let driver = configure(UiAppDriver::new(driver)).into_inner();
     let builder = fret_bootstrap::BootstrapBuilder::new(App::new(), driver.into_fn_driver());
 
+    #[cfg(feature = "router")]
+    let builder = builder.install_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+    });
+
     #[cfg(feature = "diagnostics")]
     let builder = builder.with_default_diagnostics();
 
