@@ -3546,7 +3546,7 @@ fn preview_code_editor_torture(
                             }),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")
-                                .a11y_label("Toggle fold fixture on line 0 (unwrapped only)")
+                                .a11y_label("Toggle fold fixture on line 0")
                                 .into_element(cx),
                             shadcn::Button::new("Folds: off")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -3560,16 +3560,14 @@ fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-folds-set-on")
                                 .on_activate(set_folds_on.clone())
                                 .into_element(cx),
-                            cx.text(if folds_enabled && !soft_wrap_enabled {
+                            cx.text(if folds_enabled {
                                 "Folds: fixture"
-                            } else if folds_enabled {
-                                "Folds: (disabled under wrap)"
                             } else {
                                 "Folds: off"
                             }),
                             shadcn::Switch::new(inlays.clone())
                                 .test_id("ui-gallery-code-editor-torture-inlays")
-                                .a11y_label("Toggle inlay fixture on line 0 (unwrapped only)")
+                                .a11y_label("Toggle inlay fixture on line 0")
                                 .into_element(cx),
                             shadcn::Button::new("Inlays: off")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -3583,10 +3581,8 @@ fn preview_code_editor_torture(
                                 .test_id("ui-gallery-code-editor-torture-inlays-set-on")
                                 .on_activate(set_inlays_on.clone())
                                 .into_element(cx),
-                            cx.text(if inlays_enabled && !soft_wrap_enabled {
+                            cx.text(if inlays_enabled {
                                 "Inlays: fixture"
-                            } else if inlays_enabled {
-                                "Inlays: (disabled under wrap)"
                             } else {
                                 "Inlays: off"
                             }),

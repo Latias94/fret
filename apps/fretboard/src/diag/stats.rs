@@ -10417,20 +10417,20 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_
     ))
 }
 
-pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap(
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap_json(
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap_json(
         &bundle,
         bundle_path,
         warmup_frames,
     )
 }
 
-pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap_json(
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     warmup_frames: u64,
@@ -10518,12 +10518,13 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_
     }
 
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-    let evidence_path = evidence_dir
-        .join("check.ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap.json");
+    let evidence_path = evidence_dir.join(
+        "check.ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap.json",
+    );
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
-        "kind": "ui_gallery_code_editor_torture_folds_placeholder_absent_under_soft_wrap",
+        "kind": "ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap",
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
@@ -10553,14 +10554,14 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_
     }
 
     if placeholder_present_under_wrap_observed {
-        return Err(format!(
-            "ui-gallery code-editor folds-under-wrap gate failed (expected fold placeholder to be absent under soft wrap in v1)\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            evidence_path.display()
-        ));
+        return Ok(());
     }
 
-    Ok(())
+    Err(format!(
+        "ui-gallery code-editor folds-under-wrap gate failed (expected fold placeholder to be observed at least once under soft wrap)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
 }
 
 pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present(
@@ -10678,20 +10679,20 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_jso
     ))
 }
 
-pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap(
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap_json(
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap_json(
         &bundle,
         bundle_path,
         warmup_frames,
     )
 }
 
-pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap_json(
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     warmup_frames: u64,
@@ -10780,11 +10781,11 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_unde
 
     let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     let evidence_path = evidence_dir
-        .join("check.ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap.json");
+        .join("check.ui_gallery_code_editor_torture_inlays_present_under_soft_wrap.json");
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
-        "kind": "ui_gallery_code_editor_torture_inlays_absent_under_soft_wrap",
+        "kind": "ui_gallery_code_editor_torture_inlays_present_under_soft_wrap",
         "bundle_json": bundle_path.display().to_string(),
         "evidence_dir": evidence_dir.display().to_string(),
         "evidence_path": evidence_path.display().to_string(),
@@ -10814,14 +10815,14 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_unde
     }
 
     if inlay_present_under_wrap_observed {
-        return Err(format!(
-            "ui-gallery code-editor inlays-under-wrap gate failed (expected inlays to be absent under soft wrap in v1)\n  bundle: {}\n  evidence: {}",
-            bundle_path.display(),
-            evidence_path.display()
-        ));
+        return Ok(());
     }
 
-    Ok(())
+    Err(format!(
+        "ui-gallery code-editor inlays-under-wrap gate failed (expected inlay text to be observed at least once under soft wrap)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
 }
 
 pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(

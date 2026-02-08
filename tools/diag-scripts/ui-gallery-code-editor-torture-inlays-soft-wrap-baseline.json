@@ -70,8 +70,7 @@
     { "type": "wait_frames", "n": 2 },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-torture-inlays-disabled-under-soft-wrap"
+      "label": "ui-gallery-code-editor-torture-inlays-soft-wrap-baseline"
     }
   ]
 }
-
