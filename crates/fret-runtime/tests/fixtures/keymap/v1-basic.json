@@ -1,0 +1,15 @@
+{
+  "keymap_version": 1,
+  "bindings": [
+    {
+      "command": "app.open",
+      "keys": { "mods": ["ctrl"], "key": "KeyO" },
+      "when": "platform != \"web\""
+    },
+    {
+      "command": "app.focus_search",
+      "keys": { "mods": ["ctrl"], "key": "KeyF" },
+      "when": "focus.is_text_input"
+    }
+  ]
+}
