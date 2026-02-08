@@ -87,6 +87,29 @@ tools/perf/diag_perf_baseline_select.sh \
    - Tracy (`docs/tracy.md`)
    - RenderDoc (`docs/renderdoc-inspection.md`)
 
+## From gate failure to root cause (tail hitch loop)
+
+When a gate fails, the goal is to go from “numbers” → “one concrete hitch class” quickly.
+
+1. Identify the failing script/metric.
+   - `<out-dir>/check.perf_thresholds.json`
+   - For gate scripts: `<out-dir>/attempt-N/check.perf_thresholds.json`
+2. Find the worst bundle for that script.
+   - Gate scripts write `attempt-N/stdout.json`, but it may include log lines before the JSON payload.
+   - Extract JSON (skip leading logs), then query with `jq`:
+     ```bash
+     awk 'BEGIN{f=0} {if(!f && $0 ~ /^\\{/){f=1} if(f){print}}' attempt-N/stdout.json > attempt-N/stdout.payload.json
+     jq -r '.rows[] | select(.script | endswith(\"<script-name>.json\")) | .worst_run.bundle' attempt-N/stdout.payload.json
+     ```
+3. Attribute the worst frame in that bundle.
+   - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+4. Decide the lever (and keep it global-optimum safe).
+   - If the top cost is `layout_engine_solve_time_us`: focus on measure/shaping reuse, layout root scope, and
+     allocation spikes (HashMap growth / rehash).
+   - If the top cost is `paint_time_us`: focus on text prepare churn, atlas upload/eviction, scene replay, and
+     intermediate pool churn.
+   - Validate the change globally: `ui-gallery-steady` + P0 resize probes must pass.
+
 ## Tips / pitfalls
 
 - “One probe win” is not accepted if `ui-gallery-steady` regresses.

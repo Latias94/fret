@@ -35,6 +35,18 @@ If your primary goal is to quantify performance (baselines/gates/logs), use `fre
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
+## Perf triage handoff (when the “bug” is a hitch)
+
+If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a correctness regression:
+
+1. Switch to `fret-perf-workflow` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
+2. When a `diag perf` run fails, start with the thresholds file:
+   - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
+3. Use the worst bundle for root cause:
+   - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
+4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
+   - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
+
 ## Tips
 
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
