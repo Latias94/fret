@@ -3981,6 +3981,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("ab", None);
@@ -4000,6 +4003,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("", None);
