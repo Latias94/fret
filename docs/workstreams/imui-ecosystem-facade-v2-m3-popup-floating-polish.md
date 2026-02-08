@@ -24,9 +24,8 @@ M3 decision:
 - Trigger activation opens a popup menu anchored to trigger bounds.
 - Option activation updates the model, emits `changed` once, and closes popup.
 - Option rows are exposed as radio-menu items to reuse canonical menu interaction policy.
-- Popups are kept alive by `begin_popup_*` calls; if a popup scope is opened but not rendered on a
-  subsequent frame (e.g. the triggering widget disappears), it will auto-close to avoid stale
-  "open" state resurfacing later.
+- Popups are kept alive by `begin_popup_*` calls; if a popup scope is opened but not kept alive,
+  it will auto-close after a short grace period to avoid stale "open" state resurfacing later.
 
 Implementation anchors:
 

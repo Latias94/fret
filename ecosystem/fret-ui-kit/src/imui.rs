@@ -2052,7 +2052,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn open_popup(&mut self, id: &str) {
         self.with_cx_mut(|cx| {
-            let open = with_popup_store_for_id(cx, id, |st, _app| st.open.clone());
+            let keep_alive_frame = cx.frame_id;
+            let open = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                st.open.clone()
+            });
             let _ = cx.app.models_mut().update(&open, |v| *v = true);
             cx.app.request_redraw(cx.window);
         });
@@ -2060,8 +2064,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
         self.with_cx_mut(|cx| {
-            let (open, anchor_model) =
-                with_popup_store_for_id(cx, id, |st, _app| (st.open.clone(), st.anchor.clone()));
+            let keep_alive_frame = cx.frame_id;
+            let (open, anchor_model) = with_popup_store_for_id(cx, id, move |st, _app| {
+                st.keep_alive_frame = Some(keep_alive_frame);
+                (st.open.clone(), st.anchor.clone())
+            });
             let _ = cx
                 .app
                 .models_mut()
@@ -2110,6 +2117,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 .read_model(&anchor_model, fret_ui::Invalidation::Paint, |_app, v| *v)
                 .unwrap_or(None);
             let Some(anchor) = anchor else {
+                let _ = cx.app.models_mut().update(&open, |v| *v = false);
+                let _ = cx.app.models_mut().update(&anchor_model, |v| *v = None);
+                with_popup_store_for_id(cx, id, |st, _app| {
+                    st.panel_id = None;
+                    st.keep_alive_frame = None;
+                });
+                cx.app.request_redraw(cx.window);
                 return false;
             };
 
