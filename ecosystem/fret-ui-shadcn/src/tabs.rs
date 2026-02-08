@@ -144,6 +144,28 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
 use fret_ui_kit::primitives::tabs as radix_tabs;
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+fn set_tabs_value_and_emit_change(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &Model<Option<Arc<str>>>,
+    next: Option<Arc<str>>,
+    on_value_change: Option<&OnValueChange>,
+) {
+    let mut changed = false;
+    let next_for_update = next.clone();
+    let _ = host.models_mut().update(model, |value| {
+        if *value != next_for_update {
+            *value = next_for_update.clone();
+            changed = true;
+        }
+    });
+
+    if changed && let Some(on_value_change) = on_value_change {
+        on_value_change(next);
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TabsStyle {
     pub trigger_background: OverrideSlot<ColorRef>,
@@ -292,6 +314,7 @@ pub struct TabsRoot {
     force_mount_content: bool,
     list_full_width: bool,
     content_fill_remaining: bool,
+    on_value_change: Option<OnValueChange>,
 }
 
 impl std::fmt::Debug for TabsRoot {
@@ -308,6 +331,7 @@ impl std::fmt::Debug for TabsRoot {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
+            .field("on_value_change", &self.on_value_change.is_some())
             .finish()
     }
 }
@@ -329,6 +353,7 @@ impl TabsRoot {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            on_value_change: None,
         }
     }
 
@@ -349,6 +374,7 @@ impl TabsRoot {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            on_value_change: None,
         }
     }
 
@@ -439,6 +465,12 @@ impl TabsRoot {
         self
     }
 
+    /// Called when the selected tab value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = self.list.clone();
         let contents = self.contents.clone();
@@ -476,6 +508,7 @@ impl TabsRoot {
             .orientation(self.orientation)
             .activation_mode(self.activation_mode)
             .loop_navigation(self.loop_navigation)
+            .on_value_change(self.on_value_change)
             .style(self.style)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
@@ -547,6 +580,7 @@ pub struct Tabs {
     force_mount_content: bool,
     list_full_width: bool,
     content_fill_remaining: bool,
+    on_value_change: Option<OnValueChange>,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -562,6 +596,7 @@ impl std::fmt::Debug for Tabs {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
+            .field("on_value_change", &self.on_value_change.is_some())
             .finish()
     }
 }
@@ -582,6 +617,7 @@ impl Tabs {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            on_value_change: None,
         }
     }
 
@@ -601,6 +637,7 @@ impl Tabs {
             force_mount_content: false,
             list_full_width: false,
             content_fill_remaining: false,
+            on_value_change: None,
         }
     }
 
@@ -686,6 +723,12 @@ impl Tabs {
         self
     }
 
+    /// Called when the selected tab value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -700,6 +743,7 @@ impl Tabs {
         let force_mount_content = self.force_mount_content;
         let list_full_width = self.list_full_width;
         let content_fill_remaining = self.content_fill_remaining;
+        let on_value_change = self.on_value_change;
 
         let model =
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
@@ -807,7 +851,20 @@ impl Tabs {
                             |cx| {
                                 cx.roving_nav_apg();
                                 if activation_mode == TabsActivationMode::Automatic {
-                                    cx.roving_select_option_arc_str(&model, values_arc.clone());
+                                    let model_for_roving = model.clone();
+                                    let values_for_roving = values_arc.clone();
+                                    let on_value_change_for_roving = on_value_change.clone();
+                                    cx.roving_on_active_change(Arc::new(move |host, _acx, idx| {
+                                        let Some(value) = values_for_roving.get(idx).cloned() else {
+                                            return;
+                                        };
+                                        set_tabs_value_and_emit_change(
+                                            host,
+                                            &model_for_roving,
+                                            Some(value),
+                                            on_value_change_for_roving.as_ref(),
+                                        );
+                                    }));
                                 }
 
                                 // shadcn new-york-v4: inactive triggers are `text-foreground` in
@@ -854,6 +911,7 @@ impl Tabs {
                                 let mut out: Vec<AnyElement> =
                                     Vec::with_capacity(disabled_flags.len());
                                 for (idx, item) in items_for_list.iter().cloned().enumerate() {
+                                    let on_value_change = on_value_change.clone();
                                     let item_disabled =
                                         disabled_flags.get(idx).copied().unwrap_or(true);
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
@@ -878,6 +936,7 @@ impl Tabs {
                                         cx.pressable_with_id_props(move |cx, st, _id| {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
+                                        let on_value_change_for_pointer = on_value_change.clone();
 
                                         cx.pressable_add_on_pointer_down(Arc::new(
                                             move |host, _cx, down| {
@@ -890,9 +949,11 @@ impl Tabs {
                                                     item_disabled,
                                                 ) {
                                                     radix_tabs::TabsTriggerPointerDownAction::Select => {
-                                                        let _ = host.models_mut().update(
+                                                        set_tabs_value_and_emit_change(
+                                                            host,
                                                             &model_for_pointer,
-                                                            |v| *v = Some(value_for_pointer.clone()),
+                                                            Some(value_for_pointer.clone()),
+                                                            on_value_change_for_pointer.as_ref(),
                                                         );
                                                         R::Continue
                                                     }
@@ -906,8 +967,19 @@ impl Tabs {
                                                 }
                                             },
                                         ));
-
-                                        cx.pressable_set_option_arc_str(&model, value.clone());
+                                        let value_for_activate = value.clone();
+                                        let model_for_activate = model.clone();
+                                        let on_value_change_for_activate = on_value_change.clone();
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, _acx, _reason| {
+                                                set_tabs_value_and_emit_change(
+                                                    host,
+                                                    &model_for_activate,
+                                                    Some(value_for_activate.clone()),
+                                                    on_value_change_for_activate.as_ref(),
+                                                );
+                                            },
+                                        ));
                                         if active {
                                             selected_tab_element.set(Some(_id.0));
                                         }
@@ -1587,6 +1659,107 @@ mod tests {
             Some(Arc::from("alpha")),
         );
         assert!(tab_is_selected(&ui, "Beta"));
+    }
+
+    #[test]
+    fn tabs_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let tabs = Tabs::new(model).on_value_change(Some(Arc::new(|_value| {})));
+        assert!(tabs.on_value_change.is_some());
+    }
+
+    #[test]
+    fn tabs_root_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let tabs = TabsRoot::new(model).on_value_change(Some(Arc::new(|_value| {})));
+        assert!(tabs.on_value_change.is_some());
+    }
+
+    #[test]
+    fn tabs_on_value_change_fires_once_when_selection_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed_values: Arc<std::sync::Mutex<Vec<Option<Arc<str>>>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_values_for_handler = changed_values.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .on_value_change(Some(Arc::new(move |value| {
+                            changed_values_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push(value);
+                        })))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let values = changed_values.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].as_deref(), Some("beta"));
     }
 
     fn render_force_mount_frame(

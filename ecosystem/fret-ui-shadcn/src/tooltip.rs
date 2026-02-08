@@ -138,6 +138,41 @@ struct TooltipTriggerHoverEdgeState {
     was_hovered: bool,
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct TooltipOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn tooltip_open_change_events(
+    state: &mut TooltipOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TooltipAlign {
     Start,
@@ -304,7 +339,7 @@ impl TooltipProvider {
 ///
 /// Note: This uses a per-window overlay root, so it is not clipped by ancestors with
 /// `overflow: Clip`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Tooltip {
     trigger: AnyElement,
     content: AnyElement,
@@ -324,6 +359,47 @@ pub struct Tooltip {
     track_cursor_axis: TooltipTrackCursorAxis,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
+}
+
+impl std::fmt::Debug for Tooltip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Tooltip")
+            .field("trigger", &"<trigger>")
+            .field("content", &"<content>")
+            .field("align", &self.align)
+            .field("side", &self.side)
+            .field("side_offset", &self.side_offset)
+            .field("window_margin_override", &self.window_margin_override)
+            .field("arrow", &self.arrow)
+            .field("arrow_test_id", &self.arrow_test_id)
+            .field("panel_test_id", &self.panel_test_id)
+            .field("arrow_size_override", &self.arrow_size_override)
+            .field("arrow_padding_override", &self.arrow_padding_override)
+            .field("hide_when_detached", &self.hide_when_detached)
+            .field(
+                "open_delay_frames_override",
+                &self.open_delay_frames_override,
+            )
+            .field(
+                "close_delay_frames_override",
+                &self.close_delay_frames_override,
+            )
+            .field(
+                "disable_hoverable_content_override",
+                &self.disable_hoverable_content_override,
+            )
+            .field("track_cursor_axis", &self.track_cursor_axis)
+            .field("layout", &self.layout)
+            .field("anchor_override", &self.anchor_override)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
+            .finish()
+    }
 }
 
 impl Tooltip {
@@ -347,6 +423,8 @@ impl Tooltip {
             track_cursor_axis: TooltipTrackCursorAxis::None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -476,6 +554,21 @@ impl Tooltip {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -514,6 +607,8 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
         let track_cursor_axis = self.track_cursor_axis;
+        let on_open_change = self.on_open_change;
+        let on_open_change_complete = self.on_open_change_complete;
 
         let base_trigger = self.trigger;
         let content = self.content;
@@ -827,6 +922,18 @@ impl Tooltip {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(TooltipOpenChangeCallbackState::default, |state| {
+                    tooltip_open_change_events(state, opening, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
+                handler(open);
+            }
+            if let (Some(open), Some(handler)) =
+                (open_change_complete, on_open_change_complete.as_ref())
+            {
+                handler(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: update.open,
@@ -1301,6 +1408,52 @@ mod tests {
 
         // Keep `app` live so this test mirrors normal construction context style.
         let _ = app.models_mut();
+    }
+
+    #[test]
+    fn tooltip_open_change_handlers_can_be_set() {
+        let trigger = AnyElement::new(
+            fret_ui::elements::GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+        let content = AnyElement::new(
+            fret_ui::elements::GlobalElementId(2),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+
+        let tooltip = Tooltip::new(trigger, content)
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(tooltip.on_open_change.is_some());
+        assert!(tooltip.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn tooltip_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = TooltipOpenChangeCallbackState::default();
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, true, true);
+        assert_eq!(changed, Some(false));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(false));
     }
 
     fn render_tooltip_frame(
