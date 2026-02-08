@@ -1070,6 +1070,12 @@ pub struct FloatingWindowOptions {
     pub collapsible: bool,
     /// When true and an `open` model is provided, the close button and `Escape`-to-close are enabled.
     pub closable: bool,
+    /// When true, pointer down inside the window requests focus for the surface (even if
+    /// activation is disabled).
+    ///
+    /// This is useful to model ImGui's `NoBringToFrontOnFocus` behavior: you may want a window to
+    /// take focus when clicked without also being activated for z-order.
+    pub focus_on_click: bool,
     /// When true, pointer down anywhere in the window activates it for z-order (when nested under
     /// `floating_layer(...)`).
     pub activate_on_click: bool,
@@ -1106,6 +1112,7 @@ impl Default for FloatingWindowOptions {
             resizable: true,
             collapsible: true,
             closable: true,
+            focus_on_click: true,
             activate_on_click: true,
             inputs_enabled: true,
             no_inputs: false,

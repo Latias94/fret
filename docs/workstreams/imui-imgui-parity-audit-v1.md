@@ -62,8 +62,8 @@ Legend:
     - `inputs_enabled=false`: rendered but non-interactive (blocks hits; not click-through by default).
     - `pointer_passthrough=true`: pointer pass-through (hit-test transparent subtree) while still allowing focus traversal.
     - `no_inputs=true`: click-through and skipped by focus traversal.
-- **Focus vs z-order split**: **Partial**
-  - ImGui separates “taking focus” from “bringing to front” more cleanly than current `imui` wrappers.
+- **Focus vs z-order split**: **Aligned**
+  - Fret can take focus without z-order activation: `focus_on_click=true` with `activate_on_click=false`.
 
 ### 1.2 Item query semantics (hover/active/focus/click)
 

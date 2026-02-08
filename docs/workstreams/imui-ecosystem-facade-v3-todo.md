@@ -95,10 +95,13 @@ Exit criteria:
     `floating_area_show_ex` wrapping with `InteractivityGate`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`floating_window_no_inputs_allows_underlay_hit_testing`,
     `floating_window_no_inputs_is_skipped_by_focus_traversal`, `no_inputs_is_click_through_and_skips_focus_traversal`).
-- [ ] IMUIECO3-float-016 Align activation semantics with ImGui `NoBringToFrontOnFocus` (focus vs z-order).
+- [x] IMUIECO3-float-016 Align activation semantics with ImGui `NoBringToFrontOnFocus` (focus vs z-order).
   - Reference: `repo-ref/imgui/imgui.h` (`ImGuiWindowFlags_NoBringToFrontOnFocus`).
-  - Evidence (current Fret behavior): `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` + `ecosystem/fret-ui-kit/src/imui.rs`
-    (`activate_on_click` gates bring-to-front activation for title bar, content, and resize handles).
+  - Evidence (options): `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingWindowOptions.focus_on_click`,
+    `FloatingWindowOptions.activate_on_click`).
+  - Evidence (wiring): `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (content pointer-region requests focus
+    independent of activation).
+  - Evidence (test): `ecosystem/fret-imui/src/lib.rs` (`floating_window_focus_on_click_can_be_independent_from_z_order_activation`).
 - [x] IMUIECO3-resp-017 Decide whether keyboard-nav highlight should participate in "hovered" (ImGui-style) or a separate signal.
   - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered`, `IsItemFocused`).
   - Decision: keep `hovered` pointer-driven; add a separate `nav_highlighted` signal + a helper that composes them.

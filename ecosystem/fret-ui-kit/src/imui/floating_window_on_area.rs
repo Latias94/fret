@@ -259,8 +259,12 @@ where
 
         let window = cx.container(window_props, move |cx| {
             let mut col = ColumnProps::default();
-            col.layout.size.width = Length::Auto;
-            col.layout.size.height = Length::Auto;
+            col.layout.size.width = Length::Fill;
+            col.layout.size.height = if resizable_layout && !collapsed {
+                Length::Fill
+            } else {
+                Length::Auto
+            };
 
             let title_bar = cx.container(
                 {
@@ -418,13 +422,15 @@ where
                     )
                 };
 
-                if options.inputs_enabled && options.activate_on_click {
+                if options.inputs_enabled && (options.activate_on_click || options.focus_on_click) {
                     let layout = {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
                         layout.size.height = Length::Fill;
                         layout
                     };
+                    let focus_on_click = options.focus_on_click;
+                    let activate_on_click = options.activate_on_click;
                     cx.pointer_region(
                         PointerRegionProps {
                             layout,
@@ -435,11 +441,21 @@ where
                             super::float_layer_bring_to_front_if_activated(
                                 cx, region_id, window_id,
                             );
+                            // Make the surface focusable so `request_focus(...)` is effective even
+                            // when the click lands on a non-focusable background area.
+                            cx.key_on_key_down_for(region_id, Arc::new(|_host, _acx, _down| false));
 
                             cx.pointer_region_clear_on_pointer_down();
                             cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, _down| {
-                                host.request_focus(acx.target);
-                                host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_ACTIVATE);
+                                if focus_on_click {
+                                    host.request_focus(acx.target);
+                                }
+                                if activate_on_click {
+                                    host.record_transient_event(
+                                        acx,
+                                        super::KEY_FLOAT_WINDOW_ACTIVATE,
+                                    );
+                                }
                                 host.notify(acx);
                                 false
                             }));
