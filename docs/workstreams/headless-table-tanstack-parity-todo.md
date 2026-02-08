@@ -539,11 +539,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       (info+sizing stay unchanged due to upstream `newColumnSizing` computation placement).
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
-- [ ] HTP-size-060 Expand column sizing capability coverage across feature interactions.
-  - Target: ensure sizing offsets + `columnSizingInfo` remain correct under:
-    - pinning/visibility/ordering changes, and
-    - grouped header resize fan-out + manualSizing overrides.
-  - Evidence target: extend `column_sizing.json` (or add a new interaction fixture + parity gate).
+- [x] HTP-size-060 Expand column sizing capability coverage across feature interactions.
+  - Done (parity-gated): sizing offsets remain correct under combined:
+    - pinning + visibility + ordering changes, and
+    - grouped-header resize fan-out + manualSizing overrides.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing_interactions.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_interactions_parity.rs`
 
 ---
 

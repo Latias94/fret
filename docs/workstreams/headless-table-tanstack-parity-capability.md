@@ -54,13 +54,13 @@ Mapping conventions:
 | `table.getAllColumns()` | `Table::{column_tree,column_tree_snapshot}` (nested `ColumnDef` tree + snapshot) | Aligned | `headers_inventory_deep.json` |
 | `table.getAllFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (helper) | Aligned | `visibility_ordering.json` + `tanstack_v8_visibility_ordering_parity.rs` |
 | `table.getAllLeafColumns()` | `Table::ordered_columns()` (ordered leaf set) | Aligned | `visibility_ordering.json` + `column_ordering.rs` gates |
-| `table.getColumn(columnId)` | `Table::column(column_id)` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column`) |
+| `table.getColumn(columnId)` | `Table::column_any(column_id)` (group or leaf) + `Table::column(column_id)` (leaf-only fast path) | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`column_any`) |
 | `table.getCoreRowModel()` | `Table::core_row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
 | `table.getRowModel()` | `Table::row_model()` | Aligned | parity fixtures (`demo_process.json`, etc.) |
 | `table.getRow(rowId, searchAll?)` | `Table::row_by_id(row_id, search_all)` | Aligned | `row_id_lookup.json` + `tanstack_v8_row_id_lookup_parity.rs` |
 | `table.getState()` | `Table::state()` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
 | `table.options.renderFallbackValue` | `Table::render_fallback_value()` + `Table::cell_render_value(..)` | Aligned | `render_fallback.json` |
-| `table._queue(cb)` (auto-reset scheduling) | modeled via state-transition parity gates (no runtime queue yet) | Partial | `auto_reset.json` + `docs/workstreams/headless-table-tanstack-parity.md` notes |
+| `table._queue(cb)` (auto-reset scheduling) | `TanStackAutoResetQueue` (explicit register-first + coalesced auto-reset queue) | Partial | `auto_reset.json` + `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` |
 
 ### Row core surface
 
@@ -304,7 +304,7 @@ Source of truth:
 | `setPageIndex/setPageSize` | `Table::{set_page_index,set_page_size}` (+ updater variants) | Aligned | `pagination.json` |
 | `nextPage/previousPage/firstPage/lastPage` | `Table::{next_page,previous_page,first_page,last_page}` | Aligned | `pagination.json` |
 | `resetPageIndex/resetPageSize/resetPagination` | `Table::{reset_page_index,reset_page_size,reset_pagination}` | Aligned | `pagination.json` |
-| Auto-reset `_queue` behavior | modeled via state-transition parity gates (not a first-class runtime queue) | Partial | `auto_reset.json` |
+| Auto-reset `_queue` behavior | `TanStackAutoResetQueue` (explicit, pass-scoped flush) | Partial | `auto_reset.json` |
 
 ---
 

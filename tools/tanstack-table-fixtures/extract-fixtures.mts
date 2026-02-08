@@ -21,6 +21,7 @@ type CaseId =
   | "column_pinning"
   | "faceting"
   | "column_sizing"
+  | "column_sizing_interactions"
   | "column_resizing_group_headers"
   | "state_shapes"
   | "selection"
@@ -109,6 +110,9 @@ type SnapshotId =
   | "colsize_hook_noop_sizing_reset_column_sizing_keeps_state"
   | "colsize_hook_noop_info_move_keeps_info_and_sizing"
   | "colsize_hook_noop_info_reset_header_size_info_keeps_state"
+  | "colsize_interactions_pin_vis_order_then_resize_group_on_change"
+  | "colsize_interactions_manual_sizing_pins_visibility"
+  | "colsize_interactions_group_resize_on_end_writes_with_pins"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
@@ -1110,6 +1114,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "column_pinning" &&
         v !== "faceting" &&
         v !== "column_sizing" &&
+        v !== "column_sizing_interactions" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
         v !== "selection" &&
@@ -1129,7 +1134,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1871,6 +1876,37 @@ async function main(): Promise<void> {
       minSize: c.minSize,
       maxSize: c.maxSize,
       enableResizing: true,
+    })
+
+    columns = [
+      {
+        id: "ab",
+        columns: [leaf(sizingColumns[0]), leaf(sizingColumns[1])],
+      },
+      leaf(sizingColumns[2]),
+    ]
+  } else if (case_id === "column_sizing_interactions") {
+    // Column sizing offsets under pinning/visibility/ordering changes, plus grouped-header resize fan-out.
+    // We keep a 1-row dataset so table-core initializes consistently.
+    const rows: DemoProcessRow[] = [{ id: 1, name: "x", status: "x", cpu: 0, mem_mb: 0 }]
+    data = rows
+
+    const sizingColumns = [
+      { id: "a", size: 100, minSize: 20, maxSize: 300, enablePinning: true, enableHiding: true },
+      { id: "b", size: 50, enablePinning: false, enableHiding: true },
+      { id: "c", size: 25, enablePinning: true, enableHiding: true },
+    ]
+    columns_meta = sizingColumns
+
+    const leaf = (c: any) => ({
+      id: c.id,
+      accessorFn: (row: DemoProcessRow) => row.id,
+      size: c.size,
+      minSize: c.minSize,
+      maxSize: c.maxSize,
+      enableResizing: true,
+      enablePinning: c.enablePinning,
+      enableHiding: c.enableHiding,
     })
 
     columns = [
@@ -6611,6 +6647,87 @@ function snapshotColumnPinning(
           ],
         ),
       },
+    ]
+  } else if (case_id === "column_sizing_interactions") {
+    const baseOptions: TanStackOptions = {
+      enableColumnResizing: true,
+    }
+
+    const baseState: TanStackState = {
+      columnOrder: ["b", "c", "a"],
+      columnPinning: { left: ["b"], right: ["a"] },
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          header_sizing: snapshotHeaderSizing(table),
+        },
+      }
+    }
+
+    snapshots = [
+      mkActions(
+        "colsize_interactions_pin_vis_order_then_resize_group_on_change",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        baseState,
+        [
+          { type: "toggleColumnVisibility", column_id: "b", value: false },
+          { type: "setColumnOrder", order: ["c", "a", "b"] },
+          { type: "pinColumn", column_id: "c", position: "right" },
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "colsize_interactions_manual_sizing_pins_visibility",
+        baseOptions,
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 220, b: 10, c: 180 },
+        },
+        [],
+      ),
+      mkActions(
+        "colsize_interactions_group_resize_on_end_writes_with_pins",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "ltr",
+        },
+        {
+          ...baseState,
+          columnVisibility: { b: false },
+          columnPinning: { left: ["a"], right: ["c"] },
+          columnSizing: { a: 120, b: 60, c: 40 },
+        },
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
     ]
   } else if (case_id === "column_resizing_group_headers") {
     const baseOptions: TanStackOptions = {
