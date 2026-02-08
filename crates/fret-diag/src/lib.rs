@@ -54,6 +54,7 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits,
     check_bundle_for_ui_gallery_code_editor_word_boundary,
     check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition,
+    check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click,
     check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
@@ -144,6 +145,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_markdown_editor_source_read_only_blocks_edits: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_word_boundary: bool = false;
+    let mut check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool =
         false;
@@ -672,6 +674,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-markdown-editor-source-word-boundary" => {
                 check_ui_gallery_markdown_editor_source_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-line-boundary-triple-click" => {
+                check_ui_gallery_markdown_editor_source_line_boundary_triple_click = true;
                 i += 1;
             }
             "--check-ui-gallery-markdown-editor-source-a11y-composition" => {
@@ -1629,6 +1635,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
                     || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                     || check_ui_gallery_markdown_editor_source_word_boundary
+                    || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                     || check_ui_gallery_markdown_editor_source_a11y_composition
                     || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
                     || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
@@ -1702,6 +1709,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary,
+                        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
@@ -2037,6 +2045,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
                         || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                         || check_ui_gallery_markdown_editor_source_word_boundary
+                        || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                         || check_ui_gallery_markdown_editor_source_a11y_composition
                         || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
                         || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
@@ -2109,6 +2118,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
                             check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                             check_ui_gallery_markdown_editor_source_word_boundary,
+                            check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                             check_ui_gallery_markdown_editor_source_a11y_composition,
                             check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
                             check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
@@ -3398,6 +3408,18 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_keep_alive_budget_for_script.is_some()
                     || vlist_window_shifts_non_retained_max_for_script.is_some()
                     || ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_read_only_blocks_edits_gate(
+                        &src,
+                    )
+                    || ui_gallery_script_requires_markdown_editor_source_soft_wrap_toggle_stable_gate(
+                        &src,
+                    )
+                    || ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
+                        &src,
+                    )
+                    || ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
                 let is_gc_liveness_script =
@@ -3605,6 +3627,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_markdown_editor_source_word_boundary =
                         ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_word_boundary;
+                    let suite_ui_gallery_markdown_editor_source_line_boundary_triple_click =
+                        ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
                     let suite_ui_gallery_markdown_editor_source_a11y_composition =
                         ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(
                             &src,
@@ -3730,6 +3755,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary
                             || suite_ui_gallery_markdown_editor_source_word_boundary,
+                        check_ui_gallery_markdown_editor_source_line_boundary_triple_click
+                            || suite_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition
                             || suite_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
@@ -7388,6 +7415,19 @@ fn ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(script: 
     )
 }
 
+fn ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_markdown_editor_source_a11y_composition_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -7780,6 +7820,7 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_read_only_blocks_edits: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_word_boundary: bool,
+    check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool,
@@ -7958,6 +7999,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_markdown_editor_source_word_boundary {
         check_bundle_for_ui_gallery_markdown_editor_source_word_boundary(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_line_boundary_triple_click {
+        check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click(
             bundle_path,
             warmup_frames,
         )?;
@@ -8809,6 +8856,7 @@ mod tests {
         check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json,
         check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_json,
+        check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click_json,
         check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_json,
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable_json,
@@ -12103,6 +12151,47 @@ mod tests {
         let _ = std::fs::create_dir_all(&out_dir);
         let bundle_path = out_dir.join("bundle.json");
         check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_line_boundary_triple_click_gate_passes_on_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello world", "text_selection": [0,0] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "value": "hello world", "text_selection": [0,11] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-markdown-editor-viewport", "parent": 2 }
+                            ] } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir =
+            tmp_out_dir("ui_gallery_markdown_editor_line_boundary_triple_click_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click_json(
             &bundle,
             &bundle_path,
             0,
