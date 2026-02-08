@@ -21,7 +21,7 @@
 //! use fret_ui::scroll::VirtualListScrollHandle;
 //! use fret_ui_ai::{AiConversationTranscript, AiMessage, MessagePart, MessageRole, PromptInput};
 //!
-//! fn build_ui(cx: &mut fret_ui::ElementContext<'_, impl fret_ui::UiHost>) {
+//! fn build_ui(cx: &mut fret_ui::ElementContext<'_, impl fret_ui::UiHost + 'static>) {
 //!     let prompt: Model<String> = cx.app.models_mut().insert(String::new());
 //!     let messages: Arc<[AiMessage]> = Arc::from(vec![
 //!         AiMessage::new(1, MessageRole::User, [MessagePart::Text(Arc::<str>::from("Hello"))]),

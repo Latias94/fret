@@ -338,6 +338,10 @@ Recommended derivation strategy:
 - If your upstream gives you an ordered stream, use a **monotonic counter** (best).
 - If you need to key by a string ID, use a **stable hash with a fixed seed** at the app boundary and
   **detect duplicates** during message list construction (fail fast in debug builds).
+  - `fret-ui-ai` provides helpers: `message_id_from_external_id(external_id: &str)` and
+    `message_id_from_salted_external_id(salt: u64, external_id: &str)`.
+  - Reminder: hash collisions are possible; if you cannot tolerate collisions, keep a per-transcript
+    mapping table and assign monotonic `MessageId`s.
 - Avoid using `Vec` indices as IDs if you ever insert/remove in the middle of the transcript (it
   breaks keyed identity and can cause per-row state to “jump”).
 

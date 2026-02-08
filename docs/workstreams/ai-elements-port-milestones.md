@@ -81,7 +81,12 @@ Acceptance criteria:
 - `CodeBlock` / `Snippet` are backed by `ecosystem/fret-code-view` (no new engines).
 - `FileTree` is virtualized and keyed correctly (stable identity; no state jumping).
 
-Status: Planned.
+Status: In progress (FileTree v0 shipped; CodeBlock/Snippet pending).
+Notes:
+
+- `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gate.
+- Remaining work in this milestone focuses on `CodeBlock` / `Snippet` parity and a large-tree
+  strategy (likely via UI Kit primitives + virtualization).
 
 ### M4 — Workflow surfaces (optional; only if we can reuse existing crates)
 
