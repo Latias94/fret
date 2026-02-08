@@ -709,6 +709,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Covered: controlled-hook noop semantics (`onColumnOrderChange` ignores updater).
     - Fixture snapshots: `visord_set_column_order_on_column_order_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnOrderChange`)
+- [x] HTP-corecol-010 Align core column inventory helpers:
+  - `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn/getVisibleFlatColumns`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
+    (`Table::{column_tree,column_tree_snapshot,column_any,column_node_snapshot,all_flat_columns,visible_flat_columns,ordered_columns}`).
+  - Gates:
+    - `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`
 
 ### UI integration notes (workstream hygiene)
 

@@ -99,7 +99,7 @@ Source of truth:
 
 | Upstream API | Fret mapping | Status | Evidence |
 | --- | --- | --- | --- |
-| `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::column_tree_snapshot` + `Table::ordered_columns` + `Table::column` + `Table::visible_leaf_columns`-style surfaces | Partial | `tanstack_v8_headers_cells_parity.rs` (core model snapshot) |
+| `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,column_tree_snapshot,all_flat_columns,ordered_columns,column_any,column_node_snapshot}` | Aligned | `headers_inventory_deep.json`, `visibility_ordering.json` |
 | `getHeaderGroups/getLeftHeaderGroups/getCenterHeaderGroups/getRightHeaderGroups` | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` (snapshot output) | Aligned | `tanstack_v8_headers_cells_parity.rs` |
 | `getFooterGroups/getLeftFooterGroups/getCenterFooterGroups/getRightFooterGroups` | `Table::{footer_groups,left_footer_groups,center_footer_groups,right_footer_groups}` | Aligned | `tanstack_v8_headers_cells_parity.rs` |
 | `getFlatHeaders/getLeftFlatHeaders/getCenterFlatHeaders/getRightFlatHeaders` | `Table::{flat_headers,left_flat_headers,center_flat_headers,right_flat_headers}` | Aligned | `tanstack_v8_headers_cells_parity.rs` |
@@ -650,7 +650,7 @@ Rules:
 
 **Columns**
 
-- **Partial**: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`
+- **Aligned**: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`
   → `Table::{column_tree,ordered_columns,column}` + `CoreModelSnapshot.column_tree/leaf_columns` (`headers_cells.json`).
 - **Aligned**: `getVisibleLeafColumns` (+ left/center/right variants)
   → `CoreModelSnapshot.leaf_columns.{visible,left_visible,center_visible,right_visible}` (`headers_cells.json`).
@@ -732,7 +732,7 @@ Legend:
 | `getExpandedDepth` | `Table::expanded_depth()` | Partial | unit gate: `row_expanding.rs` (`expanded_depth_tracks_max_depth_plus_one`) |
 | `getTopRows/getCenterRows/getBottomRows` | `Table::{top_row_keys,center_row_keys,bottom_row_keys}` + row lookup | Aligned | `pinning.json` |
 | `getIsSomeRowsPinned` | `Table::is_some_rows_pinned(position)` | Aligned | `pinning.json` |
-| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column}` + core snapshot | Partial | `headers_cells.json` |
+| `getAllColumns/getAllLeafColumns/getColumn` | `Table::{column_tree,ordered_columns,column_any}` (+ `column_tree_snapshot/column_node_snapshot`) | Aligned | `headers_inventory_deep.json`, `headers_cells.json` |
 | `getVisibleLeafColumns` (+ left/center/right) | `CoreModelSnapshot.leaf_columns.*` | Aligned | `headers_cells.json` |
 | `getLeft/Center/RightLeafColumns` | `Table::{left_leaf_columns,center_leaf_columns,right_leaf_columns}` | Aligned | `column_pinning.json` |
 | `getHeaderGroups` (+ left/center/right) | `Table::{header_groups,left_header_groups,center_header_groups,right_header_groups}` | Aligned | `headers_cells.json` |

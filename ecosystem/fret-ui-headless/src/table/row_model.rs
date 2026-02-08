@@ -2933,27 +2933,6 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn core_model_snapshot(&self) -> super::CoreModelSnapshot {
-        fn push_column_nodes<TData>(
-            cols: &[super::ColumnDef<TData>],
-            depth: usize,
-            parent_id: Option<Arc<str>>,
-            out: &mut Vec<super::ColumnNodeSnapshot>,
-        ) {
-            for col in cols {
-                let id = col.id.clone();
-                let child_ids: Vec<Arc<str>> = col.columns.iter().map(|c| c.id.clone()).collect();
-                out.push(super::ColumnNodeSnapshot {
-                    id: id.clone(),
-                    depth,
-                    parent_id: parent_id.clone(),
-                    child_ids: child_ids.clone(),
-                });
-                if !col.columns.is_empty() {
-                    push_column_nodes(&col.columns, depth + 1, Some(id), out);
-                }
-            }
-        }
-
         fn snapshot_row_model_ids<'a, TData>(
             model: &RowModel<'a, TData>,
         ) -> super::RowModelIdSnapshot {
@@ -2970,8 +2949,7 @@ impl<'a, TData> Table<'a, TData> {
             super::RowModelIdSnapshot { root, flat }
         }
 
-        let mut column_tree = Vec::new();
-        push_column_nodes(&self.column_tree, 0, None, &mut column_tree);
+        let column_tree = self.column_tree_snapshot();
 
         let all_leaf = self
             .ordered_columns()
@@ -4141,6 +4119,76 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         find(self.column_tree.as_slice(), column_id)
+    }
+
+    /// TanStack-aligned: `table.getColumn(columnId)`.
+    ///
+    /// Note: unlike [`Self::column`], this searches the full column tree and can return group
+    /// columns as well as leaf columns.
+    pub fn column_any(&self, column_id: &str) -> Option<&super::ColumnDef<TData>> {
+        self.find_column_in_tree(column_id)
+    }
+
+    /// TanStack-aligned: `table.getAllColumns()` snapshot surface.
+    pub fn column_tree_snapshot(&self) -> Vec<super::ColumnNodeSnapshot> {
+        fn push_column_nodes<TData>(
+            cols: &[super::ColumnDef<TData>],
+            depth: usize,
+            parent_id: Option<Arc<str>>,
+            out: &mut Vec<super::ColumnNodeSnapshot>,
+        ) {
+            for col in cols {
+                let id = col.id.clone();
+                let child_ids: Vec<Arc<str>> = col.columns.iter().map(|c| c.id.clone()).collect();
+                out.push(super::ColumnNodeSnapshot {
+                    id: id.clone(),
+                    depth,
+                    parent_id: parent_id.clone(),
+                    child_ids,
+                });
+                if !col.columns.is_empty() {
+                    push_column_nodes(&col.columns, depth + 1, Some(id), out);
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        push_column_nodes(&self.column_tree, 0, None, &mut out);
+        out
+    }
+
+    /// TanStack-aligned: `table.getColumn(columnId)` structural snapshot.
+    pub fn column_node_snapshot(&self, column_id: &str) -> Option<super::ColumnNodeSnapshot> {
+        fn find<TData>(
+            cols: &[super::ColumnDef<TData>],
+            depth: usize,
+            parent_id: Option<Arc<str>>,
+            id: &str,
+        ) -> Option<super::ColumnNodeSnapshot> {
+            for col in cols {
+                let col_id = col.id.clone();
+                let next_parent = Some(col_id.clone());
+                if col_id.as_ref() == id {
+                    let child_ids: Vec<Arc<str>> =
+                        col.columns.iter().map(|c| c.id.clone()).collect();
+                    return Some(super::ColumnNodeSnapshot {
+                        id: col_id,
+                        depth,
+                        parent_id,
+                        child_ids,
+                    });
+                }
+
+                if !col.columns.is_empty() {
+                    if let Some(found) = find(&col.columns, depth + 1, next_parent, id) {
+                        return Some(found);
+                    }
+                }
+            }
+            None
+        }
+
+        find(self.column_tree.as_slice(), 0, None, column_id)
     }
 
     fn column_leaf_ids_for(&self, column_id: &str) -> Option<Vec<super::ColumnId>> {

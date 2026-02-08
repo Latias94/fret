@@ -76,6 +76,19 @@ fn headers_to_jsonish(
     headers.into_iter().map(header_to_jsonish).collect()
 }
 
+fn column_node_to_jsonish(n: fret_ui_headless::table::ColumnNodeSnapshot) -> ColumnNodeSnapshot {
+    ColumnNodeSnapshot {
+        id: n.id.as_ref().to_string(),
+        depth: n.depth,
+        parent_id: n.parent_id.as_ref().map(|s| s.as_ref().to_string()),
+        child_ids: n
+            .child_ids
+            .into_iter()
+            .map(|s| s.as_ref().to_string())
+            .collect(),
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct CellSnapshot {
     id: String,
@@ -465,6 +478,19 @@ fn tanstack_v8_headers_inventory_deep_parity() {
                 expected.clone(),
                 "snapshot {} flat_columns mismatch",
                 snap.id
+            );
+        }
+
+        for expected in &snap.expect.core_model.column_tree {
+            let got = table
+                .column_node_snapshot(expected.id.as_str())
+                .unwrap_or_else(|| panic!("unknown column id: {}", expected.id));
+            assert_eq!(
+                column_node_to_jsonish(got),
+                expected.clone(),
+                "snapshot {} column_node_snapshot({}) mismatch",
+                snap.id,
+                expected.id
             );
         }
 
