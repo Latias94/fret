@@ -1245,6 +1245,7 @@ name = "fret-devtools-mcp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "fret-diag",
  "fret-diag-protocol",
  "fret-diag-ws",

@@ -127,6 +127,7 @@ Conventions:
   - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),
   - [x] `fret_diag_run_script_json` (minimal: run a v1/v2 script JSON and wait for pass/fail),
   - [x] `fret_diag_pack_last_bundle` (dump + pack into zip),
+  - [x] `fret_diag_pack_last_bundle_zip_bytes` (dump + pack bundle.json zip bytes as base64),
   - [x] `fret_diag_bundle_dump_latest` (best-effort latest bundle.dumped payload),
   - [ ] `fret_diag_compare`.
 - [ ] (Optional) Expose key artifacts as resources:

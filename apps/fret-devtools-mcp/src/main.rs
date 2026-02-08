@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use base64::Engine;
 use fret_diag::artifacts;
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
@@ -369,6 +370,87 @@ impl FretDevtoolsMcp {
     }
 
     #[tool(
+        description = "Return the latest bundle.json text (from the most recent bundle.dumped payload)."
+    )]
+    async fn fret_diag_bundle_json_latest(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<BundleJsonLatestRequestV1>,
+    ) -> Result<Json<BundleJsonLatestResultV1>, String> {
+        let session_id = self.resolve_session_id(params.0.session_id).await?;
+
+        let dumped_payload = {
+            let inbox = self.inbox.lock().await;
+            inbox
+                .iter()
+                .rev()
+                .find(|m| {
+                    m.r#type == "bundle.dumped" && m.session_id.as_deref() == Some(&session_id)
+                })
+                .map(|m| m.payload.clone())
+        };
+
+        let Some(dumped_payload) = dumped_payload else {
+            return Ok(Json(BundleJsonLatestResultV1 {
+                schema_version: 1,
+                found: false,
+                bundle_json: None,
+            }));
+        };
+
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+        let bundle_json = bundle_json_from_bundle_dumped_payload(&repo_root, &dumped_payload)?;
+
+        Ok(Json(BundleJsonLatestResultV1 {
+            schema_version: 1,
+            found: true,
+            bundle_json: Some(bundle_json),
+        }))
+    }
+
+    #[tool(
+        description = "Create a zip (base64) containing bundle.json. Always performs a fresh bundle dump first."
+    )]
+    async fn fret_diag_pack_last_bundle_zip_bytes(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<PackLastBundleZipBytesRequestV1>,
+    ) -> Result<Json<PackLastBundleZipBytesResultV1>, String> {
+        let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+        let label = params.0.label.as_deref().unwrap_or("devtools-mcp");
+
+        self.client_tx
+            .send(ClientCommand::Send(DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: "bundle.dump".to_string(),
+                session_id: Some(session_id.clone()),
+                request_id: None,
+                payload: serde_json::json!({ "label": label }),
+            }))
+            .map_err(|_| "client task is not running".to_string())?;
+
+        let dumped = self
+            .wait_for_type_and_session("bundle.dumped", &session_id, params.0.timeout_ms)
+            .await
+            .ok_or_else(|| "timeout waiting for bundle.dumped".to_string())?;
+
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+        let bundle_json = bundle_json_from_bundle_dumped_payload(&repo_root, &dumped.payload)?;
+
+        let zip_bytes = artifacts::pack_bundle_json_to_zip_bytes(&bundle_json)?;
+        let zip_base64 = base64::engine::general_purpose::STANDARD.encode(zip_bytes);
+
+        Ok(Json(PackLastBundleZipBytesResultV1 {
+            schema_version: 1,
+            zip_base64,
+            bundle_dumped_json: serde_json::to_string_pretty(&dumped.payload)
+                .unwrap_or_else(|_| "{}".to_string()),
+        }))
+    }
+
+    #[tool(
         description = "Request a screenshot capture and wait for screenshot.result (returns JSON text)."
     )]
     async fn fret_diag_screenshot_request(
@@ -644,6 +726,20 @@ struct BundleDumpLatestResultV1 {
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
+struct BundleJsonLatestRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct BundleJsonLatestResultV1 {
+    schema_version: u32,
+    found: bool,
+    #[serde(default)]
+    bundle_json: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
 struct InspectSetRequestV1 {
     #[serde(default)]
     session_id: Option<String>,
@@ -670,6 +766,22 @@ struct ScreenshotRequestToolV1 {
     #[serde(default)]
     timeout_frames: Option<u32>,
     timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct PackLastBundleZipBytesRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    label: Option<String>,
+    timeout_ms: u64,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct PackLastBundleZipBytesResultV1 {
+    schema_version: u32,
+    zip_base64: String,
+    bundle_dumped_json: String,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -907,6 +1019,39 @@ fn repo_root_from_manifest_dir() -> Option<PathBuf> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let apps_dir = manifest_dir.parent()?;
     apps_dir.parent().map(|p| p.to_path_buf())
+}
+
+fn bundle_json_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Result<String, String> {
+    if let Some(bundle) = dumped_payload.get("bundle") {
+        return serde_json::to_string_pretty(bundle).map_err(|e| e.to_string());
+    }
+
+    let out_dir = dumped_payload
+        .get("out_dir")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "bundle.dumped missing out_dir (and no bundle payload)".to_string())?;
+    let dir = dumped_payload
+        .get("dir")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "bundle.dumped missing dir (and no bundle payload)".to_string())?;
+
+    let out_dir_path = Path::new(out_dir);
+    let out_dir_abs = if out_dir_path.is_absolute() {
+        out_dir_path.to_path_buf()
+    } else {
+        repo_root.join(out_dir_path)
+    };
+
+    let bundle_dir = if Path::new(dir).is_absolute() {
+        PathBuf::from(dir)
+    } else {
+        out_dir_abs.join(dir)
+    };
+
+    std::fs::read_to_string(bundle_dir.join("bundle.json")).map_err(|e| e.to_string())
 }
 
 fn default_pack_out_path(repo_root: &Path, bundle_dir_arg: &str) -> PathBuf {
