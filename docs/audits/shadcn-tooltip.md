@@ -31,6 +31,8 @@ Key upstream notes:
 - Pass: `TooltipProvider` exists and provides a shared delay group for consistent open delays.
 - Pass: Fret additionally supports an optional custom placement anchor via `TooltipAnchor` +
   `Tooltip::anchor_element(...)` (anchor can be separate from the trigger).
+- Pass: Base UI cursor-tracking policy is supported via `Tooltip::track_cursor_axis(...)` with
+  `None | X | Y | Both` behavior.
 
 ### Open/close behavior
 
@@ -69,3 +71,4 @@ Key upstream notes:
   tooltip content tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
   `fret_tooltip_tracks_trigger_when_underlay_scrolls`).
+- Contract test: `tooltip_track_cursor_axis_projects_anchor_center_as_expected`.

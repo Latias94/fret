@@ -17,7 +17,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{KeyCode, Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, Elements, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
@@ -155,6 +155,51 @@ pub enum TooltipSide {
     Left,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TooltipTrackCursorAxis {
+    #[default]
+    None,
+    X,
+    Y,
+    Both,
+}
+
+impl TooltipTrackCursorAxis {
+    fn enabled(self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+fn tooltip_anchor_with_cursor_axis(
+    trigger_anchor: Rect,
+    cursor: Option<Point>,
+    axis: TooltipTrackCursorAxis,
+) -> Rect {
+    let Some(cursor) = cursor else {
+        return trigger_anchor;
+    };
+    if !axis.enabled() {
+        return trigger_anchor;
+    }
+
+    let trigger_center = Point::new(
+        Px(trigger_anchor.origin.x.0 + trigger_anchor.size.width.0 * 0.5),
+        Px(trigger_anchor.origin.y.0 + trigger_anchor.size.height.0 * 0.5),
+    );
+
+    let center = match axis {
+        TooltipTrackCursorAxis::None => return trigger_anchor,
+        TooltipTrackCursorAxis::X => Point::new(cursor.x, trigger_center.y),
+        TooltipTrackCursorAxis::Y => Point::new(trigger_center.x, cursor.y),
+        TooltipTrackCursorAxis::Both => cursor,
+    };
+
+    Rect::new(
+        Point::new(Px(center.x.0 - 0.5), Px(center.y.0 - 0.5)),
+        Size::new(Px(1.0), Px(1.0)),
+    )
+}
+
 /// shadcn/ui `TooltipProvider` (v4).
 ///
 /// In Radix/shadcn this is a context provider used to share open-delay behavior across tooltip
@@ -244,6 +289,7 @@ pub struct Tooltip {
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
+    track_cursor_axis: TooltipTrackCursorAxis,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
@@ -266,6 +312,7 @@ impl Tooltip {
             open_delay_frames_override: None,
             close_delay_frames_override: None,
             disable_hoverable_content_override: None,
+            track_cursor_axis: TooltipTrackCursorAxis::None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
         }
@@ -301,6 +348,16 @@ impl Tooltip {
     /// Default: inherited from `TooltipProvider`.
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
         self.disable_hoverable_content_override = Some(disable);
+        self
+    }
+
+    /// Base UI-compatible cursor tracking policy (`trackCursorAxis`).
+    ///
+    /// - `None`: anchor to trigger bounds (default).
+    /// - `X` / `Y`: track cursor on one axis and keep trigger center on the other axis.
+    /// - `Both`: anchor to cursor point on both axes.
+    pub fn track_cursor_axis(mut self, axis: TooltipTrackCursorAxis) -> Self {
+        self.track_cursor_axis = axis;
         self
     }
 
@@ -406,6 +463,7 @@ impl Tooltip {
         let open_delay_frames_override = self.open_delay_frames_override;
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
+        let track_cursor_axis = self.track_cursor_axis;
 
         let base_trigger = self.trigger;
         let content = self.content;
@@ -511,11 +569,24 @@ impl Tooltip {
             let disable_hoverable_content = disable_hoverable_content_override
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
+            let last_pointer_for_trigger = last_pointer.clone();
+            let last_pointer_for_overlay = last_pointer.clone();
+            let last_pointer_for_request = last_pointer.clone();
 
             let trigger_hovered = gates.trigger_hovered(hovered);
             let trigger_focused = gates.trigger_focused(focused);
 
-            let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
+            let cursor_for_anchor = if track_cursor_axis.enabled() {
+                cx.watch_model(&last_pointer)
+                    .layout()
+                    .copied()
+                    .unwrap_or(None)
+            } else {
+                None
+            };
+            let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
+            });
             let floating_bounds = anchor_bounds.and_then(|anchor| {
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
@@ -651,10 +722,15 @@ impl Tooltip {
                 cx.pointer_region_on_pointer_move(Arc::new({
                     let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
                     let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                    let last_pointer = last_pointer_for_trigger.clone();
                     move |host, acx, mv| {
                         if mv.pointer_type == PointerType::Touch {
                             return false;
                         }
+
+                        let _ = host
+                            .models_mut()
+                            .update(&last_pointer, |v| *v = Some(mv.position));
 
                         let geometry = host
                             .models_mut()
@@ -715,7 +791,17 @@ impl Tooltip {
             let direction = direction_prim::use_direction_in_scope(cx, None);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
+                let cursor_for_anchor = if track_cursor_axis.enabled() {
+                    cx.watch_model(&last_pointer_for_overlay)
+                        .layout()
+                        .copied()
+                        .unwrap_or(None)
+                } else {
+                    None
+                };
+                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                    tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
+                });
                 let Some(anchor) = anchor else {
                     return Vec::new();
                 };
@@ -859,8 +945,11 @@ impl Tooltip {
                     host.request_redraw(acx.window);
                 }
             }));
-            if !disable_hoverable_content {
-                radix_tooltip::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
+            if !disable_hoverable_content || track_cursor_axis.enabled() {
+                radix_tooltip::tooltip_install_pointer_move_tracker(
+                    &mut request,
+                    last_pointer_for_request,
+                );
             }
             radix_tooltip::request_tooltip(cx, request);
 
@@ -1093,6 +1182,37 @@ mod tests {
         assert_eq!(colors.len(), 2);
         assert_eq!(colors[0], Some(fg));
         assert_ne!(colors[1], Some(fg));
+    }
+
+    #[test]
+    fn tooltip_track_cursor_axis_projects_anchor_center_as_expected() {
+        let trigger = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(40.0), Px(20.0)),
+        );
+        let cursor = Some(Point::new(Px(100.0), Px(200.0)));
+
+        let x_only = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::X);
+        let y_only = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::Y);
+        let both = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::Both);
+
+        let trigger_center = Point::new(Px(30.0), Px(30.0));
+
+        let center_of = |r: Rect| {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        };
+
+        assert_eq!(center_of(x_only).x, Px(100.0));
+        assert_eq!(center_of(x_only).y, trigger_center.y);
+
+        assert_eq!(center_of(y_only).x, trigger_center.x);
+        assert_eq!(center_of(y_only).y, Px(200.0));
+
+        assert_eq!(center_of(both).x, Px(100.0));
+        assert_eq!(center_of(both).y, Px(200.0));
     }
 
     fn render_tooltip_frame(
