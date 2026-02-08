@@ -67,6 +67,11 @@ Conventions:
     independent of the row `max_width`.
     - Implementation: `perf(fret-code-editor): avoid baseline measure churn on resize` (commit `dd2da2ada`).
     - Evidence: perf log entry `2026-02-08` (`ui-code-editor-resize-probes` p95 total ~11.8ms).
+  - [x] Add an experimental interactive-resize wrapped-text width cache to reduce `Text::prepare` churn when
+    dragging back-and-forth across wrap-width buckets.
+    - Implementation: `feat(fret-ui): add interactive-resize wrapped text width cache knob` (commit `2e479fc2f`).
+    - Knob: `FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES` (default: `0`/off; try `4`).
+    - Evidence: perf log entries `2026-02-08` (A/B: off vs `ENTRIES=4`).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
