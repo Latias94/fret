@@ -119,7 +119,7 @@ Source of truth:
 | --- | --- | --- | --- |
 | `id/index/depth/parentId/subRows` | `RowModel::row(..)` (`RowId`, `RowKey`, `depth`, `parent`, `sub_rows`) | Aligned | `selection_tree.json` (`row_structure_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 | `getValue/getUniqueValues/renderValue` | `ColumnDef` value fns + `Table::cell_render_value` (fallback) | Partial | `render_fallback.json` parity |
-| `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Partial | `tanstack_v8_headers_cells_parity.rs` |
+| `getAllCells` | `snapshot_cells_for_row(..)` / `RowCellsSnapshot` | Aligned | `headers_cells.json` + `tanstack_v8_headers_cells_parity.rs` |
 | `getParentRow(s)/getLeafRows` | `RowModel` traversal + helpers | Aligned | `selection_tree.json` (`row_traversal_detail`) + `tanstack_v8_selection_tree_parity.rs` |
 
 ### Column (CoreColumn)

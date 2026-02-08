@@ -693,11 +693,11 @@ type FixtureSnapshot = {
       cells: Record<
         string,
         {
-          all: { id: string; column_id: string }[]
-          visible: { id: string; column_id: string }[]
-          left: { id: string; column_id: string }[]
-          center: { id: string; column_id: string }[]
-          right: { id: string; column_id: string }[]
+          all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
         }
       >
     }
@@ -2432,47 +2432,39 @@ function snapshotHeaders(headers: any[]): {
 function snapshotCells(table: any): Record<
   string,
   {
-    all: { id: string; column_id: string }[]
-    visible: { id: string; column_id: string }[]
-    left: { id: string; column_id: string }[]
-    center: { id: string; column_id: string }[]
-    right: { id: string; column_id: string }[]
+    all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
   }
 > {
   const rows = table.getRowModel().rows ?? []
   const out: Record<
     string,
     {
-      all: { id: string; column_id: string }[]
-      visible: { id: string; column_id: string }[]
-      left: { id: string; column_id: string }[]
-      center: { id: string; column_id: string }[]
-      right: { id: string; column_id: string }[]
+      all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
     }
   > = {}
   for (const r of rows) {
     const rowId = String(r.id)
+    const mk = (c: any) => ({
+      id: String(c.id),
+      column_id: String(c.column?.id),
+      is_grouped: Boolean(c.getIsGrouped?.()),
+      is_placeholder: Boolean(c.getIsPlaceholder?.()),
+      is_aggregated: Boolean(c.getIsAggregated?.()),
+    })
     out[rowId] = {
-      all: (r.getAllCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      visible: (r.getVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      left: (r.getLeftVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      center: (r.getCenterVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      right: (r.getRightVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
+      all: (r.getAllCells?.() ?? []).map(mk),
+      visible: (r.getVisibleCells?.() ?? []).map(mk),
+      left: (r.getLeftVisibleCells?.() ?? []).map(mk),
+      center: (r.getCenterVisibleCells?.() ?? []).map(mk),
+      right: (r.getRightVisibleCells?.() ?? []).map(mk),
     }
   }
   return out

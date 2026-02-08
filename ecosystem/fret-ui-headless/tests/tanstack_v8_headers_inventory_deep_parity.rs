@@ -93,6 +93,12 @@ fn column_node_to_jsonish(n: fret_ui_headless::table::ColumnNodeSnapshot) -> Col
 struct CellSnapshot {
     id: String,
     column_id: String,
+    #[serde(default)]
+    is_grouped: bool,
+    #[serde(default)]
+    is_placeholder: bool,
+    #[serde(default)]
+    is_aggregated: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -219,6 +225,9 @@ fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCell
     let conv = |c: fret_ui_headless::table::CellSnapshot| CellSnapshot {
         id: c.id.as_ref().to_string(),
         column_id: c.column_id.as_ref().to_string(),
+        is_grouped: c.is_grouped,
+        is_placeholder: c.is_placeholder,
+        is_aggregated: c.is_aggregated,
     };
     RowCellsSnapshot {
         all: cells.all.into_iter().map(conv).collect(),

@@ -266,6 +266,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Update (parity-gated): core snapshot cell inventory now includes grouping flags:
+    `cell.getIsGrouped/getIsPlaceholder/getIsAggregated` across `all/visible/left/center/right` splits.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
   - Remaining: broaden schema to include a fuller column/header/cell capability inventory (and keep versioning strict).
   - Remaining: broaden schema to include full column/header/cell inventories and cover deeper nesting + visibility edge cases.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
