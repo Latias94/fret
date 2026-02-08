@@ -1002,7 +1002,9 @@ fn select_impl<H: UiHost>(
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let enabled = !disabled;
+        let model_open = cx.app.models().get_copied(&open).unwrap_or(false);
+        let is_open = model_open && enabled;
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
@@ -1097,7 +1099,6 @@ fn select_impl<H: UiHost>(
         let style_for_trigger = style.clone();
         let style_for_options = style;
 
-        let enabled = !disabled;
         let item_len = count_items(entries);
 
         #[derive(Debug)]
@@ -3417,13 +3418,32 @@ mod tests {
         open: Model<bool>,
         items: Vec<SelectItem>,
     ) -> fret_core::NodeId {
+        render_frame_with_disabled(ui, app, services, window, bounds, model, open, items, false)
+    }
+
+    fn render_frame_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
         fret_ui_kit::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
-                vec![Select::new(model, open).items(items).into_element(cx)]
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .disabled(disabled)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
@@ -5918,6 +5938,62 @@ mod tests {
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("beta"));
         assert!(app.models().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn select_disabled_hides_content_even_when_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![SelectItem::new("alpha", "Alpha")];
+
+        let _ = render_frame_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).unwrap_or(false);
+        assert!(
+            open_now,
+            "disabled select root should not mutate controlled open model"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .all(|n| !(n.role == SemanticsRole::ListBoxOption
+                    && n.label.as_deref() == Some("Alpha"))),
+            "disabled select should keep listbox options hidden"
+        );
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        assert!(
+            !trigger.flags.expanded,
+            "disabled select should not expose expanded trigger semantics"
+        );
     }
 
     #[test]

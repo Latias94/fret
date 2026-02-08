@@ -45,6 +45,8 @@ examples in `repo-ref/ui`.
 - Pass: Selecting an item commits `model` and closes the overlay.
 - Pass: Outside press dismissal is delegated to the shared dismissible overlay infra (ADR 0069).
 - Pass: Select behaves like a Radix-style menu overlay: outside pointer-down is consumed (non-click-through).
+- Pass: root-level disabled gate now forces closed-state render semantics (content hidden and trigger
+  not exposed as expanded), even when the controlled `open` model is `true`.
 
 ### Visual parity (shadcn)
 
@@ -64,6 +66,7 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib select`
+- Contract test: `select_disabled_hides_content_even_when_open_model_true`
 - Trigger chrome + focus ring gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_control_chrome`
   (`web_vs_fret_select_scrollable_trigger_chrome_matches`, `web_vs_fret_select_demo_aria_invalid_border_color_matches`,
   `web_vs_fret_select_demo_focus_ring_matches`, `web_vs_fret_select_demo_aria_invalid_focus_ring_matches`).
