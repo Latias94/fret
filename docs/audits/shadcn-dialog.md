@@ -50,6 +50,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `Dialog::on_dismiss_request(...)`. When set, Escape and overlay-click dismissal route through the
   handler and do not automatically close `open`.
+- Pass: Open lifecycle callbacks are available via `Dialog::on_open_change` and
+  `Dialog::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 
 ### Focus behavior
 
@@ -70,6 +72,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn dialog::tests`
 - Contract test: `dialog_disable_pointer_dismissal_alias_maps_overlay_closable`
+- Contract test: `dialog_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `dialog_open_change_events_complete_without_animation`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_dialog_demo_panel_chrome_matches`).
 - Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
