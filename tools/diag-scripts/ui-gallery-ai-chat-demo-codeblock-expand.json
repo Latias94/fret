@@ -30,9 +30,22 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-2-code-expand-0" } },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-ai-chat-transcript-root" },
+      "target": { "kind": "test_id", "id": "ui-ai-msg-2-code-expand-0" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "padding_insets_px": { "left_px": 16.0, "top_px": 16.0, "right_px": 16.0, "bottom_px": 40.0 },
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-msg-2-code-expand-0" }
+    },
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_bundle", "label": "ui-gallery-ai-chat-demo-codeblock-expand" }
   ]
 }
-
