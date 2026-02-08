@@ -76,6 +76,27 @@ Conventions:
     measure churn and align layout/paint wrap widths.
     - Implementation: `perf(fret-ui): bucket wrapped text measure width during resize` (commit `b6c4d1094`).
     - Evidence: perf log entries `2026-02-08` (`ui-code-editor-resize-probes` and P0 `ui-resize-probes` sanity).
+- [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
+  “paint-only” frames under small-step resize/scroll.
+  - Primary probes:
+    - `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  - Work items (fearless refactor allowed; log every perf-affecting change):
+    - [ ] Add a stable “row op count” signal to diag snapshots (or reuse an existing one) so we can gate
+      “we are rebuilding 500+ ops/frame” vs “we are replaying”.
+    - [ ] Decide the replay boundary:
+      - Option A (component-level): `fret-code-editor` caches per-row paint ops and replays when inputs unchanged.
+      - Option B (mechanism-level): add a general `CanvasPainter` op cache (keyed, bounded, frame-aware) that any
+        component can use.
+    - [ ] Ensure replay is correctness-safe:
+      - invalidation keys include font stack, scale factor, wrap width bucket, theme/style, and selection/preedit
+        geometry dependencies.
+      - replayed ops preserve hit-testing / selection rect correctness (or explicitly opt-out).
+    - [ ] Add a “canvas replay hit rate” counter to `fretboard diag perf --json` output for the editor probes.
+    - [ ] Tighten the `ui-code-editor-resize-probes` baseline once replay is real and stable.
+  - Acceptance (initial):
+    - `ui-code-editor-resize-probes` stays PASS (no regressions in P0 `ui-resize-probes`).
+    - In the editor probes, `paint_widget_hotspots` no longer shows the editor `Canvas` dominating p95 paint.
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
   - [x] Deep-run editor resize jitter with `FRET_DIAG_RENDERER_PERF=1` to classify CPU vs renderer costs.
     - Evidence: perf log entry `2026-02-08` (commit `f1292f2f8`).
