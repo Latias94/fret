@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Mechanism-layer UI engine for Fret with tree, layout, focus, routing, and interaction contracts."
 
 [features]
 default = []
@@ -17,8 +18,8 @@ unstable-retained-bridge = []
 diagnostics = []
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-runtime = { path = "../fret-runtime" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-runtime = { version = "0.1.0", path = "../fret-runtime" }
 slotmap.workspace = true
 smallvec.workspace = true
 stacksafe.workspace = true

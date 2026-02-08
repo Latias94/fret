@@ -1,8 +1,8 @@
 {
   "name": "fret-skills",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
-  "last_updated": "2026-02-04",
+  "last_updated": "2026-02-08",
   "skills": {
     "foundation": [
       "fret-component-authoring",
@@ -40,6 +40,9 @@
     ],
     "debugging": [
       "fret-diag-workflow"
+    ],
+    "release": [
+      "fret-release-check-and-publish"
     ],
     "parity": [
       "fret-shadcn-source-alignment"
@@ -167,6 +170,16 @@
       "capture_bundle",
       "capture_screenshot",
       "FRET_DIAG"
+    ],
+    "release": [
+      "release-plz",
+      "release-pr",
+      "cargo publish",
+      "crates.io",
+      "version_group",
+      "CARGO_REGISTRY_TOKEN",
+      "trusted publishing",
+      "publish dry-run"
     ],
     "shadcn_radix": [
       "shadcn",

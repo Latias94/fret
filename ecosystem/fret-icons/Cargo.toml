@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Shared icon surface and icon primitives for Fret UI ecosystems."
 
 [dependencies]
 

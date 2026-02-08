@@ -41,6 +41,7 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - Align behavior with shadcn/Radix: `fret-shadcn-source-alignment` (then add invariant tests + `fretboard diag` repros)
 - Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
 - Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
+- Prepare and run releases: `fret-release-check-and-publish` (`release-plz` scope, preflight checks, release-pr/release troubleshooting)
 
 ## Skills
 
@@ -59,3 +60,4 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - `fret-diag-workflow`: Use `fretboard diag` + `tools/diag-scripts/*.json` to reproduce UI issues, capture bundles/screenshots, triage regressions, and turn bugs into stable repro gates.
 - `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source (optional local pinned snapshots under `repo-ref/`) and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
 - `fret-shadcn-app-recipes`: Build good-looking apps with `fret-ui-shadcn` by translating shadcn/Tailwind mental models into Fret patterns, and pairing recipes with tests + `fretboard diag` scripts to avoid regressions.
+- `fret-release-check-and-publish`: Release workflow for Fret with `release-plz` + crates.io (scope selection, dry-run checks, CI publish flow, and common failure diagnostics).

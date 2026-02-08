@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Typed message routing and router composition utilities for Fret applications."
 
 [features]
 default = []
@@ -16,7 +17,7 @@ hash-routing = ["dep:js-sys", "dep:wasm-bindgen", "dep:web-sys"]
 query-integration = ["dep:fret-query"]
 
 [dependencies]
-fret-query = { path = "../fret-query", optional = true }
+fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

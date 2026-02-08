@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Canvas and node-graph substrate for interactive Fret tooling."
 
 [features]
 default = []
@@ -28,8 +29,8 @@ rstar = ["dep:rstar"]
 kurbo = ["dep:kurbo"]
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime", optional = true }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 rstar = { workspace = true, optional = true }
 kurbo = { workspace = true, optional = true }
