@@ -31,6 +31,33 @@ fn released_blob_cache_entries() -> usize {
     })
 }
 
+fn unwrapped_layout_cache_entries() -> usize {
+    static ENTRIES: OnceLock<usize> = OnceLock::new();
+    *ENTRIES.get_or_init(|| {
+        // Default: off. Opt in to retain width-independent “unwrapped” shaping results and reuse
+        // them across wrap-width changes (reduces `Text::prepare` churn under resize jitter).
+        std::env::var("FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0)
+            .min(8192)
+    })
+}
+
+fn unwrapped_layout_cache_max_text_len_bytes() -> usize {
+    static MAX_BYTES: OnceLock<usize> = OnceLock::new();
+    *MAX_BYTES.get_or_init(|| {
+        // Do not cache huge single-line paragraphs by default. The wrap-from-unwrapped fast path
+        // targets UI chrome and short editor labels, not large documents.
+        std::env::var("FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(4096)
+            .max(64)
+            .min(1_048_576)
+    })
+}
+
 struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
@@ -1331,6 +1358,39 @@ fn paint_fingerprint_color(
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct TextUnwrappedKey {
+    text: Arc<str>,
+    spans_shaping_key: u64,
+    backend: u8,
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    letter_spacing_bits: Option<u32>,
+    scale_bits: u32,
+}
+
+impl TextUnwrappedKey {
+    fn from_blob_key(key: &TextBlobKey) -> Self {
+        Self {
+            text: key.text.clone(),
+            spans_shaping_key: key.spans_shaping_key,
+            backend: key.backend,
+            font: key.font.clone(),
+            font_stack_key: key.font_stack_key,
+            size_bits: key.size_bits,
+            weight: key.weight,
+            slant: key.slant,
+            line_height_bits: key.line_height_bits,
+            letter_spacing_bits: key.letter_spacing_bits,
+            scale_bits: key.scale_bits,
+        }
+    }
+}
+
 pub struct TextSystem {
     font_system: FontSystem,
     parley_shaper: crate::text::parley_shaper::ParleyShaper,
@@ -1345,6 +1405,10 @@ pub struct TextSystem {
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
     released_blob_lru: VecDeque<TextBlobId>,
     released_blob_set: HashSet<TextBlobId>,
+    unwrapped_layout_cache:
+        HashMap<TextUnwrappedKey, Arc<crate::text::parley_shaper::ShapedLineLayout>>,
+    unwrapped_layout_lru: VecDeque<TextUnwrappedKey>,
+    unwrapped_layout_set: HashSet<TextUnwrappedKey>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
     measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
     measure_shaping_cache: HashMap<TextMeasureShapingKey, TextMeasureShapingEntry>,
@@ -1766,6 +1830,7 @@ impl TextSystem {
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
             self.clear_released_blob_cache();
+            self.clear_unwrapped_layout_cache();
             self.shape_cache.clear();
             self.measure_cache.clear();
             self.measure_shaping_cache.clear();
@@ -1919,6 +1984,9 @@ impl TextSystem {
             blob_key_by_id: HashMap::new(),
             released_blob_lru: VecDeque::new(),
             released_blob_set: HashSet::new(),
+            unwrapped_layout_cache: HashMap::new(),
+            unwrapped_layout_lru: VecDeque::new(),
+            unwrapped_layout_set: HashSet::new(),
             shape_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             measure_shaping_cache: HashMap::new(),
@@ -2056,6 +2124,7 @@ impl TextSystem {
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
         self.clear_released_blob_cache();
+        self.clear_unwrapped_layout_cache();
         self.shape_cache.clear();
         self.measure_cache.clear();
         self.measure_shaping_cache.clear();
@@ -2431,11 +2500,7 @@ impl TextSystem {
                         style,
                     },
                 };
-                let wrapped = crate::text::wrapper::wrap_with_constraints(
-                    &mut self.parley_shaper,
-                    input,
-                    constraints,
-                );
+                let wrapped = self.wrap_with_cached_unwrapped_layout(input, &key, constraints);
                 let kept_end = wrapped.kept_end;
 
                 let first_baseline_px = wrapped
@@ -3130,6 +3195,121 @@ impl TextSystem {
             }
         }
         let _ = self.blobs.remove(blob);
+    }
+
+    fn wrap_with_cached_unwrapped_layout(
+        &mut self,
+        input: TextInputRef<'_>,
+        blob_key: &TextBlobKey,
+        constraints: TextConstraints,
+    ) -> crate::text::wrapper::WrappedLayout {
+        let scale = constraints.scale_factor.max(1.0);
+        let max_width = match constraints {
+            TextConstraints {
+                max_width: Some(max_width),
+                wrap: TextWrap::Word,
+                ..
+            } => max_width,
+            _ => {
+                return crate::text::wrapper::wrap_with_constraints(
+                    &mut self.parley_shaper,
+                    input,
+                    constraints,
+                );
+            }
+        };
+
+        let text = match input {
+            TextInputRef::Plain { text, .. } => text,
+            TextInputRef::Attributed { text, .. } => text,
+        };
+        if text.contains('\n') {
+            return crate::text::wrapper::wrap_with_constraints(
+                &mut self.parley_shaper,
+                input,
+                constraints,
+            );
+        }
+
+        let entries = unwrapped_layout_cache_entries();
+        if entries == 0 || text.len() > unwrapped_layout_cache_max_text_len_bytes() {
+            return crate::text::wrapper::wrap_with_constraints(
+                &mut self.parley_shaper,
+                input,
+                constraints,
+            );
+        }
+
+        let unwrapped = self.get_or_shape_unwrapped_layout(input, blob_key, scale, entries);
+        let max_width_px = max_width.0 * scale;
+
+        if let Some((line_ranges, lines)) = crate::text::wrapper::wrap_word_from_unwrapped_ltr(
+            text,
+            unwrapped.as_ref(),
+            max_width_px,
+        ) {
+            return crate::text::wrapper::WrappedLayout {
+                text_len: text.len(),
+                kept_end: text.len(),
+                line_ranges,
+                lines,
+            };
+        }
+
+        crate::text::wrapper::wrap_with_constraints(&mut self.parley_shaper, input, constraints)
+    }
+
+    fn clear_unwrapped_layout_cache(&mut self) {
+        self.unwrapped_layout_cache.clear();
+        self.unwrapped_layout_lru.clear();
+        self.unwrapped_layout_set.clear();
+    }
+
+    fn get_or_shape_unwrapped_layout(
+        &mut self,
+        input: TextInputRef<'_>,
+        blob_key: &TextBlobKey,
+        scale: f32,
+        max_entries: usize,
+    ) -> Arc<crate::text::parley_shaper::ShapedLineLayout> {
+        let key = TextUnwrappedKey::from_blob_key(blob_key);
+
+        if let Some(hit) = self.unwrapped_layout_cache.get(&key).cloned() {
+            self.touch_unwrapped_lru(&key, max_entries);
+            return hit;
+        }
+
+        let scale = if scale.is_finite() {
+            scale.max(1.0)
+        } else {
+            1.0
+        };
+        let shaped = self.parley_shaper.shape_single_line(input, scale);
+        let shaped = Arc::new(shaped);
+        self.unwrapped_layout_cache
+            .insert(key.clone(), shaped.clone());
+        self.touch_unwrapped_lru(&key, max_entries);
+        shaped
+    }
+
+    fn touch_unwrapped_lru(&mut self, key: &TextUnwrappedKey, max_entries: usize) {
+        if max_entries == 0 {
+            return;
+        }
+        if !self.unwrapped_layout_set.insert(key.clone()) {
+            if let Some(pos) = self.unwrapped_layout_lru.iter().position(|k| k == key) {
+                self.unwrapped_layout_lru.remove(pos);
+            }
+        }
+        self.unwrapped_layout_lru.push_back(key.clone());
+
+        while self.unwrapped_layout_lru.len() > max_entries {
+            let Some(evict) = self.unwrapped_layout_lru.pop_front() else {
+                break;
+            };
+            self.unwrapped_layout_set.remove(&evict);
+            self.unwrapped_layout_cache.remove(&evict);
+        }
     }
 }
 

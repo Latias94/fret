@@ -92,6 +92,141 @@ pub(crate) fn wrap_with_constraints(
     }
 }
 
+pub(crate) fn wrap_word_from_unwrapped_ltr(
+    text: &str,
+    full: &ShapedLineLayout,
+    max_width_px: f32,
+) -> Option<(Vec<Range<usize>>, Vec<ShapedLineLayout>)> {
+    // Be conservative: only enable this path for LTR text. RTL runs can reorder visual clusters
+    // and make glyph slicing ambiguous without additional mapping.
+    if full.clusters.iter().any(|c| c.is_rtl) || full.glyphs.iter().any(|g| g.is_rtl) {
+        return None;
+    }
+
+    if full.width <= max_width_px + 0.5 {
+        return Some((vec![0..text.len()], vec![full.clone()]));
+    }
+
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut line_start_byte: usize = 0;
+    let mut cluster_idx: usize = 0;
+    let mut glyph_idx: usize = 0;
+
+    while line_start_byte < text.len() && cluster_idx < full.clusters.len() {
+        while cluster_idx < full.clusters.len()
+            && full.clusters[cluster_idx].text_range.end <= line_start_byte
+        {
+            cluster_idx = cluster_idx.saturating_add(1);
+        }
+        while glyph_idx < full.glyphs.len()
+            && full.glyphs[glyph_idx].text_range.end <= line_start_byte
+        {
+            glyph_idx = glyph_idx.saturating_add(1);
+        }
+        if cluster_idx >= full.clusters.len() {
+            break;
+        }
+
+        let line_start_x = full.clusters[cluster_idx].x0;
+        let (cut_end, used_word_boundary) = wrap_word_cut_end_from_with_kind(
+            text,
+            &full.clusters,
+            cluster_idx,
+            line_start_byte,
+            line_start_x,
+            max_width_px,
+        );
+
+        // If we'd be forced to cut in the middle of a word (no candidate boundary), bail out and
+        // fall back to the per-line shaping path for correctness (ligatures/context shaping).
+        if !used_word_boundary {
+            return None;
+        }
+
+        let mut line_end_byte = clamp_to_char_boundary(text, cut_end.min(text.len()));
+        if line_end_byte <= line_start_byte {
+            line_end_byte =
+                first_cluster_end(&text[line_start_byte..], &full.clusters[cluster_idx..])
+                    .saturating_add(line_start_byte);
+            line_end_byte = clamp_to_char_boundary(text, line_end_byte.min(text.len()));
+        }
+        if line_end_byte <= line_start_byte {
+            let first = text[line_start_byte..]
+                .chars()
+                .next()
+                .map(|c| c.len_utf8())
+                .unwrap_or(0);
+            line_end_byte = clamp_to_char_boundary(
+                text,
+                line_start_byte.saturating_add(first.max(1)).min(text.len()),
+            );
+        }
+        if line_end_byte <= line_start_byte {
+            break;
+        }
+
+        let mut cluster_end_idx = cluster_idx;
+        while cluster_end_idx < full.clusters.len()
+            && full.clusters[cluster_end_idx].text_range.start < line_end_byte
+        {
+            cluster_end_idx = cluster_end_idx.saturating_add(1);
+        }
+
+        let mut line_clusters: Vec<ShapedCluster> = Vec::new();
+        line_clusters.extend(full.clusters[cluster_idx..cluster_end_idx].iter().map(|c| {
+            ShapedCluster {
+                text_range: (c.text_range.start.saturating_sub(line_start_byte))
+                    ..(c.text_range.end.saturating_sub(line_start_byte)),
+                x0: c.x0 - line_start_x,
+                x1: c.x1 - line_start_x,
+                is_rtl: false,
+            }
+        }));
+
+        let mut line_glyphs: Vec<ParleyGlyph> = Vec::new();
+        while glyph_idx < full.glyphs.len() {
+            let g = &full.glyphs[glyph_idx];
+            if g.text_range.start >= line_end_byte {
+                break;
+            }
+            if g.text_range.end <= line_start_byte {
+                glyph_idx = glyph_idx.saturating_add(1);
+                continue;
+            }
+            let mut g2 = g.clone();
+            g2.x -= line_start_x;
+            g2.text_range = (g2.text_range.start.saturating_sub(line_start_byte))
+                ..(g2.text_range.end.saturating_sub(line_start_byte));
+            g2.is_rtl = false;
+            line_glyphs.push(g2);
+            glyph_idx = glyph_idx.saturating_add(1);
+        }
+
+        let line_width = line_clusters.last().map(|c| c.x1.max(0.0)).unwrap_or(0.0);
+
+        lines.push(ShapedLineLayout {
+            width: line_width,
+            ascent: full.ascent,
+            descent: full.descent,
+            baseline: full.baseline,
+            line_height: full.line_height,
+            glyphs: line_glyphs,
+            clusters: line_clusters,
+        });
+        line_ranges.push(line_start_byte..line_end_byte);
+
+        line_start_byte = line_end_byte;
+        cluster_idx = cluster_end_idx;
+    }
+
+    if line_ranges.is_empty() || lines.is_empty() {
+        return None;
+    }
+    Some((line_ranges, lines))
+}
+
 /// Wraps text for measurement only.
 ///
 /// The returned `lines[*].glyphs` is intentionally empty to avoid per-glyph work in layout.
@@ -923,6 +1058,25 @@ fn wrap_word_cut_end_from(
     line_start_x: f32,
     max_width_px: f32,
 ) -> usize {
+    wrap_word_cut_end_from_with_kind(
+        text,
+        clusters,
+        cluster_idx,
+        line_start_byte,
+        line_start_x,
+        max_width_px,
+    )
+    .0
+}
+
+fn wrap_word_cut_end_from_with_kind(
+    text: &str,
+    clusters: &[ShapedCluster],
+    cluster_idx: usize,
+    line_start_byte: usize,
+    line_start_x: f32,
+    max_width_px: f32,
+) -> (usize, bool) {
     let mut last_candidate: usize = line_start_byte;
     let mut last_fit_end: usize = line_start_byte;
     let mut first_non_whitespace: Option<usize> = None;
@@ -962,10 +1116,10 @@ fn wrap_word_cut_end_from(
     }
 
     if last_candidate > line_start_byte {
-        return last_candidate;
+        return (last_candidate, true);
     }
 
-    last_fit_end
+    (last_fit_end, false)
 }
 
 fn wrap_word_range_measure_only(
