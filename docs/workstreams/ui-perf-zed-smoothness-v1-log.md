@@ -7133,3 +7133,59 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
 - top_total_time_us: `49557`
 - bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510591981-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+---
+
+## 2026-02-08 — Re-validate resize gates (post-triage)
+
+Commit: `c2a6348c8`
+
+Goal:
+- Confirm current HEAD is still within the committed baselines, and capture today’s headroom / flake status as
+  commit-addressable evidence (even when no code changes land).
+
+### Gate: editor resize jitter
+
+Command:
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3`
+
+Result:
+- PASS (`passes=3/3`; required majority=2)
+- Out dir: `target/fret-diag-resize-probes-gate-1770511936`
+- Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v1.json`
+- Selected attempt: `target/fret-diag-resize-probes-gate-1770511936/attempt-1`
+- Max (selected attempt; us):
+  - `top_total_time_us=47418`
+  - `top_layout_time_us=2101`
+  - `top_layout_engine_solve_time_us=339`
+
+### Gate: P0 resize probes (stress + drag-jitter)
+
+Command:
+- `tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3`
+
+Result:
+- PASS (`passes=2/3`; required majority=2)
+- Out dir: `target/fret-diag-resize-probes-gate-1770512176`
+- Baseline: `docs/workstreams/perf-baselines/ui-resize-probes.macos-m4.v3.json`
+- Selected attempt: `target/fret-diag-resize-probes-gate-1770512176/attempt-1`
+
+Attempt status:
+- attempt-1: pass
+- attempt-2: FAIL (3 threshold failures; drag-jitter outlier)
+- attempt-3: pass
+
+Max (attempt-1; us):
+- `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`:
+  - `top_total_time_us=16661`, `top_layout_time_us=9876`, `top_solve_time_us=2251`
+- `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`:
+  - `top_total_time_us=15595`, `top_layout_time_us=10353`, `top_solve_time_us=2368`
+
+Outlier details (attempt-2 failures; us; drag-jitter script):
+- `top_total_time_us=22441` (threshold `19128`)
+- `top_layout_time_us=16285` (threshold `12264`)
+- `top_layout_engine_solve_time_us=4186` (threshold `2816`)
+
+Notes:
+- This run did not land code changes; it is intended to keep the perf narrative continuous and to surface whether
+  we are still dealing with rare tail outliers (yes, on `drag-jitter`) even after recent resize churn reductions.

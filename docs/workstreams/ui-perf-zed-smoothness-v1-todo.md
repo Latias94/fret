@@ -35,6 +35,8 @@ Conventions:
     - Evidence: perf log entry `2026-02-07 11:50`.
   - [x] Post-merge sanity: ensure the P0 resize probes gate still passes after integrating upstream `main` (commit `9bf37cc0b`).
     - Evidence: perf log entry `2026-02-07 20:39` (`target/fret-diag-resize-probes-gate-r21/summary.json`).
+  - [x] Re-validate both resize gates on the current head (no-code-change evidence snapshot).
+    - Evidence: perf log entry `2026-02-08` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Track an “interactive resize” window in the UI tree to enable guarded LOD/deferral experiments (commit `34bac1b78`).
     - Evidence: perf log entry `2026-02-07 21:23` (`target/fret-diag-resize-probes-gate-r24/summary.json`).
   - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
