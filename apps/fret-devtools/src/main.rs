@@ -16,6 +16,7 @@ use fret_diag_ws::server::{DevtoolsWsServer, DevtoolsWsServerConfig};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, VirtualListOptions};
 use fret_ui::elements::ContinuousFrames;
+use fret_ui::scroll::ScrollStrategy;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme};
 use fret_ui_shadcn as shadcn;
@@ -604,6 +605,11 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                 rows: Arc<Vec<semantics::SemanticsRow>>,
             }
 
+            #[derive(Debug, Default)]
+            struct SelectionScrollSync {
+                last: Option<(u64, u64)>,
+            }
+
             let rows_key = {
                 use std::hash::{Hash, Hasher};
                 let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -625,6 +631,24 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             });
 
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+            if let Some(sel) = selected_id {
+                let rows_for_scroll = Arc::clone(&rows);
+                let handle_for_scroll = scroll_handle.clone();
+                cx.with_state(SelectionScrollSync::default, |sync| {
+                    let next = (rows_key, sel);
+                    if sync.last == Some(next) {
+                        return;
+                    }
+                    sync.last = Some(next);
+
+                    if let Some(idx) = rows_for_scroll.iter().position(|r| r.id == sel) {
+                        handle_for_scroll.scroll_to_item(idx, ScrollStrategy::Nearest);
+                    }
+                });
+            } else {
+                cx.with_state(SelectionScrollSync::default, |sync| sync.last = None);
+            }
 
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Fill;
