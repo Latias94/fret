@@ -49,6 +49,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, date picker trigger geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_date_picker_trigger_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, native select heights):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_native_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_native_select_heights_match_web_fixtures`)
 
 - [x] BU-FR-guard-005 Add a lightweight “largest files report” to keep module size drift visible.
   - Goal: prevent new god files from appearing unnoticed during refactors.
