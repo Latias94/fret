@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -71,6 +71,8 @@ struct FretDevtoolsMcp {
     inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
     sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
     selected_session_id: Arc<Mutex<Option<String>>>,
+    peer: Arc<Mutex<Option<rmcp::Peer<rmcp::RoleServer>>>>,
+    subscribed_resources: Arc<Mutex<HashSet<String>>>,
     tool_router: ToolRouter<Self>,
 }
 
@@ -83,6 +85,8 @@ impl FretDevtoolsMcp {
         inbox: Arc<Mutex<VecDeque<DiagTransportMessageV1>>>,
         sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
         selected_session_id: Arc<Mutex<Option<String>>>,
+        peer: Arc<Mutex<Option<rmcp::Peer<rmcp::RoleServer>>>>,
+        subscribed_resources: Arc<Mutex<HashSet<String>>>,
     ) -> Self {
         Self {
             ws,
@@ -91,6 +95,8 @@ impl FretDevtoolsMcp {
             inbox,
             sessions,
             selected_session_id,
+            peer,
+            subscribed_resources,
             tool_router: Self::tool_router(),
         }
     }
@@ -891,9 +897,43 @@ impl ServerHandler for FretDevtoolsMcp {
             ),
             capabilities: ServerCapabilities::builder()
                 .enable_tools()
-                .enable_resources()
+                .enable_resources_with(ResourcesCapability {
+                    subscribe: Some(true),
+                    list_changed: Some(true),
+                })
                 .build(),
             ..Default::default()
+        }
+    }
+
+    fn on_initialized(
+        &self,
+        context: rmcp::service::NotificationContext<rmcp::RoleServer>,
+    ) -> impl std::future::Future<Output = ()> + Send + '_ {
+        async move {
+            *self.peer.lock().await = Some(context.peer.clone());
+        }
+    }
+
+    fn subscribe(
+        &self,
+        request: SubscribeRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<(), McpError>> + Send + '_ {
+        async move {
+            self.subscribed_resources.lock().await.insert(request.uri);
+            Ok(())
+        }
+    }
+
+    fn unsubscribe(
+        &self,
+        request: UnsubscribeRequestParams,
+        _context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> impl std::future::Future<Output = Result<(), McpError>> + Send + '_ {
+        async move {
+            self.subscribed_resources.lock().await.remove(&request.uri);
+            Ok(())
         }
     }
 
@@ -1408,6 +1448,8 @@ async fn main() -> anyhow::Result<()> {
     let inbox = Arc::new(Mutex::new(VecDeque::new()));
     let sessions = Arc::new(Mutex::new(Vec::<DevtoolsSessionDescriptorV1>::new()));
     let selected_session_id = Arc::new(Mutex::new(None::<String>));
+    let peer = Arc::new(Mutex::new(None::<rmcp::Peer<rmcp::RoleServer>>));
+    let subscribed_resources = Arc::new(Mutex::new(HashSet::<String>::new()));
 
     let (client_tx, client_rx) = mpsc::unbounded_channel::<ClientCommand>();
     tokio::spawn(run_client_task(
@@ -1420,6 +1462,8 @@ async fn main() -> anyhow::Result<()> {
             ws_url: ws_url.clone(),
             token: token.clone(),
         },
+        peer.clone(),
+        subscribed_resources.clone(),
     ));
 
     let service = FretDevtoolsMcp::new(
@@ -1429,6 +1473,8 @@ async fn main() -> anyhow::Result<()> {
         inbox,
         sessions,
         selected_session_id,
+        peer,
+        subscribed_resources,
     )
     .serve(stdio())
     .await?;
@@ -1443,6 +1489,8 @@ async fn run_client_task(
     sessions: Arc<Mutex<Vec<DevtoolsSessionDescriptorV1>>>,
     selected_session_id: Arc<Mutex<Option<String>>>,
     ws_defaults: WsState,
+    peer: Arc<Mutex<Option<rmcp::Peer<rmcp::RoleServer>>>>,
+    subscribed_resources: Arc<Mutex<HashSet<String>>>,
 ) {
     loop {
         while let Ok(cmd) = rx.try_recv() {
@@ -1467,12 +1515,16 @@ async fn run_client_task(
         while let Some(msg) = client.try_recv() {
             drained = true;
 
+            let mut notify_resources_list_changed: bool = false;
+            let mut resource_updated_uris: Vec<String> = Vec::new();
+
             match msg.r#type.as_str() {
                 "session.list" => {
                     if let Ok(parsed) =
                         serde_json::from_value::<DevtoolsSessionListV1>(msg.payload.clone())
                     {
                         *sessions.lock().await = parsed.sessions;
+                        notify_resources_list_changed = true;
                     }
                 }
                 "session.added" => {
@@ -1488,6 +1540,7 @@ async fn run_client_task(
                         } else {
                             s.push(parsed.session);
                         }
+                        notify_resources_list_changed = true;
                     }
                 }
                 "session.removed" => {
@@ -1496,6 +1549,28 @@ async fn run_client_task(
                     {
                         let mut s = sessions.lock().await;
                         s.retain(|x| x.session_id != parsed.session_id);
+                        notify_resources_list_changed = true;
+                    }
+                }
+                "bundle.dumped" => {
+                    notify_resources_list_changed = true;
+                    if let Some(sid) = msg.session_id.as_deref() {
+                        let base = format!("{RESOURCE_SCHEME}sessions/{sid}/");
+                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_JSON}"));
+                        resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_ZIP}"));
+                        resource_updated_uris
+                            .push(format!("{base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
+
+                        let selected = selected_session_id.lock().await.clone();
+                        if selected.as_deref() == Some(sid) {
+                            let selected_base = format!("{RESOURCE_SCHEME}selected/");
+                            resource_updated_uris
+                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_JSON}"));
+                            resource_updated_uris
+                                .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_ZIP}"));
+                            resource_updated_uris
+                                .push(format!("{selected_base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
+                        }
                     }
                 }
                 _ => {}
@@ -1528,6 +1603,38 @@ async fn run_client_task(
                 if inbox.len() > 2000 {
                     let drain = inbox.len().saturating_sub(2000);
                     inbox.drain(0..drain);
+                }
+            }
+
+            if notify_resources_list_changed || !resource_updated_uris.is_empty() {
+                let peer = peer.lock().await.clone();
+                let subscribed = subscribed_resources.lock().await.clone();
+
+                if let Some(peer) = peer {
+                    if notify_resources_list_changed {
+                        let n = ResourceListChangedNotification {
+                            method: Default::default(),
+                            extensions: Extensions::default(),
+                        };
+                        let _ = peer
+                            .send_notification(ServerNotification::ResourceListChangedNotification(
+                                n,
+                            ))
+                            .await;
+                    }
+
+                    for uri in resource_updated_uris {
+                        if !subscribed.contains(&uri) {
+                            continue;
+                        }
+                        let n =
+                            ResourceUpdatedNotification::new(ResourceUpdatedNotificationParam {
+                                uri,
+                            });
+                        let _ = peer
+                            .send_notification(ServerNotification::ResourceUpdatedNotification(n))
+                            .await;
+                    }
                 }
             }
         }
