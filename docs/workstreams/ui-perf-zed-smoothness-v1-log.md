@@ -7107,6 +7107,12 @@ Notes:
   - `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
   - Worst dispatch bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510565303-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
   - Worst hit-test bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510565303-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- Worst-frame triage (from `fretboard diag stats ... --sort time --top 20`):
+  - bundle: `target/fret-diag-code-editor-resize-probes-gate-r1/attempt-1/1770510591981-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - `paint_node.widget_us` dominates (~46.9ms on the worst frame), with:
+    - `paint_widget_hotspots`: a `Canvas` element (~31.3ms, `ops=581`) + a few `Text` prepares.
+    - `paint_text_prepare` (~15.5ms, reasons: `width_changed`).
+  - View-cache reuse is partial on the worst frame (`cache_roots=2`, `reused=1`; one root reported as `not_marked_reuse_root`).
 
 Text prepare signals (worst frame in each bundle; p95/max):
 | script | p95 prepare_us | max prepare_us | p95 width_changed | max width_changed | p95 calls | max calls |
