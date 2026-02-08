@@ -74,6 +74,7 @@ pub mod prelude {
         TextProps,
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui_kit::declarative::AnyElementSemanticsExt;
     pub use fret_ui_kit::declarative::ModelWatchExt;
     #[cfg(not(feature = "shadcn"))]
     pub use fret_ui_kit::{
