@@ -34,6 +34,41 @@ const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
 const HOVER_CARD_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct HoverCardOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn hover_card_open_change_events(
+    state: &mut HoverCardOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 #[derive(Default)]
 struct HoverCardLastPointerModelState {
     model: Option<Model<Option<Point>>>,
@@ -151,6 +186,8 @@ pub struct HoverCard {
     close_delay_frames: u32,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for HoverCard {
@@ -167,6 +204,11 @@ impl std::fmt::Debug for HoverCard {
             .field("close_delay_frames", &self.close_delay_frames)
             .field("layout", &self.layout)
             .field("anchor_override", &self.anchor_override)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -189,6 +231,8 @@ impl HoverCard {
             close_delay_frames: HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES,
             layout: LayoutRefinement::default(),
             anchor_override: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -279,6 +323,21 @@ impl HoverCard {
     /// - The anchor bounds are resolved from last-frame layout/visual bounds.
     pub fn anchor_element(mut self, element: fret_ui::elements::GlobalElementId) -> Self {
         self.anchor_override = Some(element);
+        self
+    }
+
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
         self
     }
 
@@ -486,6 +545,20 @@ impl HoverCard {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
+                    hover_card_open_change_events(state, opening, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) =
+                (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let opacity = motion.opacity;
             let scale = motion.scale;
             let overlay_presence = OverlayPresence {
@@ -841,6 +914,34 @@ mod tests {
     use fret_ui::tree::UiTree;
     use fret_ui_kit::prelude::ActionHooksExt;
     use fret_ui_kit::{OverlayController, ui};
+
+    #[test]
+    fn hover_card_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = HoverCardOpenChangeCallbackState::default();
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn hover_card_open_change_events_complete_without_animation() {
+        let mut state = HoverCardOpenChangeCallbackState::default();
+
+        let _ = hover_card_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
 
     #[derive(Default)]
     struct FakeServices;
