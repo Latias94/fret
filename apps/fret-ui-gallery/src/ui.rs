@@ -16678,6 +16678,32 @@ fn preview_data_table_torture(
         Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
     };
 
+    let pinning_text: Arc<str> = {
+        let pinning = cx
+            .app
+            .models()
+            .read(&state, |st| st.column_pinning.clone())
+            .ok()
+            .unwrap_or_default();
+        if pinning.left.is_empty() && pinning.right.is_empty() {
+            Arc::<str>::from("Pinning: <none>")
+        } else {
+            let left = pinning
+                .left
+                .iter()
+                .map(|v| v.as_ref().to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            let right = pinning
+                .right
+                .iter()
+                .map(|v| v.as_ref().to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            Arc::<str>::from(format!("Pinning: left=[{left}] right=[{right}]"))
+        }
+    };
+
     let toolbar_columns = columns.clone();
     let toolbar =
         shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
@@ -16698,6 +16724,12 @@ fn preview_data_table_torture(
                         .role(fret_core::SemanticsRole::Text)
                         .label(sorting_text.clone())
                         .test_id("ui-gallery-data-table-torture-sorting"),
+                ),
+                cx.text(pinning_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(pinning_text.clone())
+                        .test_id("ui-gallery-data-table-torture-pinning"),
                 ),
                 toolbar.clone().into_element(cx),
             ]

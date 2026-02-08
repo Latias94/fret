@@ -888,6 +888,8 @@ Next UI parity targets (capability, not exact DOM behavior):
   - Runner: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`click_events_with_modifiers` + ClickStable injection).
   - Tests: `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
 - [ ] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
+  - Guiding principle (UI): focus on capability parity (not pixel-identical behavior). Prefer
+    small, script-gated affordances that exercise the headless engine’s contract surface.
   - Sub-milestones (keep each gateable via `fretboard diag`):
     - [x] HTP-ui-dt-011 Multi-sort input semantics: Shift-click appends/toggles sort specs (TanStack default).
       - Gate: one script Shift-clicks 2 headers and asserts a deterministic sorting status row.
@@ -901,7 +903,31 @@ Next UI parity targets (capability, not exact DOM behavior):
         - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (retained header text renders `mem_mb ▲2`)
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json` (asserts `mem_mb ▲2`)
     - [ ] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
+      - Sub-milestones:
+        - [ ] HTP-ui-dt-021 Gate global filter input: changing the input filters visible rows and resets `page_index`.
+        - [ ] HTP-ui-dt-022 Add a per-column text filter control (wires `TableState.column_filters`).
+        - [ ] HTP-ui-dt-023 Add a faceted filter control for a categorical column (menu of unique values).
+          - Prefer headless-backed faceting when the caller can provide a facet key/label mapping.
+          - Accept a static option list fallback (still drives `column_filters`) to keep the recipe usable
+            in apps that already own their domain option inventories.
+        - [ ] HTP-ui-dt-024 Add a “Reset filters” affordance (clears global + column filters and resets `page_index`).
+      - Gates (planned):
+        - `tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json`
+        - `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
+        - `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
     - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
+      - Scope note: sticky rendering + split layout are already wired in `table_virtualized` (HTP-ui-colpin-010).
+        This milestone focuses on *UI entrypoints* that let users drive `TableState.column_pinning`.
+      - Sub-milestones:
+        - [x] HTP-ui-dt-031 Provide a pinning control surface (toolbar dropdown is sufficient for v1).
+          - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` adds a `Pin` dropdown
+            wired to `TableState.column_pinning`).
+        - [x] HTP-ui-dt-032 Gate that the control updates `TableState.column_pinning` deterministically.
+          - Gallery: `apps/fret-ui-gallery/src/ui.rs` adds a stable pinning status row (`Pinning: ...`) for assertions.
+          - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json`.
+        - [ ] HTP-ui-dt-033 Optional: gate that pinned columns remain visible during horizontal scroll.
+      - Gates:
+        - `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json`
     - [x] HTP-ui-dt-040 Column visibility dropdown (docs-style checkbox menu).
       - Evidence:
         - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` wires `TableState.column_visibility`)

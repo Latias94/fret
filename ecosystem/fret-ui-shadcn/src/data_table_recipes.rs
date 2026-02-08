@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_headless::table::{ColumnDef, ColumnId, TableState};
+use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
@@ -14,13 +14,49 @@ use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::dropdown_menu::{
-    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuRadioGroup,
-    DropdownMenuRadioItemSpec,
+    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuLabel,
+    DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
 
 fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
     state.column_visibility.get(id).copied().unwrap_or(true)
+}
+
+fn column_pin_position(state: &TableState, id: &ColumnId) -> Option<ColumnPinPosition> {
+    if state
+        .column_pinning
+        .left
+        .iter()
+        .any(|c| c.as_ref() == id.as_ref())
+    {
+        return Some(ColumnPinPosition::Left);
+    }
+    if state
+        .column_pinning
+        .right
+        .iter()
+        .any(|c| c.as_ref() == id.as_ref())
+    {
+        return Some(ColumnPinPosition::Right);
+    }
+    None
+}
+
+fn pin_position_model_value(state: &TableState, id: &ColumnId) -> Arc<str> {
+    match column_pin_position(state, id) {
+        None => Arc::from("none"),
+        Some(ColumnPinPosition::Left) => Arc::from("left"),
+        Some(ColumnPinPosition::Right) => Arc::from("right"),
+    }
+}
+
+fn pin_position_from_model_value(value: Option<&Arc<str>>) -> Option<ColumnPinPosition> {
+    match value.map(|v| v.as_ref()) {
+        Some("left") => Some(ColumnPinPosition::Left),
+        Some("right") => Some(ColumnPinPosition::Right),
+        _ => None,
+    }
 }
 
 fn normalized_global_filter(value: &str) -> Option<Value> {
@@ -82,6 +118,37 @@ fn sync_column_visibility(
     });
 }
 
+fn apply_column_pinning_change(
+    state: &mut TableState,
+    desired: &HashMap<ColumnId, Option<ColumnPinPosition>>,
+) -> bool {
+    let mut changed = false;
+    for (id, desired_position) in desired {
+        let current = column_pin_position(state, id);
+        if current == *desired_position {
+            continue;
+        }
+        changed = true;
+        pin_column(&mut state.column_pinning, id, *desired_position);
+    }
+
+    if changed {
+        state.pagination.page_index = 0;
+    }
+
+    changed
+}
+
+fn sync_column_pinning(
+    app: &mut impl UiHost,
+    state: &Model<TableState>,
+    desired: &HashMap<ColumnId, Option<ColumnPinPosition>>,
+) {
+    let _ = app.models_mut().update(state, |st| {
+        let _ = apply_column_pinning_change(st, desired);
+    });
+}
+
 struct ColumnVisibilityBinding {
     id: ColumnId,
     model: Model<bool>,
@@ -96,11 +163,28 @@ impl Clone for ColumnVisibilityBinding {
     }
 }
 
+struct ColumnPinningBinding {
+    id: ColumnId,
+    model: Model<Option<Arc<str>>>,
+}
+
+impl Clone for ColumnPinningBinding {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            model: self.model.clone(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct DataTableToolbarState {
     filter_model: Option<Model<String>>,
     columns_open: Option<Model<bool>>,
+    pinning_open: Option<Model<bool>>,
     column_visibility: Vec<ColumnVisibilityBinding>,
+    column_pinning: Vec<ColumnPinningBinding>,
+    last_synced_state_revision: Option<u64>,
 }
 
 /// shadcn/ui `DataTable` toolbar (recipe).
@@ -153,6 +237,7 @@ impl<TData> DataTableToolbar<TData> {
             .layout()
             .cloned()
             .unwrap_or_default();
+        let state_revision = self.state.revision(&*cx.app).unwrap_or(0);
 
         let filter_model =
             cx.with_state(DataTableToolbarState::default, |st| st.filter_model.clone());
@@ -188,6 +273,20 @@ impl<TData> DataTableToolbar<TData> {
             }
         };
 
+        let pinning_open =
+            cx.with_state(DataTableToolbarState::default, |st| st.pinning_open.clone());
+        let pinning_open = match pinning_open {
+            Some(m) => m,
+            None => {
+                let m = cx.app.models_mut().insert(false);
+                let m_for_state = m.clone();
+                cx.with_state(DataTableToolbarState::default, move |st| {
+                    st.pinning_open = Some(m_for_state);
+                });
+                m
+            }
+        };
+
         let mut bindings = cx.with_state(DataTableToolbarState::default, |st| {
             st.column_visibility.clone()
         });
@@ -210,6 +309,44 @@ impl<TData> DataTableToolbar<TData> {
             });
         }
 
+        let mut pinning_bindings = cx.with_state(DataTableToolbarState::default, |st| {
+            st.column_pinning.clone()
+        });
+        if pinning_bindings.is_empty() {
+            pinning_bindings = self
+                .columns
+                .iter()
+                .filter(|c| c.enable_pinning)
+                .map(|c| ColumnPinningBinding {
+                    id: c.id.clone(),
+                    model: cx
+                        .app
+                        .models_mut()
+                        .insert(Some(pin_position_model_value(&state_value, &c.id))),
+                })
+                .collect();
+            let next = pinning_bindings.clone();
+            cx.with_state(DataTableToolbarState::default, |st| {
+                st.column_pinning = next
+            });
+        }
+
+        let last_synced_state_revision = cx.with_state(DataTableToolbarState::default, |st| {
+            st.last_synced_state_revision
+        });
+        if last_synced_state_revision != Some(state_revision) {
+            for binding in pinning_bindings.iter() {
+                let desired = Some(pin_position_model_value(&state_value, &binding.id));
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&binding.model, |v| *v = desired.clone());
+            }
+            cx.with_state(DataTableToolbarState::default, |st| {
+                st.last_synced_state_revision = Some(state_revision);
+            });
+        }
+
         let filter_value = cx
             .watch_model(&filter_model)
             .layout()
@@ -227,6 +364,15 @@ impl<TData> DataTableToolbar<TData> {
             })
             .collect();
         sync_column_visibility(&mut *cx.app, &self.state, &desired_visibility);
+
+        let desired_pinning: HashMap<ColumnId, Option<ColumnPinPosition>> = pinning_bindings
+            .iter()
+            .map(|b| {
+                let raw = cx.watch_model(&b.model).layout().cloned().flatten();
+                (b.id.clone(), pin_position_from_model_value(raw.as_ref()))
+            })
+            .collect();
+        sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
 
         let selected_count = state_value.row_selection.len();
         let theme = Theme::global(&*cx.app).clone();
@@ -255,6 +401,49 @@ impl<TData> DataTableToolbar<TData> {
             move |_cx| visibility_items.clone(),
         );
 
+        let mut pin_items: Vec<DropdownMenuEntry> = pinning_bindings
+            .iter()
+            .filter_map(|b| {
+                let col = columns.iter().find(|c| c.id.as_ref() == b.id.as_ref())?;
+                let label = (column_label)(col);
+
+                let radio_group = DropdownMenuRadioGroup::new(b.model.clone())
+                    .item(
+                        DropdownMenuRadioItemSpec::new("none", "Unpinned")
+                            .a11y_label(Arc::<str>::from(format!("Pin {label} unpinned"))),
+                    )
+                    .item(
+                        DropdownMenuRadioItemSpec::new("left", "Left")
+                            .a11y_label(Arc::<str>::from(format!("Pin {label} left"))),
+                    )
+                    .item(
+                        DropdownMenuRadioItemSpec::new("right", "Right")
+                            .a11y_label(Arc::<str>::from(format!("Pin {label} right"))),
+                    );
+
+                Some(vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new(label).inset(true)),
+                    DropdownMenuEntry::RadioGroup(radio_group),
+                    DropdownMenuEntry::Separator,
+                ])
+            })
+            .flatten()
+            .collect();
+        if matches!(pin_items.last(), Some(DropdownMenuEntry::Separator)) {
+            pin_items.pop();
+        }
+
+        let pin_menu = DropdownMenu::new(pinning_open).into_element(
+            cx,
+            |cx| {
+                Button::new("Pin")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Sm)
+                    .into_element(cx)
+            },
+            move |_cx| pin_items.clone(),
+        );
+
         let filter = Input::new(filter_model)
             .placeholder(self.filter_placeholder.clone())
             .into_element(cx);
@@ -275,7 +464,7 @@ impl<TData> DataTableToolbar<TData> {
                 .items_center()
                 .gap_x(Space::N2),
             move |_cx| {
-                let mut children = vec![filter, cols_menu];
+                let mut children = vec![filter, cols_menu, pin_menu];
                 if let Some(sel) = selected_text.clone() {
                     children.push(sel);
                 }

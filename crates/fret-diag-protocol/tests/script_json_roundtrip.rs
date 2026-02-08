@@ -67,6 +67,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_visibility_toggle() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json"
+    ));
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,
