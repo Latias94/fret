@@ -26,7 +26,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ui, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
 
 use crate::overlay_motion;
@@ -1031,6 +1031,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 #[derive(Clone)]
 pub struct DropdownMenu {
     open: Model<bool>,
+    disabled: bool,
     modal: bool,
     align: DropdownMenuAlign,
     align_offset: Px,
@@ -1051,6 +1052,7 @@ impl std::fmt::Debug for DropdownMenu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DropdownMenu")
             .field("open", &"<model>")
+            .field("disabled", &self.disabled)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -1065,6 +1067,7 @@ impl DropdownMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            disabled: false,
             modal: true,
             align: DropdownMenuAlign::default(),
             align_offset: Px(0.0),
@@ -1084,6 +1087,12 @@ impl DropdownMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Whether trigger keyboard interaction should be ignored.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -1170,11 +1179,12 @@ impl DropdownMenu {
         cx.scope(|cx| {
             let overlay_id = cx.root_id();
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx
+            let model_open = cx
                 .watch_model(&self.open)
                 .layout()
                 .copied()
                 .unwrap_or(false);
+            let is_open = model_open && !self.disabled;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
@@ -1235,6 +1245,7 @@ impl DropdownMenu {
             // behaviors like submenu close delays).
             let trigger = cx.keyed(("dropdown-menu-trigger", overlay_id), |cx| trigger(cx));
             let trigger_id = trigger.id;
+            let disabled = self.disabled;
             let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let open_for_trigger_arrow_keys = self.open.clone();
@@ -1244,6 +1255,9 @@ impl DropdownMenu {
             cx.key_on_key_down_for(
                 trigger_id,
                 Arc::new(move |host, _acx, down| {
+                    if disabled {
+                        return false;
+                    }
                     if down.repeat {
                         return false;
                     }
@@ -3266,8 +3280,8 @@ mod tests {
         TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::{Effect, FrameId};
-    use fret_ui::element::PressableA11y;
     use fret_ui::UiTree;
+    use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
 
@@ -3546,6 +3560,21 @@ mod tests {
         open: Model<bool>,
         entries: Vec<DropdownMenuEntry>,
     ) -> fret_core::NodeId {
+        render_frame_focusable_trigger_with_disabled(
+            ui, app, services, window, bounds, open, entries, false,
+        )
+    }
+
+    fn render_frame_focusable_trigger_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
@@ -3558,7 +3587,7 @@ mod tests {
             bounds,
             "dropdown-menu-trigger",
             move |cx| {
-                vec![DropdownMenu::new(open).into_element(
+                vec![DropdownMenu::new(open).disabled(disabled).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -3697,42 +3726,46 @@ mod tests {
                             let trigger_id_out = trigger_id_out_for_render.clone();
                             // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
                             // menu so trigger semantics remain visible while open.
-                            vec![DropdownMenu::new(open)
-                                .modal(false)
-                                .arrow(false)
-                                .into_element(
-                                    cx,
-                                    move |cx| {
-                                        cx.pressable_with_id_props(move |cx, _st, id| {
-                                            let _ = cx
-                                                .app
-                                                .models_mut()
-                                                .update(&trigger_id_out, |v| *v = Some(id));
-                                            (
-                                                PressableProps {
-                                                    layout: {
-                                                        let mut layout = LayoutStyle::default();
-                                                        layout.size.width = Length::Px(Px(120.0));
-                                                        layout.size.height = Length::Px(Px(40.0));
-                                                        layout
-                                                    },
-                                                    enabled: true,
-                                                    focusable: true,
-                                                    a11y: PressableA11y {
-                                                        label: Some(Arc::from("Trigger")),
+                            vec![
+                                DropdownMenu::new(open)
+                                    .modal(false)
+                                    .arrow(false)
+                                    .into_element(
+                                        cx,
+                                        move |cx| {
+                                            cx.pressable_with_id_props(move |cx, _st, id| {
+                                                let _ = cx
+                                                    .app
+                                                    .models_mut()
+                                                    .update(&trigger_id_out, |v| *v = Some(id));
+                                                (
+                                                    PressableProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width =
+                                                                Length::Px(Px(120.0));
+                                                            layout.size.height =
+                                                                Length::Px(Px(40.0));
+                                                            layout
+                                                        },
+                                                        enabled: true,
+                                                        focusable: true,
+                                                        a11y: PressableA11y {
+                                                            label: Some(Arc::from("Trigger")),
+                                                            ..Default::default()
+                                                        },
                                                         ..Default::default()
                                                     },
-                                                    ..Default::default()
-                                                },
-                                                vec![cx
-                                                    .container(ContainerProps::default(), |_cx| {
-                                                        Vec::new()
-                                                    })],
-                                            )
-                                        })
-                                    },
-                                    move |_cx| entries.clone(),
-                                )]
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )],
+                                                )
+                                            })
+                                        },
+                                        move |_cx| entries.clone(),
+                                    ),
+                            ]
                         },
                     )]
                 })
@@ -3918,26 +3951,28 @@ mod tests {
             bounds,
             "dropdown-menu-dismiss-handler",
             move |cx| {
-                vec![DropdownMenu::new(open)
-                    .on_dismiss_request(on_dismiss_request)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Px(Px(120.0));
-                                        layout.size.height = Length::Px(Px(40.0));
-                                        layout
+                vec![
+                    DropdownMenu::new(open)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
                                     },
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::new(),
-                            )
-                        },
-                        move |_cx| entries,
-                    )]
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            move |_cx| entries,
+                        ),
+                ]
             },
         );
         ui.set_root(root);
@@ -4240,6 +4275,118 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
             "menu items should render after ArrowDown opens the menu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_disabled_blocks_arrow_key_open_from_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let root = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+            true,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            !open_now,
+            "disabled dropdown menu should ignore trigger ArrowDown open"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled dropdown menu should not render menu content"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_disabled_hides_content_even_when_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            open_now,
+            "disabled root should not mutate controlled open model value"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled dropdown menu should not render menu content when model is open"
         );
     }
 

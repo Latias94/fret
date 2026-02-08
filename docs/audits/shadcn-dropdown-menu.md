@@ -47,6 +47,10 @@ Key upstream behaviors/surfaces:
 - Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
+- Pass: root-level disabled gate is now supported (`DropdownMenu::disabled(bool)`) and blocks
+  trigger keyboard-open choreography.
+- Pass: when root disabled is enabled, content stays hidden even if the controlled `open` model
+  value is `true` (render-time gate, matching disabled-root expectations from Base UI/Radix family).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
@@ -94,6 +98,8 @@ Notes on API mapping:
 ## Validation
 
 - Contract test: `dropdown_menu_items_have_collection_position_metadata_excluding_separators`
+- Interaction test: `dropdown_menu_disabled_blocks_arrow_key_open_from_trigger`
+- Interaction test: `dropdown_menu_disabled_hides_content_even_when_open_model_true`
   (ensures `pos_in_set`/`set_size` exclude separators).
 - Interaction test: `dropdown_menu_submenu_opens_on_hover_and_closes_on_leave`
 - Keyboard test: `dropdown_menu_submenu_opens_on_arrow_right_without_pointer_move`
