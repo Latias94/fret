@@ -50,6 +50,27 @@ If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a 
 4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:
    - Add a `tools/diag-scripts/*.json` script (stable `test_id` targets), then baseline/gate it.
 
+### “Resize jank” fast path (copy/paste)
+
+Run the P0 resize probes (numbers + thresholds):
+
+```bash
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
+```
+
+If a gate fails (or you want the worst bundles even on PASS):
+
+```bash
+.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> --all --app-snapshot
+```
+
+Then inspect the worst bundle:
+
+```bash
+cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
+```
+
 ## Tips
 
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.

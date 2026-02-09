@@ -18,6 +18,10 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3
 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
 ```
 
+Notes:
+- `tools/perf/diag_resize_probes_gate.sh` defaults to `--attempts 1` (fast local check). For tail stability and
+  flake resistance, prefer `--attempts 3` and require a strict majority pass.
+
 ### Run the steady suite against the canonical baseline
 
 ```bash
@@ -38,6 +42,20 @@ python3 tools/perf/perf_log.py append \
   --log docs/workstreams/ui-perf-zed-smoothness-v1-log.md \
   --suite <suite-name> \
   --command "<exact command used>" \
+  --change "<short change summary>"
+```
+
+### Append a gate attempt to the perf log (resize probes)
+
+`diag_resize_probes_gate.sh` writes an `attempt-N/stdout.json` file that includes the perf JSON payload. You can
+append that directly:
+
+```bash
+python3 tools/perf/perf_log.py append \
+  --stdout <gate-out-dir>/attempt-1/stdout.json \
+  --log docs/workstreams/ui-perf-zed-smoothness-v1-log.md \
+  --suite ui-resize-probes \
+  --command "tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir <gate-out-dir>" \
   --change "<short change summary>"
 ```
 
