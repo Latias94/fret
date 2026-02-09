@@ -656,6 +656,7 @@ pub struct Select {
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
+    mouse_policies: radix_select::SelectMousePolicies,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -687,6 +688,7 @@ impl Select {
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
+            mouse_policies: radix_select::SelectMousePolicies::default(),
             trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
@@ -757,6 +759,11 @@ impl Select {
     pub fn items(mut self, items: impl IntoIterator<Item = SelectItem>) -> Self {
         self.entries
             .extend(items.into_iter().map(SelectEntry::Item));
+        self
+    }
+
+    pub fn mouse_policies(mut self, policies: radix_select::SelectMousePolicies) -> Self {
+        self.mouse_policies = policies;
         self
     }
 
@@ -925,6 +932,7 @@ impl Select {
             &self.entries,
             self.placeholder,
             self.disabled,
+            self.mouse_policies,
             self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
@@ -968,6 +976,7 @@ pub fn select<H: UiHost>(
         &entries,
         placeholder,
         disabled,
+        radix_select::SelectMousePolicies::default(),
         None,
         a11y_label,
         false,
@@ -1001,6 +1010,7 @@ fn select_impl<H: UiHost>(
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
+    mouse_policies: radix_select::SelectMousePolicies,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -1391,6 +1401,7 @@ fn select_impl<H: UiHost>(
             let state_for_pointer_down = trigger_state.clone();
             let mouse_open_guard_for_pointer_down = mouse_open_guard.clone();
             let mouse_up_selection_gate_for_pointer_down = mouse_up_selection_gate.clone();
+            let mouse_policies_for_pointer_down = mouse_policies;
             let model_for_pointer_down = model.clone();
             let typeahead_values_for_pointer_down = typeahead_values.clone();
             let typeahead_disabled_for_pointer_down = typeahead_disabled.clone();
@@ -1442,15 +1453,26 @@ fn select_impl<H: UiHost>(
                     let mut gate = mouse_up_selection_gate_for_pointer_down
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    gate.arm_on_open(host, action_cx.window, has_selected_item_in_list);
+                    if let Some(policy) = mouse_policies_for_pointer_down.mouse_up_selection_gate {
+                        gate.arm_on_open_with_policy(
+                            host,
+                            action_cx.window,
+                            has_selected_item_in_list,
+                            policy,
+                        );
+                    } else {
+                        gate.clear_and_cancel(host);
+                    }
                 }
 
-                radix_select::select_mouse_open_guard_record_if_opened(
-                    &mouse_open_guard_for_pointer_down,
-                    was_open,
-                    now_open,
-                    down.position,
-                );
+                if mouse_policies_for_pointer_down.pointer_up_guard {
+                    radix_select::select_mouse_open_guard_record_if_opened(
+                        &mouse_open_guard_for_pointer_down,
+                        was_open,
+                        now_open,
+                        down.position,
+                    );
+                }
                 if !was_open && now_open {
                     state.opened_by_pointer = true;
                 }
@@ -2044,6 +2066,7 @@ fn select_impl<H: UiHost>(
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
                     let mouse_up_selection_gate_for_overlay = mouse_up_selection_gate.clone();
+                    let mouse_policies_for_overlay = mouse_policies;
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let on_value_change_for_overlay_children = on_value_change.clone();
                     let model_for_overlay = model.clone();
@@ -2053,6 +2076,10 @@ fn select_impl<H: UiHost>(
                         let open_for_content = open_for_overlay.clone();
                         let open_for_barrier_children = open_for_overlay.clone();
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
+                        let mouse_up_selection_gate_for_overlay_opt = mouse_policies_for_overlay
+                            .mouse_up_selection_gate
+                            .is_some()
+                            .then_some(mouse_up_selection_gate_for_overlay.clone());
 
                         #[derive(Clone)]
                         enum SelectRow {
@@ -2137,10 +2164,10 @@ fn select_impl<H: UiHost>(
                             state.content.active_row()
                         };
 
-                        if !is_open {
-                            let mut gate = mouse_up_selection_gate_for_overlay
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
+                        if !is_open
+                            && let Some(gate) = mouse_up_selection_gate_for_overlay_opt.as_ref()
+                        {
+                            let mut gate = gate.lock().unwrap_or_else(|e| e.into_inner());
                             gate.reset_without_cancel();
                         }
 
@@ -2495,7 +2522,7 @@ fn select_impl<H: UiHost>(
                                                                             let mouse_open_guard_for_item_pointer_up =
                                                                                 mouse_open_guard_for_content.clone();
                                                                             let mouse_up_selection_gate_for_item_pointer_up =
-                                                                                mouse_up_selection_gate_for_overlay.clone();
+                                                                                mouse_up_selection_gate_for_overlay_opt.clone();
 
                                                                             let value_key = item.value.clone();
                                                                             let style_for_item =
@@ -2544,21 +2571,19 @@ fn select_impl<H: UiHost>(
                                                                                     cx.pressable_set_bool(&open, false);
 
                                                                                     if !item_disabled {
-                                                                                        let handlers =
-                                                                                            radix_select::select_item_pressable_pointer_handlers_with_mouse_up_gate(
-                                                                                                open.clone(),
-                                                                                                model.clone(),
-                                                                                                item_value.clone(),
-                                                                                                item_disabled,
-                                                                                                mouse_open_guard_for_item_pointer_up
-                                                                                                    .clone(),
-                                                                                                is_selected,
-                                                                                                Some(
-                                                                                                    mouse_up_selection_gate_for_item_pointer_up
+                                                                                            let handlers =
+                                                                                                radix_select::select_item_pressable_pointer_handlers_with_mouse_up_gate(
+                                                                                                    open.clone(),
+                                                                                                    model.clone(),
+                                                                                                    item_value.clone(),
+                                                                                                    item_disabled,
+                                                                                                    mouse_open_guard_for_item_pointer_up
                                                                                                         .clone(),
-                                                                                                ),
-                                                                                                on_value_change_for_item.clone(),
-                                                                                            );
+                                                                                                    is_selected,
+                                                                                                mouse_up_selection_gate_for_item_pointer_up
+                                                                                                    .clone(),
+                                                                                                    on_value_change_for_item.clone(),
+                                                                                                );
                                                                                         cx.pressable_add_on_pointer_down(
                                                                                             handlers.on_pointer_down,
                                                                                         );
