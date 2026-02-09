@@ -41,8 +41,9 @@ pub mod windowed_rows_surface;
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use container_queries::{
     ContainerQueryHysteresis, container_breakpoints, container_query_region,
-    container_query_region_with_id,
+    container_query_region_with_id, container_width_at_least,
 };
+pub use container_queries::tailwind;
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 pub use semantics::AnyElementSemanticsExt;

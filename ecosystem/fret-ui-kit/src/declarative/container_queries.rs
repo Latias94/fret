@@ -42,7 +42,13 @@ struct ContainerBreakpointsState {
     initialized: bool,
 }
 
-fn container_breakpoints_init_active_index(width: Px, breakpoints: &[(Px, impl Copy)]) -> usize {
+#[derive(Debug, Default, Clone, Copy)]
+struct ContainerWidthAtLeastState {
+    active: bool,
+    initialized: bool,
+}
+
+fn container_breakpoints_init_active_index<T: Copy>(width: Px, breakpoints: &[(Px, T)]) -> usize {
     let mut active_index = 0;
     for (i, (min_width, _)) in breakpoints.iter().enumerate() {
         if width.0 >= min_width.0 {
@@ -52,9 +58,9 @@ fn container_breakpoints_init_active_index(width: Px, breakpoints: &[(Px, impl C
     active_index
 }
 
-fn container_breakpoints_apply_hysteresis(
+fn container_breakpoints_apply_hysteresis<T: Copy>(
     width: Px,
-    breakpoints: &[(Px, impl Copy)],
+    breakpoints: &[(Px, T)],
     hysteresis: ContainerQueryHysteresis,
     mut active_index: usize,
 ) -> usize {
@@ -83,6 +89,25 @@ fn container_breakpoints_apply_hysteresis(
     }
 
     active_index
+}
+
+fn container_width_at_least_init(width: Px, threshold: Px) -> bool {
+    width.0 >= threshold.0
+}
+
+fn container_width_at_least_apply_hysteresis(
+    width: Px,
+    threshold: Px,
+    hysteresis: ContainerQueryHysteresis,
+    active: bool,
+) -> bool {
+    if !active && width.0 >= threshold.0 + hysteresis.up.0 {
+        return true;
+    }
+    if active && width.0 < threshold.0 - hysteresis.down.0 {
+        return false;
+    }
+    active
 }
 
 /// Marks a subtree as a container-query region.
@@ -174,6 +199,45 @@ where
     })
 }
 
+/// Returns whether a container-query region's committed width is at least `threshold`.
+///
+/// This is a convenience wrapper for the common "single breakpoint" case.
+///
+/// - Observations are frame-lagged (read last committed bounds only).
+/// - Hysteresis is applied to avoid oscillation near the threshold.
+/// - When the width is not yet known, returns `default_when_unknown`.
+#[track_caller]
+pub fn container_width_at_least<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    region: GlobalElementId,
+    invalidation: Invalidation,
+    default_when_unknown: bool,
+    threshold: Px,
+    hysteresis: ContainerQueryHysteresis,
+) -> bool {
+    cx.scope(|cx| {
+        let rect: Option<Rect> = cx.layout_query_bounds(region, invalidation);
+        let Some(width) = rect.map(|r| r.size.width) else {
+            return default_when_unknown;
+        };
+
+        cx.with_state(ContainerWidthAtLeastState::default, |st| {
+            if !st.initialized {
+                st.active = container_width_at_least_init(width, threshold);
+                st.initialized = true;
+            }
+
+            st.active = container_width_at_least_apply_hysteresis(
+                width,
+                threshold,
+                hysteresis,
+                st.active,
+            );
+            st.active
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -209,5 +273,26 @@ mod tests {
         // Jump up multiple breakpoints in one update.
         active_index = container_breakpoints_apply_hysteresis(Px(2000.0), breakpoints, hysteresis, active_index);
         assert_eq!(active_index, 3);
+    }
+
+    #[test]
+    fn container_width_at_least_hysteresis_transitions() {
+        let threshold = tailwind::MD;
+        let hysteresis = ContainerQueryHysteresis::default();
+
+        let mut active = container_width_at_least_init(Px(700.0), threshold);
+        assert!(!active);
+
+        // Do not cross until width >= threshold + up.
+        active = container_width_at_least_apply_hysteresis(Px(770.0), threshold, hysteresis, active);
+        assert!(!active);
+        active = container_width_at_least_apply_hysteresis(Px(776.0), threshold, hysteresis, active);
+        assert!(active);
+
+        // Do not drop until width < threshold - down.
+        active = container_width_at_least_apply_hysteresis(Px(762.0), threshold, hysteresis, active);
+        assert!(active);
+        active = container_width_at_least_apply_hysteresis(Px(759.0), threshold, hysteresis, active);
+        assert!(!active);
     }
 }
