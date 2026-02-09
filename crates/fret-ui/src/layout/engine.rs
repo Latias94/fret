@@ -363,17 +363,23 @@ impl TaffyLayoutEngine {
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
         let parent = self.request_layout_node(node).0;
 
-        let prev_children = self.children.get(&node).cloned().unwrap_or_default();
-        if prev_children.as_slice() == children {
+        let prev_children = self
+            .children
+            .get(&node)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+        if prev_children == children {
             return;
         }
         self.node_solved_stamp.remove(node);
         self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
 
-        for child in prev_children {
-            if self.parent.get(&child) == Some(&node) {
-                self.parent.remove(&child);
+        if let Some(prev_children) = self.children.get(&node) {
+            for &child in prev_children.iter() {
+                if self.parent.get(&child) == Some(&node) {
+                    self.parent.remove(&child);
+                }
             }
         }
 
