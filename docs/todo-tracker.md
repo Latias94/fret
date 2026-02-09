@@ -28,6 +28,17 @@ It complements (but does not replace) ADRs:
     - `docs/workstreams/container-queries-v1-todo.md`
     - `docs/workstreams/container-queries-v1-milestones.md`
 
+## P0 - Environment queries (viewport/device capabilities)
+
+- Lock and implement a typed environment query mechanism so viewport/device-driven responsive
+  behavior (mobile shells, pointer capability gates, safe-area) is not encoded as ad-hoc
+  `cx.bounds` magic numbers.
+  - ADR: `docs/adr/1171-environment-queries-and-viewport-snapshots-v1.md`
+  - Workstream:
+    - `docs/workstreams/environment-queries-v1.md`
+    - `docs/workstreams/environment-queries-v1-todo.md`
+    - `docs/workstreams/environment-queries-v1-milestones.md`
+
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:
