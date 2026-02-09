@@ -1,5 +1,6 @@
 use super::*;
 
+use fret_runtime::GlobalsHost;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -140,5 +141,96 @@ fn layout_query_bounds_are_frame_lagged_and_invalidate_view_cache_next_frame() {
     assert!(
         (last.0 - width1.0).abs() < 0.01,
         "expected cached subtree to observe the resized region after invalidation"
+    );
+}
+
+#[test]
+fn layout_query_region_ignores_origin_and_small_size_jitter_for_invalidation() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let width = Arc::new(Mutex::new(Px(100.0)));
+    let region_offset_y = Arc::new(Mutex::new(Px(0.0)));
+    let region_id: Arc<Mutex<Option<crate::elements::GlobalElementId>>> =
+        Arc::new(Mutex::new(None));
+    let mut revisions: Vec<u64> = Vec::new();
+
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..5 {
+        match frame {
+            1 => *region_offset_y.lock().unwrap() = Px(10.0),
+            // Below the EPS (0.5px) threshold: should not invalidate dependents.
+            2 => *width.lock().unwrap() = Px(100.25),
+            // Above the EPS threshold: should invalidate on the next frame.
+            3 => *width.lock().unwrap() = Px(101.0),
+            _ => {}
+        }
+
+        let width = width.clone();
+        let region_offset_y = region_offset_y.clone();
+        let region_id_for_render = region_id.clone();
+
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "layout-query-jitter-eps",
+            move |cx| {
+                let w = *width.lock().unwrap();
+                let offset_y = *region_offset_y.lock().unwrap();
+
+                let mut region_props = crate::element::LayoutQueryRegionProps::default();
+                region_props.layout.margin.top = crate::element::MarginEdge::Px(offset_y);
+                let region = cx.layout_query_region_with_id(region_props, |cx, id| {
+                    *region_id_for_render.lock().unwrap() = Some(id);
+
+                    let mut container = crate::element::ContainerProps::default();
+                    container.layout.size.width = Length::Px(w);
+                    container.layout.size.height = Length::Px(Px(20.0));
+
+                    vec![cx.container(container, |cx| vec![cx.text("region")])]
+                });
+                vec![region]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let region_id = region_id
+            .lock()
+            .unwrap()
+            .expect("layout query region id should be recorded");
+        let revision =
+            app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |rt, _| {
+                let state = rt.for_window(window).expect("window state");
+                state.layout_query_region_revision(region_id)
+            });
+        revisions.push(revision);
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        revisions,
+        vec![1, 1, 1, 2, 2],
+        "expected origin-only changes and sub-EPS size jitter to not bump region revision"
     );
 }

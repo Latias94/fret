@@ -798,7 +798,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            cx.with_state_for(id, LayoutQueryRegionMarker::default, |_marker| ());
+            let name = props.name.clone();
+            cx.with_state_for(id, LayoutQueryRegionMarker::default, |marker| {
+                marker.name = name.clone();
+            });
             let built = f(cx, id);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::LayoutQueryRegion(props), children)

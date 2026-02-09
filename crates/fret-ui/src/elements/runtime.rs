@@ -38,6 +38,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
+    pub observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot>,
+    pub layout_query_regions: Vec<LayoutQueryRegionDiagnosticsSnapshot>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
@@ -48,6 +50,38 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub retained_keep_alive_roots_head: Vec<NodeId>,
     pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct LayoutQueryRegionDiagnosticsSnapshot {
+    pub region: GlobalElementId,
+    pub name: Option<StdArc<str>>,
+    pub revision: u64,
+    pub changed_this_frame: bool,
+    /// Last committed bounds (i.e. what `layout_query_bounds` reads).
+    pub committed_bounds: Option<Rect>,
+    /// Best-effort current bounds observed during the current frame.
+    pub current_bounds: Option<Rect>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ElementObservedLayoutQueriesDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub deps_fingerprint: u64,
+    pub regions: Vec<ObservedLayoutQueryRegionDiagnosticsSnapshot>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ObservedLayoutQueryRegionDiagnosticsSnapshot {
+    pub region: GlobalElementId,
+    pub invalidation: Invalidation,
+    pub region_revision: u64,
+    pub region_changed_this_frame: bool,
+    pub region_name: Option<StdArc<str>>,
+    pub region_committed_bounds: Option<Rect>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -220,8 +254,10 @@ pub struct NodeEntryRootOverwrite {
     pub column: u32,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(crate) struct LayoutQueryRegionMarker;
+#[derive(Debug, Default, Clone)]
+pub(crate) struct LayoutQueryRegionMarker {
+    pub name: Option<Arc<str>>,
+}
 
 impl WindowElementState {
     pub(crate) fn element_children_vec_pool_reuses(&self) -> u32 {
@@ -1079,6 +1115,77 @@ impl WindowElementState {
             element.and_then(|id| self.node_entry(id).map(|e| e.node))
         };
 
+        let layout_query_region_name_for = |element: GlobalElementId| -> Option<StdArc<str>> {
+            let key = (element, TypeId::of::<LayoutQueryRegionMarker>());
+            self.state_any_ref(&key)
+                .and_then(|any| any.downcast_ref::<LayoutQueryRegionMarker>())
+                .and_then(|marker| marker.name.clone())
+        };
+
+        let mut layout_query_regions: Vec<LayoutQueryRegionDiagnosticsSnapshot> = self
+            .nodes
+            .iter()
+            .filter(|(_, entry)| entry.last_seen_frame == self.prepared_frame)
+            .map(|(&element, _)| element)
+            .filter(|&element| self.has_state::<LayoutQueryRegionMarker>(element))
+            .map(|element| {
+                let committed_bounds = self.prev_bounds.get(&element).copied();
+                let current_bounds = self.cur_bounds.get(&element).copied().or(committed_bounds);
+                LayoutQueryRegionDiagnosticsSnapshot {
+                    region: element,
+                    name: layout_query_region_name_for(element),
+                    revision: self.layout_query_region_revision(element),
+                    changed_this_frame: self
+                        .layout_query_regions_changed_this_frame
+                        .contains(&element),
+                    committed_bounds,
+                    current_bounds,
+                }
+            })
+            .collect();
+        layout_query_regions.sort_by_key(|r| r.region.0);
+
+        let mut observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot> =
+            self.observed_layout_queries_next
+                .iter()
+                .map(|(element, list)| {
+                    let deps_fingerprint = self.layout_query_deps_fingerprint_from_list(Some(list));
+                    let mut regions: Vec<ObservedLayoutQueryRegionDiagnosticsSnapshot> = list
+                        .iter()
+                        .map(
+                            |(region, inv)| ObservedLayoutQueryRegionDiagnosticsSnapshot {
+                                region: *region,
+                                invalidation: *inv,
+                                region_revision: self.layout_query_region_revision(*region),
+                                region_changed_this_frame: self
+                                    .layout_query_regions_changed_this_frame
+                                    .contains(region),
+                                region_name: layout_query_region_name_for(*region),
+                                region_committed_bounds: self.prev_bounds.get(region).copied(),
+                            },
+                        )
+                        .collect();
+                    regions.sort_by(|a, b| {
+                        a.region.0.cmp(&b.region.0).then_with(|| {
+                            let key = |inv: Invalidation| match inv {
+                                Invalidation::Layout => 0u8,
+                                Invalidation::Paint => 1u8,
+                                Invalidation::HitTest => 2u8,
+                                Invalidation::HitTestOnly => 3u8,
+                            };
+                            key(a.invalidation).cmp(&key(b.invalidation))
+                        })
+                    });
+
+                    ElementObservedLayoutQueriesDiagnosticsSnapshot {
+                        element: *element,
+                        deps_fingerprint,
+                        regions,
+                    }
+                })
+                .collect();
+        observed_layout_queries.sort_by_key(|e| e.element.0);
+
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
             self.view_cache_reuse_roots.iter().copied().collect();
         view_cache_reuse_roots.sort_by_key(|id| id.0);
@@ -1196,6 +1303,8 @@ impl WindowElementState {
                     )
                 })
                 .collect(),
+            observed_layout_queries,
+            layout_query_regions,
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,

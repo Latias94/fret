@@ -27,11 +27,11 @@ ADR anchor:
 - [x] Expose a frame-lagged query API (read committed bounds by stable ID).
 - [x] Dependency tracking: record which view roots observed which regions.
 - [x] Invalidation: bounds change invalidates dependents (coalescing OK; avoid same-frame recursion).
-- [ ] Add diagnostics hooks (inspector snapshot / debug logging) beyond best-effort naming.
+- [x] Add diagnostics hooks (inspector snapshot / debug logging) beyond best-effort naming.
 - [ ] Add unit tests for:
   - [x] frame-lagged semantics (no same-frame recursion),
   - [x] invalidation on bounds change,
-  - [ ] jitter threshold / epsilon handling.
+  - [x] jitter threshold / epsilon handling.
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
