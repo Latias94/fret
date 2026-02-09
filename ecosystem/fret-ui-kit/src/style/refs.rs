@@ -1,6 +1,6 @@
 use fret_core::{Color, Px};
-use fret_ui::Theme;
 
+use super::ThemeTokenRead;
 use super::{ColorFallback, MetricFallback, Radius, Space};
 
 #[derive(Debug, Clone)]
@@ -41,7 +41,7 @@ impl MetricRef {
         }
     }
 
-    pub fn resolve(&self, theme: &Theme) -> Px {
+    pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Px {
         match self {
             Self::Px(px) => *px,
             Self::Token { key, fallback } => theme
@@ -84,7 +84,7 @@ impl SignedMetricRef {
         Self::Neg(metric)
     }
 
-    pub fn resolve(&self, theme: &Theme) -> Px {
+    pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Px {
         match self {
             Self::Pos(m) => m.resolve(theme),
             Self::Neg(m) => {
@@ -111,7 +111,7 @@ pub enum ColorRef {
 }
 
 impl ColorRef {
-    pub fn resolve(&self, theme: &Theme) -> Color {
+    pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> Color {
         match self {
             Self::Color(c) => *c,
             Self::Token { key, fallback } => theme

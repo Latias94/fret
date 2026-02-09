@@ -680,9 +680,13 @@ fn page_preview(
             code_editor_folds,
             code_editor_inlays,
         ),
-        PAGE_MARKDOWN_EDITOR_SOURCE => {
-            preview_markdown_editor_source(cx, theme, code_editor_soft_wrap)
-        }
+        PAGE_MARKDOWN_EDITOR_SOURCE => preview_markdown_editor_source(
+            cx,
+            theme,
+            code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
+        ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
@@ -3588,6 +3592,13 @@ fn preview_code_editor_torture(
         last_inlays.set(Some(inlays_enabled));
     }
 
+    let allow_decorations_under_preedit =
+        cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
+    if handle.allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
+        handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
+    }
+
     let header_handle = handle.clone();
     let header = stack::vstack(
         cx,
@@ -3697,6 +3708,37 @@ fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-off",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit.set(false);
+                                    header_handle_controls.set_allow_decorations_under_inline_preedit(false);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: on")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-on",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit.set(true);
+                                    header_handle_controls.set_allow_decorations_under_inline_preedit(true);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            cx.text(if allow_decorations_under_preedit_enabled {
+                                "Preedit decorations: on"
+                            } else {
+                                "Preedit decorations: off"
+                            }),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")
                                 .a11y_label("Toggle fold fixture on line 0")
@@ -3879,9 +3921,17 @@ fn preview_markdown_editor_source(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     soft_wrap: Model<bool>,
+    folds: Model<bool>,
+    inlays: Model<bool>,
 ) -> Vec<AnyElement> {
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+    let folds_enabled = cx
+        .get_model_copied(&folds, Invalidation::Layout)
+        .unwrap_or(false);
+    let inlays_enabled = cx
+        .get_model_copied(&inlays, Invalidation::Layout)
         .unwrap_or(false);
 
     let handle = cx.with_state(
@@ -3890,6 +3940,8 @@ fn preview_markdown_editor_source(
     );
     // Best-effort: only takes effect when `fret-code-editor` is built with `syntax` features.
     handle.set_language(Some("markdown"));
+    // Markdown source editing uses Unicode word boundaries (ADR 0194).
+    handle.set_text_boundary_mode(fret_runtime::TextBoundaryMode::UnicodeWord);
 
     #[cfg(not(target_arch = "wasm32"))]
     cx.app.with_global_mut(
@@ -3898,6 +3950,52 @@ fn preview_markdown_editor_source(
             store.per_window.insert(cx.window, handle.clone());
         },
     );
+
+    let last_folds = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_folds.get() != Some(folds_enabled) {
+        if folds_enabled {
+            let span = handle.with_buffer(|b| b.line_text(0)).and_then(|line| {
+                let start = line.find("Editor").unwrap_or(2).min(line.len());
+                let end = line.len();
+                if start < end {
+                    Some(code_editor_view::FoldSpan {
+                        range: start..end,
+                        placeholder: Arc::<str>::from("…"),
+                    })
+                } else {
+                    None
+                }
+            });
+            if let Some(span) = span {
+                handle.set_line_folds(0, vec![span]);
+            } else {
+                handle.clear_all_folds();
+            }
+        } else {
+            handle.clear_all_folds();
+        }
+        last_folds.set(Some(folds_enabled));
+    }
+
+    let last_inlays = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_inlays.get() != Some(inlays_enabled) {
+        if inlays_enabled {
+            let byte = handle
+                .with_buffer(|b| b.line_text(0))
+                .map(|line| 2usize.min(line.len()))
+                .unwrap_or(0);
+            handle.set_line_inlays(
+                0,
+                vec![code_editor_view::InlaySpan {
+                    byte,
+                    text: Arc::<str>::from("<inlay>"),
+                }],
+            );
+        } else {
+            handle.clear_all_inlays();
+        }
+        last_inlays.set(Some(inlays_enabled));
+    }
 
     let header_handle = handle.clone();
     let header = stack::vstack(
@@ -3909,6 +4007,7 @@ fn preview_markdown_editor_source(
             let mode_handle = header_handle.clone();
             let edit_handle = header_handle.clone();
             let read_only_handle = header_handle.clone();
+            let disabled_handle = header_handle.clone();
 
             let mode = mode_handle.interaction();
             let mode_label = if !mode.enabled {
@@ -3963,6 +4062,115 @@ fn preview_markdown_editor_source(
                         ]
                     },
                 ),
+                {
+                    let folds_caret_handle = header_handle.clone();
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| {
+                            let set_folds_on = folds.clone();
+                            let set_folds_off = folds.clone();
+                            let set_inlays_on = inlays.clone();
+                            let set_inlays_off = inlays.clone();
+                            let caret_handle = folds_caret_handle.clone();
+
+                            vec![
+                                shadcn::Switch::new(folds.clone())
+                                    .test_id("ui-gallery-markdown-editor-folds")
+                                    .a11y_label("Toggle fold fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_folds_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_folds_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Caret: in fold")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-caret-inside")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        if !caret_handle.interaction().enabled {
+                                            return;
+                                        }
+
+                                        let Some(byte) = caret_handle.with_buffer(|b| {
+                                            let line = b.line_text(0)?;
+                                            let line_range = b.line_byte_range(0)?;
+                                            let start =
+                                                line.find("Editor").unwrap_or(2).min(line.len());
+                                            let end = line.len();
+                                            if start + 1 >= end {
+                                                return None;
+                                            }
+                                            Some(line_range.start.saturating_add(start + 1))
+                                        }) else {
+                                            return;
+                                        };
+
+                                        caret_handle.set_caret(byte);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if folds_enabled {
+                                    "Folds: fixture"
+                                } else {
+                                    "Folds: off"
+                                }),
+                                shadcn::Switch::new(inlays.clone())
+                                    .test_id("ui-gallery-markdown-editor-inlays")
+                                    .a11y_label("Toggle inlay fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_inlays_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_inlays_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if inlays_enabled {
+                                    "Inlays: fixture"
+                                } else {
+                                    "Inlays: off"
+                                }),
+                            ]
+                        },
+                    )
+                },
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -3973,6 +4181,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("ab", None);
@@ -3992,6 +4203,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("", None);
@@ -4071,6 +4285,18 @@ fn preview_markdown_editor_source(
                                 .on_activate(Arc::new(move |host, action_cx, _reason| {
                                     read_only_handle.set_interaction(
                                         code_editor::CodeEditorInteractionOptions::read_only(),
+                                    );
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: disabled")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-mode-disabled")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    disabled_handle.set_interaction(
+                                        code_editor::CodeEditorInteractionOptions::disabled(),
                                     );
                                     host.notify(action_cx);
                                     host.request_redraw(action_cx.window);

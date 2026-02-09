@@ -3473,6 +3473,8 @@ pub fn build_app() -> App {
                             let caret = selection.caret().min(text.len()) as u64;
                             let stats = handle.cache_stats();
                             let preedit_active = handle.preedit_active();
+                            let allow_decorations_under_inline_preedit =
+                                handle.allow_decorations_under_inline_preedit();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
                             let fold_placeholder_present = handle
@@ -3485,6 +3487,7 @@ pub fn build_app() -> App {
                                 "schema_version": 1,
                                 "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                                 "preedit_active": preedit_active,
+                                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3493,7 +3496,7 @@ pub fn build_app() -> App {
                                 },
                                 "buffer_revision": buffer_revision,
                                 "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
-                                "inlays": { "enabled": inlays, "line0_present": inlay_present },
+                                "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                                 "cache_stats": {
@@ -3523,10 +3526,32 @@ pub fn build_app() -> App {
                             let selection = handle.selection();
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
+                            let preedit_active = handle.preedit_active();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let fold_fixture_span_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .and_then(|line| {
+                                    let start = line.find("Editor").unwrap_or(2).min(line.len());
+                                    let end = line.len();
+                                    (start < end).then_some(serde_json::json!({
+                                        "start": start as u64,
+                                        "end": end as u64,
+                                    }))
+                                });
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
+                            let inlay_fixture_byte_line0 = handle
+                                .with_buffer(|b| b.line_text(0))
+                                .map(|line| 2usize.min(line.len()) as u64)
+                                .unwrap_or(0);
                             serde_json::json!({
                                 "schema_version": 1,
+                                "preedit_active": preedit_active,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3534,6 +3559,16 @@ pub fn build_app() -> App {
                                     "editable": interaction.editable,
                                 },
                                 "buffer_revision": buffer_revision,
+                                "folds": {
+                                    "enabled": folds,
+                                    "line0_placeholder_present": fold_placeholder_present,
+                                    "fixture_span_line0": fold_fixture_span_line0,
+                                },
+                                "inlays": {
+                                    "enabled": inlays,
+                                    "line0_present": inlay_present,
+                                    "fixture_byte_line0": inlay_fixture_byte_line0,
+                                },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                             })

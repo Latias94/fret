@@ -187,8 +187,6 @@ impl IconButton {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
 
@@ -196,11 +194,44 @@ impl IconButton {
                     cx.pressable_on_activate(handler);
                 }
 
-                let size_tokens = icon_button_size_tokens(&theme, self.size);
                 let now_frame = cx.frame_id.0;
                 let pressed = enabled && st.pressed;
-                let (corner_radii, corner_want_frames) =
-                    animated_icon_button_corner_radii(cx, &theme, pressable_id, now_frame, pressed);
+                let (base_radius, pressed_radius, corner_spring, size_tokens) = {
+                    let theme = Theme::global(&*cx.app);
+                    let base_radius = icon_button_shape_radius(theme);
+                    let pressed_radius = icon_button_pressed_shape_radius(theme);
+                    let scheme_spring =
+                        sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
+                    let corner_spring = icon_button_pressed_corner_spring(theme, scheme_spring);
+                    let size_tokens = icon_button_size_tokens(theme, self.size);
+                    (base_radius, pressed_radius, corner_spring, size_tokens)
+                };
+
+                let (corner_radii, corner_want_frames) = animated_icon_button_corner_radii(
+                    cx,
+                    pressable_id,
+                    now_frame,
+                    pressed,
+                    base_radius,
+                    pressed_radius,
+                    corner_spring,
+                );
+
+                let (layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        icon_button_tokens::COMPONENT_PREFIX,
+                        corner_radii,
+                    );
+
+                    (layout, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -213,17 +244,8 @@ impl IconButton {
                         checked: self.toggle.then_some(self.selected),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        icon_button_tokens::COMPONENT_PREFIX,
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -244,34 +266,48 @@ impl IconButton {
 
                         let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
 
-                        let colors = icon_button_colors(
-                            &theme,
-                            self.variant,
-                            size_tokens.outline_width,
-                            self.toggle,
-                            self.selected,
-                            enabled,
-                            interaction,
-                        );
                         let mut states = WidgetStates::from_pressable(cx, st, enabled);
                         if self.toggle && self.selected {
                             states |= WidgetStates::SELECTED;
                         }
-                        let colors =
-                            apply_icon_button_style_overrides(&theme, states, &self.style, colors);
 
-                        let state_layer_target = state_layer_target_opacity(
-                            &theme,
-                            self.variant,
-                            enabled,
-                            is_pressed,
-                            is_hovered,
-                            is_focused,
-                        );
+                        let (colors, state_layer_target, ripple_base_opacity, config) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let ripple_base_opacity =
-                            icon_button_tokens::pressed_state_layer_opacity(&theme, self.variant);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let colors = icon_button_colors(
+                                theme,
+                                self.variant,
+                                size_tokens.outline_width,
+                                self.toggle,
+                                self.selected,
+                                enabled,
+                                interaction,
+                            );
+                            let colors = apply_icon_button_style_overrides(
+                                theme,
+                                states,
+                                &self.style,
+                                colors,
+                            );
+
+                            let state_layer_target = state_layer_target_opacity(
+                                theme,
+                                self.variant,
+                                enabled,
+                                is_pressed,
+                                is_hovered,
+                                is_focused,
+                            );
+
+                            let ripple_base_opacity =
+                                icon_button_tokens::pressed_state_layer_opacity(
+                                    theme,
+                                    self.variant,
+                                );
+                            let config = material_pressable_indication_config(theme, None);
+
+                            (colors, state_layer_target, ripple_base_opacity, config)
+                        };
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -327,21 +363,18 @@ fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec)
 
 fn animated_icon_button_corner_radii<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     pressable_id: fret_ui::elements::GlobalElementId,
     now_frame: u64,
     pressed: bool,
+    base_radius: f32,
+    pressed_radius: f32,
+    spring: SpringSpec,
 ) -> (Corners, bool) {
-    let base = icon_button_shape_radius(theme);
-    let pressed_radius = icon_button_pressed_shape_radius(theme);
-    let target = if pressed { pressed_radius } else { base };
-
-    let scheme_spring = sys_spring_in_scope(cx, theme, MotionSchemeKey::FastSpatial);
-    let spring = icon_button_pressed_corner_spring(theme, scheme_spring);
+    let target = if pressed { pressed_radius } else { base_radius };
 
     cx.with_state_for(pressable_id, IconButtonCornerRuntime::default, |rt| {
         if !rt.spring.is_initialized() {
-            rt.spring.reset(now_frame, base);
+            rt.spring.reset(now_frame, base_radius);
         }
 
         rt.spring.set_target(now_frame, target, spring);

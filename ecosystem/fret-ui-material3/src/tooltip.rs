@@ -632,8 +632,6 @@ impl PlainTooltip {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
         let align = self.align;
         let side = self.side;
         let side_offset = self.side_offset;
@@ -649,29 +647,52 @@ impl PlainTooltip {
         let trigger_id = base_trigger.id;
         let anchor_id = anchor_override.unwrap_or(trigger_id);
 
-        let container_bg = tooltip_tokens::plain_container_background(&theme);
-        let text_fg = tooltip_tokens::plain_supporting_text_color(&theme);
-        let radius = tooltip_tokens::plain_container_shape_radius(&theme);
-        let corner_radii = Corners::all(radius);
-        // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
-        let elevation = Px(0.0);
-        let shadow_color = tooltip_tokens::shadow_color(&theme);
-        let surface = material_surface_style(
-            &theme,
+        let (
             container_bg,
-            elevation,
-            Some(shadow_color),
+            shadow,
+            supporting_text_style,
+            content_max_width,
+            container_padding,
             corner_radii,
-        );
-        let container_bg = surface.background;
-        let shadow = surface.shadow;
+            text_fg,
+            close_grace_frames_default,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let supporting_text_style = theme
-            .text_style_by_key("md.comp.plain-tooltip.supporting-text")
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
-            .unwrap_or_default();
-        let content_max_width = tooltip_tokens::max_width(&theme);
-        let container_padding = tooltip_tokens::plain_container_padding(&theme);
+            let container_bg = tooltip_tokens::plain_container_background(theme);
+            let text_fg = tooltip_tokens::plain_supporting_text_color(theme);
+            let radius = tooltip_tokens::plain_container_shape_radius(theme);
+            let corner_radii = Corners::all(radius);
+            // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
+            let elevation = Px(0.0);
+            let shadow_color = tooltip_tokens::shadow_color(theme);
+            let surface = material_surface_style(
+                theme,
+                container_bg,
+                elevation,
+                Some(shadow_color),
+                corner_radii,
+            );
+
+            let supporting_text_style = theme
+                .text_style_by_key("md.comp.plain-tooltip.supporting-text")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
+                .unwrap_or_default();
+            let content_max_width = tooltip_tokens::max_width(theme);
+            let container_padding = tooltip_tokens::plain_container_padding(theme);
+            let close_grace_frames_default = ms_to_frames(tooltip_tokens::close_duration_ms(theme));
+
+            (
+                surface.background,
+                surface.shadow,
+                supporting_text_style,
+                content_max_width,
+                container_padding,
+                corner_radii,
+                text_fg,
+                close_grace_frames_default,
+            )
+        };
 
         let content = cx.named("content", move |cx| {
             let child = match content_spec {
@@ -959,7 +980,7 @@ impl PlainTooltip {
                 vec![trigger]
             });
 
-            let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
+            let close_grace_frames = Some(close_grace_frames_default);
             let motion =
                 drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
 
@@ -1193,8 +1214,6 @@ impl RichTooltip {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-
         let align = self.align;
         let side = self.side;
         let side_offset = self.side_offset;
@@ -1210,35 +1229,61 @@ impl RichTooltip {
         let trigger_id = base_trigger.id;
         let anchor_id = anchor_override.unwrap_or(trigger_id);
 
-        let container_bg = tooltip_tokens::rich_container_background(&theme);
-        let subhead_fg = tooltip_tokens::rich_subhead_color(&theme);
-        let supporting_fg = tooltip_tokens::rich_supporting_text_color(&theme);
-        let radius = tooltip_tokens::rich_container_shape_radius(&theme);
-        let corner_radii = Corners::all(radius);
-        let elevation = tooltip_tokens::rich_container_elevation(&theme);
-        let shadow_color = tooltip_tokens::rich_container_shadow_color(&theme);
-        let surface = material_surface_style(
-            &theme,
+        let (
             container_bg,
-            elevation,
-            Some(shadow_color),
+            shadow,
+            subhead_fg,
+            supporting_fg,
             corner_radii,
-        );
-        let container_bg = surface.background;
-        let shadow = surface.shadow;
+            subhead_style,
+            supporting_style,
+            content_max_width,
+            container_padding,
+            text_gap,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let subhead_style = theme
-            .text_style_by_key("md.comp.rich-tooltip.subhead")
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.title-small"))
-            .unwrap_or_default();
-        let supporting_style = theme
-            .text_style_by_key("md.comp.rich-tooltip.supporting-text")
-            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-medium"))
-            .unwrap_or_default();
+            let container_bg = tooltip_tokens::rich_container_background(theme);
+            let subhead_fg = tooltip_tokens::rich_subhead_color(theme);
+            let supporting_fg = tooltip_tokens::rich_supporting_text_color(theme);
+            let radius = tooltip_tokens::rich_container_shape_radius(theme);
+            let corner_radii = Corners::all(radius);
+            let elevation = tooltip_tokens::rich_container_elevation(theme);
+            let shadow_color = tooltip_tokens::rich_container_shadow_color(theme);
+            let surface = material_surface_style(
+                theme,
+                container_bg,
+                elevation,
+                Some(shadow_color),
+                corner_radii,
+            );
 
-        let content_max_width = tooltip_tokens::max_width(&theme);
-        let container_padding = tooltip_tokens::rich_container_padding(&theme);
-        let text_gap = tooltip_tokens::rich_text_gap(&theme);
+            let subhead_style = theme
+                .text_style_by_key("md.comp.rich-tooltip.subhead")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.title-small"))
+                .unwrap_or_default();
+            let supporting_style = theme
+                .text_style_by_key("md.comp.rich-tooltip.supporting-text")
+                .or_else(|| theme.text_style_by_key("md.sys.typescale.body-medium"))
+                .unwrap_or_default();
+
+            let content_max_width = tooltip_tokens::max_width(theme);
+            let container_padding = tooltip_tokens::rich_container_padding(theme);
+            let text_gap = tooltip_tokens::rich_text_gap(theme);
+
+            (
+                surface.background,
+                surface.shadow,
+                subhead_fg,
+                supporting_fg,
+                corner_radii,
+                subhead_style,
+                supporting_style,
+                content_max_width,
+                container_padding,
+                text_gap,
+            )
+        };
 
         let content = cx.named("content", move |cx| {
             let child = match content_spec {
@@ -1300,6 +1345,7 @@ impl RichTooltip {
             )
         });
 
+        let theme = Theme::global(&*cx.app).clone();
         tooltip_policy_root(
             cx,
             theme,

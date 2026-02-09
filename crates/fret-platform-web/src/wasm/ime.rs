@@ -1,4 +1,4 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
@@ -86,9 +86,9 @@ struct WebTimer {
 
 #[cfg(debug_assertions)]
 #[derive(Debug, Default)]
-struct WebImeDebugState {
-    dirty: bool,
-    snapshot: fret_core::input::WebImeBridgeDebugSnapshot,
+pub(super) struct WebImeDebugState {
+    pub(super) dirty: bool,
+    pub(super) snapshot: fret_core::input::WebImeBridgeDebugSnapshot,
 }
 
 #[cfg(debug_assertions)]
@@ -196,7 +196,7 @@ fn ime_console_log(msg: impl AsRef<str>) {
     let _ = log.call1(&console, &wasm_bindgen::JsValue::from_str(msg.as_ref()));
 }
 
-struct WebImeBridge {
+pub(super) struct WebImeBridge {
     textarea: HtmlTextAreaElement,
     position_mode: WebImePositionMode,
     enabled: bool,
@@ -232,7 +232,7 @@ impl std::fmt::Debug for WebImeBridge {
 }
 
 impl WebImeBridge {
-    fn ensure(
+    pub(super) fn ensure(
         document: &Document,
         mount: Option<HtmlElement>,
         queued_events: Rc<RefCell<Vec<Event>>>,
@@ -898,7 +898,7 @@ impl WebImeBridge {
         }
     }
 
-    fn set_enabled(&mut self, enabled: bool) {
+    pub(super) fn set_enabled(&mut self, enabled: bool) {
         if self.enabled == enabled {
             return;
         }
@@ -958,7 +958,7 @@ impl WebImeBridge {
         self.push_event(Event::Ime(fret_core::ImeEvent::Disabled));
     }
 
-    fn set_cursor_area(&mut self, rect: fret_core::Rect) {
+    pub(super) fn set_cursor_area(&mut self, rect: fret_core::Rect) {
         self.last_cursor_area = Some(rect);
         let anchor_x = rect.origin.x.0 + rect.size.width.0 * 0.5;
         let anchor_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
@@ -1248,7 +1248,7 @@ impl WebPlatformServices {
                         }
                     });
                 }
-                Effect::OpenUrl { url } => {
+                Effect::OpenUrl { url, .. } => {
                     let caps = app
                         .global::<PlatformCapabilities>()
                         .cloned()

@@ -21,7 +21,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, Length, VirtualListOptions};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::ScrollStrategy;
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{ElementContext, Invalidation, Theme};
+use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn as shadcn;
 
 mod pack;
@@ -513,10 +513,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.semantics_live_enabled, Invalidation::Paint);
     cx.observe_model(&st.semantics_live_force_nonce, Invalidation::Paint);
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = cx.theme_snapshot();
 
-    let header = header_bar(cx, &theme, st);
-    let body = resizable_body(cx, &theme, st);
+    let header = header_bar(cx, theme, st);
+    let body = resizable_body(cx, theme, st);
 
     let wrap = fret_ui_kit::declarative::style::container_props(
         &theme,
@@ -531,7 +531,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     vec![cx.container(wrap, |_cx| [header, body])].into()
 }
 
-fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> AnyElement {
+fn header_bar(
+    cx: &mut ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
     let ws_url_with_token = format!(
         "{}?fret_devtools_token={}",
         st.cfg.ws_url.as_ref(),
@@ -658,7 +662,7 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
 
     cx.container(
         fret_ui_kit::declarative::style::container_props(
-            theme,
+            &theme,
             chrome,
             fret_ui_kit::LayoutRefinement::default().w_full(),
         ),
@@ -666,7 +670,11 @@ fn header_bar(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> An
     )
 }
 
-fn resizable_body(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> AnyElement {
+fn resizable_body(
+    cx: &mut ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
     let group = shadcn::ResizablePanelGroup::new(st.panel_fractions.clone())
         .axis(fret_core::Axis::Horizontal)
         .entries([
@@ -680,7 +688,7 @@ fn resizable_body(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -
 
     cx.container(
         fret_ui_kit::declarative::style::container_props(
-            theme,
+            &theme,
             fret_ui_kit::ChromeRefinement::default(),
             fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
         ),
@@ -688,7 +696,11 @@ fn resizable_body(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -
     )
 }
 
-fn left_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> AnyElement {
+fn left_panel(
+    cx: &mut ElementContext<'_, App>,
+    _theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
     let semantics = semantics_panel(cx, st);
     let lines = cx
         .app
@@ -978,7 +990,11 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     )
 }
 
-fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> AnyElement {
+fn center_panel(
+    cx: &mut ElementContext<'_, App>,
+    theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
     let script_text = cx
         .app
         .models()
@@ -1728,7 +1744,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
             [
                 cx.container(
                     fret_ui_kit::declarative::style::container_props(
-                        theme,
+                        &theme,
                         fret_ui_kit::ChromeRefinement::default(),
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(240.0))
@@ -1738,7 +1754,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                 ),
                 cx.container(
                     fret_ui_kit::declarative::style::container_props(
-                        theme,
+                        &theme,
                         fret_ui_kit::ChromeRefinement::default(),
                         fret_ui_kit::LayoutRefinement::default()
                             .flex_1()
@@ -1749,7 +1765,7 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
                 ),
                 cx.container(
                     fret_ui_kit::declarative::style::container_props(
-                        theme,
+                        &theme,
                         fret_ui_kit::ChromeRefinement::default(),
                         fret_ui_kit::LayoutRefinement::default()
                             .w_px(Px(320.0))
@@ -1791,7 +1807,11 @@ fn center_panel(cx: &mut ElementContext<'_, App>, theme: &Theme, st: &State) -> 
     .into_element(cx)
 }
 
-fn right_panel(cx: &mut ElementContext<'_, App>, _theme: &Theme, st: &State) -> AnyElement {
+fn right_panel(
+    cx: &mut ElementContext<'_, App>,
+    _theme: fret_ui::ThemeSnapshot,
+    st: &State,
+) -> AnyElement {
     let pick = cx
         .app
         .models()
@@ -2147,7 +2167,11 @@ fn on_command(
                 push_log(app, &st.log_lines, "open viewer refused (empty url)");
                 return;
             }
-            app.push_effect(Effect::OpenUrl { url });
+            app.push_effect(Effect::OpenUrl {
+                url,
+                target: None,
+                rel: None,
+            });
         }
         CMD_COPY_PACK_PATH => {
             let Some(path) = app
