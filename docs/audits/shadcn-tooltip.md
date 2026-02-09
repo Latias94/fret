@@ -27,6 +27,9 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 ### Open lifecycle semantics (Base UI parity)
 
 - Pass: `Tooltip::on_open_change(...)` emits when open state changes.
+- Pass: `Tooltip::on_open_change_with_reason(...)` emits open state changes with reason metadata
+  (`TriggerHover` / `TriggerFocus` / `TriggerPress` / `OutsidePress` / `FocusOutside` /
+  `EscapeKey` / `Scroll` / `None`).
 - Pass: `Tooltip::on_open_change_complete(...)` emits when transition settles
   (`present == open && !animating`).
 - Pass: Callbacks are edge-triggered (no duplicate events when state is unchanged).
@@ -39,11 +42,14 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 
 ## Known gaps
 
-- Gap: Base UI `onOpenChange` includes event details; Fret currently exposes a simplified boolean callback.
+- Gap: Base UI `onOpenChange` includes cancellable event details (`isCanceled`, `preventUnmountOnClose`);
+  Fret currently exposes non-cancelable callback metadata.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn tooltip_open_change_handlers_can_be_set`
 - `cargo nextest run -p fret-ui-shadcn tooltip_open_change_events_emit_change_and_complete_after_settle`
+- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_mapping_covers_dismiss_reasons`
+- `cargo nextest run -p fret-ui-shadcn tooltip_open_change_reason_for_transition_uses_trigger_and_close_reason`
 - Overlay layout and chrome parity continue to be validated in
   `web_vs_fret_overlay_placement` / `web_vs_fret_overlay_chrome` tooltip gates.

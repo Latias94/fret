@@ -8587,6 +8587,14 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observed_layout_queries: Vec<ElementObservedLayoutQueriesV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_query_regions: Vec<ElementLayoutQueryRegionV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<ElementEnvironmentSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observed_environment: Vec<ElementObservedEnvironmentV1>,
     #[serde(default)]
     pub view_cache_reuse_roots: Vec<u64>,
     #[serde(default)]
@@ -8643,6 +8651,61 @@ pub struct ElementObservedModelsV1 {
 pub struct ElementObservedGlobalsV1 {
     pub element: u64,
     pub globals: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedLayoutQueriesV1 {
+    pub element: u64,
+    pub deps_fingerprint: u64,
+    pub regions: Vec<ElementObservedLayoutQueryRegionV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedLayoutQueryRegionV1 {
+    pub region: u64,
+    pub invalidation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_name: Option<String>,
+    pub region_revision: u64,
+    pub region_changed_this_frame: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_committed_bounds: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementLayoutQueryRegionV1 {
+    pub region: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub revision: u64,
+    pub changed_this_frame: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub committed_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_bounds: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementEnvironmentSnapshotV1 {
+    pub viewport_bounds: RectV1,
+    pub scale_factor: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefers_reduced_motion: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentV1 {
+    pub element: u64,
+    pub deps_fingerprint: u64,
+    pub keys: Vec<ElementObservedEnvironmentKeyV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentKeyV1 {
+    pub key: String,
+    pub invalidation: String,
+    pub key_revision: u64,
+    pub key_changed_this_frame: bool,
 }
 
 impl ElementDiagnosticsSnapshotV1 {
@@ -8713,6 +8776,61 @@ impl ElementDiagnosticsSnapshotV1 {
                     globals: list
                         .into_iter()
                         .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
+                        .collect(),
+                })
+                .collect(),
+            observed_layout_queries: snapshot
+                .observed_layout_queries
+                .into_iter()
+                .map(|entry| ElementObservedLayoutQueriesV1 {
+                    element: entry.element.0,
+                    deps_fingerprint: entry.deps_fingerprint,
+                    regions: entry
+                        .regions
+                        .into_iter()
+                        .map(|r| ElementObservedLayoutQueryRegionV1 {
+                            region: r.region.0,
+                            invalidation: invalidation_label(r.invalidation).to_string(),
+                            region_name: r.region_name.map(|name| name.to_string()),
+                            region_revision: r.region_revision,
+                            region_changed_this_frame: r.region_changed_this_frame,
+                            region_committed_bounds: r.region_committed_bounds.map(RectV1::from),
+                        })
+                        .collect(),
+                })
+                .collect(),
+            layout_query_regions: snapshot
+                .layout_query_regions
+                .into_iter()
+                .map(|r| ElementLayoutQueryRegionV1 {
+                    region: r.region.0,
+                    name: r.name.map(|name| name.to_string()),
+                    revision: r.revision,
+                    changed_this_frame: r.changed_this_frame,
+                    committed_bounds: r.committed_bounds.map(RectV1::from),
+                    current_bounds: r.current_bounds.map(RectV1::from),
+                })
+                .collect(),
+            environment: Some(ElementEnvironmentSnapshotV1 {
+                viewport_bounds: RectV1::from(snapshot.environment.viewport_bounds),
+                scale_factor: snapshot.environment.scale_factor,
+                prefers_reduced_motion: snapshot.environment.prefers_reduced_motion,
+            }),
+            observed_environment: snapshot
+                .observed_environment
+                .into_iter()
+                .map(|entry| ElementObservedEnvironmentV1 {
+                    element: entry.element.0,
+                    deps_fingerprint: entry.deps_fingerprint,
+                    keys: entry
+                        .keys
+                        .into_iter()
+                        .map(|k| ElementObservedEnvironmentKeyV1 {
+                            key: k.key.to_string(),
+                            invalidation: invalidation_label(k.invalidation).to_string(),
+                            key_revision: k.key_revision,
+                            key_changed_this_frame: k.key_changed_this_frame,
+                        })
                         .collect(),
                 })
                 .collect(),

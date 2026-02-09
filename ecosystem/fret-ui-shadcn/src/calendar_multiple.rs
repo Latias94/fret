@@ -5,10 +5,10 @@ use std::sync::Arc;
 use fret_core::{Color, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
-    RovingFlexProps, RovingFocusProps, TextProps,
+    AnyElement, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, TextProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
@@ -248,49 +248,81 @@ impl CalendarMultiple {
             day_grid_width
         };
 
-        let bg = theme.color_required("background");
-        let mut chrome = ChromeRefinement::default()
-            .bg(ColorRef::Color(bg))
-            .p(Space::N3);
-        if matches!(
-            surface_slot_in_scope(cx),
-            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
-        ) {
-            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
-        }
-        let chrome = chrome.merge(self.chrome);
-        let root = LayoutRefinement::default().merge(self.layout);
+        let chrome_override = self.chrome;
+        let layout_override = self.layout;
 
-        let container_props = decl_style::container_props(&theme, chrome, root);
-        cx.container(container_props, move |cx| {
-            calendar_multi_month_view(
-                cx,
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
                 &theme,
-                month,
-                month_model.clone(),
-                selected_model.clone(),
-                number_of_months,
-                locale,
-                month_bounds,
-                disable_navigation,
-                week_start,
-                selected.clone(),
-                today,
-                show_outside_days,
-                disable_outside_days,
-                show_week_number,
-                day_size,
-                month_width,
-                day_grid_width,
-                week_row_gap,
-                required,
-                max,
-                disabled_predicate.clone(),
-                close_on_select.clone(),
-                initial_focus_out.clone(),
-                grid_text_style.clone(),
-            )
-        })
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
+
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.calendar_multiple",
+            region_props,
+            move |cx, region_id| {
+                let is_row = if number_of_months > 1 {
+                    fret_ui_kit::declarative::container_width_at_least(
+                        cx,
+                        region_id,
+                        Invalidation::Layout,
+                        false,
+                        fret_ui_kit::declarative::container_queries::tailwind::MD,
+                        fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                    )
+                } else {
+                    false
+                };
+
+                let bg = theme.color_required("background");
+                let mut chrome = ChromeRefinement::default()
+                    .bg(ColorRef::Color(bg))
+                    .p(Space::N3);
+                if matches!(
+                    surface_slot_in_scope(cx),
+                    Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+                ) {
+                    chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+                }
+                let chrome = chrome.merge(chrome_override);
+                let root = LayoutRefinement::default().merge(layout_override);
+
+                let container_props = decl_style::container_props(&theme, chrome, root);
+                vec![cx.container(container_props, move |cx| {
+                    calendar_multi_month_view(
+                        cx,
+                        &theme,
+                        is_row,
+                        month,
+                        month_model.clone(),
+                        selected_model.clone(),
+                        number_of_months,
+                        locale,
+                        month_bounds,
+                        disable_navigation,
+                        week_start,
+                        selected.clone(),
+                        today,
+                        show_outside_days,
+                        disable_outside_days,
+                        show_week_number,
+                        day_size,
+                        month_width,
+                        day_grid_width,
+                        week_row_gap,
+                        required,
+                        max,
+                        disabled_predicate.clone(),
+                        close_on_select.clone(),
+                        initial_focus_out.clone(),
+                        grid_text_style.clone(),
+                    )
+                })]
+            },
+        )
     }
 }
 
@@ -298,6 +330,7 @@ impl CalendarMultiple {
 fn calendar_multi_month_view<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    is_row: bool,
     start_month: CalendarMonth,
     month_model: Model<CalendarMonth>,
     selected_model: Model<Vec<Date>>,
@@ -322,8 +355,6 @@ fn calendar_multi_month_view<H: UiHost>(
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
 ) -> Vec<AnyElement> {
-    let is_row = cx.bounds.size.width.0 >= 768.0;
-
     let gap_px = decl_style::space(theme, Space::N4);
     let months_span = if is_row {
         Px(month_width.0 * (number_of_months as f32) + gap_px.0 * ((number_of_months - 1) as f32))

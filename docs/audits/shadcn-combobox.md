@@ -1,19 +1,18 @@
-# shadcn/ui v4 Audit — Combobox
+# shadcn/ui v4 Audit - Combobox
 
-This audit compares Fret’s shadcn-aligned `Combobox` against the upstream shadcn/ui v4 docs and
-examples in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Combobox` against upstream shadcn/ui v4 recipes and
+Base UI combobox lifecycle semantics.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/combobox.mdx`
-- Example implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-demo.tsx`
-- Key note: upstream “Combobox” is a **recipe** composed from `Popover` + `Command`, not a dedicated
-  primitive.
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/combobox.mdx`
+- shadcn demo recipe: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-demo.tsx`
+- Base UI contract: `repo-ref/base-ui/packages/react/src/combobox/root/AriaCombobox.tsx`
 
-## Fret implementation
+## Fret implementation anchors
 
 - Component code: `ecosystem/fret-ui-shadcn/src/combobox.rs`
-- Reused building blocks:
+- Building blocks:
   - `ecosystem/fret-ui-shadcn/src/popover.rs`
   - `ecosystem/fret-ui-shadcn/src/command.rs`
 
@@ -21,57 +20,38 @@ examples in `repo-ref/ui`.
 
 ### Composition model (Popover + Command)
 
-- Pass: `Combobox` now renders as a `Popover` overlay containing a `CommandPalette` (cmdk-style,
-  active-descendant navigation).
-- Pass: Item selection is wired through `CommandItem::on_select_action(...)`, so selection works
-  both via pointer click and `Enter` on the active item.
-- Pass: Open lifecycle callback is exposed via `Combobox::on_open_change`
-  (Base UI `onOpenChange`).
+- Pass: `Combobox` is implemented as a Popover + Command recipe (cmdk-style active descendant behavior).
+- Pass: Item selection is wired through `CommandItem::on_select_action(...)` (pointer + keyboard enter).
+- Pass: Supports controllable/uncontrollable construction for both selected value and open state.
 
-### Placement & sizing
+### Base UI lifecycle parity
 
-- Pass: Overlay placement and dismissal are delegated to `Popover` (portal-like per-window overlay
-  roots + outside-press dismissal).
-- Pass: By default, content width tracks the trigger width (via `Popover::into_element_with_anchor(...)`);
-  recipes can opt into a fixed width via `Combobox::width(Px(...))` to match upstream demos
-  (`w-[200px]`).
+- Pass: `Combobox::on_value_change(...)` is exposed (Base UI `onValueChange`).
+- Pass: `Combobox::on_open_change(...)` is exposed (Base UI `onOpenChange`).
+- Pass: `Combobox::on_open_change_with_reason(...)` is exposed for reason-aware callbacks
+  (`TriggerPress` / `OutsidePress` / `ItemPress` / `EscapeKey` / `FocusOut` / `None`).
+- Pass: `Combobox::on_open_change_complete(...)` is exposed (Base UI `onOpenChangeComplete`).
+- Pass: Value/open callbacks are edge-triggered (no duplicate emission on unchanged state).
 
-### Keyboard & focus
+### Placement, keyboard, and visual defaults
 
-- Pass: On open, focus moves into the popover (via `Popover::auto_focus(true)`), enabling keyboard
-  navigation inside the command list.
-- Pass: `CommandPalette` now supports input placeholder (backed by the `TextInput` placeholder
-  surface in `fret-ui`), so recipes can match `CommandInput placeholder="..."` ergonomics.
-- Pass: When used by `Combobox`, the command input is exposed as a `ComboBox` semantics role (so the
-  focused editable surface reports combobox semantics instead of only `TextField`).
-- Pass: `Combobox` exposes `search_placeholder(...)` and forwards it to
-  `CommandPalette::placeholder(...)`.
+- Pass: Overlay placement and dismissal are delegated to `Popover` (portal-like behavior).
+- Pass: Trigger/content width behavior matches recipe intent (default track-trigger width; optional fixed width).
+- Pass: Opening auto-focuses the command input, and combobox semantics are reported on the editable surface.
+- Pass: Trigger chrome aligns with shadcn outline-button intent while preserving combobox semantics.
 
-### Visual parity (shadcn)
+## Known gaps
 
-- Pass: Popover content padding matches the demo (`p-0`).
-- Pass: Trigger styling matches the upstream intent (`Button` `variant="outline"` + `role="combobox"`)
-  using outline-button-like tokens while preserving `SemanticsRole::ComboBox` + `expanded` semantics.
-
-### Filtering semantics
-
-- Pass: Filtering and ranking are implemented in `CommandPalette` via the shared cmdk-style scoring
-  helper (`fret-ui-kit::headless::cmdk_score`). Ungrouped items are sorted by score and groups are
-  sorted by their highest item score (cmdk `sort()` semantics). `CommandItem.value` participates as
-  an alias.
-- Pass: `CommandItem.keywords([...])` is supported, aligning with cmdk’s `keywords` taxonomy.
-- Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
-- Pass: Default rows can render cmdk-style match highlighting via `cmdk_score::command_match_ranges`.
+- Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
+  but does not provide cancelable `eventDetails` contracts.
 
 ## Validation
 
-- `cargo check -p fret-ui-shadcn`
-- Contract test: `combobox_open_change_builder_sets_handler`
-- Contract test: `combobox_open_change_event_emits_only_on_state_change`
-- Highlighted option chrome gates (hover/highlight background + text color): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
-  (`web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web`, `web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark`).
-- Highlight-state golden: `goldens/shadcn-web/v4/new-york-v4/combobox-demo.highlight-first.open.json`
-
-## Follow-ups (recommended)
-
-_None tracked at this time._
+- `cargo nextest run -p fret-ui-shadcn combobox_on_value_change_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_with_reason_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_complete_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn combobox_value_change_event_emits_only_on_state_change`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_emit_change_and_complete_after_settle`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_complete_without_animation`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`

@@ -18,7 +18,7 @@ If your primary goal is performance quantification (baselines/gates/logs), use `
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG=1 --env FRET_DIAG_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
 
 - Web runner (WASM): export bundles via devtools-ws (headless-friendly):
   - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`

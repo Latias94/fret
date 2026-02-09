@@ -1158,6 +1158,27 @@ impl<H: UiHost> UiTree<H> {
                 };
 
         if let Some(window) = self.window {
+            let pointer_type = match event {
+                Event::Pointer(fret_core::PointerEvent::Move { pointer_type, .. }) => {
+                    Some(*pointer_type)
+                }
+                Event::Pointer(fret_core::PointerEvent::Down { pointer_type, .. }) => {
+                    Some(*pointer_type)
+                }
+                Event::Pointer(fret_core::PointerEvent::Up { pointer_type, .. }) => {
+                    Some(*pointer_type)
+                }
+                Event::PointerCancel(fret_core::PointerCancelEvent { pointer_type, .. }) => {
+                    Some(*pointer_type)
+                }
+                _ => None,
+            };
+            if let Some(pointer_type) = pointer_type {
+                app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |rt, _app| {
+                    rt.set_window_primary_pointer_type(window, pointer_type);
+                });
+            }
+
             let changed = crate::focus_visible::update_for_event(app, window, event);
             if changed {
                 if let Some(focus) = self.focus {

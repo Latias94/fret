@@ -134,11 +134,11 @@ Status legend:
 
 | Component | Upstream role | Base UI/Radix contract touchpoint | Fret status | Primary gap | Owner layer |
 | --- | --- | --- | --- | --- | --- |
-| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, and first-pass `Ctrl/Cmd+B` shortcut handling are implemented; cookie persistence and richer callback shape remain | `fret-ui-shadcn` |
-| `useSidebar` | Access provider state/actions | Context read contract | Partial | Hook exists (`use_sidebar`) and now exposes `set_open/set_open_mobile` on context; parity gaps remain around callback ergonomics and cookie-backed persistence | `fret-ui-shadcn` |
+| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, first-pass `Ctrl/Cmd+B` shortcut handling, provider callbacks (`on_open_change` / `on_open_mobile_change`), and function-style setter ergonomics (`set_open_with` / `set_open_mobile_with`) are implemented; cookie persistence and full React API-shape parity remain | `fret-ui-shadcn` |
+| `useSidebar` | Access provider state/actions | Context read contract | Partial | Hook exists (`use_sidebar`) and now exposes `set_open/set_open_mobile` and function-style setters (`set_open_with` / `set_open_mobile_with`) on context; parity gaps remain around cookie-backed persistence and full React API-shape parity | `fret-ui-shadcn` |
 | `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, and first-pass `variant` width/surface matrix is now wired; richer data-slot channels and cookie persistence parity remain | `fret-ui-shadcn` |
 | `SidebarTrigger` | Toggle sidebar state | Provider action + button semantics | Partial | Toggle behavior wired; upstream `onClick` merge, data-slot conventions, and full keyboard shortcut coupling remain to align | `fret-ui-shadcn` |
-| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas placement matrix are wired; cursor-state and pseudo-element hit-area parity remain | `fret-ui-shadcn` |
+| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas placement matrix are wired, and hover now requests `CursorIcon::ColResize` as a first-pass cursor affordance; pseudo-element hit-area parity and full class-state styling parity remain | `fret-ui-shadcn` |
 | `SidebarInset` | Peer/inset content container | None (layout recipe) | Partial | First-pass `variant=inset` peer-surface matrix is now wired (margin/radius/shadow + collapsed margin step); responsive breakpoint choreography and full class-state parity remain | `fret-ui-shadcn` |
 | `SidebarInput` | Sidebar-local input style wrapper | None (input styling wrapper) | Partial | 32px height + background wrapper exists; full class-level state variants are still narrower than upstream | `fret-ui-shadcn` |
 | `SidebarSeparator` | Sidebar-local separator wrapper | None (separator styling wrapper) | Partial | Sidebar-border + horizontal wrapper exists; upstream data-slot/class and variant nuances remain | `fret-ui-shadcn` |
@@ -181,8 +181,10 @@ Remaining impact/gap:
 
 Remaining impact/gap:
 
-- Keyboard shortcut is now present as a first pass (`Ctrl/Cmd+B -> sidebar.toggle`), but cookie
-  persistence and full upstream callback ergonomics are still TODO.
+- Keyboard shortcut is now present as a first pass (`Ctrl/Cmd+B -> sidebar.toggle`), and
+  provider-level change callbacks (`on_open_change` / `on_open_mobile_change`) plus function-style
+  setter ergonomics (`set_open_with` / `set_open_mobile_with`) are now available.
+  Cookie persistence and full React API-shape parity are still TODO.
 - Mobile `openMobile` sheet path is now surfaced in a first pass; remaining gaps are richer
   callback shape (`setOpen`/`setOpenMobile` parity) and cookie persistence semantics.
 
