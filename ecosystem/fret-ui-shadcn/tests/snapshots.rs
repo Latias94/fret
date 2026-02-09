@@ -582,6 +582,23 @@ fn snapshot_extras_marquee_default() {
 }
 
 #[test]
+fn snapshot_extras_ticker_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_ticker_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Ticker::new("AAPL")
+                .price("$199.18")
+                .change("+1.01%")
+                .change_kind(fret_ui_shadcn::extras::TickerChangeKind::Up)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
 fn snapshot_extras_relative_time_default() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

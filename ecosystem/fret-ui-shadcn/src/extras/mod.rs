@@ -16,6 +16,7 @@ pub mod marquee;
 pub mod rating;
 pub mod relative_time;
 pub mod tags;
+pub mod ticker;
 
 pub use announcement::{Announcement, AnnouncementTag, AnnouncementTitle};
 pub use avatar_stack::{AvatarStack, AvatarStackItem};
@@ -27,3 +28,4 @@ pub use relative_time::{
     RelativeTimeZoneDisplay, RelativeTimeZoneLabel,
 };
 pub use tags::{Tag, Tags};
+pub use ticker::{Ticker, TickerChangeKind};
