@@ -72,6 +72,17 @@ To support charts with different `AxisId`, the shared linking state is keyed by 
 Adapters apply the shared state by mapping `LinkAxisKey -> AxisId` inside each chart (only when the
 mapping is unique).
 
+## Implementation Notes (v1)
+
+`fret-chart` v1 provides:
+
+- `ChartLinkRouter` to resolve `AxisId -> LinkAxisKey` and `LinkAxisKey -> AxisId`.
+- `ChartLinkRouter::with_explicit_axis_map(...)` to override ambiguous auto mappings.
+- `LinkedChartGroup` to propagate engine link events into shared key-space models while avoiding
+  feedback loops.
+
+Explicit mapping is expected to live in app/host code (or adapter configuration), not the engine.
+
 ## Consequences
 
 - Linking remains stable under refactors that change `AxisId` values.
@@ -84,4 +95,3 @@ mapping is unique).
   - axisPointer sync,
   - zoom/pan sync (domain windows),
   - brush sync (when axis keys are unambiguous).
-

@@ -46,6 +46,8 @@ Regression gates:
 - [x] DEL-ENG1-contract-004 Define link event contracts for axisPointer/cursor sync (ADR 1172).
 - [x] DEL-ENG1-contract-005 Define link event contracts for domain window sync (ADR 1173).
 - [x] DEL-ENG1-contract-006 Define host-level link mapping policy for cross-spec linking (ADR 1174).
+- [x] DEL-ENG1-impl-017 Add key-based chart link coordinator and mapping router (LinkAxisKey).
+- [x] DEL-ENG1-impl-018 Add explicit axis map overrides for ambiguous cross-spec linking (ADR 1174).
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 

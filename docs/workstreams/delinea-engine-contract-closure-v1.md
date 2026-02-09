@@ -62,6 +62,10 @@ Adapter-level anchors:
     `ecosystem/fret-chart/src/retained/multi_grid.rs` (`FillStack`) +
     `ecosystem/fret-chart/src/retained/canvas.rs` (`ChartCanvas::new_overlay`)
   - demo: `apps/fret-examples/src/echarts_multi_grid_demo.rs`
+- Cross-chart linking (v1):
+  - engine emits `LinkEvent` streams (`AxisPointerChanged`, `DomainWindowChanged`) when a link group is set.
+  - host/adapter code coordinates shared key-space models via `LinkAxisKey` (`ecosystem/fret-chart/src/linking.rs`).
+  - ambiguous axis mappings can be overridden explicitly via `ChartCanvas::link_axis_map(...)`.
 
 ## 7) UI adapter consolidation plan (TanStack-style posture)
 
