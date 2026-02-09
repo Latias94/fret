@@ -725,7 +725,8 @@ impl UiDiagnosticsService {
 
         let is_v2_intent_step = matches!(
             &step,
-            UiActionStepV2::EnsureVisible { .. }
+            UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
@@ -1114,6 +1115,103 @@ impl UiDiagnosticsService {
                 active.wait_until = None;
                 active.screenshot_wait = None;
 
+                // Stable-click: wait for semantics bounds to stop moving before clicking.
+                //
+                // This is intended for virtualization-heavy views where a target's measured bounds
+                // can jump across frames (e.g. estimate -> measured), causing clicks to land at
+                // stale coordinates when using a single-frame snapshot.
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_center: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-click_stable-timeout"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+
+                            let moved = match state.last_center {
+                                Some(last) => {
+                                    let dx = (center.x.0 - last.x.0).abs();
+                                    let dy = (center.y.0 - last.y.0).abs();
+                                    dx.max(dy)
+                                }
+                                None => 0.0,
+                            };
+
+                            if moved <= max_move_px {
+                                state.stable_count = state.stable_count.saturating_add(1);
+                            } else {
+                                state.stable_count = 1;
+                            }
+                            state.last_center = Some(center);
+
+                            if state.stable_count >= stable_required {
+                                output.events.extend(click_events_with_modifiers(
+                                    center,
+                                    button,
+                                    click_count,
+                                    click_modifiers,
+                                ));
+                                active.wait_until = None;
+                                active.screenshot_wait = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-click_stable-click"
+                                    ));
+                                }
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::ClickStable(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_stable-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+
+                #[cfg(any())]
                 if let Some(snapshot) = semantics_snapshot {
                     if let Some(node) =
                         select_semantics_node(snapshot, window, element_runtime, &target)
@@ -3367,6 +3465,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
 
     match step {
         UiActionStepV2::Click { .. }
+        | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
@@ -4568,6 +4667,7 @@ impl PendingScript {
 
 #[derive(Debug, Clone)]
 enum V2StepState {
+    ClickStable(V2ClickStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -4576,6 +4676,14 @@ enum V2StepState {
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_center: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
