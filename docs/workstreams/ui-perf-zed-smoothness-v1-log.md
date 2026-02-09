@@ -8895,3 +8895,41 @@ Notes:
 - A representative tail failure mode for `drag-jitter` remains “paint text prepare (width)”; see:
   - `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
   - `fretboard diag stats ... --sort time` attributes the worst frame to `paint_text_prepare.reasons=width`.
+
+## 2026-02-09 21:14:30 (commit `e337b4299`)
+
+Change:
+- Reuse prepared text blobs across layout/paint by caching the latest prepared blob + wrap width in the host-widget
+  layout path. This is intended to reduce redundant `TextService::prepare` work when a text node is both measured and
+  painted with the same constraints.
+- Snap `measure_width` to device pixel boundaries before interactive-resize bucketing to reduce float-noise churn.
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 5 \
+  --out-dir target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15703 | 15856 | 15856 | 9158 | 2218 | 6577 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15923 | 16025 | 16025 | 9168 | 2229 | 6901 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/attempt-1/1770642376254-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.layout-prep-reuse.e337b4299.20260209-210611/attempt-1/1770642404541-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- `ui-resize-probes` remains somewhat noisy on `stress-steady` `top_layout_engine_solve_time_us`; attempts>3 may be
+  useful when validating changes locally under background load.
+- This does not, by itself, eliminate the `paint_text_prepare.reasons=width` churn observed in `drag-jitter` frames
+  (many UI gallery nodes are sized via the layout engine’s measure callback rather than the host-widget layout path).

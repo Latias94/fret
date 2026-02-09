@@ -124,7 +124,7 @@ must keep a clear order of operations based on *how often the hot path executes*
 
 ---
 
-## Active milestone ladder (updated 2026-02-07)
+## Active milestone ladder (updated 2026-02-09)
 
 | Milestone | Status | Scope | Required evidence |
 | --- | --- | --- | --- |
@@ -133,7 +133,7 @@ must keep a clear order of operations based on *how often the hot path executes*
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
 | M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) and strict non-retained gate passes 3/3; see perf log (2026-02-07 01:16) |
-| M4.4 Resize-drag smoothness | Pending | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-gallery-window-resize-stress-steady.json` p95/max improvements recorded in perf log; new diagnostics or gates if needed |
+| M4.4 Resize-drag smoothness | In progress | Reduce `layout/solve` costs and eliminate avoidable secondary probes during resize | `ui-resize-probes` gate evidence recorded in perf log (2026-02-09 entries, incl. commits `d834481b3`, `e337b4299`) |
 | M5.0 Text pipeline stabilization | Pending | Cache-key spec + warmup/cold-path miss gate | Text cache miss gate and miss attribution recorded in bundles |
 | M7.0 GPU/CPU attribution | Pending | GPU timing capture and hitch-class triage flow | One hitch classified with recorded CPU/GPU evidence |
 
@@ -143,7 +143,8 @@ must keep a clear order of operations based on *how often the hot path executes*
 2. **M4.4 resize LOD (guarded)**: bucket wrap widths / defer expensive probes while resizing, then reconcile on idle.
 3. **M4.3 escape-trigger observability**: make escape-driven shifts assertable when expected (deprioritized vs P0).
 4. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
-5. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
+5. **M5.x measure/paint reuse**: align `TextService::measure` vs `prepare` caches so paint can reuse measurement work.
+6. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
 
 This queue is intentionally aggressive, but each item has a measurable gate and a rollback trail in the perf log.
 

@@ -195,6 +195,11 @@ Conventions:
       - `FRET_TEXT_MEASURE_SHAPING_CACHE_ENTRIES` (default: `4096`; clamp: `64..=65536`)
       - `FRET_TEXT_MEASURE_SHAPING_CACHE_MIN_TEXT_LEN_BYTES` (default: `128`; cache only long paragraphs)
     - Evidence: perf log entry `2026-02-08 23:44:01` (`ui-code-editor-resize-probes`, `ui-resize-probes`, `ui-gallery-steady`).
+  - [x] Attempt: reuse prepared text blobs across the host-widget layout/paint paths.
+    - Implementation: `perf(fret-ui): reuse prepared text across layout/paint` (commit `e337b4299`).
+    - Evidence: perf log entry `2026-02-09 21:14:30` (`ui-resize-probes` attempts=5 PASS).
+    - Known gap: most UI gallery nodes are sized via the layout engine’s measure callback; follow up by aligning
+      `TextService::measure`/`prepare` cache behavior so paint can reuse measurement work without re-shaping.
 - [ ] **P1.5 Editor canvas paint replay**: reduce editor-class `Canvas` paint cost (scene-op rebuild), aiming for
   “paint-only” frames under small-step resize/scroll.
   - Primary probes:
