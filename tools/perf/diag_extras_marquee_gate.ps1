@@ -6,7 +6,7 @@ param(
   [string]$LaunchBin = "target/release/extras_marquee_perf_demo",
   [int]$TimeoutMs = 300000,
   [int]$Repeat = 7,
-  [int]$WarmupFrames = 5
+  [int]$WarmupFrames = 60
 )
 
 $ErrorActionPreference = "Stop"
