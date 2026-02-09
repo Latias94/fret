@@ -58,29 +58,6 @@
         },
         "size": {
           "w": 86.0,
-          "h": 16.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 0.0,
-          "y": 0.0
-        },
-        "size": {
-          "w": 86.0,
           "h": 64.0
         }
       },
@@ -146,29 +123,6 @@
       "bounds": {
         "origin": {
           "x": 0.0,
-          "y": 24.0
-        },
-        "size": {
-          "w": 86.0,
-          "h": 16.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 0.0,
           "y": 48.0
         },
         "size": {
@@ -196,29 +150,6 @@
         },
         "size": {
           "w": 38.0,
-          "h": 16.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": 0.0,
-          "y": 48.0
-        },
-        "size": {
-          "w": 86.0,
           "h": 16.0
         }
       },
@@ -358,6 +289,75 @@
         "size": {
           "w": 42.0,
           "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Group",
+      "label": "CET",
+      "value": "February 9, 2026 16:04:05",
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 48.0
+        },
+        "size": {
+          "w": 86.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Group",
+      "label": "PST",
+      "value": "February 9, 2026 07:04:05",
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 24.0
+        },
+        "size": {
+          "w": 86.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Group",
+      "label": "UTC",
+      "value": "February 9, 2026 15:04:05",
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 86.0,
+          "h": 16.0
         }
       },
       "flags": {

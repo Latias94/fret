@@ -21,7 +21,7 @@ pub use avatar_stack::{AvatarStack, AvatarStackItem};
 pub use banner::{Banner, BannerAction, BannerClose, BannerIcon, BannerTitle};
 pub use rating::Rating;
 pub use relative_time::{
-    RelativeTime, RelativeTimeZone, RelativeTimeZoneDate, RelativeTimeZoneDisplay,
-    RelativeTimeZoneLabel,
+    RelativeTime, RelativeTimeClockZone, RelativeTimeTick, RelativeTimeZone, RelativeTimeZoneDate,
+    RelativeTimeZoneDisplay, RelativeTimeZoneLabel,
 };
 pub use tags::{Tag, Tags};

@@ -1,36 +1,91 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::Px;
+use fret_core::time::Instant;
+use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state::use_controllable_model;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
+use time::{OffsetDateTime, UtcOffset};
 
 use crate::test_id::attach_test_id;
 
 /// A small world-clock-like display block inspired by Kibo's "RelativeTime" shadcn block.
 ///
 /// Notes:
-/// - This is display-only in M1 (no timers / no scheduling).
+/// - Display-only composition (`RelativeTime::new(...)`) remains supported.
 /// - Callers provide already-formatted strings for date/time.
 ///
 /// Upstream inspiration (MIT):
 /// - `repo-ref/kibo/packages/relative-time`
 #[derive(Debug, Clone)]
 pub struct RelativeTime {
-    children: Vec<AnyElement>,
+    kind: RelativeTimeKind,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
+}
+
+#[derive(Debug, Clone)]
+enum RelativeTimeKind {
+    StaticChildren(Vec<AnyElement>),
+    Clock(RelativeTimeClock),
 }
 
 impl RelativeTime {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
-            children: children.into_iter().collect(),
+            kind: RelativeTimeKind::StaticChildren(children.into_iter().collect()),
             test_id: None,
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// An auto-updating world clock (uncontrolled).
+    ///
+    /// This uses a continuous-frames lease and advances the internal time model by one tick per
+    /// interval.
+    pub fn uncontrolled_clock(zones: impl IntoIterator<Item = RelativeTimeClockZone>) -> Self {
+        Self {
+            kind: RelativeTimeKind::Clock(RelativeTimeClock::uncontrolled(zones)),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// An auto-updating world clock driven by a caller-provided time model (controlled).
+    ///
+    /// Controlled clocks do not schedule timers; callers are responsible for updating the model.
+    pub fn controlled_clock(
+        time: Model<OffsetDateTime>,
+        zones: impl IntoIterator<Item = RelativeTimeClockZone>,
+    ) -> Self {
+        Self {
+            kind: RelativeTimeKind::Clock(RelativeTimeClock::controlled(time, zones)),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Apply an auto-update tick interval (only applies to clock variants).
+    pub fn tick(mut self, tick: RelativeTimeTick) -> Self {
+        if let RelativeTimeKind::Clock(clock) = &mut self.kind {
+            clock.tick = tick;
+        }
+        self
+    }
+
+    /// Override the initial time value (only applies to uncontrolled clock variants).
+    pub fn default_time_utc(mut self, time: OffsetDateTime) -> Self {
+        if let RelativeTimeKind::Clock(clock) = &mut self.kind {
+            clock.default_time_utc = time;
+        }
+        self
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
@@ -44,14 +99,17 @@ impl RelativeTime {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let children = self.children;
-        let el = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap_y(Space::N2)
-                .layout(self.layout),
-            |_cx| children,
-        );
+        let layout = self.layout;
+        let el = match self.kind {
+            RelativeTimeKind::StaticChildren(children) => stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap_y(Space::N2)
+                    .layout(layout),
+                |_cx| children,
+            ),
+            RelativeTimeKind::Clock(clock) => clock.into_element(cx, layout),
+        };
         attach_test_id(
             el,
             self.test_id
@@ -95,6 +153,10 @@ impl RelativeTimeZone {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let label = self.label.clone();
+        let date = self.date.clone();
+        let time = self.time.clone();
+
         let left = stack::hstack(
             cx,
             stack::HStackProps::default()
@@ -122,12 +184,185 @@ impl RelativeTimeZone {
             |_cx| vec![left, right],
         );
 
-        attach_test_id(
+        let el = attach_test_id(
             el,
             self.test_id
                 .unwrap_or_else(|| Arc::<str>::from("shadcn-extras.relative-time-zone")),
+        );
+
+        el.attach_semantics(
+            fret_ui::element::SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .label(label)
+                .value(Arc::<str>::from(format!("{date} {time}"))),
         )
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RelativeTimeTick {
+    Second,
+    Minute,
+}
+
+impl RelativeTimeTick {
+    fn std_duration(self) -> Duration {
+        match self {
+            Self::Second => Duration::from_secs(1),
+            Self::Minute => Duration::from_secs(60),
+        }
+    }
+
+    fn time_duration(self) -> time::Duration {
+        match self {
+            Self::Second => time::Duration::seconds(1),
+            Self::Minute => time::Duration::minutes(1),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RelativeTimeClockZone {
+    pub label: Arc<str>,
+    pub offset: UtcOffset,
+}
+
+impl RelativeTimeClockZone {
+    pub fn new(label: impl Into<Arc<str>>, offset: UtcOffset) -> Self {
+        Self {
+            label: label.into(),
+            offset,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RelativeTimeClock {
+    zones: Vec<RelativeTimeClockZone>,
+    time: Option<Model<OffsetDateTime>>,
+    default_time_utc: OffsetDateTime,
+    tick: RelativeTimeTick,
+}
+
+impl RelativeTimeClock {
+    fn uncontrolled(zones: impl IntoIterator<Item = RelativeTimeClockZone>) -> Self {
+        Self {
+            zones: zones.into_iter().collect(),
+            time: None,
+            default_time_utc: OffsetDateTime::now_utc(),
+            tick: RelativeTimeTick::Second,
+        }
+    }
+
+    fn controlled(
+        time: Model<OffsetDateTime>,
+        zones: impl IntoIterator<Item = RelativeTimeClockZone>,
+    ) -> Self {
+        Self {
+            zones: zones.into_iter().collect(),
+            time: Some(time),
+            default_time_utc: OffsetDateTime::now_utc(),
+            tick: RelativeTimeTick::Second,
+        }
+    }
+
+    fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        layout: LayoutRefinement,
+    ) -> AnyElement {
+        cx.scope(|cx| {
+            let id = cx.root_id();
+
+            let out = use_controllable_model(cx, self.time, || self.default_time_utc);
+            let time_model = out.model();
+            let is_controlled = out.is_controlled();
+
+            #[derive(Default)]
+            struct AutoUpdateState {
+                next_update_at: Option<Instant>,
+            }
+
+            let tick = self.tick;
+            let want_auto_update = !is_controlled;
+            scheduling::set_continuous_frames(cx, want_auto_update);
+            if want_auto_update {
+                let now = Instant::now();
+                let due = cx.with_state_for(id, AutoUpdateState::default, |st| {
+                    if let Some(next) = st.next_update_at {
+                        if now >= next {
+                            st.next_update_at = Some(now + tick.std_duration());
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    st.next_update_at = Some(now + tick.std_duration());
+                    false
+                });
+
+                if due {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&time_model, |v| *v = *v + tick.time_duration());
+                }
+            } else {
+                cx.with_state_for(id, AutoUpdateState::default, |st| {
+                    st.next_update_at = None;
+                });
+            }
+
+            let now = cx
+                .watch_model(&time_model)
+                .layout()
+                .cloned_or_else(|| self.default_time_utc);
+
+            let mut children = Vec::with_capacity(self.zones.len());
+            for zone in self.zones {
+                let dt = now.to_offset(zone.offset);
+                let date = Arc::<str>::from(format_date_long(dt));
+                let time = Arc::<str>::from(format_time_hms(dt));
+                children
+                    .push(RelativeTimeZone::new(zone.label.clone(), date, time).into_element(cx));
+            }
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap_y(Space::N2)
+                    .layout(layout),
+                |_cx| children,
+            )
+        })
+    }
+}
+
+fn month_name_long(m: time::Month) -> &'static str {
+    match m {
+        time::Month::January => "January",
+        time::Month::February => "February",
+        time::Month::March => "March",
+        time::Month::April => "April",
+        time::Month::May => "May",
+        time::Month::June => "June",
+        time::Month::July => "July",
+        time::Month::August => "August",
+        time::Month::September => "September",
+        time::Month::October => "October",
+        time::Month::November => "November",
+        time::Month::December => "December",
+    }
+}
+
+fn format_date_long(dt: OffsetDateTime) -> String {
+    let d = dt.date();
+    format!("{} {}, {}", month_name_long(d.month()), d.day(), d.year())
+}
+
+fn format_time_hms(dt: OffsetDateTime) -> String {
+    let t = dt.time();
+    format!("{:02}:{:02}:{:02}", t.hour(), t.minute(), t.second())
 }
 
 #[derive(Debug, Clone)]
