@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
@@ -7,6 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -105,6 +106,7 @@ struct ComboboxState {
     query: Option<Model<String>>,
     open_change_reason: Option<Model<Option<ComboboxOpenChangeReason>>>,
     clear_query_on_close: kit_combobox::ClearQueryOnCloseState,
+    focus_restore_target: Option<Arc<Mutex<Option<GlobalElementId>>>>,
 }
 
 pub use kit_combobox::ComboboxOpenChangeReason;
@@ -131,6 +133,7 @@ pub struct Combobox {
     search_enabled: bool,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
+    close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_with_reason: Option<OnOpenChangeWithReason>,
@@ -161,6 +164,7 @@ impl Combobox {
             // (ADR 0069)
             consume_outside_pointer_events: false,
             selection_commit_policy: kit_combobox::SelectionCommitPolicy::default(),
+            close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
             on_value_change: None,
             on_open_change: None,
             on_open_change_with_reason: None,
@@ -275,6 +279,14 @@ impl Combobox {
         self
     }
 
+    pub fn close_auto_focus_policy(
+        mut self,
+        policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
+    ) -> Self {
+        self.close_auto_focus_policy = policy;
+        self
+    }
+
     /// Called when selected value changes (Base UI `onValueChange`).
     pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
         self.on_value_change = on_value_change;
@@ -339,6 +351,7 @@ impl Combobox {
             self.search_enabled,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
+            self.close_auto_focus_policy,
             self.on_value_change,
             self.on_open_change,
             self.on_open_change_with_reason,
@@ -384,6 +397,7 @@ pub fn combobox<H: UiHost>(
         search_enabled,
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
+        kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
         None,
         None,
         None,
@@ -413,6 +427,7 @@ fn combobox_with_patch<H: UiHost>(
     search_enabled: bool,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
+    close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_with_reason: Option<OnOpenChangeWithReason>,
@@ -436,6 +451,24 @@ fn combobox_with_patch<H: UiHost>(
                 model
             }
         };
+        let focus_restore_target = {
+            let existing =
+                cx.with_state(ComboboxState::default, |st| st.focus_restore_target.clone());
+            if let Some(cell) = existing {
+                cell
+            } else {
+                let cell: Arc<Mutex<Option<GlobalElementId>>> = Arc::new(Mutex::new(None));
+                cx.with_state(ComboboxState::default, |st| {
+                    st.focus_restore_target = Some(cell.clone());
+                });
+                cell
+            }
+        };
+        let close_auto_focus = kit_combobox::on_close_auto_focus_with_reason(
+            open_change_reason_model.clone(),
+            focus_restore_target.clone(),
+            close_auto_focus_policy,
+        );
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         if let Some(handler) = on_value_change.as_ref() {
             let value_change = cx.with_state(
@@ -614,17 +647,23 @@ fn combobox_with_patch<H: UiHost>(
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
+            let focus_restore_target_for_trigger = focus_restore_target.clone();
             return Drawer::new(open.clone())
                 .on_dismiss_request(Some(
                     kit_combobox::set_open_change_reason_on_dismiss_request(
                         open_change_reason_model.clone(),
                     ),
                 ))
+                .on_close_auto_focus(Some(close_auto_focus.clone()))
                 .into_element(
                     cx,
                     move |cx| {
                         let open_change_reason_model = open_change_reason_model_for_trigger.clone();
-                        cx.pressable_with_id_props(|cx, st, _trigger_id| {
+                        let focus_restore_target = focus_restore_target_for_trigger.clone();
+                        cx.pressable_with_id_props(|cx, st, trigger_id| {
+                            *focus_restore_target
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
                             let mut states = WidgetStates::from_pressable(cx, st, enabled);
                             states.set(WidgetState::Open, is_open);
 
@@ -907,6 +946,7 @@ fn combobox_with_patch<H: UiHost>(
         let open_change_reason_model_for_trigger = open_change_reason_model.clone();
         let open_change_reason_model_for_content = open_change_reason_model.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
+        let focus_restore_target_for_trigger = focus_restore_target.clone();
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
@@ -915,11 +955,16 @@ fn combobox_with_patch<H: UiHost>(
                     open_change_reason_model.clone(),
                 ),
             ))
+            .on_close_auto_focus(Some(close_auto_focus.clone()))
             .into_element_with_anchor(
                 cx,
                 move |cx| {
                     let open_change_reason_model = open_change_reason_model_for_trigger.clone();
-                    cx.pressable_with_id_props(|cx, st, _trigger_id| {
+                    let focus_restore_target = focus_restore_target_for_trigger.clone();
+                    cx.pressable_with_id_props(|cx, st, trigger_id| {
+                        *focus_restore_target
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
                         let mut states = WidgetStates::from_pressable(cx, st, enabled);
                         states.set(WidgetState::Open, is_open);
 

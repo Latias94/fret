@@ -4,11 +4,14 @@
 //! - open/close reasons mapping
 //! - callback gating helpers ("changed" vs "completed")
 //! - value change gating (emit only on actual changes)
+//! - reason-aware focus restore policies
 
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use crate::prelude::Model;
-use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
+use fret_ui::action::{DismissReason, OnActivate, OnCloseAutoFocus, OnDismissRequest};
+use fret_ui::elements::GlobalElementId;
 
 /// Open-change reasons aligned with Base UI combobox semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +30,58 @@ pub fn open_change_reason_from_dismiss_reason(reason: DismissReason) -> Combobox
         DismissReason::OutsidePress { .. } => ComboboxOpenChangeReason::OutsidePress,
         DismissReason::FocusOutside => ComboboxOpenChangeReason::FocusOut,
         DismissReason::Scroll => ComboboxOpenChangeReason::None,
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComboboxCloseAutoFocusDecision {
+    /// Do nothing and allow the primitive's default behavior.
+    Default,
+    /// Prevent the primitive's default behavior.
+    PreventDefault,
+    /// Restore focus to the combobox trigger (and prevent default).
+    RestoreTrigger,
+}
+
+/// Reason-aware focus-restore policy for combobox-like overlays.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ComboboxCloseAutoFocusPolicy {
+    pub on_item_press: ComboboxCloseAutoFocusDecision,
+    pub on_escape: ComboboxCloseAutoFocusDecision,
+    pub on_trigger_press: ComboboxCloseAutoFocusDecision,
+    pub on_outside_press: ComboboxCloseAutoFocusDecision,
+    pub on_focus_out: ComboboxCloseAutoFocusDecision,
+    pub on_none: ComboboxCloseAutoFocusDecision,
+}
+
+impl Default for ComboboxCloseAutoFocusPolicy {
+    fn default() -> Self {
+        // shadcn/ui-like expectations:
+        // - commit restores focus to trigger (asserted by diag gates)
+        // - Escape restores focus to trigger
+        // - outside press / focus-out should not steal focus back to trigger
+        Self {
+            on_item_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_escape: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_trigger_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_outside_press: ComboboxCloseAutoFocusDecision::PreventDefault,
+            on_focus_out: ComboboxCloseAutoFocusDecision::PreventDefault,
+            on_none: ComboboxCloseAutoFocusDecision::Default,
+        }
+    }
+}
+
+pub fn close_auto_focus_decision_for_reason(
+    policy: ComboboxCloseAutoFocusPolicy,
+    reason: ComboboxOpenChangeReason,
+) -> ComboboxCloseAutoFocusDecision {
+    match reason {
+        ComboboxOpenChangeReason::ItemPress => policy.on_item_press,
+        ComboboxOpenChangeReason::EscapeKey => policy.on_escape,
+        ComboboxOpenChangeReason::TriggerPress => policy.on_trigger_press,
+        ComboboxOpenChangeReason::OutsidePress => policy.on_outside_press,
+        ComboboxOpenChangeReason::FocusOut => policy.on_focus_out,
+        ComboboxOpenChangeReason::None => policy.on_none,
     }
 }
 
@@ -183,6 +238,36 @@ pub fn commit_selection_on_activate<T: Clone + PartialEq + 'static>(
     })
 }
 
+pub fn on_close_auto_focus_with_reason(
+    open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
+    trigger_id: Arc<Mutex<Option<GlobalElementId>>>,
+    policy: ComboboxCloseAutoFocusPolicy,
+) -> OnCloseAutoFocus {
+    Arc::new(move |host, _action_cx, req| {
+        let reason = host
+            .models_mut()
+            .get_copied(&open_change_reason)
+            .unwrap_or(None)
+            .unwrap_or(ComboboxOpenChangeReason::None);
+        // Avoid leaking a stale reason across programmatic open/close.
+        let _ = host.models_mut().update(&open_change_reason, |v| *v = None);
+
+        match close_auto_focus_decision_for_reason(policy, reason) {
+            ComboboxCloseAutoFocusDecision::Default => {}
+            ComboboxCloseAutoFocusDecision::PreventDefault => {
+                req.prevent_default();
+            }
+            ComboboxCloseAutoFocusDecision::RestoreTrigger => {
+                req.prevent_default();
+                let target = trigger_id.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                if let Some(target) = target {
+                    host.request_focus(target);
+                }
+            }
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +353,38 @@ mod tests {
         assert_eq!(should_clear_query_on_close(&mut state, true), false);
         assert_eq!(should_clear_query_on_close(&mut state, false), true);
         assert_eq!(should_clear_query_on_close(&mut state, false), false);
+    }
+
+    #[test]
+    fn close_auto_focus_decision_maps_reasons() {
+        let policy = ComboboxCloseAutoFocusPolicy {
+            on_item_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_escape: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_trigger_press: ComboboxCloseAutoFocusDecision::RestoreTrigger,
+            on_outside_press: ComboboxCloseAutoFocusDecision::PreventDefault,
+            on_focus_out: ComboboxCloseAutoFocusDecision::PreventDefault,
+            on_none: ComboboxCloseAutoFocusDecision::Default,
+        };
+
+        assert_eq!(
+            close_auto_focus_decision_for_reason(policy, ComboboxOpenChangeReason::ItemPress),
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            close_auto_focus_decision_for_reason(policy, ComboboxOpenChangeReason::EscapeKey),
+            ComboboxCloseAutoFocusDecision::RestoreTrigger
+        );
+        assert_eq!(
+            close_auto_focus_decision_for_reason(policy, ComboboxOpenChangeReason::OutsidePress),
+            ComboboxCloseAutoFocusDecision::PreventDefault
+        );
+        assert_eq!(
+            close_auto_focus_decision_for_reason(policy, ComboboxOpenChangeReason::FocusOut),
+            ComboboxCloseAutoFocusDecision::PreventDefault
+        );
+        assert_eq!(
+            close_auto_focus_decision_for_reason(policy, ComboboxOpenChangeReason::None),
+            ComboboxCloseAutoFocusDecision::Default
+        );
     }
 }
