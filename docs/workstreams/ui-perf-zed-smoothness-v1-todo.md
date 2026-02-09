@@ -29,6 +29,7 @@ Conventions:
   - Deliverable (initial): expand `fret-perf-workflow` attribution recipes + add a single “worked example”.
   - Latest:
     - Added `fret-perf-attribution` skill (tail-hitch playbook): commit `7ea708d2f`.
+    - Added `click_stable` diag script step to reduce selector-driven flakiness: commit `75ac42db9`.
 
 - [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
   bucketed/deferred/cached during live resize, and what must remain exact).

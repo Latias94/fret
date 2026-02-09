@@ -8834,3 +8834,31 @@ Notes:
     (16508 → 16233), largely driven by `paint_time_us` reductions.
   - `ui-code-editor-resize-probes` is effectively flat/noisy: `drag-jitter` p95 total `+69us` (15544 → 15613) while
     `layout_engine_solve_time_us` p95 improved slightly (-6us).
+
+## 2026-02-09 19:32:39 (commit `75ac42db9`)
+
+Change:
+- Add `click_stable` as a diag script step that only clicks a target once its center remains stable for N frames.
+- Update `ui-gallery-material3-tabs-switch-perf-steady.json` to navigate via search and use `click_stable` to reduce
+  “stale click” flakiness (measurement reliability change, not a runtime perf win).
+
+Validation:
+- Smoke run: PASS (run_id `1770636679182`).
+
+Commands:
+```bash
+out_dir="target/fret-diag/click-stable-smoke-20260209-192936"
+cargo run -q -p fretboard -- \
+  diag run tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json \
+  --dir "$out_dir" \
+  --timeout-ms 180000 \
+  --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- cargo run -q -p fret-ui-gallery --release
+```
+
+Artifacts:
+- `target/fret-diag/click-stable-smoke-20260209-192936/1770636679549-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
