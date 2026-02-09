@@ -12,6 +12,7 @@
 pub mod announcement;
 pub mod avatar_stack;
 pub mod banner;
+pub mod marquee;
 pub mod rating;
 pub mod relative_time;
 pub mod tags;
@@ -19,6 +20,7 @@ pub mod tags;
 pub use announcement::{Announcement, AnnouncementTag, AnnouncementTitle};
 pub use avatar_stack::{AvatarStack, AvatarStackItem};
 pub use banner::{Banner, BannerAction, BannerClose, BannerIcon, BannerTitle};
+pub use marquee::{Marquee, MarqueeDirection};
 pub use rating::Rating;
 pub use relative_time::{
     RelativeTime, RelativeTimeClockZone, RelativeTimeTick, RelativeTimeZone, RelativeTimeZoneDate,
