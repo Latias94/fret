@@ -1499,6 +1499,65 @@ fn set_language_is_idempotent_for_same_value() {
     }
 }
 
+#[test]
+fn set_line_folds_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let placeholder = Arc::<str>::from("…");
+    let spans = vec![FoldSpan {
+        range: 1..3,
+        placeholder,
+    }];
+
+    handle.set_line_folds(0, spans.clone());
+
+    let (folds_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.folds_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_folds(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.folds_epoch, folds_epoch_before,
+        "idempotent set_line_folds must not bump folds_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_folds must not reset row text caches"
+    );
+}
+
+#[test]
+fn set_line_inlays_is_idempotent_for_same_value() {
+    let handle = CodeEditorHandle::new("abcdef\n");
+
+    let spans = vec![InlaySpan {
+        byte: 2,
+        text: Arc::<str>::from("<inlay>"),
+    }];
+
+    handle.set_line_inlays(0, spans.clone());
+
+    let (inlays_epoch_before, row_text_resets_before) = {
+        let st = handle.state.borrow();
+        (st.inlays_epoch, st.cache_stats.row_text_resets)
+    };
+
+    handle.set_line_inlays(0, spans);
+
+    let st = handle.state.borrow();
+    assert_eq!(
+        st.inlays_epoch, inlays_epoch_before,
+        "idempotent set_line_inlays must not bump inlays_epoch"
+    );
+    assert_eq!(
+        st.cache_stats.row_text_resets, row_text_resets_before,
+        "idempotent set_line_inlays must not reset row text caches"
+    );
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {

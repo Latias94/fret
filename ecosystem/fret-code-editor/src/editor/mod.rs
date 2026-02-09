@@ -752,8 +752,18 @@ impl CodeEditorHandle {
     pub fn set_line_folds(&self, line: usize, spans: Vec<FoldSpan>) {
         let mut st = self.state.borrow_mut();
         if spans.is_empty() {
+            if !st.line_folds.contains_key(&line) {
+                return;
+            }
             st.line_folds.remove(&line);
         } else {
+            if st
+                .line_folds
+                .get(&line)
+                .is_some_and(|existing| existing.as_ref() == spans.as_slice())
+            {
+                return;
+            }
             st.line_folds.insert(line, Arc::from(spans));
         }
         st.folds_epoch = st.folds_epoch.saturating_add(1);
@@ -797,8 +807,18 @@ impl CodeEditorHandle {
     pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
         let mut st = self.state.borrow_mut();
         if spans.is_empty() {
+            if !st.line_inlays.contains_key(&line) {
+                return;
+            }
             st.line_inlays.remove(&line);
         } else {
+            if st
+                .line_inlays
+                .get(&line)
+                .is_some_and(|existing| existing.as_ref() == spans.as_slice())
+            {
+                return;
+            }
             st.line_inlays.insert(line, Arc::from(spans));
         }
         st.inlays_epoch = st.inlays_epoch.saturating_add(1);
