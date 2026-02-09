@@ -298,7 +298,6 @@ mod tests {
 
     use fret_ui::element::{ContainerProps, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
-    use fret_ui_kit::declarative::AnyElementSemanticsExt;
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {

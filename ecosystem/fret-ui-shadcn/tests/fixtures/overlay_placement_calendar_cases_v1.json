@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "calendar-22.open_overlay_placement", "web_name": "calendar-22", "recipe": "calendar_22_open_overlay_placement" },
+    { "id": "calendar-22.vp375x240.open_overlay_placement", "web_name": "calendar-22.vp375x240", "recipe": "calendar_22_open_overlay_placement" },
+
+    { "id": "calendar-23.open_overlay_placement", "web_name": "calendar-23", "recipe": "calendar_23_open_overlay_placement" },
+    { "id": "calendar-23.vp375x240.open_overlay_placement", "web_name": "calendar-23.vp375x240", "recipe": "calendar_23_open_overlay_placement" },
+
+    { "id": "calendar-24.open_overlay_placement", "web_name": "calendar-24", "recipe": "calendar_24_open_overlay_placement" },
+    { "id": "calendar-25.open_overlay_placement", "web_name": "calendar-25", "recipe": "calendar_25_open_overlay_placement" },
+    { "id": "calendar-26.open_overlay_placement", "web_name": "calendar-26", "recipe": "calendar_26_open_overlay_placement" },
+    { "id": "calendar-27.open_overlay_placement", "web_name": "calendar-27", "recipe": "calendar_27_open_overlay_placement" },
+    { "id": "calendar-28.open_overlay_placement", "web_name": "calendar-28", "recipe": "calendar_28_open_overlay_placement" },
+    { "id": "calendar-29.open_overlay_placement", "web_name": "calendar-29", "recipe": "calendar_29_open_overlay_placement" },
+    { "id": "calendar-30.open_overlay_placement", "web_name": "calendar-30", "recipe": "calendar_30_open_overlay_placement" },
+
+    { "id": "calendar-32.open_drawer_insets", "web_name": "calendar-32", "recipe": "calendar_32_open_drawer_insets" }
+  ]
+}

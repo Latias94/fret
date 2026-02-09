@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "menubar-demo.panel_chrome", "web_name": "menubar-demo", "recipe": "panel_chrome" },
+
+    { "id": "menubar-demo.light.panel_size", "web_name": "menubar-demo", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "menubar-demo.dark.panel_size", "web_name": "menubar-demo", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "menubar-demo.vp1440x240.light.panel_size", "web_name": "menubar-demo.vp1440x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "menubar-demo.vp1440x240.dark.panel_size", "web_name": "menubar-demo.vp1440x240", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "menubar-demo.vp375x240.light.panel_size", "web_name": "menubar-demo.vp375x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "menubar-demo.vp375x240.dark.panel_size", "web_name": "menubar-demo.vp375x240", "theme": "dark", "recipe": "demo_panel_size" },
+
+    { "id": "menubar-demo.light.shadow_insets.file.minimal", "web_name": "menubar-demo", "theme": "light", "trigger": "File", "click_builder": "minimal_file_menu", "recipe": "click_overlay_shadow_insets" },
+    { "id": "menubar-demo.dark.shadow_insets.file.minimal", "web_name": "menubar-demo", "theme": "dark", "trigger": "File", "click_builder": "minimal_file_menu", "recipe": "click_overlay_shadow_insets" },
+    { "id": "menubar-demo.view.light.shadow_insets", "web_name": "menubar-demo.view", "theme": "light", "trigger": "View", "click_builder": "shadcn_demo", "recipe": "click_overlay_shadow_insets" },
+    { "id": "menubar-demo.view.dark.shadow_insets", "web_name": "menubar-demo.view", "theme": "dark", "trigger": "View", "click_builder": "shadcn_demo", "recipe": "click_overlay_shadow_insets" },
+    { "id": "menubar-demo.profiles.light.shadow_insets", "web_name": "menubar-demo.profiles", "theme": "light", "trigger": "Profiles", "click_builder": "shadcn_demo", "recipe": "click_overlay_shadow_insets" },
+    { "id": "menubar-demo.profiles.dark.shadow_insets", "web_name": "menubar-demo.profiles", "theme": "dark", "trigger": "Profiles", "click_builder": "shadcn_demo", "recipe": "click_overlay_shadow_insets" },
+
+    { "id": "menubar-demo.light.surface_colors.file.minimal", "web_name": "menubar-demo", "theme": "light", "trigger": "File", "click_builder": "minimal_file_menu", "recipe": "click_overlay_surface_colors" },
+    { "id": "menubar-demo.dark.surface_colors.file.minimal", "web_name": "menubar-demo", "theme": "dark", "trigger": "File", "click_builder": "minimal_file_menu", "recipe": "click_overlay_surface_colors" },
+    { "id": "menubar-demo.view.light.surface_colors", "web_name": "menubar-demo.view", "theme": "light", "trigger": "View", "click_builder": "shadcn_demo", "recipe": "click_overlay_surface_colors" },
+    { "id": "menubar-demo.view.dark.surface_colors", "web_name": "menubar-demo.view", "theme": "dark", "trigger": "View", "click_builder": "shadcn_demo", "recipe": "click_overlay_surface_colors" },
+    { "id": "menubar-demo.profiles.light.surface_colors", "web_name": "menubar-demo.profiles", "theme": "light", "trigger": "Profiles", "click_builder": "shadcn_demo", "recipe": "click_overlay_surface_colors" },
+    { "id": "menubar-demo.profiles.dark.surface_colors", "web_name": "menubar-demo.profiles", "theme": "dark", "trigger": "Profiles", "click_builder": "shadcn_demo", "recipe": "click_overlay_surface_colors" },
+
+    { "id": "menubar-demo.submenu.light.surface_colors", "web_name": "menubar-demo.submenu", "theme": "light", "recipe": "submenu_surface_colors" },
+    { "id": "menubar-demo.submenu.dark.surface_colors", "web_name": "menubar-demo.submenu", "theme": "dark", "recipe": "submenu_surface_colors" },
+
+    { "id": "menubar-demo.submenu-kbd.light.shadow_insets", "web_name": "menubar-demo.submenu-kbd", "theme": "light", "recipe": "submenu_keyboard_shadow_insets" },
+    { "id": "menubar-demo.submenu-kbd.dark.shadow_insets", "web_name": "menubar-demo.submenu-kbd", "theme": "dark", "recipe": "submenu_keyboard_shadow_insets" },
+    { "id": "menubar-demo.submenu-kbd.vp375x240.light.shadow_insets", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "light", "recipe": "submenu_keyboard_shadow_insets" },
+    { "id": "menubar-demo.submenu-kbd.vp375x240.dark.shadow_insets", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "dark", "recipe": "submenu_keyboard_shadow_insets" },
+
+    { "id": "menubar-demo.submenu-kbd.light.panel_size", "web_name": "menubar-demo.submenu-kbd", "theme": "light", "recipe": "submenu_keyboard_panel_size" },
+    { "id": "menubar-demo.submenu-kbd.dark.panel_size", "web_name": "menubar-demo.submenu-kbd", "theme": "dark", "recipe": "submenu_keyboard_panel_size" },
+    { "id": "menubar-demo.submenu-kbd.vp375x240.light.panel_size", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "light", "recipe": "submenu_keyboard_panel_size" },
+    { "id": "menubar-demo.submenu-kbd.vp375x240.dark.panel_size", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "dark", "recipe": "submenu_keyboard_panel_size" },
+    { "id": "menubar-demo.submenu-kbd.vp1440x240.light.panel_size", "web_name": "menubar-demo.submenu-kbd-vp1440x240", "theme": "light", "recipe": "submenu_keyboard_panel_size" },
+    { "id": "menubar-demo.submenu-kbd.vp1440x240.dark.panel_size", "web_name": "menubar-demo.submenu-kbd-vp1440x240", "theme": "dark", "recipe": "submenu_keyboard_panel_size" },
+
+    { "id": "menubar-demo.submenu-kbd.vp375x240.light.surface_colors", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "light", "recipe": "submenu_keyboard_surface_colors" },
+    { "id": "menubar-demo.submenu-kbd.vp375x240.dark.surface_colors", "web_name": "menubar-demo.submenu-kbd-vp375x240", "theme": "dark", "recipe": "submenu_keyboard_surface_colors" },
+    { "id": "menubar-demo.submenu-kbd.vp1440x240.light.surface_colors", "web_name": "menubar-demo.submenu-kbd-vp1440x240", "theme": "light", "recipe": "submenu_keyboard_surface_colors" },
+    { "id": "menubar-demo.submenu-kbd.vp1440x240.dark.surface_colors", "web_name": "menubar-demo.submenu-kbd-vp1440x240", "theme": "dark", "recipe": "submenu_keyboard_surface_colors" },
+
+    { "id": "menubar-demo.submenu-kbd.light.subtrigger_open_chrome", "web_name": "menubar-demo.submenu-kbd", "theme": "light", "recipe": "subtrigger_open_chrome_keyboard" },
+    { "id": "menubar-demo.submenu-kbd.dark.subtrigger_open_chrome", "web_name": "menubar-demo.submenu-kbd", "theme": "dark", "recipe": "subtrigger_open_chrome_keyboard" },
+
+    { "id": "menubar-demo.focus-first.light.focused_item_chrome", "web_name": "menubar-demo.focus-first", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "menubar-demo.focus-first.dark.focused_item_chrome", "web_name": "menubar-demo.focus-first", "theme": "dark", "recipe": "focused_item_chrome" },
+    { "id": "menubar-demo.focus-first.vp375x240.light.focused_item_chrome", "web_name": "menubar-demo.focus-first-vp375x240", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "menubar-demo.focus-first.vp375x240.dark.focused_item_chrome", "web_name": "menubar-demo.focus-first-vp375x240", "theme": "dark", "recipe": "focused_item_chrome" },
+
+    { "id": "menubar-demo.file-menu.light.destructive_item_idle_fg", "theme": "light", "recipe": "file_menu_destructive_item_idle_fg" },
+    { "id": "menubar-demo.file-menu.dark.destructive_item_idle_fg", "theme": "dark", "recipe": "file_menu_destructive_item_idle_fg" },
+    { "id": "menubar-demo.file-menu.light.destructive_focused_item_chrome", "theme": "light", "recipe": "file_menu_destructive_focused_item_chrome" },
+    { "id": "menubar-demo.file-menu.dark.destructive_focused_item_chrome", "theme": "dark", "recipe": "file_menu_destructive_focused_item_chrome" },
+
+    { "id": "menubar-demo.highlight-first.light.highlighted_item_chrome", "web_name": "menubar-demo.highlight-first", "theme": "light", "recipe": "highlighted_item_chrome" },
+    { "id": "menubar-demo.highlight-first.dark.highlighted_item_chrome", "web_name": "menubar-demo.highlight-first", "theme": "dark", "recipe": "highlighted_item_chrome" },
+    { "id": "menubar-demo.highlight-first.vp375x240.light.highlighted_item_chrome", "web_name": "menubar-demo.highlight-first-vp375x240", "theme": "light", "recipe": "highlighted_item_chrome" },
+    { "id": "menubar-demo.highlight-first.vp375x240.dark.highlighted_item_chrome", "web_name": "menubar-demo.highlight-first-vp375x240", "theme": "dark", "recipe": "highlighted_item_chrome" },
+
+    { "id": "menubar-demo.submenu-highlight-first.vp375x240.light.highlighted_item_chrome", "web_name": "menubar-demo.submenu-highlight-first-vp375x240", "theme": "light", "recipe": "submenu_highlighted_item_chrome" },
+    { "id": "menubar-demo.submenu-highlight-first.vp375x240.dark.highlighted_item_chrome", "web_name": "menubar-demo.submenu-highlight-first-vp375x240", "theme": "dark", "recipe": "submenu_highlighted_item_chrome" }
+  ]
+}

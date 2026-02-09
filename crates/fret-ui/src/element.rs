@@ -45,6 +45,11 @@ impl AnyElement {
         });
         self
     }
+
+    /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
+    pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
+        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +63,12 @@ pub enum ElementKind {
     /// otherwise be separated from layout.
     SemanticFlex(SemanticFlexProps),
     FocusScope(FocusScopeProps),
+    /// A layout wrapper used for frame-lagged container queries (ADR 1170).
+    ///
+    /// This is paint- and input-transparent. It exists to provide a stable, queryable bounds
+    /// snapshot for component-layer "responsive" policies that must adapt to **panel width**
+    /// rather than viewport width.
+    LayoutQueryRegion(LayoutQueryRegionProps),
     /// A transparent wrapper that gates subtree presence and interactivity.
     ///
     /// This is a mechanism-oriented primitive intended to support Radix-style authoring outcomes
@@ -559,6 +570,28 @@ impl Default for SemanticsProps {
             labelled_by_element: None,
             described_by_element: None,
             controls_element: None,
+        }
+    }
+}
+
+/// A paint- and input-transparent layout wrapper that records a queryable bounds snapshot.
+///
+/// This is a mechanism-only primitive: breakpoint tables and hysteresis policies live in the
+/// component ecosystem (ADR 0066 / ADR 1170).
+#[derive(Debug, Clone)]
+pub struct LayoutQueryRegionProps {
+    pub layout: LayoutStyle,
+    /// Optional name used for diagnostics and audit readability.
+    ///
+    /// This is not a stable identifier and must not be used for equality.
+    pub name: Option<Arc<str>>,
+}
+
+impl Default for LayoutQueryRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            name: None,
         }
     }
 }
@@ -1228,6 +1261,7 @@ impl std::fmt::Debug for ResizablePanelGroupProps {
 pub struct ImageProps {
     pub layout: LayoutStyle,
     pub image: ImageId,
+    pub fit: ViewportFit,
     pub opacity: f32,
     pub uv: Option<UvRect>,
 }
@@ -1237,6 +1271,7 @@ impl ImageProps {
         Self {
             layout: LayoutStyle::default(),
             image,
+            fit: ViewportFit::Stretch,
             opacity: 1.0,
             uv: None,
         }

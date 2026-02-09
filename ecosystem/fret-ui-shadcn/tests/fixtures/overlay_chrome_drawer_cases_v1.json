@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "drawer-demo.vp1440x240.light.surface_colors", "web_name": "drawer-demo.vp1440x240", "theme": "light", "recipe": "surface_colors" }
+  ]
+}

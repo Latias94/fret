@@ -524,7 +524,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let normalized_menu_bar = menu_bar.clone().normalized();
     let group = cx.root_id();
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let border = theme.color_required("color.panel.border");
     let bg = theme.color_required("color.panel.background");
 
@@ -739,7 +739,7 @@ fn render_menu_from_runtime<H: UiHost>(
             open
         };
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = cx.theme_snapshot();
         let enabled = menu.enabled;
 
         let bg_hover = theme.color_required("color.hover.background");
@@ -843,7 +843,7 @@ fn render_menu_from_runtime<H: UiHost>(
             if overlay_presence.present && enabled {
                 request_menu_overlay(
                     cx,
-                    &theme,
+                    theme,
                     trigger_id,
                     open.clone(),
                     overlay_root_name.clone(),
@@ -909,7 +909,7 @@ fn render_menu_from_runtime<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn request_menu_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     trigger_id: GlobalElementId,
     open: fret_runtime::Model<bool>,
     overlay_root_name: String,
@@ -1203,7 +1203,7 @@ fn request_menu_overlay<H: UiHost>(
 
 fn render_menu_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     entries: &[InWindowMenuEntry],
     open: fret_runtime::Model<bool>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
@@ -1286,7 +1286,7 @@ fn render_menu_entries<H: UiHost>(
 #[allow(clippy::too_many_arguments)]
 fn render_menu_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    theme: fret_ui::ThemeSnapshot,
     item: &InWindowMenuItem,
     open: fret_runtime::Model<bool>,
     group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,

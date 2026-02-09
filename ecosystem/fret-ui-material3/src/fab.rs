@@ -194,8 +194,6 @@ impl Fab {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
                 let extended = self.label.is_some();
@@ -219,10 +217,26 @@ impl Fab {
                         PressableInteraction::Pressed => fab_tokens::FabInteraction::Pressed,
                     });
 
-                let corner_radii = if extended {
-                    fab_tokens::extended_container_shape(&theme)
-                } else {
-                    fab_tokens::container_shape(&theme, self.size)
+                let (corner_radii, layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+
+                    let corner_radii = if extended {
+                        fab_tokens::extended_container_shape(theme)
+                    } else {
+                        fab_tokens::container_shape(theme, self.size)
+                    };
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        focus_ring_component_prefix(extended, self.variant),
+                        corner_radii,
+                    );
+
+                    (corner_radii, layout, focus_ring)
                 };
 
                 let pressable_props = PressableProps {
@@ -234,17 +248,8 @@ impl Fab {
                         test_id: self.test_id.clone(),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        focus_ring_component_prefix(extended, self.variant),
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -256,98 +261,148 @@ impl Fab {
 
                         let interaction = tokens_interaction;
 
-                        let background = fab_tokens::container_background(
-                            &theme,
-                            extended,
-                            self.variant,
-                            enabled,
-                            self.lowered,
-                        );
-                        let background = resolve_override_slot_with(
-                            self.style.container_background.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || background,
-                        );
-
-                        let icon_color = fab_tokens::icon_color(
-                            &theme,
-                            extended,
-                            self.variant,
-                            enabled,
-                            interaction,
-                        );
-                        let icon_color = resolve_override_slot_with(
-                            self.style.icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || icon_color,
-                        );
-
-                        let label_color =
-                            fab_tokens::label_color(&theme, self.variant, enabled, interaction);
-                        let label_color = resolve_override_slot_with(
-                            self.style.label_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || label_color,
-                        );
-
-                        let state_layer_target = state_layer_target_opacity(
-                            &theme,
-                            extended,
-                            self.variant,
-                            enabled,
-                            is_pressed,
-                            is_hovered,
-                            is_focused,
-                        );
-
-                        let state_layer_color = tokens_interaction
-                            .map(|s| {
-                                fab_tokens::state_layer_color(&theme, extended, self.variant, s)
-                            })
-                            .unwrap_or_else(|| {
-                                fab_tokens::state_layer_color(
-                                    &theme,
-                                    extended,
-                                    self.variant,
-                                    fab_tokens::FabInteraction::Pressed,
-                                )
-                            });
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
-
-                        let elevation = fab_tokens::container_elevation(
-                            &theme,
-                            extended,
-                            self.variant,
-                            enabled,
-                            self.lowered,
-                            interaction,
-                        );
-                        let shadow_color =
-                            fab_tokens::container_shadow_color(&theme, extended, self.variant);
-                        let surface = material_surface_style(
-                            &theme,
-                            background,
-                            elevation,
-                            Some(shadow_color),
-                            corner_radii,
-                        );
-
                         let now_frame = cx.frame_id.0;
-                        let ripple_base_opacity =
-                            fab_tokens::pressed_state_layer_opacity_for_variant(
-                                &theme,
+                        let (
+                            surface,
+                            icon_color,
+                            label_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            content_tokens,
+                            chrome_tokens,
+                            icon_size,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
+
+                            let background = fab_tokens::container_background(
+                                theme,
                                 extended,
                                 self.variant,
+                                enabled,
+                                self.lowered,
                             );
-                        let config = material_pressable_indication_config(&theme, None);
+                            let background = resolve_override_slot_with(
+                                self.style.container_background.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || background,
+                            );
+
+                            let icon_color = fab_tokens::icon_color(
+                                theme,
+                                extended,
+                                self.variant,
+                                enabled,
+                                interaction,
+                            );
+                            let icon_color = resolve_override_slot_with(
+                                self.style.icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || icon_color,
+                            );
+
+                            let label_color =
+                                fab_tokens::label_color(theme, self.variant, enabled, interaction);
+                            let label_color = resolve_override_slot_with(
+                                self.style.label_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || label_color,
+                            );
+
+                            let state_layer_target = state_layer_target_opacity(
+                                theme,
+                                extended,
+                                self.variant,
+                                enabled,
+                                is_pressed,
+                                is_hovered,
+                                is_focused,
+                            );
+
+                            let state_layer_color = tokens_interaction
+                                .map(|s| {
+                                    fab_tokens::state_layer_color(theme, extended, self.variant, s)
+                                })
+                                .unwrap_or_else(|| {
+                                    fab_tokens::state_layer_color(
+                                        theme,
+                                        extended,
+                                        self.variant,
+                                        fab_tokens::FabInteraction::Pressed,
+                                    )
+                                });
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let elevation = fab_tokens::container_elevation(
+                                theme,
+                                extended,
+                                self.variant,
+                                enabled,
+                                self.lowered,
+                                interaction,
+                            );
+                            let shadow_color =
+                                fab_tokens::container_shadow_color(theme, extended, self.variant);
+                            let surface = material_surface_style(
+                                theme,
+                                background,
+                                elevation,
+                                Some(shadow_color),
+                                corner_radii,
+                            );
+
+                            let ripple_base_opacity =
+                                fab_tokens::pressed_state_layer_opacity_for_variant(
+                                    theme,
+                                    extended,
+                                    self.variant,
+                                );
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let content_tokens = ExtendedFabContentTokens {
+                                icon_size: fab_tokens::extended_icon_size(theme),
+                                icon_label_space: fab_tokens::extended_icon_label_space(theme),
+                                label_style: theme
+                                    .text_style_by_key("md.comp.extended-fab.label-text")
+                                    .or_else(|| {
+                                        theme.text_style_by_key("md.sys.typescale.label-large")
+                                    })
+                                    .unwrap_or_else(|| fret_core::TextStyle::default()),
+                            };
+
+                            let chrome_tokens = ExtendedFabChromeTokens {
+                                height: fab_tokens::extended_container_height(theme),
+                                pad_left: fab_tokens::extended_leading_space(
+                                    theme,
+                                    self.icon.is_some(),
+                                ),
+                                pad_right: fab_tokens::extended_trailing_space(theme),
+                            };
+
+                            let icon_size = fab_tokens::icon_size(theme, self.size);
+
+                            (
+                                surface,
+                                icon_color,
+                                label_color,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                                content_tokens,
+                                chrome_tokens,
+                                icon_size,
+                            )
+                        };
                         let overlay = material_ink_layer_for_pressable(
                             cx,
                             pressable_id,
@@ -365,33 +420,30 @@ impl Fab {
                         let content = if extended {
                             material_extended_fab_content(
                                 cx,
-                                &theme,
+                                content_tokens,
                                 self.icon.as_ref(),
                                 self.label.as_ref(),
                                 icon_color,
                                 label_color,
                             )
                         } else {
-                            let icon_size = fab_tokens::icon_size(&theme, self.size);
                             material_fab_content(cx, self.icon.as_ref(), icon_size, icon_color)
                         };
 
                         let chrome = if extended {
                             material_extended_fab_chrome(
                                 cx,
-                                &theme,
+                                chrome_tokens,
                                 corner_radii,
                                 surface.background,
                                 surface.shadow,
                                 overlay,
                                 content,
-                                self.icon.is_some(),
                             )
                         } else {
                             material_fab_chrome(
                                 cx,
-                                &theme,
-                                self.size,
+                                fab_tokens::container_size(Theme::global(&*cx.app), self.size),
                                 corner_radii,
                                 surface.background,
                                 surface.shadow,
@@ -435,16 +487,13 @@ fn state_layer_target_opacity(
 
 fn material_fab_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    size: FabSize,
+    container: Px,
     corner_radii: Corners,
     background: Color,
     shadow: Option<fret_ui::element::ShadowStyle>,
     overlay: AnyElement,
     content: AnyElement,
 ) -> AnyElement {
-    let container = fab_tokens::container_size(theme, size);
-
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
     props.layout.size.min_width = Some(container);
@@ -455,19 +504,32 @@ fn material_fab_chrome<H: UiHost>(
     cx.container(props, move |_cx| vec![overlay, content])
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ExtendedFabChromeTokens {
+    height: Px,
+    pad_left: Px,
+    pad_right: Px,
+}
+
+#[derive(Debug, Clone)]
+struct ExtendedFabContentTokens {
+    icon_size: Px,
+    icon_label_space: Px,
+    label_style: fret_core::TextStyle,
+}
+
 fn material_extended_fab_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    tokens: ExtendedFabChromeTokens,
     corner_radii: Corners,
     background: Color,
     shadow: Option<fret_ui::element::ShadowStyle>,
     overlay: AnyElement,
     content: AnyElement,
-    has_icon: bool,
 ) -> AnyElement {
-    let height = fab_tokens::extended_container_height(theme);
-    let pad_left = fab_tokens::extended_leading_space(theme, has_icon);
-    let pad_right = fab_tokens::extended_trailing_space(theme);
+    let height = tokens.height;
+    let pad_left = tokens.pad_left;
+    let pad_right = tokens.pad_right;
 
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
@@ -527,14 +589,14 @@ fn material_fab_content<H: UiHost>(
 
 fn material_extended_fab_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    tokens: ExtendedFabContentTokens,
     icon: Option<&IconId>,
     label: Option<&Arc<str>>,
     icon_color: Color,
     label_color: Color,
 ) -> AnyElement {
-    let icon_size = fab_tokens::extended_icon_size(theme);
-    let icon_label_space = fab_tokens::extended_icon_label_space(theme);
+    let icon_size = tokens.icon_size;
+    let icon_label_space = tokens.icon_label_space;
 
     let mut children: Vec<AnyElement> = Vec::new();
     if let Some(icon) = icon {
@@ -547,7 +609,12 @@ fn material_extended_fab_content<H: UiHost>(
     }
 
     if let Some(label) = label {
-        children.push(material_extended_fab_label(cx, theme, label, label_color));
+        children.push(material_extended_fab_label(
+            cx,
+            tokens.label_style,
+            label,
+            label_color,
+        ));
     }
 
     let mut props = FlexProps::default();
@@ -561,15 +628,10 @@ fn material_extended_fab_content<H: UiHost>(
 
 fn material_extended_fab_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    style: fret_core::TextStyle,
     label: &Arc<str>,
     color: Color,
 ) -> AnyElement {
-    let style = theme
-        .text_style_by_key("md.comp.extended-fab.label-text")
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut props = TextProps::new(label.clone());
     props.style = Some(style);
     props.color = Some(color);

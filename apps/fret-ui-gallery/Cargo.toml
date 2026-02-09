@@ -23,6 +23,7 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["image-decode", "image-metadata"] }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
@@ -45,6 +46,7 @@ tracing-subscriber.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 winit.workspace = true
+image.workspace = true
 fret-node = { path = "../../ecosystem/fret-node" }
 
 [dev-dependencies]

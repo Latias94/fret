@@ -13,3 +13,5 @@ description = "Render data model and backend-agnostic rendering contracts for Fr
 [dependencies]
 serde.workspace = true
 
+[dev-dependencies]
+serde_json.workspace = true

@@ -1739,7 +1739,7 @@ impl LayoutNodeProfileState {
             node,
             pass_kind,
             bounds,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1800,7 +1800,7 @@ struct LayoutNodeProfileStackEntry {
     node: NodeId,
     pass_kind: crate::layout_pass::LayoutPassKind,
     bounds: Rect,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -1871,7 +1871,7 @@ impl MeasureNodeProfileState {
         self.stack.push(MeasureNodeProfileStackEntry {
             node,
             constraints,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1928,7 +1928,7 @@ impl MeasureNodeProfileState {
 struct MeasureNodeProfileStackEntry {
     node: NodeId,
     constraints: crate::layout_constraints::LayoutConstraints,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -2552,6 +2552,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_hotspot(
         &mut self,
         node: NodeId,
@@ -2587,6 +2588,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_reasons(
         &mut self,
         blob_missing: bool,
@@ -3534,9 +3536,7 @@ impl<H: UiHost> UiTree<H> {
         wrap: fret_core::TextWrap,
         max_width: Option<fret_core::Px>,
     ) -> Option<fret_core::Px> {
-        let Some(max_width) = max_width else {
-            return None;
-        };
+        let max_width = max_width?;
         Some(self.maybe_bucket_text_wrap_width(wrap, max_width))
     }
 

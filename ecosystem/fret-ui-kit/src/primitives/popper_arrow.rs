@@ -12,7 +12,7 @@
 use fret_core::{Color, Corners, Edges, Point, Px, Transform2D};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsDecoration, SizeStyle, VisualTransformProps,
+    SizeStyle, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{AnchoredPanelLayout, Side};
 use fret_ui::{ElementContext, UiHost};
@@ -155,10 +155,7 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
             );
 
             if let Some(test_id) = &test_id {
-                vec![
-                    container
-                        .attach_semantics(SemanticsDecoration::default().test_id(test_id.clone())),
-                ]
+                vec![container.test_id(test_id.clone())]
             } else {
                 vec![container]
             }

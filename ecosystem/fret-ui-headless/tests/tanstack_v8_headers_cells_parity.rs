@@ -100,6 +100,12 @@ struct HeadersCellsExpect {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct FlatColumnsExpect {
+    all: Vec<String>,
+    visible: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct ColumnNodeSnapshot {
     id: String,
     depth: usize,
@@ -152,16 +158,50 @@ struct HeaderSizingExpect {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnSizingExpect {
+    total_size: f32,
+    left_total_size: f32,
+    center_total_size: f32,
+    right_total_size: f32,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnStartExpect {
+    all: BTreeMap<String, f32>,
+    left: BTreeMap<String, Option<f32>>,
+    center: BTreeMap<String, Option<f32>>,
+    right: BTreeMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct ColumnAfterExpect {
+    all: BTreeMap<String, f32>,
+    left: BTreeMap<String, Option<f32>>,
+    center: BTreeMap<String, Option<f32>>,
+    right: BTreeMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+struct LeafColumnSizingExpect {
+    sizing: ColumnSizingExpect,
+    size: BTreeMap<String, f32>,
+    start: ColumnStartExpect,
+    after: ColumnAfterExpect,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 struct CoreModelExpect {
     schema_version: u32,
     column_tree: Vec<ColumnNodeSnapshot>,
     column_capabilities: BTreeMap<String, ColumnCapabilitySnapshot>,
+    flat_columns: FlatColumnsExpect,
     leaf_columns: LeafColumnsSnapshot,
     header_groups: Vec<HeaderGroupSnapshot>,
     left_header_groups: Vec<HeaderGroupSnapshot>,
     center_header_groups: Vec<HeaderGroupSnapshot>,
     right_header_groups: Vec<HeaderGroupSnapshot>,
     header_sizing: HeaderSizingExpect,
+    leaf_column_sizing: LeafColumnSizingExpect,
     rows: CoreRowsSnapshot,
     cells: BTreeMap<String, RowCellsSnapshot>,
 }
@@ -263,6 +303,20 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                 )
             })
             .collect(),
+        flat_columns: FlatColumnsExpect {
+            all: snapshot
+                .flat_columns
+                .all
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+            visible: snapshot
+                .flat_columns
+                .visible
+                .into_iter()
+                .map(|s| s.as_ref().to_string())
+                .collect(),
+        },
         leaf_columns: LeafColumnsSnapshot {
             all: snapshot
                 .leaf_columns
@@ -312,6 +366,80 @@ fn core_model_to_jsonish(snapshot: fret_ui_headless::table::CoreModelSnapshot) -
                 .into_iter()
                 .map(|(k, v)| (k.as_ref().to_string(), v))
                 .collect(),
+        },
+        leaf_column_sizing: LeafColumnSizingExpect {
+            sizing: ColumnSizingExpect {
+                total_size: snapshot.leaf_column_sizing.sizing.total_size,
+                left_total_size: snapshot.leaf_column_sizing.sizing.left_total_size,
+                center_total_size: snapshot.leaf_column_sizing.sizing.center_total_size,
+                right_total_size: snapshot.leaf_column_sizing.sizing.right_total_size,
+            },
+            size: snapshot
+                .leaf_column_sizing
+                .size
+                .into_iter()
+                .map(|(k, v)| (k.as_ref().to_string(), v))
+                .collect(),
+            start: ColumnStartExpect {
+                all: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .all
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                left: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .left
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                center: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .center
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                right: snapshot
+                    .leaf_column_sizing
+                    .start
+                    .right
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+            },
+            after: ColumnAfterExpect {
+                all: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .all
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                left: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .left
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                center: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .center
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+                right: snapshot
+                    .leaf_column_sizing
+                    .after
+                    .right
+                    .into_iter()
+                    .map(|(k, v)| (k.as_ref().to_string(), v))
+                    .collect(),
+            },
         },
         rows: CoreRowsSnapshot {
             core: RowModelIdSnapshot {

@@ -479,7 +479,7 @@ fn autocomplete_into_element<H: UiHost>(
         }
 
         let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme)));
-        let motion = drive_overlay_open_close_motion(cx, &theme, open_now, close_grace_frames);
+        let motion = drive_overlay_open_close_motion(cx, open_now, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: open_now,

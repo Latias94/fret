@@ -4,10 +4,12 @@
 //! likely to be misread as an editor/project asset pipeline. See ADR 0004 and ADR 0108.
 
 pub mod image_asset_state;
+pub mod image_source;
 pub mod svg_asset_state;
 pub mod ui_assets;
 
 pub use fret_asset_cache::*;
+pub use image_source::*;
 pub use ui_assets::*;
 
 #[cfg(feature = "app-integration")]

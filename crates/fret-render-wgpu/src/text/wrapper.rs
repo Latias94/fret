@@ -786,12 +786,12 @@ fn wrap_word_range(
         );
     }
 
-    if spans.is_none() && shape_once_word_wrap_enabled(end.saturating_sub(start)) {
-        if let Some(out) =
+    if spans.is_none()
+        && shape_once_word_wrap_enabled(end.saturating_sub(start))
+        && let Some(out) =
             wrap_word_range_plain_shape_once(shaper, text, base, start..end, max_width_px, scale)
-        {
-            return out;
-        }
+    {
+        return out;
     }
 
     let mut lines: Vec<ShapedLineLayout> = Vec::new();
@@ -923,7 +923,7 @@ fn wrap_word_range_plain_shape_once(
     }
 
     if full.width <= max_width_px + 0.5 {
-        return Some((vec![start..end], vec![full]));
+        return Some((vec![Range { start, end }], vec![full]));
     }
 
     let mut lines: Vec<ShapedLineLayout> = Vec::new();

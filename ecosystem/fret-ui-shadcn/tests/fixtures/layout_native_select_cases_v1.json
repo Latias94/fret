@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "native-select-demo.height",
+      "web_name": "native-select-demo",
+      "label_text": "Select status"
+    },
+    {
+      "id": "native-select-disabled.height",
+      "web_name": "native-select-disabled",
+      "label_text": "Select priority",
+      "disabled": true
+    },
+    {
+      "id": "native-select-groups.height",
+      "web_name": "native-select-groups",
+      "label_text": "Select department"
+    },
+    {
+      "id": "native-select-invalid.height",
+      "web_name": "native-select-invalid",
+      "label_text": "Select role",
+      "aria_invalid": true
+    }
+  ]
+}

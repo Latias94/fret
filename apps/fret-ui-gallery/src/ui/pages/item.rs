@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(920.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -61,16 +59,18 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let image_media = |cx: &mut ElementContext<'_, App>, label: &'static str| {
-        shadcn::ItemMedia::new([cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .bg(ColorRef::Color(theme.color_required("muted")))
                     .rounded(Radius::Sm),
                 LayoutRefinement::default().size_full(),
-            ),
-            move |cx| vec![shadcn::typography::muted(cx, label)],
-        )])
+            )
+        });
+        shadcn::ItemMedia::new([
+            cx.container(props, move |cx| vec![shadcn::typography::muted(cx, label)])
+        ])
         .variant(shadcn::ItemMediaVariant::Image)
         .into_element(cx)
     };
@@ -428,25 +428,25 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                cx.container(
+                let props = cx.with_theme(|theme| {
                     decl_style::container_props(
-                        &theme,
+                        theme,
                         ChromeRefinement::default(),
                         LayoutRefinement::default().w_full().max_w(Px(720.0)),
-                    ),
-                    |cx| {
-                        vec![item_row_icon(
-                            cx,
-                            "???? ??????",
-                            "???? ???? ??? ?????",
-                            "lucide.layout-dashboard",
-                            shadcn::ItemVariant::Default,
-                            shadcn::ItemSize::Default,
-                            true,
-                            "ui-gallery-item-rtl-row",
-                        )]
-                    },
-                )
+                    )
+                });
+                cx.container(props, |cx| {
+                    vec![item_row_icon(
+                        cx,
+                        "???? ??????",
+                        "???? ???? ??? ?????",
+                        "lucide.layout-dashboard",
+                        shadcn::ItemVariant::Default,
+                        shadcn::ItemSize::Default,
+                        true,
+                        "ui-gallery-item-rtl-row",
+                    )]
+                })
             },
         )
         .test_id("ui-gallery-item-rtl");

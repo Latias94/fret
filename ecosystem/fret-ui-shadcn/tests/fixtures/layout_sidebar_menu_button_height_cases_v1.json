@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "sidebar_01", "web_name": "sidebar-01" },
+    { "id": "sidebar_02", "web_name": "sidebar-02" },
+    { "id": "sidebar_03", "web_name": "sidebar-03" },
+    { "id": "sidebar_04", "web_name": "sidebar-04" },
+    { "id": "sidebar_05", "web_name": "sidebar-05" },
+    { "id": "sidebar_06", "web_name": "sidebar-06" },
+    { "id": "sidebar_07", "web_name": "sidebar-07" },
+    { "id": "sidebar_08", "web_name": "sidebar-08" },
+    { "id": "sidebar_09", "web_name": "sidebar-09" },
+    { "id": "sidebar_10", "web_name": "sidebar-10" },
+    { "id": "sidebar_11", "web_name": "sidebar-11" },
+    { "id": "sidebar_12", "web_name": "sidebar-12" },
+    { "id": "sidebar_14", "web_name": "sidebar-14" },
+    { "id": "sidebar_15", "web_name": "sidebar-15" },
+    { "id": "sidebar_16", "web_name": "sidebar-16" }
+  ]
+}

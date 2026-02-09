@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "empty-demo.geometry",
+      "web_name": "empty-demo",
+      "recipe": "demo"
+    },
+    {
+      "id": "empty-background.geometry",
+      "web_name": "empty-background",
+      "recipe": "background"
+    },
+    {
+      "id": "empty-outline.geometry",
+      "web_name": "empty-outline",
+      "recipe": "outline"
+    }
+  ]
+}
+

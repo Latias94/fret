@@ -145,12 +145,30 @@ use fret_ui_kit::primitives::tabs as radix_tabs;
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+type OnValueChangeWithSource =
+    Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeSource) + Send + Sync + 'static>;
+
+/// Source metadata for tab value changes.
+///
+/// This mirrors the high-level intent exposed by Base UI event details without introducing a
+/// cancellation contract yet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabsValueChangeSource {
+    /// Selection changed via roving-focus active-item movement (`activationMode=Automatic`).
+    RovingActiveChange,
+    /// Selection changed from pointer-down handling on a trigger.
+    PointerDown,
+    /// Selection changed from trigger activation (keyboard/pointer click activation phase).
+    Activate,
+}
 
 fn set_tabs_value_and_emit_change(
     host: &mut dyn fret_ui::action::UiActionHost,
     model: &Model<Option<Arc<str>>>,
     next: Option<Arc<str>>,
     on_value_change: Option<&OnValueChange>,
+    on_value_change_with_source: Option<&OnValueChangeWithSource>,
+    source: TabsValueChangeSource,
 ) {
     let mut changed = false;
     let next_for_update = next.clone();
@@ -162,7 +180,11 @@ fn set_tabs_value_and_emit_change(
     });
 
     if changed && let Some(on_value_change) = on_value_change {
-        on_value_change(next);
+        on_value_change(next.clone());
+    }
+
+    if changed && let Some(on_value_change_with_source) = on_value_change_with_source {
+        on_value_change_with_source(next, source);
     }
 }
 
@@ -315,6 +337,7 @@ pub struct TabsRoot {
     list_full_width: bool,
     content_fill_remaining: bool,
     on_value_change: Option<OnValueChange>,
+    on_value_change_with_source: Option<OnValueChangeWithSource>,
 }
 
 impl std::fmt::Debug for TabsRoot {
@@ -332,6 +355,10 @@ impl std::fmt::Debug for TabsRoot {
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
             .field("on_value_change", &self.on_value_change.is_some())
+            .field(
+                "on_value_change_with_source",
+                &self.on_value_change_with_source.is_some(),
+            )
             .finish()
     }
 }
@@ -354,6 +381,7 @@ impl TabsRoot {
             list_full_width: false,
             content_fill_remaining: false,
             on_value_change: None,
+            on_value_change_with_source: None,
         }
     }
 
@@ -375,6 +403,7 @@ impl TabsRoot {
             list_full_width: false,
             content_fill_remaining: false,
             on_value_change: None,
+            on_value_change_with_source: None,
         }
     }
 
@@ -471,6 +500,15 @@ impl TabsRoot {
         self
     }
 
+    /// Called when the selected tab value changes, with source metadata.
+    pub fn on_value_change_with_source(
+        mut self,
+        on_value_change_with_source: Option<OnValueChangeWithSource>,
+    ) -> Self {
+        self.on_value_change_with_source = on_value_change_with_source;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = self.list.clone();
         let contents = self.contents.clone();
@@ -509,6 +547,7 @@ impl TabsRoot {
             .activation_mode(self.activation_mode)
             .loop_navigation(self.loop_navigation)
             .on_value_change(self.on_value_change)
+            .on_value_change_with_source(self.on_value_change_with_source)
             .style(self.style)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
@@ -581,6 +620,7 @@ pub struct Tabs {
     list_full_width: bool,
     content_fill_remaining: bool,
     on_value_change: Option<OnValueChange>,
+    on_value_change_with_source: Option<OnValueChangeWithSource>,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -597,6 +637,10 @@ impl std::fmt::Debug for Tabs {
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
             .field("on_value_change", &self.on_value_change.is_some())
+            .field(
+                "on_value_change_with_source",
+                &self.on_value_change_with_source.is_some(),
+            )
             .finish()
     }
 }
@@ -618,6 +662,7 @@ impl Tabs {
             list_full_width: false,
             content_fill_remaining: false,
             on_value_change: None,
+            on_value_change_with_source: None,
         }
     }
 
@@ -638,6 +683,7 @@ impl Tabs {
             list_full_width: false,
             content_fill_remaining: false,
             on_value_change: None,
+            on_value_change_with_source: None,
         }
     }
 
@@ -729,6 +775,15 @@ impl Tabs {
         self
     }
 
+    /// Called when the selected tab value changes, with source metadata.
+    pub fn on_value_change_with_source(
+        mut self,
+        on_value_change_with_source: Option<OnValueChangeWithSource>,
+    ) -> Self {
+        self.on_value_change_with_source = on_value_change_with_source;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let controlled_model = self.model;
         let default_value = self.default_value;
@@ -744,6 +799,7 @@ impl Tabs {
         let list_full_width = self.list_full_width;
         let content_fill_remaining = self.content_fill_remaining;
         let on_value_change = self.on_value_change;
+        let on_value_change_with_source = self.on_value_change_with_source;
 
         let model =
             radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
@@ -854,6 +910,8 @@ impl Tabs {
                                     let model_for_roving = model.clone();
                                     let values_for_roving = values_arc.clone();
                                     let on_value_change_for_roving = on_value_change.clone();
+                                    let on_value_change_with_source_for_roving =
+                                        on_value_change_with_source.clone();
                                     cx.roving_on_active_change(Arc::new(move |host, _acx, idx| {
                                         let Some(value) = values_for_roving.get(idx).cloned() else {
                                             return;
@@ -863,6 +921,8 @@ impl Tabs {
                                             &model_for_roving,
                                             Some(value),
                                             on_value_change_for_roving.as_ref(),
+                                            on_value_change_with_source_for_roving.as_ref(),
+                                            TabsValueChangeSource::RovingActiveChange,
                                         );
                                     }));
                                 }
@@ -912,6 +972,8 @@ impl Tabs {
                                     Vec::with_capacity(disabled_flags.len());
                                 for (idx, item) in items_for_list.iter().cloned().enumerate() {
                                     let on_value_change = on_value_change.clone();
+                                    let on_value_change_with_source =
+                                        on_value_change_with_source.clone();
                                     let item_disabled =
                                         disabled_flags.get(idx).copied().unwrap_or(true);
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
@@ -937,6 +999,8 @@ impl Tabs {
                                         let value_for_pointer = value.clone();
                                         let model_for_pointer = model.clone();
                                         let on_value_change_for_pointer = on_value_change.clone();
+                                        let on_value_change_with_source_for_pointer =
+                                            on_value_change_with_source.clone();
 
                                         cx.pressable_add_on_pointer_down(Arc::new(
                                             move |host, _cx, down| {
@@ -954,6 +1018,9 @@ impl Tabs {
                                                             &model_for_pointer,
                                                             Some(value_for_pointer.clone()),
                                                             on_value_change_for_pointer.as_ref(),
+                                                            on_value_change_with_source_for_pointer
+                                                                .as_ref(),
+                                                            TabsValueChangeSource::PointerDown,
                                                         );
                                                         R::Continue
                                                     }
@@ -970,6 +1037,8 @@ impl Tabs {
                                         let value_for_activate = value.clone();
                                         let model_for_activate = model.clone();
                                         let on_value_change_for_activate = on_value_change.clone();
+                                        let on_value_change_with_source_for_activate =
+                                            on_value_change_with_source.clone();
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, _acx, _reason| {
                                                 set_tabs_value_and_emit_change(
@@ -977,6 +1046,9 @@ impl Tabs {
                                                     &model_for_activate,
                                                     Some(value_for_activate.clone()),
                                                     on_value_change_for_activate.as_ref(),
+                                                    on_value_change_with_source_for_activate
+                                                        .as_ref(),
+                                                    TabsValueChangeSource::Activate,
                                                 );
                                             },
                                         ));
@@ -1680,6 +1752,26 @@ mod tests {
     }
 
     #[test]
+    fn tabs_on_value_change_with_source_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let tabs =
+            Tabs::new(model).on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
+        assert!(tabs.on_value_change_with_source.is_some());
+    }
+
+    #[test]
+    fn tabs_root_on_value_change_with_source_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let tabs =
+            TabsRoot::new(model).on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
+        assert!(tabs.on_value_change_with_source.is_some());
+    }
+
+    #[test]
     fn tabs_on_value_change_fires_once_when_selection_changes() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1760,6 +1852,164 @@ mod tests {
         let values = changed_values.lock().unwrap_or_else(|e| e.into_inner());
         assert_eq!(values.len(), 1);
         assert_eq!(values[0].as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_source_reports_pointer_down() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeSource)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-source-pointer",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .on_value_change_with_source(Some(Arc::new(move |value, source| {
+                            changed_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push((value, source));
+                        })))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(changed[0].1, TabsValueChangeSource::PointerDown);
+    }
+
+    #[test]
+    fn tabs_on_value_change_with_source_reports_roving_active_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let changed: Arc<std::sync::Mutex<Vec<(Option<Arc<str>>, TabsValueChangeSource)>>> =
+            Arc::new(std::sync::Mutex::new(Vec::new()));
+        let changed_for_handler = changed.clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-on-value-change-with-source-roving",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::new(model.clone())
+                        .activation_mode(TabsActivationMode::Automatic)
+                        .on_value_change_with_source(Some(Arc::new(move |value, source| {
+                            changed_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push((value, source));
+                        })))
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let changed = changed.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(changed.len(), 1);
+        assert_eq!(changed[0].0.as_deref(), Some("beta"));
+        assert_eq!(changed[0].1, TabsValueChangeSource::RovingActiveChange);
     }
 
     fn render_force_mount_frame(

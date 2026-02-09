@@ -11,12 +11,12 @@ use fret_runtime::{
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
-    VisualTransformProps,
+    AnyElement, ContainerProps, Elements, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length,
+    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle,
+    StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -97,6 +97,31 @@ fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
 const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct NavigationMenuValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn navigation_menu_value_change_event(
+    state: &mut NavigationMenuValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
+        return None;
+    }
+
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
+    }
+
+    None
+}
 
 #[derive(Default)]
 struct NavigationMenuOpenChangeCallbackState {
@@ -452,6 +477,7 @@ pub struct NavigationMenuItem {
     label: Arc<str>,
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -467,8 +493,14 @@ impl NavigationMenuItem {
             label: label.into(),
             content,
             trigger: None,
+            trigger_test_id: None,
             disabled: false,
         }
+    }
+
+    pub fn trigger_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(test_id.into());
+        self
     }
 
     pub fn trigger_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
@@ -565,10 +597,17 @@ pub struct NavigationMenu {
     disabled: bool,
     viewport: bool,
     indicator: bool,
+    /// Optional override for which query region drives responsive variants (ADR 1170).
+    ///
+    /// When unset, the component uses its own internal region wrapper. When set, the caller must
+    /// ensure the id refers to a `LayoutQueryRegion`, otherwise changes will not participate in
+    /// invalidation.
+    query_region: Option<GlobalElementId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
+    on_value_change: Option<OnValueChange>,
     on_open_change_complete: Option<OnOpenChange>,
 }
 
@@ -582,6 +621,7 @@ impl std::fmt::Debug for NavigationMenu {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
+            .field("on_value_change", &self.on_value_change.is_some())
             .field(
                 "on_open_change_complete",
                 &self.on_open_change_complete.is_some(),
@@ -599,10 +639,12 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
             on_open_change_complete: None,
         }
     }
@@ -615,10 +657,12 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
             on_open_change_complete: None,
         }
     }
@@ -635,6 +679,15 @@ impl NavigationMenu {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Overrides which query region drives responsive variants (ADR 1170).
+    ///
+    /// This is primarily intended for editor-grade layouts where the navigation menu lives inside
+    /// a resizable panel/dock split and should adapt to the local container width.
+    pub fn container_query_region(mut self, region: GlobalElementId) -> Self {
+        self.query_region = Some(region);
         self
     }
 
@@ -720,6 +773,12 @@ impl NavigationMenu {
         self
     }
 
+    /// Called when selected value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
     pub fn on_open_change_complete(
         mut self,
@@ -736,10 +795,12 @@ impl NavigationMenu {
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
+        let query_region_override = self.query_region;
         let chrome = self.chrome;
         let layout = self.layout;
         let style = self.style;
         let cfg = self.config;
+        let on_value_change = self.on_value_change;
         let on_open_change_complete = self.on_open_change_complete;
 
         let value_model =
@@ -775,7 +836,6 @@ impl NavigationMenu {
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
-        let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
@@ -808,7 +868,21 @@ impl NavigationMenu {
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
-        cx.container(root_props, move |cx| {
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
+
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.navigation_menu",
+            region_props,
+            move |cx, region_id| {
+                let region_id_for_queries = query_region_override.unwrap_or(region_id);
+                vec![cx.container(root_props, move |cx| {
             let root_id = cx.root_id();
             let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
                 .config(cfg)
@@ -848,6 +922,15 @@ impl NavigationMenu {
 
             let selected: Option<Arc<str>> =
                 cx.watch_model(&value_model).layout().cloned().flatten();
+            if let Some(handler) = on_value_change.as_ref() {
+                let changed = cx.with_state(
+                    NavigationMenuValueChangeCallbackState::default,
+                    |state| navigation_menu_value_change_event(state, selected.clone()),
+                );
+                if let Some(value) = changed {
+                    handler(value);
+                }
+            }
             let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
                 root_id,
                 || Arc::new(Mutex::new(SafeCorridorState::default())),
@@ -947,7 +1030,14 @@ impl NavigationMenu {
                 &values,
             );
 
-            let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+            let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                cx,
+                region_id_for_queries,
+                Invalidation::Layout,
+                false,
+                &[(fret_ui_kit::declarative::container_queries::tailwind::MD, true)],
+                fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+            );
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -976,6 +1066,7 @@ impl NavigationMenu {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
+                        let trigger_test_id = item.trigger_test_id.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -992,6 +1083,7 @@ impl NavigationMenu {
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(label.clone()),
+                                test_id: trigger_test_id.clone(),
                                 ..Default::default()
                             };
 
@@ -1309,7 +1401,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let mut content_size = if viewport_enabled {
+                let content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,
@@ -1809,7 +1901,9 @@ impl NavigationMenu {
             }
 
             vec![list]
-        })
+        })]
+            },
+        )
     }
 }
 
@@ -1999,6 +2093,45 @@ mod tests {
         let menu = NavigationMenu::new(model).on_open_change_complete(Some(Arc::new(|_open| {})));
 
         assert!(menu.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model).on_value_change(Some(Arc::new(|_value| {})));
+
+        assert!(menu.on_value_change.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_value_change_event_emits_only_on_state_change() {
+        let mut state = NavigationMenuValueChangeCallbackState::default();
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, None);
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("components")
+        );
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(changed, None);
+
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("docs")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("docs")
+        );
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, Some(None));
     }
 
     #[test]
@@ -2717,55 +2850,80 @@ mod tests {
             );
             let mut services = FakeServices::default();
 
-            let render_frame = |ui: &mut UiTree<App>,
-                                app: &mut App,
-                                services: &mut FakeServices| {
-                bump_frame(app);
-                OverlayController::begin_frame(app, window);
-                let model_for_render = model.clone();
-                let root = fret_ui::declarative::render_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    "navigation-menu-dir",
-                    move |cx| {
-                        direction_prim::with_direction_provider(cx, dir, |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    padding: Edges {
-                                        top: Px(100.0),
-                                        right: Px(0.0),
-                                        bottom: Px(0.0),
-                                        left: Px(500.0),
+            let render_frame =
+                |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+                    bump_frame(app);
+                    OverlayController::begin_frame(app, window);
+                    let model_for_render = model.clone();
+                    let root = fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "navigation-menu-dir",
+                        move |cx| {
+                            direction_prim::with_direction_provider(cx, dir, |cx| {
+                                let theme = Theme::global(&*cx.app).clone();
+                                let region_props = LayoutQueryRegionProps {
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().w_full().min_w_0(),
+                                    ),
+                                    name: None,
+                                };
+
+                                vec![cx.layout_query_region_with_id(
+                                    region_props,
+                                    move |cx, region_id| {
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle {
+                                                    size: SizeStyle {
+                                                        width: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                padding: Edges {
+                                                    top: Px(100.0),
+                                                    right: Px(0.0),
+                                                    bottom: Px(0.0),
+                                                    left: Px(500.0),
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                let items = vec![
+                                                    NavigationMenuItem::new(
+                                                        "alpha",
+                                                        "Alpha",
+                                                        vec![cx.text("A")],
+                                                    ),
+                                                    NavigationMenuItem::new(
+                                                        "beta",
+                                                        "Beta",
+                                                        vec![cx.text("B")],
+                                                    ),
+                                                ];
+                                                vec![
+                                                    NavigationMenu::new(model_for_render.clone())
+                                                        .container_query_region(region_id)
+                                                        .items(items)
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        )]
                                     },
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    let items = vec![
-                                        NavigationMenuItem::new(
-                                            "alpha",
-                                            "Alpha",
-                                            vec![cx.text("A")],
-                                        ),
-                                        NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
-                                    ];
-                                    vec![
-                                        NavigationMenu::new(model_for_render.clone())
-                                            .items(items)
-                                            .into_element(cx),
-                                    ]
-                                },
-                            )]
-                        })
-                    },
-                );
-                ui.set_root(root);
-                OverlayController::render(ui, app, services, window, bounds);
-                ui.request_semantics_snapshot();
-                ui.layout_all(app, services, bounds, 1.0);
-            };
+                                )]
+                            })
+                        },
+                    );
+                    ui.set_root(root);
+                    OverlayController::render(ui, app, services, window, bounds);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                };
 
             // Three frames:
             // - frame 1 establishes trigger/root bounds,

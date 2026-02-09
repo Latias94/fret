@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "tooltip-demo.panel_chrome", "web_name": "tooltip-demo", "recipe": "panel_chrome" },
+
+    { "id": "tooltip-demo.light.panel_size", "web_name": "tooltip-demo", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "tooltip-demo.dark.panel_size", "web_name": "tooltip-demo", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "tooltip-demo.vp1440x240.light.panel_size", "web_name": "tooltip-demo.vp1440x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "tooltip-demo.vp1440x240.dark.panel_size", "web_name": "tooltip-demo.vp1440x240", "theme": "dark", "recipe": "demo_panel_size" },
+
+    { "id": "tooltip-demo.vp375x240.light.panel_height", "web_name": "tooltip-demo.vp375x240", "theme": "light", "recipe": "demo_panel_height" },
+    { "id": "tooltip-demo.vp375x240.dark.panel_height", "web_name": "tooltip-demo.vp375x240", "theme": "dark", "recipe": "demo_panel_height" },
+
+    { "id": "tooltip-demo.light.surface_colors", "web_name": "tooltip-demo", "theme": "light", "recipe": "surface_colors" },
+    { "id": "tooltip-demo.dark.surface_colors", "web_name": "tooltip-demo", "theme": "dark", "recipe": "surface_colors" }
+  ]
+}

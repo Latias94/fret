@@ -10,9 +10,9 @@ use fret_ui::element::{
     Length, OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::{scheduling, style as decl_style};
+use fret_ui_kit::declarative::{primary_pointer_can_hover, scheduling, style as decl_style};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -590,7 +590,8 @@ impl Popover {
                 );
             }
 
-            let open_on_hover = self.open_on_hover;
+            let pointer_can_hover = primary_pointer_can_hover(cx, Invalidation::Layout, true);
+            let open_on_hover = self.open_on_hover && pointer_can_hover;
             let hover_last_pointer =
                 open_on_hover.then(|| popover_hover_last_pointer_model(cx, popover_id));
             let hover_open_delay_frames = self.hover_open_delay_frames;
@@ -731,7 +732,7 @@ impl Popover {
                 let side = self.side;
                 let align_offset = self.align_offset;
                 let side_offset = self.side_offset;
-                let shift_cross_axis = self.shift_cross_axis.unwrap_or(false);
+                let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
                 let window_margin = self.window_margin_override.unwrap_or_else(|| {
                     theme
                         .metric_by_key("component.popover.window_margin")
@@ -1202,7 +1203,7 @@ impl PopoverContent {
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = cx.container(props, move |_cx| children);
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::Panel),
@@ -5676,13 +5677,13 @@ mod tests {
     }
 
     #[test]
-    fn popover_shift_cross_axis_default_matches_explicit_false() {
+    fn popover_shift_cross_axis_defaults_to_true_and_can_be_disabled() {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
         let a = Popover::new(open.clone());
         let b = Popover::new(open).shift_cross_axis(false);
-        assert_eq!(a.shift_cross_axis.unwrap_or(false), false);
-        assert_eq!(b.shift_cross_axis.unwrap_or(false), false);
+        assert_eq!(a.shift_cross_axis.unwrap_or(true), true);
+        assert_eq!(b.shift_cross_axis.unwrap_or(true), false);
     }
 
     #[test]

@@ -5,6 +5,14 @@ description: Docking, multi-window, and viewport integration in Fret (editor-gra
 
 # Fret docking and viewports
 
+## When to use
+
+Use this skill when:
+
+- Working on DockSpace/tabs/splits/tear-off windows.
+- Debugging drag arbitration (dock drag vs viewport capture vs overlays).
+- Ensuring multi-window correctness (tear-off and re-dock) and DPI/metrics issues.
+
 Docking is a “policy-heavy” editor feature. In Fret it is intentionally split:
 
 - **Core model/ops (stable):** `crates/fret-core` (IDs, docking ops, persistence contracts)
@@ -17,6 +25,10 @@ Docking is a “policy-heavy” editor feature. In Fret it is intentionally spli
 - Multi-window correctness (tear-off and re-dock).
 - Reproducible diagnostics (scripts + bundles) for regressions.
 
+## Quick start (run the conformance harness)
+
+- `cargo run -p fretboard -- dev native --bin docking_arbitration_demo`
+
 ## Code entry points
 
 - Docking UI (policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
@@ -25,7 +37,7 @@ Docking is a “policy-heavy” editor feature. In Fret it is intentionally spli
   - `apps/fret-examples/src/docking_demo.rs`
   - `apps/fret-examples/src/docking_arbitration_demo.rs`
 
-## Debugging workflow (recommended)
+## Workflow
 
 - Use scripted repros + bundles:
   - `tools/diag-scripts/docking-demo-drag-indicators.json`
@@ -35,6 +47,21 @@ Docking is a “policy-heavy” editor feature. In Fret it is intentionally spli
 
 See: `fret-diag-workflow`.
 
+## Evidence anchors
+
+- Docking ops + persistence: `docs/adr/0013-docking-ops-and-persistence.md`
+- Multi-window lifecycle + DPI: `docs/adr/0017-multi-window-display-and-dpi.md`
+- Docking UI/policy: `ecosystem/fret-docking/src/dock/space.rs`
+- Conformance demos:
+  - `apps/fret-examples/src/docking_demo.rs`
+  - `apps/fret-examples/src/docking_arbitration_demo.rs`
+
+## Common pitfalls
+
+- Fixing docking behavior by adding knobs to `crates/fret-ui` (usually the wrong layer; prefer `ecosystem/fret-docking` policy).
+- No scripted repro for drag arbitration (regressions become “human-only” and hard to review).
+- Unstable IDs for tabs/panes (state and persistence become flaky across reorder/tear-off).
+
 ## References
 
 - Docking ops + persistence: `docs/adr/0013-docking-ops-and-persistence.md`
@@ -42,3 +69,8 @@ See: `fret-diag-workflow`.
 - Docking arbitration checklist: `docs/docking-arbitration-checklist.md`
 - Docking multi-window parity tracker: `docs/workstreams/docking-multiwindow-imgui-parity.md`
 - Viewport embedding contracts: `docs/viewport-panels.md`, `docs/adr/0007-viewport-surfaces.md`
+
+## Related skills
+
+- `fret-diag-workflow` (scripted repros + bundles)
+- `fret-overlays-and-focus` (modal barriers and overlay interference with drags)

@@ -1298,6 +1298,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::SemanticFlex(p) => ElementInstance::SemanticFlex(p),
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
+        ElementKind::LayoutQueryRegion(p) => ElementInstance::LayoutQueryRegion(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
@@ -1732,7 +1733,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let reconcile_start = std::time::Instant::now();
+        let reconcile_start = fret_core::time::Instant::now();
 
         let prev_items_len = props.visible_items.len();
         let next_items_len = desired_items.len();

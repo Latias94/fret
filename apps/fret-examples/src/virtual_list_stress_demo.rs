@@ -12,7 +12,7 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     VirtualListOptions,
 };
-use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
+use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -309,7 +309,7 @@ impl WinitAppDriver for VirtualListStressDriver {
                 cx.observe_model(&state.reversed, Invalidation::Layout);
                 cx.observe_model(&state.items_revision, Invalidation::Layout);
 
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = cx.theme_snapshot();
                 let padding = theme.metric_required("metric.padding.md");
 
                 let mut root_layout = LayoutStyle::default();

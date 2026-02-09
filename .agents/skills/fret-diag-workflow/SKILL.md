@@ -1,17 +1,32 @@
 ---
 name: fret-diag-workflow
-description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted UI automation, diagnostics bundles, screenshots, triage/compare, and turning bugs into stable repro gates. Use when authoring or running `tools/diag-scripts/*.json`, packaging bundles for sharing, or analyzing invalidation/perf regressions."
+description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted interaction automation, diagnostics bundles, screenshots, and triage/compare. Use when authoring or running `tools/diag-scripts/*.json`, turning a flaky UI bug into a stable repro gate, or when you need shareable artifacts for AI/humans."
 ---
 
 # Fret diag workflow
 
-If your primary goal is to quantify performance (baselines/gates/logs), use `fret-perf-workflow` instead.
+## When to use
+
+Use this skill when:
+
+- A UI bug is hard to reproduce, flaky, or requires “human timing”.
+- You need a **shareable artifact** (bundle + optional screenshots) for triage.
+- You want to convert a bug into a **CI-friendly gate** (script + assertions).
+
+If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
 If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
 
 ## Quick start
 
 - Run a script and launch the target app (recommended for reproducibility):
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --env FRET_DIAG=1 --env FRET_DIAG_SCREENSHOTS=1 --pack --launch -- cargo run -p fret-ui-gallery --release`
+  - `pwsh -NoProfile -Command "$env:FRET_DIAG=1; $env:FRET_DIAG_SCREENSHOTS=1; cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release"`
+
+- Web runner (WASM): export bundles via devtools-ws (headless-friendly):
+  - Start the loopback WS hub (prints the token): `cargo run -p fret-devtools-ws`
+  - Serve the WASM app: `cd apps/fret-ui-gallery-web && trunk serve --port 8080`
+  - Open (note the query params): `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+  - Run the script and materialize `.fret/diag/exports/<timestamp>/bundle.json`:
+    - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --token <token>`
 
 ## Workflow
 
@@ -29,6 +44,9 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
    - Full env reference: `docs/ui-diagnostics-and-scripted-tests.md`
 4. Run the script via `fretboard` and collect artifacts.
    - Prefer `fretboard diag run ... --launch -- <cmd...>` so env vars are applied consistently.
+   - Web runner note: `fretboard diag run` uses the filesystem-trigger transport; for web/WASM use
+     devtools-ws + `fret-diag-export` (or `apps/fret-devtools`) to export bundles under
+     `.fret/diag/exports/`.
 5. Turn the repro into a gate (stable assertions first).
    - Prefer geometry/semantics invariants over pixel diffs when possible.
    - If you need pixel diffs, add `capture_screenshot` steps and use `--check-pixels-changed <test_id>`.
@@ -80,3 +98,33 @@ cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
 - When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
   rather than retrying `click` with arbitrary sleeps.
+
+## Evidence anchors
+
+Where the code lives:
+
+- Doc: `docs/ui-diagnostics-and-scripted-tests.md`
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- CLI entry: `apps/fretboard/src/diag.rs`
+- Headless exporter (devtools-ws -> `.fret/diag/exports/`): `apps/fret-diag-export`
+- Loopback WS hub: `apps/fret-devtools-ws`
+- DevTools GUI (optional): `apps/fret-devtools`
+- Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
+- Triage/compare engine: `crates/fret-diag`
+
+## Common pitfalls
+
+- Scripts that call `capture_screenshot` without `FRET_DIAG_SCREENSHOTS=1`.
+- Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
+- Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
+- Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.
+- Web runner:
+  - Forgetting `fret_devtools_ws` / `fret_devtools_token` query params (no WS bridge, no scripts/bundles).
+  - Assuming the web app can write `target/fret-diag/...` (it cannot; you must export via WS).
+  - Running a script that never calls `capture_bundle` (nothing to export).
+
+## Related skills
+
+- `fret-shadcn-source-alignment` (turn Radix/shadcn mismatches into tests + scripts)
+- `fret-overlays-and-focus` (overlay/dismiss/focus issues)
+- `fret-perf-workflow` (perf baselines/gates)

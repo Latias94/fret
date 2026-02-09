@@ -149,6 +149,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
     },
     ResetDiagnostics,
     MovePointer {
@@ -223,6 +225,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
         #[serde(default = "default_click_stable_frames")]
         stable_frames: u32,
         #[serde(default = "default_click_stable_max_move_px")]
@@ -307,7 +311,11 @@ pub enum UiActionStepV2 {
 impl From<UiActionStepV1> for UiActionStepV2 {
     fn from(value: UiActionStepV1) -> Self {
         match value {
-            UiActionStepV1::Click { target, button } => Self::Click { target, button },
+            UiActionStepV1::Click { target, button } => Self::Click {
+                target,
+                button,
+                modifiers: None,
+            },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
             UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
             UiActionStepV1::DragPointer {
@@ -403,18 +411,13 @@ fn default_slider_epsilon() -> f32 {
     0.5
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
+    #[default]
     Left,
     Right,
     Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 impl UiMouseButtonV1 {

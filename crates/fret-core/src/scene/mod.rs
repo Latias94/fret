@@ -1,5 +1,5 @@
 use crate::{
-    Px, SvgFit,
+    Px, SvgFit, ViewportFit,
     geometry::{Corners, Edges, Point, Rect, Transform2D},
     ids::{ImageId, PathId, RenderTargetId, SvgId, TextBlobId},
 };
@@ -7,10 +7,12 @@ use serde::{Deserialize, Serialize};
 use slotmap::Key;
 
 mod fingerprint;
+mod image_object_fit;
 mod replay;
 mod validate;
 
 use fingerprint::mix_scene_op;
+pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -325,6 +327,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         image: ImageId,
+        fit: ViewportFit,
         opacity: f32,
     },
 

@@ -208,6 +208,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
             order: DrawOrder(2),
             rect: image_rect(left),
             image,
+            fit: fret_core::ViewportFit::Stretch,
             opacity: 1.0,
         });
     }
@@ -216,6 +217,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
             order: DrawOrder(2),
             rect: image_rect(right),
             image,
+            fit: fret_core::ViewportFit::Stretch,
             opacity: 1.0,
         });
     }

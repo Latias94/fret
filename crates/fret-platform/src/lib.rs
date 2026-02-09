@@ -23,3 +23,22 @@ pub use file_dialog::{
     FileDialogError, FileDialogErrorKind, FileDialogProvider, FileDialogReadLimits,
 };
 pub use open_url::{OpenUrl, OpenUrlError, OpenUrlErrorKind};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn facade_reexports_portable_platform_surface() {
+        let _ = std::mem::size_of::<ClipboardError>();
+        let _ = std::mem::size_of::<FileDialogError>();
+        let _ = std::mem::size_of::<OpenUrlError>();
+
+        let limits = ExternalDropReadLimits {
+            max_total_bytes: 1,
+            max_file_bytes: 2,
+            max_files: 3,
+        };
+        let _: FileDialogReadLimits = limits;
+    }
+}

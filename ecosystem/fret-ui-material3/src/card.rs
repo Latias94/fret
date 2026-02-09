@@ -148,8 +148,6 @@ impl Card {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let interactive = self.on_activate.is_some();
                 let enabled = interactive && !self.disabled;
@@ -159,7 +157,18 @@ impl Card {
                 }
 
                 let now_frame = cx.frame_id.0;
-                let corner_radii = card_tokens::container_shape(&theme, self.variant);
+                let (corner_radii, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = card_tokens::container_shape(theme, self.variant);
+                    let focus_ring = enabled.then(|| {
+                        material_focus_ring_for_component(
+                            theme,
+                            card_tokens::component_prefix(self.variant),
+                            corner_radii,
+                        )
+                    });
+                    (corner_radii, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -175,13 +184,7 @@ impl Card {
                         l.overflow = Overflow::Visible;
                         l
                     },
-                    focus_ring: enabled.then(|| {
-                        material_focus_ring_for_component(
-                            &theme,
-                            card_tokens::component_prefix(self.variant),
-                            corner_radii,
-                        )
-                    }),
+                    focus_ring,
                     focus_ring_bounds: None,
                 };
 
@@ -201,58 +204,93 @@ impl Card {
                         let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
                         let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                        let container_bg =
-                            card_tokens::container_background(&theme, self.variant, !self.disabled);
-                        let container_bg = resolve_override_slot_with(
-                            self.style.container_background.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || container_bg,
-                        );
+                        let (
+                            container,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let elevation = card_tokens::container_elevation(
-                            &theme,
-                            self.variant,
-                            !self.disabled,
-                            interaction,
-                        );
-                        let shadow_color =
-                            card_tokens::container_shadow_color(&theme, self.variant);
-                        let surface = material_surface_style(
-                            &theme,
-                            container_bg,
-                            elevation,
-                            Some(shadow_color),
-                            corner_radii,
-                        );
+                            let container_bg = card_tokens::container_background(
+                                theme,
+                                self.variant,
+                                !self.disabled,
+                            );
+                            let container_bg = resolve_override_slot_with(
+                                self.style.container_background.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || container_bg,
+                            );
 
-                        let outline =
-                            card_tokens::outline(&theme, self.variant, !self.disabled, interaction);
-                        let outline = resolve_override_slot_opt_with(
-                            self.style.outline_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || outline.map(|o| o.color),
-                        )
-                        .map(|color| card_tokens::CardOutline {
-                            color,
-                            width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
-                        });
+                            let elevation = card_tokens::container_elevation(
+                                theme,
+                                self.variant,
+                                !self.disabled,
+                                interaction,
+                            );
+                            let shadow_color =
+                                card_tokens::container_shadow_color(theme, self.variant);
+                            let surface = material_surface_style(
+                                theme,
+                                container_bg,
+                                elevation,
+                                Some(shadow_color),
+                                corner_radii,
+                            );
 
-                        let state_layer_color =
-                            card_tokens::state_layer_color(&theme, self.variant, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                            let outline = card_tokens::outline(
+                                theme,
+                                self.variant,
+                                !self.disabled,
+                                interaction,
+                            );
+                            let outline = resolve_override_slot_opt_with(
+                                self.style.outline_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || outline.map(|o| o.color),
+                            )
+                            .map(|color| card_tokens::CardOutline {
+                                color,
+                                width: outline.map(|o| o.width).unwrap_or(Px(0.0)),
+                            });
 
-                        let state_layer_target =
-                            card_tokens::state_layer_opacity(&theme, self.variant, interaction);
-                        let ripple_base_opacity =
-                            card_tokens::pressed_state_layer_opacity(&theme, self.variant);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let state_layer_color =
+                                card_tokens::state_layer_color(theme, self.variant, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let state_layer_target =
+                                card_tokens::state_layer_opacity(theme, self.variant, interaction);
+                            let ripple_base_opacity =
+                                card_tokens::pressed_state_layer_opacity(theme, self.variant);
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let mut container = ContainerProps::default();
+                            container.background = Some(surface.background);
+                            container.shadow = surface.shadow;
+                            container.corner_radii = corner_radii;
+                            container.layout.overflow = Overflow::Clip;
+                            if let Some(outline) = outline {
+                                container.border = Edges::all(outline.width);
+                                container.border_color = Some(outline.color);
+                            }
+
+                            (
+                                container,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                            )
+                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -267,16 +305,6 @@ impl Card {
                             config,
                             false,
                         );
-
-                        let mut container = ContainerProps::default();
-                        container.background = Some(surface.background);
-                        container.shadow = surface.shadow;
-                        container.corner_radii = corner_radii;
-                        container.layout.overflow = Overflow::Clip;
-                        if let Some(outline) = outline {
-                            container.border = Edges::all(outline.width);
-                            container.border_color = Some(outline.color);
-                        }
 
                         let children: Vec<AnyElement> =
                             std::iter::once(overlay).chain(content(cx)).collect();

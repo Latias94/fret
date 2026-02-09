@@ -288,12 +288,12 @@ impl<H: UiHost> Widget<H> for BoundResizablePanelGroup {
             }
         }
 
-        let theme = Theme::global(&*cx.app).clone();
+        let theme = Theme::global(&*cx.app).snapshot();
         if self.style.handle_color.a <= 0.0 {
             self.style.handle_color = theme
                 .color_by_key("border")
                 .or_else(|| theme.color_by_key("input"))
-                .unwrap_or(theme.snapshot().colors.panel_border);
+                .unwrap_or(theme.colors.panel_border);
         }
 
         let handle = ResizeHandle {

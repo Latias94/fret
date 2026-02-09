@@ -151,8 +151,6 @@ pub(super) fn preview_context_menu(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -175,17 +173,17 @@ pub(super) fn preview_context_menu(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -235,13 +233,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Basic",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-basic"),
-            ),
-        )
+        section_card(cx, "Basic", menu.test_id("ui-gallery-context-menu-basic"))
     };
 
     let submenu = {
@@ -288,9 +280,7 @@ pub(super) fn preview_context_menu(
         section_card(
             cx,
             "Submenu",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-submenu"),
-            ),
+            menu.test_id("ui-gallery-context-menu-submenu"),
         )
     };
 
@@ -329,9 +319,7 @@ pub(super) fn preview_context_menu(
         section_card(
             cx,
             "Shortcuts",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-shortcuts"),
-            ),
+            menu.test_id("ui-gallery-context-menu-shortcuts"),
         )
     };
 
@@ -375,13 +363,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Groups",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-groups"),
-            ),
-        )
+        section_card(cx, "Groups", menu.test_id("ui-gallery-context-menu-groups"))
     };
 
     let icons = {
@@ -423,13 +405,7 @@ pub(super) fn preview_context_menu(
                 ]
             },
         );
-        section_card(
-            cx,
-            "Icons",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-icons"),
-            ),
-        )
+        section_card(cx, "Icons", menu.test_id("ui-gallery-context-menu-icons"))
     };
 
     let checkboxes = {
@@ -473,15 +449,7 @@ pub(super) fn preview_context_menu(
         let checkboxes_content = stack::vstack(
             cx,
             stack::VStackProps::default().gap(Space::N2).items_start(),
-            |_cx| {
-                vec![
-                    menu.attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-context-menu-checkboxes"),
-                    ),
-                    state,
-                ]
-            },
+            |_cx| vec![menu.test_id("ui-gallery-context-menu-checkboxes"), state],
         );
         section_card(cx, "Checkboxes", checkboxes_content)
     };
@@ -519,14 +487,7 @@ pub(super) fn preview_context_menu(
         let radio_content = stack::vstack(
             cx,
             stack::VStackProps::default().gap(Space::N2).items_start(),
-            |_cx| {
-                vec![
-                    menu.attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-context-menu-radio"),
-                    ),
-                    selected_text,
-                ]
-            },
+            |_cx| vec![menu.test_id("ui-gallery-context-menu-radio"), selected_text],
         );
         section_card(cx, "Radio", radio_content)
     };
@@ -559,9 +520,7 @@ pub(super) fn preview_context_menu(
         section_card(
             cx,
             "Destructive",
-            menu.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-destructive"),
-            ),
+            menu.test_id("ui-gallery-context-menu-destructive"),
         )
     };
 
@@ -606,9 +565,7 @@ pub(super) fn preview_context_menu(
         section_card(
             cx,
             "RTL",
-            rtl_content.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-context-menu-rtl"),
-            ),
+            rtl_content.test_id("ui-gallery-context-menu-rtl"),
         )
     };
 
@@ -645,9 +602,7 @@ pub(super) fn preview_context_menu(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-context-menu-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-context-menu-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

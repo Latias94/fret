@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "perf_baseline_seed_policy",
+  "default_seed": "max",
+  "rules": [
+    {
+      "scope": "extras-marquee-steady",
+      "metric": "top_total_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "extras-marquee-steady",
+      "metric": "top_layout_time_us",
+      "seed": "p90"
+    },
+    {
+      "scope": "tools/diag-scripts/extras-marquee-steady.json",
+      "metric": "top_layout_engine_solve_time_us",
+      "seed": "p95"
+    }
+  ]
+}
+

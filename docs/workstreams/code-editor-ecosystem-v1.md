@@ -1,7 +1,17 @@
 # Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-08
+Last updated: 2026-02-09
+
+Recent changes (2026-02-09):
+
+- Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0200).
+- Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0200).
+- UI Gallery: expose the fold fixture span in `app_snapshot` and add a deterministic “Caret: in fold” fixture control for diag scripts.
+- Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0195).
+- Diagnostics: gate “no stale lines” scroll stability by asserting windowed row window changes repaint (scene fingerprint updates when `visible_start` changes).
+- Code editor: allow folds/inlays to remain visible under inline preedit when soft wrap is off (unwrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
+- Code editor: add an opt-in to allow folds/inlays to remain visible under inline preedit when soft wrap is on (wrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
 
 Recent changes (2026-02-08):
 
@@ -230,6 +240,93 @@ editor-grade workflows, while keeping the UX surface intentionally small.
 If the code editor surfaces can reliably power a minimal Markdown source editor, then the ecosystem
 contracts are likely “good enough” for broader editor-grade use cases (logs, diffs, config editors,
 note-taking) without forcing a `fret-ui` rewrite.
+
+### Milestone breakdown (v0)
+
+The downstream milestone is intentionally split into smaller, gateable increments so we can ship
+contract confidence without waiting for a full “editor product”.
+
+#### M10.1 — Source editor shell + interaction control
+
+Exit criteria:
+
+- A UI Gallery page (`markdown_editor_source`) exists and is stable enough for diagnostics.
+- The editor can be configured as:
+  - editable,
+  - read-only (select/copy/nav, but no buffer mutations),
+  - disabled (no focus/IME routing, no selection updates).
+
+Evidence:
+
+- `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorInteractionOptions`, `CodeEditorState::set_interaction`)
+- `ecosystem/fret-code-editor/src/editor/input/mod.rs` (edit/undo/redo gating)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MARKDOWN_EDITOR_SOURCE`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`)
+- `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-markdown-editor-mode-disabled`)
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-inject-preedit-baseline.json`
+- `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits`)
+
+#### M10.2 — Soft-wrap + selection/navigation consistency
+
+Exit criteria:
+
+- Soft-wrap can be toggled without destabilizing caret/selection/buffer revision.
+- Word boundaries and double-click selection match ADR 0194 baselines in source mode.
+- Selection remains stable across wrap boundaries while editing (not only on toggles).
+
+Diagnostics gates (baseline set; add more as needed):
+
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`
+- Fold/inlay decoration sanity (ADR 0200; present under wrap; suppressed under inline preedit):
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json` (captures A/B/C for toggle-stability)
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json`
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json` (captures A/B/C for toggle-stability)
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json`
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json`
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json`
+
+#### M10.3 — IME bridge seam validation (native + web)
+
+Exit criteria:
+
+- Native IME:
+  - inline preedit renders without breaking buffer↔display mapping,
+  - cursor-area feedback is best-effort correct for editor-grade surfaces.
+- Web/WASM IME:
+  - the runner-owned bridge remains attachable to the focused editor region (ADR 0195),
+  - we have at least one non-flaky diagnostics baseline that detects “IME not attached” regressions.
+
+Notes:
+
+- The web IME baseline gate must be stable; if it cannot be made stable, it stays as a manual harness.
+
+Diagnostics gates (baseline set; add more as needed):
+
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`
+- Web/WASM attach smoke (ADR 0195):
+  - `tools/diag-scripts/ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json` (run via DevTools WS transport)
+  - Gate: `--check-ui-gallery-web-ime-bridge-enabled`
+
+#### M10.4 — Diag gates as the definition-of-done
+
+Exit criteria:
+
+- The Markdown source editor v0 contract is continuously regression-tested via `fretboard diag` gates.
+- Each “hard-to-change” behavior claimed by this milestone has:
+  - an ADR reference (normative),
+  - a diagnostic script (repro),
+  - and a gate check (assertion) in the suite runner.
 
 ## Architectural Principles (performance-first, Fret-aligned)
 
@@ -613,13 +710,25 @@ Evidence anchors:
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
   - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
   - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
-- [ ] Fold regions + placeholders without breaking caret/selection.
-- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+- [~] Fold regions + placeholders without breaking caret/selection.
+  - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
+  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+- [~] Inlays (injected display fragments) without mutating the underlying buffer.
+  - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
+  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+- [~] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
+  - Implemented (staged): inline preedit can be modeled as a view-layer fragment source (opt-in composed path).
+  - In progress: make semantics export (a11y) consume the same composed mapping.
+  - Remaining DOD: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
 
 ### 9) Retained host / composable rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+  - Default path: keep the code editor paint-driven (stable tree) unless we need row-level composability.
+  - If adopted: prioritize fixed/known-height first; variable-height row measurement is deferred.
 
 ---
 

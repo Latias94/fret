@@ -4,8 +4,6 @@ pub(super) fn preview_data_table(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -28,17 +26,17 @@ pub(super) fn preview_data_table(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(900.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -77,9 +75,7 @@ pub(super) fn preview_data_table(
         section_card(
             cx,
             "Basic Table",
-            live_stack.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-data-table-basic"),
-            ),
+            live_stack.test_id("ui-gallery-data-table-basic"),
         )
     };
 
@@ -158,9 +154,7 @@ pub(super) fn preview_data_table(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-data-table-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-data-table-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

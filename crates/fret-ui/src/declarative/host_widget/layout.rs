@@ -53,6 +53,7 @@ impl ElementHostWidget {
             ElementInstance::Semantics(_) => false,
             ElementInstance::SemanticFlex(_) => false,
             ElementInstance::FocusScope(_) => false,
+            ElementInstance::LayoutQueryRegion(_) => false,
             ElementInstance::InteractivityGate(_) => false,
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
@@ -75,6 +76,7 @@ impl ElementHostWidget {
             ElementInstance::Semantics(_) => true,
             ElementInstance::SemanticFlex(_) => true,
             ElementInstance::FocusScope(_) => true,
+            ElementInstance::LayoutQueryRegion(_) => true,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::EffectLayer(_) => true,
@@ -123,6 +125,7 @@ impl ElementHostWidget {
             ElementInstance::Semantics(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::SemanticFlex(p) => matches!(p.flex.layout.overflow, Overflow::Clip),
             ElementInstance::FocusScope(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::LayoutQueryRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -318,6 +321,17 @@ impl ElementHostWidget {
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::FocusScope(props) => {
+                if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
+                    cx,
+                    window,
+                    Rect::new(cx.bounds.origin, cx.available),
+                ) {
+                    return size;
+                }
+
+                self.layout_positioned_container_impl(cx, window, props.layout)
+            }
+            ElementInstance::LayoutQueryRegion(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
                     window,

@@ -22,7 +22,7 @@ use fret_runtime::{
 };
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::{PressableProps, SemanticsDecoration};
+use fret_ui::element::PressableProps;
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -510,8 +510,7 @@ pub fn router_outlet_with_test_id<R>(
 where
     R: Clone + 'static,
 {
-    router_outlet(cx, snapshot, render)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    router_outlet(cx, snapshot, render).test_id(test_id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -553,7 +552,7 @@ where
     ) -> AnyElement {
         let elem = router_outlet(cx, &self.snapshot, render);
         match self.test_id {
-            Some(test_id) => elem.attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+            Some(test_id) => elem.test_id(test_id),
             None => elem,
         }
     }

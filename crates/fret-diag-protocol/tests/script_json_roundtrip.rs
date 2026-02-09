@@ -46,6 +46,90 @@ fn script_v2_roundtrip_chart_torture_pan_zoom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_true() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_false() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_multi_sort_shift_click() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_visibility_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_global_filter() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_filter() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_faceted_filter() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_reset_filters() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_sticky_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json"
+    ));
+}
+
+#[test]
 fn transport_message_roundtrip_envelope() {
     let message_1 = DiagTransportMessageV1 {
         schema_version: 1,
@@ -61,4 +145,21 @@ fn transport_message_roundtrip_envelope() {
     let value_2 = serde_json::to_value(&message_2).expect("message must serialize again");
 
     assert_eq!(value_1, value_2);
+}
+
+#[test]
+fn script_v2_roundtrip_click_modifiers() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "table_header_name" },
+      "button": "left",
+      "modifiers": { "shift": true }
+    }
+  ]
+}"#,
+    );
 }

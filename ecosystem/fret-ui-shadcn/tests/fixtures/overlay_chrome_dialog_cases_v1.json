@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "dialog-demo.panel_chrome", "web_name": "dialog-demo", "recipe": "panel_chrome" },
+    { "id": "dialog-demo.surface_colors", "web_name": "dialog-demo", "recipe": "surface_colors_default" },
+    { "id": "dialog-demo.dark.surface_colors", "web_name": "dialog-demo", "theme": "dark", "recipe": "surface_colors_dark" }
+  ]
+}

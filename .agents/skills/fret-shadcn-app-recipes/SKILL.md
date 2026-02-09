@@ -10,6 +10,14 @@ This skill is organized as:
 - **Mind models** (cross-component rules): reusable concepts that prevent repetitive mistakes.
 - **Recipes** (component families / app surfaces): concrete “build this UI” guides that *reference* the mind models.
 
+## When to use
+
+Use this skill when:
+
+- Building app UI using `fret-ui-shadcn` and you want the “golden path” patterns.
+- Translating shadcn/Tailwind mental models into Fret (`ui()` patches + tokens).
+- You want stable `test_id` + scripted repro gates as part of normal component work.
+
 ## Quick start (authoring)
 
 - Prefer `use fret_ui_shadcn::prelude::*;` in app code to stay on the shadcn-aligned golden path.
@@ -22,6 +30,14 @@ This skill is organized as:
   - `fret-diag-workflow`
 
 - If the work includes async data + derived state + typed message flow, pair with `fret-app-architecture-and-effects`.
+
+## Workflow
+
+1. Pick the right layer (mechanism vs policy vs shadcn recipe).
+2. Start from an existing recipe/mind model and adapt minimally.
+3. Add stable `test_id` targets for anything interactive.
+4. Add a `tools/diag-scripts/*.json` repro for state machines (menus/select/dialogs/combobox).
+5. Add a small invariant test for the most fragile geometry/semantics.
 
 ## Mind models
 
@@ -76,3 +92,22 @@ For any interactive surface (menus/select/dialogs/forms):
 1. Add stable `test_id` targets at the component/recipe layer.
 2. Add a `tools/diag-scripts/<scenario>.json` repro (click/keys/wait_until + capture_bundle; screenshot optional).
 3. Add a small Rust invariant test for the most fragile geometry/semantics (avoid pixel diffs unless needed).
+
+## Evidence anchors (where to look)
+
+- shadcn recipes: `ecosystem/fret-ui-shadcn/src/`
+- kit primitives/policy: `ecosystem/fret-ui-kit/src/primitives/`
+- ui builder surface: `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- parity harness: `ecosystem/fret-ui-shadcn/tests/`
+- diag scripts: `tools/diag-scripts/`
+
+## Common pitfalls
+
+- Mixing “parity work” with “new design work” without any regression protection (add a script or invariant test).
+- Putting interaction policy into runtime instead of `fret-ui-kit`/`fret-ui-shadcn`.
+
+## Related skills
+
+- `fret-shadcn-source-alignment` (upstream behavior alignment + tests)
+- `fret-diag-workflow` (scripted repros + bundles)
+- `fret-ui-ux-guidelines` (make it look good)

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "hover-card-demo.panel_chrome", "web_name": "hover-card-demo", "recipe": "panel_chrome" },
+
+    { "id": "hover-card-demo.light.panel_size", "web_name": "hover-card-demo", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "hover-card-demo.dark.panel_size", "web_name": "hover-card-demo", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "hover-card-demo.vp1440x240.light.panel_size", "web_name": "hover-card-demo.vp1440x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "hover-card-demo.vp1440x240.dark.panel_size", "web_name": "hover-card-demo.vp1440x240", "theme": "dark", "recipe": "demo_panel_size" },
+
+    { "id": "hover-card-demo.light.surface_colors", "web_name": "hover-card-demo", "theme": "light", "recipe": "surface_colors" },
+    { "id": "hover-card-demo.dark.surface_colors", "web_name": "hover-card-demo", "theme": "dark", "recipe": "surface_colors" }
+  ]
+}

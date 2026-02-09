@@ -5,7 +5,21 @@ description: Align Fret’s shadcn/Radix-inspired components with upstream sourc
 
 # Shadcn / Radix source alignment
 
-## Map the bug to the right layer
+## When to use
+
+- A shadcn/Radix-inspired component “doesn’t behave like upstream” (dismiss/focus/keyboard nav/placement).
+- You need to decide whether a fix belongs in `crates/fret-ui` vs `ecosystem/fret-ui-kit` vs `ecosystem/fret-ui-shadcn`.
+- You fixed a mismatch once and want to lock it with tests and/or `fretboard diag` scripted repros.
+
+## Quick start
+
+1. Identify the layer (mechanism vs policy vs recipe) before touching code.
+2. Compare against upstream docs/source (shadcn for composition + sizing; Radix for semantics).
+3. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
+
+## Workflow
+
+### 1) Map the mismatch to the right layer
 
 - `crates/fret-ui`: mechanisms/contracts (tree/layout/semantics/focus/overlay roots).
 - `ecosystem/fret-ui-kit`: headless policy + reusable infra (roving focus, typeahead, overlay policy).
@@ -14,7 +28,7 @@ description: Align Fret’s shadcn/Radix-inspired components with upstream sourc
 If the mismatch is “interaction policy” (dismiss rules, focus restore, hover intent, menu navigation),
 it almost never belongs in `crates/fret-ui`.
 
-## Find the upstream reference (source of truth)
+### 2) Find the upstream reference (source of truth)
 
 1. Start with public docs (good enough for most alignment work):
    - shadcn components: https://ui.shadcn.com/docs/components
@@ -29,7 +43,7 @@ it almost never belongs in `crates/fret-ui`.
 Use shadcn to learn the *composition + Tailwind contracts* (sizes, spacing, tokens), and Radix to
 learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering).
 
-## Align + protect with tests (goldens are not enough)
+### 3) Align + protect with tests (goldens are not enough)
 
 1. Prefer fast, targeted Rust unit tests for invariants.
    - Add tests next to the component in `ecosystem/fret-ui-shadcn/src/<component>.rs` (`#[cfg(test)]`).
@@ -41,13 +55,38 @@ learn the *interaction semantics* (focus, dismiss, keyboard nav, portal layering
    - Create `tools/diag-scripts/<scenario>.json` and gate it via `fretboard diag run`.
    - Always add/keep stable `test_id` targets in the Fret UI so scripts survive refactors.
 
-## When a golden is missing
+### 4) When a golden is missing
 
 1. Add a targeted invariant test first (so you stop bleeding regressions immediately).
 2. If needed, generate the missing golden later:
    - Follow `docs/shadcn-web-goldens.md` (extraction from the upstream shadcn v4 app; local `repo-ref/ui` is optional).
 
-## High-value regression targets (start here)
+### 5) High-value regression targets (start here)
 
 - Overlay families: `dropdown-menu`, `select`, `context-menu`, `tooltip`/`hover-card`, `dialog`/`sheet`, `navigation-menu`.
 - Listbox-ish behavior: roving focus, typeahead, active-descendant semantics, scroll clamping in constrained viewports.
+
+## Evidence anchors
+
+- Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
+- Local shadcn component implementations: `ecosystem/fret-ui-shadcn/src/`
+- Policy primitives (roving/typeahead/overlays): `ecosystem/fret-ui-kit/src/primitives/`
+- Web-vs-fret harness + goldens:
+  - `ecosystem/fret-ui-shadcn/tests/`
+  - `goldens/shadcn-web/v4/new-york-v4/*.json`
+- Optional pinned snapshots (if present):
+  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/`
+  - `repo-ref/primitives/packages/react/`
+
+## Common pitfalls
+
+- Fixing policy mismatches by adding runtime knobs in `crates/fret-ui` (wrong layer most of the time).
+- Relying on goldens alone for state-machine behavior (add a scripted repro).
+- Missing stable `test_id` targets, causing scripts to rot during refactors.
+- Mixing “parity work” and “new design work” without leaving any regression protection behind.
+
+## Related skills
+
+- `fret-shadcn-app-recipes` (recipes + stable `test_id` conventions)
+- `fret-overlays-and-focus` (overlay semantics + focus/dismiss correctness)
+- `fret-diag-workflow` (bundles + scripted repro gates)

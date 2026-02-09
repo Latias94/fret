@@ -212,6 +212,9 @@ impl ElementHostWidget {
             ElementInstance::FocusScope(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::LayoutQueryRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::InteractivityGate(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

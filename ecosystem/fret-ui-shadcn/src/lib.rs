@@ -43,6 +43,7 @@ pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
 pub mod experimental;
+pub mod extras;
 pub mod field;
 pub mod form;
 pub mod hover_card;
@@ -53,6 +54,7 @@ pub mod item;
 pub mod kbd;
 pub mod label;
 mod layout;
+pub mod media_image;
 pub mod menubar;
 pub mod native_select;
 pub mod navigation_menu;
@@ -144,6 +146,7 @@ pub use context_menu::{
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
+pub use media_image::MediaImage;
 /// Default high-performance data grid surface (canvas-rendered).
 ///
 /// This is the "performance ceiling" option for spreadsheet-scale density:

@@ -1,7 +1,6 @@
 use fret_core::Px;
-use fret_ui::Theme;
 
-use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space};
+use super::{ColorFallback, ColorRef, MetricRef, Radius, SignedMetricRef, Space, ThemeTokenRead};
 use crate::Corners4;
 
 #[derive(Debug, Clone, Default)]
@@ -89,7 +88,7 @@ pub enum MarginEdgeRefinement {
 }
 
 impl MarginEdgeRefinement {
-    pub fn resolve(&self, theme: &Theme) -> fret_ui::element::MarginEdge {
+    pub fn resolve<T: ThemeTokenRead + ?Sized>(&self, theme: &T) -> fret_ui::element::MarginEdge {
         match self {
             Self::Px(m) => fret_ui::element::MarginEdge::Px(m.resolve(theme)),
             Self::Auto => fret_ui::element::MarginEdge::Auto,

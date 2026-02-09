@@ -3381,9 +3381,7 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
-    use fret_core::{
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::element::PressableA11y;

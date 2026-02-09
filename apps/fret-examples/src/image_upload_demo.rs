@@ -156,6 +156,7 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, ImageUploadDemoWindo
             order: DrawOrder(1),
             rect,
             image,
+            fit: fret_core::ViewportFit::Stretch,
             opacity: 1.0,
         });
     } else {

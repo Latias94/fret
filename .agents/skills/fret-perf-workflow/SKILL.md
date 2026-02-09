@@ -9,6 +9,12 @@ This skill is the performance-focused companion to `fret-diag-workflow`.
 
 Use this skill when you need **numbers**, **baselines**, and **gates** (not just repro bundles).
 
+## When to use
+
+- You suspect a perf regression (resize/scroll/pointer-move hitching) and need a repeatable measurement.
+- You’re landing performance work and want to protect it with baselines/gates.
+- You need to separate “CPU time” vs “renderer/GPU-ish time” with evidence artifacts.
+
 ## Quick start
 
 ### Run the P0 resize gates (recommended “global sanity”)
@@ -158,7 +164,7 @@ Note:
      intermediate pool churn.
    - Validate the change globally: `ui-gallery-steady` + P0 resize probes must pass.
 
-## Tips / pitfalls
+## Common pitfalls
 
 - “One probe win” is not accepted if `ui-gallery-steady` regresses.
 - If a change touches text/renderer caches, always re-run at least one resize probe and one steady suite check.
@@ -196,3 +202,16 @@ FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES=2048 \
   tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 \
     --out-dir target/fret-diag-ab-text-unwrapped-on
 ```
+
+## Evidence anchors (where to look)
+
+- CLI entry: `apps/fretboard/src/diag.rs` (perf subcommands)
+- Perf helpers: `tools/perf/`
+- Baselines: `docs/workstreams/perf-baselines/`
+- Perf logs (commit-addressable evidence): `docs/workstreams/*perf*log*.md`
+- Tracy workflow: `docs/tracy.md`
+- RenderDoc workflow: `docs/renderdoc-inspection.md`
+
+## Related skills
+
+- `fret-diag-workflow` (scripted repro bundles; complements perf numbers)

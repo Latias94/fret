@@ -1044,17 +1044,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let diag_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
                             .is_some_and(|v| !v.is_empty());
-                        if diag_renderer_perf {
-                            if let Some(perf) = renderer.take_last_frame_perf_snapshot() {
-                                let tick_id = self.tick_id.0;
-                                let frame_id = self.frame_id.0;
-                                self.app.with_global_mut_untracked(
-                                    fret_render::RendererPerfFrameStore::default,
-                                    |store, _app| {
-                                        store.record(app_window, tick_id, frame_id, perf);
-                                    },
-                                );
-                            }
+                        if diag_renderer_perf
+                            && let Some(perf) = renderer.take_last_frame_perf_snapshot()
+                        {
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            self.app.with_global_mut_untracked(
+                                fret_render::RendererPerfFrameStore::default,
+                                |store, _app| {
+                                    store.record(app_window, tick_id, frame_id, perf);
+                                },
+                            );
                         }
 
                         let mut cmd_buffers = engine_frame.command_buffers;

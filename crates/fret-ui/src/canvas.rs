@@ -364,6 +364,7 @@ impl<'a> CanvasPainter<'a> {
     /// This is intended for repeated labels where callers do not have a stable per-instance key.
     /// High-entropy or scroll-driven surfaces (code editors, large virtual lists, etc.) should
     /// prefer `text(...)` with stable keys to avoid churn in the shared cache.
+    #[allow(clippy::too_many_arguments)]
     pub fn shared_text(
         &mut self,
         order: DrawOrder,
@@ -429,6 +430,7 @@ impl<'a> CanvasPainter<'a> {
     }
 
     /// Variant of `shared_text` that returns its prepared `TextBlobId`.
+    #[allow(clippy::too_many_arguments)]
     pub fn shared_text_with_blob(
         &mut self,
         order: DrawOrder,

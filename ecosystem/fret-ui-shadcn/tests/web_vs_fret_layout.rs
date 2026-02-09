@@ -35,6 +35,11 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
+#[path = "web_vs_fret_layout/input.rs"]
+mod layout_input_fixtures;
+#[path = "web_vs_fret_layout/scroll.rs"]
+mod layout_scroll_fixtures;
+
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
@@ -1352,6 +1357,63 @@ fn run_fret_root(
         .expect("expected semantics snapshot")
 }
 
+fn run_fret_root_frames(
+    bounds: Rect,
+    frames: usize,
+    mut render: impl FnMut(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_core::SemanticsSnapshot {
+    assert!(frames > 0, "frames must be > 0");
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let mut root: Option<NodeId> = None;
+    let mut snapshot: Option<fret_core::SemanticsSnapshot> = None;
+
+    for frame in 0..frames {
+        let root_node = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "web-vs-fret-layout",
+            |cx| render(cx),
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        snapshot = ui.semantics_snapshot().cloned();
+
+        // Runner-owned clocks are normally advanced by the platform event loop. In tests we
+        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        app.set_tick_id(next_tick);
+    }
+
+    snapshot.expect("expected semantics snapshot")
+}
+
 fn run_fret_root_with_services(
     bounds: Rect,
     services: &mut dyn fret_core::UiServices,
@@ -1385,6 +1447,63 @@ fn run_fret_root_with_services(
     ui.semantics_snapshot()
         .cloned()
         .expect("expected semantics snapshot")
+}
+
+fn run_fret_root_frames_with_services(
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    frames: usize,
+    mut render: impl FnMut(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_core::SemanticsSnapshot {
+    assert!(frames > 0, "frames must be > 0");
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut root: Option<NodeId> = None;
+    let mut snapshot: Option<fret_core::SemanticsSnapshot> = None;
+
+    for frame in 0..frames {
+        let root_node = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            services,
+            window,
+            bounds,
+            "web-vs-fret-layout",
+            |cx| render(cx),
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, services, bounds, &mut scene, 1.0);
+
+        snapshot = ui.semantics_snapshot().cloned();
+
+        // Runner-owned clocks are normally advanced by the platform event loop. In tests we
+        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        app.set_tick_id(next_tick);
+    }
+
+    snapshot.expect("expected semantics snapshot")
 }
 
 fn run_fret_root_with_ui(
@@ -1503,6 +1622,65 @@ fn run_fret_root_with_ui_and_services(
         .cloned()
         .expect("expected semantics snapshot");
 
+    (ui, snap, root)
+}
+
+fn run_fret_root_frames_with_ui_and_services(
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    frames: usize,
+    mut render: impl FnMut(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
+    assert!(frames > 0, "frames must be > 0");
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut root: Option<NodeId> = None;
+    let mut snapshot: Option<fret_core::SemanticsSnapshot> = None;
+
+    for frame in 0..frames {
+        let root_node = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            services,
+            window,
+            bounds,
+            "web-vs-fret-layout",
+            |cx| render(cx),
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, services, bounds, &mut scene, 1.0);
+
+        snapshot = ui.semantics_snapshot().cloned();
+
+        // Runner-owned clocks are normally advanced by the platform event loop. In tests we
+        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        app.set_tick_id(next_tick);
+    }
+
+    let root = root.expect("expected root node");
+    let snap = snapshot.expect("expected semantics snapshot");
     (ui, snap, root)
 }
 
@@ -3560,7 +3738,7 @@ fn web_vs_fret_layout_empty_demo_geometry_matches_web() {
     );
 
     let mut services = StyleAwareServices::default();
-    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+    let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
         use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
         let icon =
@@ -3674,7 +3852,7 @@ fn web_vs_fret_layout_empty_background_geometry_matches_web() {
     );
 
     let mut services = StyleAwareServices::default();
-    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+    let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
         let icon =
             decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
         let media = EmptyMedia::new(vec![icon])
@@ -3748,7 +3926,7 @@ fn web_vs_fret_layout_empty_outline_geometry_matches_web() {
     );
 
     let mut services = StyleAwareServices::default();
-    let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
+    let snap = run_fret_root_frames_with_services(bounds, &mut services, 2, |cx| {
         let icon =
             decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
         let media = EmptyMedia::new(vec![icon])
@@ -3817,7 +3995,7 @@ fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
-    let snap = run_fret_root(bounds, |cx| {
+    let snap = run_fret_root_frames(bounds, 2, |cx| {
         let theme = Theme::global(&*cx.app).clone();
 
         fn mk_card(
@@ -7751,7 +7929,6 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
     assert_close_px("tab panel gap", Px(fret_gap_y), web_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -7808,7 +7985,6 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -7894,7 +8070,6 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     assert!(max.y.0 > 0.0, "expected scroll area to overflow vertically");
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     let web = read_web_golden("scroll-area-horizontal-demo");
     let theme = web_theme(&web);
@@ -7995,7 +8170,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web_theme(&web);
@@ -8197,7 +8371,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -8401,7 +8574,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -8605,7 +8777,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -8903,7 +9074,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-demo.scrolled");
     let theme = web_theme(&web);
@@ -9114,7 +9284,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     assert_rect_close_px("scroll-area-demo thumb", thumb_bounds, expected_abs, 2.0);
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web_theme(&web);
@@ -9319,7 +9488,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -9528,7 +9696,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -9737,7 +9904,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-horizontal-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -10031,7 +10197,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-horizontal-demo.scrolled");
     let theme = web_theme(&web);
@@ -10326,7 +10491,6 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_demo_geometry() {
     let web = read_web_golden("input-demo");
     let theme = web_theme(&web);
@@ -10364,7 +10528,6 @@ fn web_vs_fret_layout_input_demo_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_disabled_geometry_matches() {
     let web = read_web_golden("input-disabled");
     let theme = web_theme(&web);
@@ -10406,7 +10569,6 @@ fn web_vs_fret_layout_input_disabled_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_file_geometry_matches() {
     let web = read_web_golden("input-file");
     let theme = web_theme(&web);
@@ -10490,7 +10652,6 @@ fn web_vs_fret_layout_input_file_geometry_matches() {
     assert_close_px("input-file gap", Px(gap_y), expected_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_button_geometry_matches() {
     let web = read_web_golden("input-with-button");
     let theme = web_theme(&web);
@@ -10593,7 +10754,6 @@ fn web_vs_fret_layout_input_with_button_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_text_geometry_matches() {
     let web = read_web_golden("input-with-text");
     let theme = web_theme(&web);
@@ -10741,7 +10901,6 @@ fn web_vs_fret_layout_input_with_text_geometry_matches() {
     assert_close_px("input-with-text gap1", Px(gap1_fret), gap1, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_label_geometry_matches() {
     let web = read_web_golden("input-group-label");
     let theme = web_theme(&web);
@@ -10963,7 +11122,6 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
     assert_close_px("input-group-label gap", Px(gap_y), expected_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_button_group_geometry_matches() {
     let web = read_web_golden("input-group-button-group");
     let theme = web_theme(&web);
@@ -11341,7 +11499,6 @@ fn assert_input_otp_block_relative_geometry_matches_web(web_name: &str, row_toke
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_01_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-01",
@@ -11355,7 +11512,6 @@ fn web_vs_fret_layout_otp_01_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_02_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-02",
@@ -11369,7 +11525,6 @@ fn web_vs_fret_layout_otp_02_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_03_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-03",
@@ -11383,7 +11538,6 @@ fn web_vs_fret_layout_otp_03_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_05_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-05",
@@ -11400,7 +11554,6 @@ fn web_vs_fret_layout_otp_05_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_demo_geometry_matches() {
     let web = read_web_golden("input-otp-demo");
     let theme = web_theme(&web);
@@ -11428,7 +11581,6 @@ fn web_vs_fret_layout_input_otp_demo_geometry_matches() {
     assert_input_otp_separators_match_web("input-otp-demo", &web_seps, &fret_seps, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_separator_geometry_matches() {
     let web = read_web_golden("input-otp-separator");
     let theme = web_theme(&web);
@@ -11456,7 +11608,6 @@ fn web_vs_fret_layout_input_otp_separator_geometry_matches() {
     assert_input_otp_separators_match_web("input-otp-separator", &web_seps, &fret_seps, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_pattern_geometry_matches() {
     let web = read_web_golden("input-otp-pattern");
     let theme = web_theme(&web);
@@ -11480,7 +11631,6 @@ fn web_vs_fret_layout_input_otp_pattern_geometry_matches() {
     assert_input_otp_slots_match_web("input-otp-pattern", &web_slots, &fret_slots, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_controlled_geometry_matches() {
     let web = read_web_golden("input-otp-controlled");
     let theme = web_theme(&web);
@@ -11540,7 +11690,6 @@ fn command_demo_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot
     })
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_input_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11561,7 +11710,6 @@ fn web_vs_fret_layout_command_demo_input_height_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11582,7 +11730,6 @@ fn web_vs_fret_layout_command_demo_listbox_height_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_option_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11627,7 +11774,6 @@ fn web_vs_fret_layout_command_demo_listbox_option_height_matches() {
     assert_close_px("command-demo option height", Px(actual_h), expected_h, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_option_insets_match() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11642,7 +11788,6 @@ fn web_vs_fret_layout_command_demo_listbox_option_insets_match() {
     assert_inset_quad_close("command-demo", actual, expected, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_label_geometry() {
     let web = read_web_golden("input-with-label");
     let theme = web_theme(&web);
@@ -11753,7 +11898,6 @@ fn web_vs_fret_layout_input_with_label_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_dropdown_height() {
     let web = read_web_golden("input-group-dropdown");
     let theme = web_theme(&web);
@@ -11839,7 +11983,6 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_icon_geometry_matches() {
     let web = read_web_golden("input-group-icon");
     let theme = web_theme(&web);
@@ -11992,7 +12135,6 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
     let web = read_web_golden("input-group-spinner");
     let theme = web_theme(&web);
@@ -12146,7 +12288,6 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_button_geometry_matches() {
     let web = read_web_golden("input-group-button");
     let theme = web_theme(&web);
@@ -12325,7 +12466,6 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
     let web = read_web_golden("input-group-tooltip");
     let theme = web_theme(&web);
@@ -12677,7 +12817,6 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_empty_input_group_geometry_matches() {
     let web = read_web_golden("empty-input-group");
     let theme = web_theme(&web);
@@ -12882,7 +13021,6 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
     let web = read_web_golden("kbd-input-group");
     let theme = web_theme(&web);
@@ -13130,7 +13268,6 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
     let web = read_web_golden("input-group-textarea");
     let theme = web_theme(&web);
@@ -13557,7 +13694,6 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -13717,7 +13853,6 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -13935,7 +14070,6 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -14116,7 +14250,6 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -14319,7 +14452,6 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_custom_geometry_matches() {
     let web = read_web_golden("input-group-custom");
     let theme = web_theme(&web);
@@ -14489,7 +14621,6 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
     let web = read_web_golden("input-group-demo");
     let theme = web_theme(&web);
@@ -21825,123 +21956,125 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
     );
 
     let mut services = StyleAwareServices::default();
-    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use fret_ui_headless::calendar::DateRangeSelection;
+    let (ui, snap, _root) =
+        run_fret_root_frames_with_ui_and_services(bounds, &mut services, 2, |cx| {
+            use fret_ui_headless::calendar::CalendarMonth;
+            use fret_ui_headless::calendar::DateRangeSelection;
 
-        let month_model: Model<CalendarMonth> =
-            cx.app.models_mut().insert(CalendarMonth::new(year, month));
-        match web_selected_dates.as_slice() {
-            [] | [_] => {
-                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(selected_date);
-                let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
+            let month_model: Model<CalendarMonth> =
+                cx.app.models_mut().insert(CalendarMonth::new(year, month));
+            match web_selected_dates.as_slice() {
+                [] | [_] => {
+                    let selected: Model<Option<time::Date>> =
+                        cx.app.models_mut().insert(selected_date);
+                    let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
+                }
+                _ if web_is_range_mode => {
+                    let (min, max) = web_selected_dates.iter().fold(
+                        (web_selected_dates[0], web_selected_dates[0]),
+                        |(min, max), d| (min.min(*d), max.max(*d)),
+                    );
+                    let selected: Model<DateRangeSelection> =
+                        cx.app.models_mut().insert(DateRangeSelection {
+                            from: Some(min),
+                            to: Some(max),
+                        });
+                    let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
+                }
+                _ => {
+                    let selected: Model<Vec<time::Date>> =
+                        cx.app.models_mut().insert(web_selected_dates.clone());
+                    let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
+                }
             }
-            _ if web_is_range_mode => {
-                let (min, max) = web_selected_dates.iter().fold(
-                    (web_selected_dates[0], web_selected_dates[0]),
-                    |(min, max), d| (min.min(*d), max.max(*d)),
-                );
-                let selected: Model<DateRangeSelection> =
-                    cx.app.models_mut().insert(DateRangeSelection {
-                        from: Some(min),
-                        to: Some(max),
-                    });
-                let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
-            }
-            _ => {
-                let selected: Model<Vec<time::Date>> =
-                    cx.app.models_mut().insert(web_selected_dates.clone());
-                let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
-            }
-        }
-    });
+        });
 
     let fret_day_buttons = snap
         .nodes
@@ -22240,158 +22373,166 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
     );
 
     let mut services = StyleAwareServices::default();
-    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        use fret_ui_headless::calendar::CalendarMonth;
-        use fret_ui_headless::calendar::DateRangeSelection;
+    let (ui, snap, _root) =
+        run_fret_root_frames_with_ui_and_services(bounds, &mut services, 2, |cx| {
+            use fret_ui_headless::calendar::CalendarMonth;
+            use fret_ui_headless::calendar::DateRangeSelection;
 
-        let month_model: Model<CalendarMonth> = cx
-            .app
-            .models_mut()
-            .insert(CalendarMonth::new(year_a, month_a));
+            let month_model: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(year_a, month_a));
 
-        match web_selected_dates.as_slice() {
-            [] | [_] => {
-                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(selected_date);
-                let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
-                    .number_of_months(2)
-                    .locale(locale)
-                    .disable_navigation(web_disable_navigation)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
-                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
-                    calendar = calendar.month_bounds(
-                        CalendarMonth::new(start_year, start_month),
-                        CalendarMonth::new(end_year, end_month),
+            match web_selected_dates.as_slice() {
+                [] | [_] => {
+                    let selected: Model<Option<time::Date>> =
+                        cx.app.models_mut().insert(selected_date);
+                    let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                        .number_of_months(2)
+                        .locale(locale)
+                        .disable_navigation(web_disable_navigation)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
+                    if let Some(((start_month, start_year), (end_month, end_year))) =
+                        web_month_bounds
+                    {
+                        calendar = calendar.month_bounds(
+                            CalendarMonth::new(start_year, start_month),
+                            CalendarMonth::new(end_year, end_month),
+                        );
+                    }
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
+                }
+                _ if web_is_range_mode => {
+                    let (min, max) = web_selected_dates.iter().fold(
+                        (web_selected_dates[0], web_selected_dates[0]),
+                        |(min, max), d| (min.min(*d), max.max(*d)),
                     );
-                }
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
+                    let selected: Model<DateRangeSelection> =
+                        cx.app.models_mut().insert(DateRangeSelection {
+                            from: Some(min),
+                            to: Some(max),
+                        });
+                    let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                        .number_of_months(2)
+                        .locale(locale)
+                        .disable_navigation(web_disable_navigation)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
+                    if let Some(((start_month, start_year), (end_month, end_year))) =
+                        web_month_bounds
+                    {
+                        calendar = calendar.month_bounds(
+                            CalendarMonth::new(start_year, start_month),
+                            CalendarMonth::new(end_year, end_month),
+                        );
+                    }
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
-            }
-            _ if web_is_range_mode => {
-                let (min, max) = web_selected_dates.iter().fold(
-                    (web_selected_dates[0], web_selected_dates[0]),
-                    |(min, max), d| (min.min(*d), max.max(*d)),
-                );
-                let selected: Model<DateRangeSelection> =
-                    cx.app.models_mut().insert(DateRangeSelection {
-                        from: Some(min),
-                        to: Some(max),
-                    });
-                let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
-                    .number_of_months(2)
-                    .locale(locale)
-                    .disable_navigation(web_disable_navigation)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
-                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
-                    calendar = calendar.month_bounds(
-                        CalendarMonth::new(start_year, start_month),
-                        CalendarMonth::new(end_year, end_month),
-                    );
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
                 }
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
-            }
-            _ => {
-                let selected: Model<Vec<time::Date>> =
-                    cx.app.models_mut().insert(web_selected_dates.clone());
-                let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
-                    .number_of_months(2)
-                    .locale(locale)
-                    .disable_navigation(web_disable_navigation)
-                    .week_start(week_start)
-                    .show_outside_days(web_show_outside_days)
-                    .disable_outside_days(web_disable_outside_days)
-                    .show_week_number(web_show_week_number)
-                    .refine_style(chrome_override);
+                _ => {
+                    let selected: Model<Vec<time::Date>> =
+                        cx.app.models_mut().insert(web_selected_dates.clone());
+                    let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                        .number_of_months(2)
+                        .locale(locale)
+                        .disable_navigation(web_disable_navigation)
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days)
+                        .show_week_number(web_show_week_number)
+                        .refine_style(chrome_override.clone());
 
-                if web_name == "calendar-03" {
-                    calendar = calendar.required(true).max(5);
-                }
-                if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
-                    calendar = calendar.month_bounds(
-                        CalendarMonth::new(start_year, start_month),
-                        CalendarMonth::new(end_year, end_month),
-                    );
-                }
-                if let Some(cell_size) = cell_size {
-                    calendar = calendar.cell_size(cell_size);
-                }
-                if let Some(today) = web_today {
-                    calendar = calendar.today(today);
-                }
+                    if web_name == "calendar-03" {
+                        calendar = calendar.required(true).max(5);
+                    }
+                    if let Some(((start_month, start_year), (end_month, end_year))) =
+                        web_month_bounds
+                    {
+                        calendar = calendar.month_bounds(
+                            CalendarMonth::new(start_year, start_month),
+                            CalendarMonth::new(end_year, end_month),
+                        );
+                    }
+                    if let Some(cell_size) = cell_size {
+                        calendar = calendar.cell_size(cell_size);
+                    }
+                    if let Some(today) = web_today {
+                        calendar = calendar.today(today);
+                    }
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            padding: fret_core::Edges {
+                                left: Px(web_origin_x),
+                                top: Px(web_origin_y),
+                                right: Px(0.0),
+                                bottom: Px(0.0),
+                            },
+                            ..Default::default()
                         },
-                        padding: fret_core::Edges {
-                            left: Px(web_origin_x),
-                            top: Px(web_origin_y),
-                            right: Px(0.0),
-                            bottom: Px(0.0),
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| vec![calendar.into_element(cx)],
-                )]
+                        move |cx| vec![calendar.into_element(cx)],
+                    )]
+                }
             }
-        }
-    });
+        });
 
     let fret_day_buttons = snap
         .nodes
@@ -24177,15 +24318,22 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
                 }
 
                 let calendar = calendar.into_element(cx);
-                match &calendar.kind {
-                    fret_ui::element::ElementKind::Container(props) => {
-                        let bg = props
-                            .background
-                            .expect("calendar root background (resolved)");
-                        calendar_bg.set(Some(bg));
-                    }
+                let container_props = match &calendar.kind {
+                    fret_ui::element::ElementKind::Container(props) => props,
+                    fret_ui::element::ElementKind::LayoutQueryRegion(_) => calendar
+                        .children
+                        .first()
+                        .and_then(|c| match &c.kind {
+                            fret_ui::element::ElementKind::Container(props) => Some(props),
+                            _ => None,
+                        })
+                        .expect("expected calendar root container child under LayoutQueryRegion"),
                     other => panic!("expected calendar root container, got {other:?}"),
-                }
+                };
+                let bg = container_props
+                    .background
+                    .expect("calendar root background (resolved)");
+                calendar_bg.set(Some(bg));
 
                 fret_ui_shadcn::PopoverContent::new(vec![calendar])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
@@ -24256,15 +24404,22 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
         vec![fret_ui_shadcn::card::card_content(cx, move |cx| {
             let calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
                 .into_element(cx);
-            match &calendar.kind {
-                fret_ui::element::ElementKind::Container(props) => {
-                    let bg = props
-                        .background
-                        .expect("calendar root background (resolved)");
-                    calendar_bg.set(Some(bg));
-                }
+            let container_props = match &calendar.kind {
+                fret_ui::element::ElementKind::Container(props) => props,
+                fret_ui::element::ElementKind::LayoutQueryRegion(_) => calendar
+                    .children
+                    .first()
+                    .and_then(|c| match &c.kind {
+                        fret_ui::element::ElementKind::Container(props) => Some(props),
+                        _ => None,
+                    })
+                    .expect("expected calendar root container child under LayoutQueryRegion"),
                 other => panic!("expected calendar root container, got {other:?}"),
-            }
+            };
+            let bg = container_props
+                .background
+                .expect("calendar root background (resolved)");
+            calendar_bg.set(Some(bg));
 
             [calendar]
         })]
@@ -25817,7 +25972,7 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
-    let snap = run_fret_root(bounds, |cx| {
+    let snap = run_fret_root_frames(bounds, 2, |cx| {
         let theme = Theme::global(&*cx.app).clone();
         let content_layout =
             decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
