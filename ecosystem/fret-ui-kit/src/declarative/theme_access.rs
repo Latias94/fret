@@ -8,11 +8,10 @@ pub trait ElementContextThemeExt {
 
 impl<H: UiHost> ElementContextThemeExt for ElementContext<'_, H> {
     fn with_theme<R>(&mut self, f: impl FnOnce(&Theme) -> R) -> R {
-        let theme = Theme::global(&*self.app);
-        f(theme)
+        f(self.theme())
     }
 
     fn theme_snapshot(&mut self) -> ThemeSnapshot {
-        Theme::global(&*self.app).snapshot()
+        self.theme().snapshot()
     }
 }
