@@ -8862,3 +8862,36 @@ cargo run -q -p fretboard -- \
 
 Artifacts:
 - `target/fret-diag/click-stable-smoke-20260209-192936/1770636679549-ui-gallery-material3-tabs-switch-perf-steady/bundle.json`
+
+## 2026-02-09 20:04:39 (commit `d834481b3`)
+
+Change:
+- Drop no-op `Event::WindowResized` deliveries when the quantized logical size is unchanged (GPUI parity).
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-samples/ui-resize-probes.noopdrop.20260209-200004
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 14745 | 14812 | 14854 | 8577 | 2049 | 6129 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 14976 | 15041 | 15214 | 8603 | 2060 | 6436 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/attempt-1/1770638413543-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/attempt-1/1770638441252-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- This is a churn/noise reduction change; it is not expected to materially move p95 totals by itself.
+- A representative tail failure mode for `drag-jitter` remains “paint text prepare (width)”; see:
+  - `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - `fretboard diag stats ... --sort time` attributes the worst frame to `paint_text_prepare.reasons=width`.

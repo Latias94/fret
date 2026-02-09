@@ -87,6 +87,9 @@ Recent evidence:
 - Commit `0de40863f` makes small-step interactive resize detection symmetric; this keeps the same bucketing/caching
   policy enabled on back-and-forth drags and improves the `ui-resize-probes` p95 total by ~0.3ms on the jitter probe.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry `2026-02-09 16:37:00`.
+- Commit `d834481b3` drops no-op `WindowResized` deliveries (quantized logical size unchanged), mirroring GPUI’s
+  `set_frame_size` early-return.
+  - This is a “reduce churn/noise” change, not a primary budget win.
 
 To feel “Zed smooth”, we need:
 
@@ -110,6 +113,16 @@ The next step is to reduce the sum of:
 
 - request/build overhead + solve overhead (especially tail outliers),
 - without regressing `ui-gallery-steady`.
+
+Local sample (for quick orientation; do not treat as canonical baseline evidence):
+- Resize probes gate run (attempts=3): `target/perf-samples/ui-resize-probes.noopdrop.20260209-200004/summary.json`
+  - `ui-gallery-window-resize-stress-steady.json` p95 total ≈ `15.7ms` (p95 layout ≈ `9.1ms`, p95 solve ≈ `2.2ms`, p95 paint ≈ `6.6ms`)
+  - `ui-gallery-window-resize-drag-jitter-steady.json` p95 total ≈ `16.3ms` (p95 layout ≈ `9.1ms`, p95 solve ≈ `2.2ms`, p95 paint ≈ `7.3ms`)
+
+Tail note:
+- A representative `drag-jitter` outlier that breaks the baseline threshold tends to be “paint text prepare (width)”.
+  - Example bundle: `target/perf-samples/ui-resize-probes.a86f390f8.20260209-1957/attempt-1/1770638303403-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+  - `fretboard diag stats ... --sort time` shows `paint_text_prepare.reasons=width` dominating the worst frame.
 
 ## GPUI/Zed resize notes (transferable vs not)
 
