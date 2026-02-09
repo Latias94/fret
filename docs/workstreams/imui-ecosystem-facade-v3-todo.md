@@ -167,6 +167,9 @@ Exit criteria:
 - [x] IMUIECO3-dock-020 Document docking handshake touchpoints and required signals/metadata.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v3.md` (M2 touchpoints).
   - Evidence: `ecosystem/fret-docking/src/imui.rs`, `ecosystem/fret-docking/src/facade.rs`.
+  - Evidence (diagnostics + scripted repro): `debug.docking_interaction.dock_drop_resolve` in bundles,
+    `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json` + `fretboard diag`
+    gates `--check-dock-drop-resolve-min` / `--check-dock-drag-cross-window-max`.
 
 ---
 

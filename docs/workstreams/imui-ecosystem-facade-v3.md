@@ -215,6 +215,15 @@ M2 touchpoints (normative for v3 work):
   - Evidence: `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`),
     `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, tear-off fallback to in-window float),
     `crates/fret-runtime/src/effect.rs` (`Effect::Dock`).
+- **Diagnostics + scripted regressions (hand-feel lock-in)**:
+  - When triaging “why did it pick this drop target?”, capture a diagnostics bundle and inspect
+    `debug.docking_interaction.dock_drop_resolve` (source + resolved target + candidate rects).
+  - Multi-window note: scripted tests may need to attach to a specific window; use the schema v2
+    top-level `window: "focused"` policy for docking repros.
+  - Scripted repro (multi-window overlap hover): `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`.
+  - Recommended `fretboard diag` gates for the repro:
+    - `--check-dock-drop-resolve-min 1` (prove resolve diagnostics were emitted),
+    - `--check-dock-drag-cross-window-max 0` (prove hover stayed in the topmost window).
 - **Arbitration seams (docking vs overlays vs viewports)**:
   - Dock drag sessions are window-scoped and must close/suspend non-modal dismissable overlays in
     the same window to avoid fighting outside-press logic (ADR 0072).

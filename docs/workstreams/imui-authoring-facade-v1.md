@@ -1,7 +1,7 @@
 # Immediate-Mode Authoring Facade ("imui") v1
 
 Status: Baseline (historical reference; superseded by v2)
-Last updated: 2026-02-03
+Last updated: 2026-02-09
 
 This document proposes an **immediate-mode authoring facade** for Fret that feels closer to `egui` / Dear ImGui (and
 to `repo-ref/dear-imgui-rs`), while remaining aligned with Fret’s core runtime direction:
@@ -442,6 +442,11 @@ Notes:
 - wasm/mobile fallback (degrade multi-window → in-window floatings) is a planned follow-up (see M7 in the TODO tracker).
   For a native simulation of wasm/mobile constraints, run the same demo with
   `FRET_IMUI_EDITOR_PROOF_SINGLE_WINDOW=1` to disable multi-window tear-off at the capability layer.
+- Cross-window dock-drag hover selection prefers the topmost overlapping OS window (best-effort), mirroring the
+  Dear ImGui multi-viewport “hovered viewport” backend contract. Evidence: `crates/fret-launch/src/runner/desktop/mod.rs`.
+- For “why did it pick this drop target?” triage, capture a diagnostics bundle and inspect
+  `debug.docking_interaction.dock_drop_resolve` (source + resolved target + candidate rects).
+- Scripted repro (multi-window overlap hover): `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`.
 
 ---
 

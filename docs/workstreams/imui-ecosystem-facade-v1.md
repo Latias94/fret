@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-06
+Last updated: 2026-02-09
 
 This document proposes an ecosystem-level “batteries included” facade built on top of Fret’s
 immediate-mode authoring surface (`imui`) that targets **egui/Dear ImGui-style ergonomics**
@@ -11,7 +11,7 @@ The central decision: keep `ecosystem/fret-imui` **policy-light and minimal**, a
 egui/imgui” convenience (richer `Response` signals, floating windows/areas, menus, adapters for
 common controls) into **ecosystem facade crates**.
 
-Status snapshot (2026-02-06):
+Status snapshot (2026-02-09):
 
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
@@ -34,6 +34,9 @@ Status snapshot (2026-02-06):
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
   - optional v1 resize handles via `floating_window_resizable(...)` (edges + corners; diagonal cursor supported).
+  - ImGui-style input gating outcomes are supported:
+    - `pointer_passthrough`: pointer hit-test transparent (ImGui `NoMouseInputs`-like),
+    - `no_inputs`: pointer click-through and skipped by focus traversal (ImGui `NoInputs`-like).
 - `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
 - OS-window promotion scope for non-docking floatings is explicitly locked: docking-only in v1, with a capability-gated promotion checklist for later milestones.
 - Performance guidance is tracked in a dedicated short guide for facade authors and reviewers.
@@ -41,6 +44,11 @@ Status snapshot (2026-02-06):
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- Diagnostics bundles now export docking “why did it pick this target?” traces for cross-window drag/drop triage.
+  - Field: `debug.docking_interaction.dock_drop_resolve` (source + resolved target + candidate rects).
+  - Producer: `ecosystem/fret-docking/src/dock/space.rs` → `fret-runtime::WindowInteractionDiagnosticsStore`.
+  - Exporter: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiDockDropResolveDiagnosticsV1`).
+  - Scripted repro (multi-window overlap hover): `tools/diag-scripts/imui-editor-proof-multiwindow-overlap-topmost-hover.json`.
 - A minimal response-signals demo exists for click variants + drag lifecycle + context-menu requests.
   - Demo: `cargo run -p fret-demo --bin imui_response_signals_demo`
 

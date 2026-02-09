@@ -1,7 +1,7 @@
 # imui ↔ Dear ImGui Parity Audit (v1)
 
 Status: Draft (audit note; not an ADR)
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 This document records a *behavior-focused* audit of Fret's immediate-mode ecosystem facade
 (`ecosystem/fret-ui-kit::imui` + `ecosystem/fret-imui`) against Dear ImGui (C++).
