@@ -53,6 +53,8 @@ Conventions:
       - Cut a new baseline (v4) with more candidates/validation runs on an idle machine.
       - If it remains flaky, revisit the metric/seed/headroom contract for `drag-jitter` (keep “no hitch” intent).
     - Latest: perf log entry `2026-02-08 13:32:06` shows attempts=3 PASS on the merged head (`828c945d4`).
+    - Latest: perf log entry `2026-02-09 19:15:00` shows attempts=3 PASS with a default-on small-step interactive-resize
+      wrap-width LRU for prepared text blobs (commit `58db05d7c`).
   - [x] Quantize `LayoutMeasureKey` bits to reduce float-noise in measure caching (commit `94057ffab`).
     - Evidence + numbers: perf log entry `2026-02-07 11:15` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
   - [x] Record resize-drag worst-frame attribution (ScrollArea + text wrap under width jitter).
