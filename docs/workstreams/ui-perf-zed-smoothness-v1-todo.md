@@ -354,6 +354,10 @@ Primary targets (highest leverage):
 - [x] Avoid per-dispatch `HashMap<NodeId, u8>` churn when deduplicating invalidations during input dispatch.
   - Use the existing generation-stamped `InvalidationDedupTable` for dispatch-time invalidation dedup.
   - Implemented by `perf(fret-ui): reuse invalidation dedup in dispatch` (commit `bcb329e6`).
+- [x] Experiment: memoize wrapper-chain fill scan during request/build.
+  - Result: passes the resize gates, but regresses `layout_request_build_roots_time_us` on drag-jitter.
+  - Evidence: perf log entry for commit `96661c49c` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - Next: prefer the broader layout-engine M1 refactor (hashing → dense tables) instead of per-frame `HashMap` caches.
 - [ ] Ensure deterministic ordering is preserved where diagnostics rely on it (bundle stability).
 
 Perf acceptance:

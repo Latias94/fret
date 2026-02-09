@@ -8693,3 +8693,35 @@ Attribution note (one-off, semantics enabled; not used for gating due to overhea
   - `../fret-perf-lab-c1af5d1f7/target/fret-diag-perf/semantics-drag-jitter.58db05d7c/1770620408091-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - Finding: the heaviest layout-engine solve during drag-jitter is rooted at `test_id=ui-gallery-view-cache-root`
   (`measure_calls=960`, `measure_cache_hits=0`), with a smaller secondary root at `test_id=ui-gallery-content-viewport`.
+
+## 2026-02-09 15:28:00 (commit `96661c49c`)
+
+Change:
+- Memoize a pass-through wrapper-chain scan during the layout-engine request/build phase.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 96661c49c
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.96661c49c.20260209-1528
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.96661c49c.20260209-1528
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.96661c49c.20260209-1528/summary.json`
+
+Finding (drag-jitter probe; selected attempt):
+- Max `top_total_time_us=18665us` (threshold `19128us`).
+  - Worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.96661c49c.20260209-1528/attempt-1/1770622160308-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `layout_request_build_roots_time_us` regressed in this bundle vs the prior commit (`58db05d7c`) for the same probe:
+  - `96661c49c`: mean/p95/max = `2367/2517/4042us`
+  - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
+  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Hypothesis: the added per-frame `HashMap` memoization overhead outweighs the saved wrapper-chain scans. This is a
+  good candidate to revert, and instead pursue the broader M1 direction (hashing → dense tables) in the layout engine.
