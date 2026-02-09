@@ -4,6 +4,7 @@ mod layout_shorthands;
 mod refs;
 mod slots;
 mod state;
+mod theme_read;
 mod tokens;
 mod vocab;
 
@@ -21,5 +22,6 @@ pub use slots::{
     resolve_override_slot_opt_with, resolve_override_slot_with,
 };
 pub use state::{WidgetState, WidgetStateProperty, WidgetStates, merge_slot, resolve_slot};
+pub use theme_read::ThemeTokenRead;
 pub use tokens::{ColorFallback, MetricFallback, Radius, Space};
 pub use vocab::{Items, Justify, OverflowRefinement};
