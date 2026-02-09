@@ -11,6 +11,7 @@ Recent changes (2026-02-09):
 - Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0195).
 - Diagnostics: gate “no stale lines” scroll stability by asserting windowed row window changes repaint (scene fingerprint updates when `visible_start` changes).
 - Code editor: allow folds/inlays to remain visible under inline preedit when soft wrap is off (unwrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
+- Code editor: add an opt-in to allow folds/inlays to remain visible under inline preedit when soft wrap is on (wrapped baseline), and lock it with dedicated diag baselines + gates (ADR 0203 staging).
 
 Recent changes (2026-02-08):
 
