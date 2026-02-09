@@ -776,6 +776,7 @@ pub struct CommandItem {
     keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
+    test_id: Option<Arc<str>>,
     shortcut: Option<Arc<str>>,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
@@ -791,6 +792,7 @@ impl std::fmt::Debug for CommandItem {
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("shortcut", &self.shortcut.as_ref().map(|s| s.as_ref()))
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
@@ -809,6 +811,7 @@ impl CommandItem {
             keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
+            test_id: None,
             shortcut: None,
             command: None,
             on_select: None,
@@ -848,6 +851,11 @@ impl CommandItem {
     pub fn checkmark(mut self, checked: bool) -> Self {
         self.checked = checked;
         self.show_checkmark = true;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 
@@ -1162,6 +1170,7 @@ impl CommandList {
                         let query_for_row = query_for_render.clone();
                         let value_key = item.value.clone();
                         let label = item.label.clone();
+                        let test_id = item.test_id.clone();
                         let command = item.command;
                         let on_select = item.on_select.clone();
                         let children = item.children;
@@ -1177,6 +1186,7 @@ impl CommandList {
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
+                                        test_id: test_id.clone(),
                                         ..Default::default()
                                     },
                                     ..Default::default()
@@ -1881,6 +1891,7 @@ impl CommandPalette {
                             let value = item.value.clone();
                             let checked = item.checked;
                             let show_checkmark = item.show_checkmark;
+                            let test_id = item.test_id.clone();
                             let shortcut = item.shortcut.clone();
                             let command = item.command;
                             let on_select = item.on_select.clone();
@@ -1896,6 +1907,7 @@ impl CommandPalette {
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::ListBoxOption),
                                         label: Some(label.clone()),
+                                        test_id: test_id.clone(),
                                         selected,
                                         ..Default::default()
                                     }

@@ -477,6 +477,7 @@ pub struct NavigationMenuItem {
     label: Arc<str>,
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
+    trigger_test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -492,8 +493,14 @@ impl NavigationMenuItem {
             label: label.into(),
             content,
             trigger: None,
+            trigger_test_id: None,
             disabled: false,
         }
+    }
+
+    pub fn trigger_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(test_id.into());
+        self
     }
 
     pub fn trigger_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
@@ -1060,6 +1067,7 @@ impl NavigationMenu {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
+                        let trigger_test_id = item.trigger_test_id.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -1076,6 +1084,7 @@ impl NavigationMenu {
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(label.clone()),
+                                test_id: trigger_test_id.clone(),
                                 ..Default::default()
                             };
 

@@ -349,6 +349,7 @@ pub(super) fn preview_combobox(
         .width(Px(260.0))
         .placeholder("Pick a fruit")
         .query_model(query.clone())
+        .test_id_prefix("ui-gallery-combobox-demo")
         .items(base_items())
         .into_element(cx)
         .attach_semantics(
@@ -419,6 +420,7 @@ pub(super) fn preview_combobox(
         .width(Px(260.0))
         .placeholder("Select a framework")
         .query_model(basic_query.clone())
+        .test_id_prefix("ui-gallery-combobox-basic")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
             shadcn::ComboboxItem::new("svelte", "SvelteKit"),

@@ -12,6 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{
@@ -106,90 +107,11 @@ struct ComboboxState {
     was_open: bool,
 }
 
-type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
-type OnOpenChangeWithReason = Arc<dyn Fn(bool, ComboboxOpenChangeReason) + Send + Sync + 'static>;
+pub use kit_combobox::ComboboxOpenChangeReason;
+
+type OnOpenChange = kit_combobox::OnOpenChange;
+type OnOpenChangeWithReason = kit_combobox::OnOpenChangeWithReason;
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
-
-/// Open-change reasons aligned with Base UI combobox semantics.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ComboboxOpenChangeReason {
-    TriggerPress,
-    OutsidePress,
-    ItemPress,
-    EscapeKey,
-    FocusOut,
-    None,
-}
-
-fn combobox_open_change_reason_from_dismiss_reason(
-    reason: fret_ui::action::DismissReason,
-) -> ComboboxOpenChangeReason {
-    match reason {
-        fret_ui::action::DismissReason::Escape => ComboboxOpenChangeReason::EscapeKey,
-        fret_ui::action::DismissReason::OutsidePress { .. } => {
-            ComboboxOpenChangeReason::OutsidePress
-        }
-        fret_ui::action::DismissReason::FocusOutside => ComboboxOpenChangeReason::FocusOut,
-        fret_ui::action::DismissReason::Scroll => ComboboxOpenChangeReason::None,
-    }
-}
-
-#[derive(Default)]
-struct ComboboxOpenChangeCallbackState {
-    initialized: bool,
-    last_open: bool,
-    pending_complete: Option<bool>,
-}
-
-fn combobox_open_change_events(
-    state: &mut ComboboxOpenChangeCallbackState,
-    open: bool,
-    present: bool,
-    animating: bool,
-) -> (Option<bool>, Option<bool>) {
-    let mut changed = None;
-    let mut completed = None;
-
-    if !state.initialized {
-        state.initialized = true;
-        state.last_open = open;
-    } else if state.last_open != open {
-        state.last_open = open;
-        state.pending_complete = Some(open);
-        changed = Some(open);
-    }
-
-    if state.pending_complete == Some(open) && present == open && !animating {
-        state.pending_complete = None;
-        completed = Some(open);
-    }
-
-    (changed, completed)
-}
-
-#[derive(Default)]
-struct ComboboxValueChangeCallbackState {
-    initialized: bool,
-    last_value: Option<Arc<str>>,
-}
-
-fn combobox_value_change_event(
-    state: &mut ComboboxValueChangeCallbackState,
-    value: Option<Arc<str>>,
-) -> Option<Option<Arc<str>>> {
-    if !state.initialized {
-        state.initialized = true;
-        state.last_value = value;
-        return None;
-    }
-
-    if state.last_value != value {
-        state.last_value = value.clone();
-        return Some(value);
-    }
-
-    None
-}
 
 #[derive(Clone)]
 pub struct Combobox {
@@ -506,9 +428,10 @@ fn combobox_with_patch<H: UiHost>(
         };
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         if let Some(handler) = on_value_change.as_ref() {
-            let value_change = cx.with_state(ComboboxValueChangeCallbackState::default, |state| {
-                combobox_value_change_event(state, selected.clone())
-            });
+            let value_change = cx.with_state(
+                kit_combobox::ValueChangeCallbackState::<Arc<str>>::default,
+                |state| kit_combobox::value_change_event(state, selected.clone()),
+            );
             if let Some(value) = value_change {
                 handler(value);
             }
@@ -521,8 +444,8 @@ fn combobox_with_patch<H: UiHost>(
             .unwrap_or(None)
             .unwrap_or(ComboboxOpenChangeReason::None);
         let (open_change, open_change_complete) = cx
-            .with_state(ComboboxOpenChangeCallbackState::default, |state| {
-                combobox_open_change_events(state, is_open, is_open, false)
+            .with_state(kit_combobox::OpenChangeCallbackState::default, |state| {
+                kit_combobox::open_change_events(state, is_open, is_open, false)
             });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
             handler(open);
@@ -681,7 +604,8 @@ fn combobox_with_patch<H: UiHost>(
                 .on_dismiss_request(Some(Arc::new({
                     let open_change_reason_model = open_change_reason_model.clone();
                     move |host, _cx, req| {
-                        let reason = combobox_open_change_reason_from_dismiss_reason(req.reason);
+                        let reason =
+                            kit_combobox::open_change_reason_from_dismiss_reason(req.reason);
                         let _ = host
                             .models_mut()
                             .update(&open_change_reason_model, |v| *v = Some(reason));
@@ -1016,7 +940,7 @@ fn combobox_with_patch<H: UiHost>(
             .on_dismiss_request(Some(Arc::new({
                 let open_change_reason_model = open_change_reason_model.clone();
                 move |host, _cx, req| {
-                    let reason = combobox_open_change_reason_from_dismiss_reason(req.reason);
+                    let reason = kit_combobox::open_change_reason_from_dismiss_reason(req.reason);
                     let _ = host
                         .models_mut()
                         .update(&open_change_reason_model, |v| *v = Some(reason));
@@ -1674,99 +1598,6 @@ mod tests {
         let combobox = Combobox::new(value, open).on_value_change(Some(Arc::new(|_value| {})));
 
         assert!(combobox.on_value_change.is_some());
-    }
-
-    #[test]
-    fn combobox_open_change_events_emit_change_and_complete_after_settle() {
-        let mut state = ComboboxOpenChangeCallbackState::default();
-
-        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
-        assert_eq!(changed, None);
-        assert_eq!(completed, None);
-
-        let (changed, completed) = combobox_open_change_events(&mut state, true, true, true);
-        assert_eq!(changed, Some(true));
-        assert_eq!(completed, None);
-
-        let (changed, completed) = combobox_open_change_events(&mut state, true, true, false);
-        assert_eq!(changed, None);
-        assert_eq!(completed, Some(true));
-
-        let (changed, completed) = combobox_open_change_events(&mut state, false, true, true);
-        assert_eq!(changed, Some(false));
-        assert_eq!(completed, None);
-
-        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
-        assert_eq!(changed, None);
-        assert_eq!(completed, Some(false));
-    }
-
-    #[test]
-    fn combobox_open_change_events_complete_without_animation() {
-        let mut state = ComboboxOpenChangeCallbackState::default();
-
-        let _ = combobox_open_change_events(&mut state, false, false, false);
-        let (changed, completed) = combobox_open_change_events(&mut state, true, true, false);
-        assert_eq!(changed, Some(true));
-        assert_eq!(completed, Some(true));
-
-        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
-        assert_eq!(changed, Some(false));
-        assert_eq!(completed, Some(false));
-    }
-
-    #[test]
-    fn combobox_open_change_reason_maps_dismiss_reasons() {
-        use fret_ui::action::DismissReason;
-
-        assert_eq!(
-            combobox_open_change_reason_from_dismiss_reason(DismissReason::Escape),
-            ComboboxOpenChangeReason::EscapeKey
-        );
-        assert_eq!(
-            combobox_open_change_reason_from_dismiss_reason(DismissReason::OutsidePress {
-                pointer: None,
-            }),
-            ComboboxOpenChangeReason::OutsidePress
-        );
-        assert_eq!(
-            combobox_open_change_reason_from_dismiss_reason(DismissReason::FocusOutside),
-            ComboboxOpenChangeReason::FocusOut
-        );
-        assert_eq!(
-            combobox_open_change_reason_from_dismiss_reason(DismissReason::Scroll),
-            ComboboxOpenChangeReason::None
-        );
-    }
-
-    #[test]
-    fn combobox_value_change_event_emits_only_on_state_change() {
-        let mut state = ComboboxValueChangeCallbackState::default();
-
-        let changed = combobox_value_change_event(&mut state, None);
-        assert_eq!(changed, None);
-
-        let changed = combobox_value_change_event(&mut state, Some(Arc::from("beta")));
-        assert_eq!(
-            changed
-                .as_ref()
-                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
-            Some("beta")
-        );
-
-        let changed = combobox_value_change_event(&mut state, Some(Arc::from("beta")));
-        assert_eq!(changed, None);
-
-        let changed = combobox_value_change_event(&mut state, Some(Arc::from("alpha")));
-        assert_eq!(
-            changed
-                .as_ref()
-                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
-            Some("alpha")
-        );
-
-        let changed = combobox_value_change_event(&mut state, None);
-        assert_eq!(changed, Some(None));
     }
 
     #[test]
