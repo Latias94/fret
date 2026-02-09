@@ -3910,6 +3910,8 @@ fn preview_markdown_editor_source(
     );
     // Best-effort: only takes effect when `fret-code-editor` is built with `syntax` features.
     handle.set_language(Some("markdown"));
+    // Markdown source editing uses Unicode word boundaries (ADR 0194).
+    handle.set_text_boundary_mode(fret_runtime::TextBoundaryMode::UnicodeWord);
 
     #[cfg(not(target_arch = "wasm32"))]
     cx.app.with_global_mut(
