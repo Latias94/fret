@@ -42,6 +42,8 @@ If the issue is “it feels janky” (resize/scroll/pointer-move) rather than a 
 1. Switch to `fret-perf-workflow` and run an appropriate gate/suite (`ui-gallery-steady`, `ui-resize-probes`, etc).
 2. When a `diag perf` run fails, start with the thresholds file:
    - `<out-dir>/check.perf_thresholds.json` (or `attempt-N/check.perf_thresholds.json` for gate scripts)
+   - Tip: `fret-perf-workflow` includes a compact gate triage helper:
+     `.agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir>`
 3. Use the worst bundle for root cause:
    - `cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30`
 4. Turn the hitch class into a stable probe or a stricter gate once it is explainable:

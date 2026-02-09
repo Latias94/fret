@@ -91,6 +91,20 @@ tools/perf/diag_perf_baseline_select.sh \
 
 When a gate fails, the goal is to go from “numbers” → “one concrete hitch class” quickly.
 
+### Optional helper (compact gate triage)
+
+If you have a gate out-dir (from `tools/perf/diag_resize_probes_gate.sh`), you can print a compact triage summary:
+
+```bash
+.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag>
+```
+
+This reports:
+
+- which attempts passed/failed,
+- which script/metric exceeded thresholds, and
+- the worst bundle for each failing script (by `top_total_time_us`).
+
 1. Identify the failing script/metric.
    - `<out-dir>/check.perf_thresholds.json`
    - For gate scripts: `<out-dir>/attempt-N/check.perf_thresholds.json`
