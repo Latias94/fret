@@ -46,3 +46,6 @@ ADR anchor:
   numbers for the mobile shell decision (Drawer vs Popover).
 - [x] Add a regression gate (test or `fretboard diag` script) for the migration.
   - Evidence: `fret-ui-shadcn::web_vs_fret_overlay_placement::fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile`
+- [x] Migrate `SidebarProvider` “mobile/offcanvas shell” to infer from environment queries by
+  default (override allowed).
+  - Evidence: `fret-ui-shadcn::sidebar::tests::sidebar_provider_infers_mobile_from_viewport_width_when_unset`

@@ -14,7 +14,7 @@ use fret_ui::element::{
     AnyElement, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign, OpacityProps,
     Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
 };
-use fret_ui::{CommandAvailability, ElementContext, Theme, UiHost};
+use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -22,6 +22,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{
+    ViewportQueryHysteresis, viewport_tailwind, viewport_width_at_least,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -525,7 +528,8 @@ pub struct SidebarProvider {
     default_open: bool,
     open_mobile: Option<Model<bool>>,
     default_open_mobile: bool,
-    is_mobile: bool,
+    is_mobile_override: Option<bool>,
+    is_mobile_breakpoint: Px,
     on_open_change: Option<OnOpenChange>,
     on_open_mobile_change: Option<OnOpenChange>,
 }
@@ -537,7 +541,8 @@ impl std::fmt::Debug for SidebarProvider {
             .field("default_open", &self.default_open)
             .field("open_mobile", &self.open_mobile)
             .field("default_open_mobile", &self.default_open_mobile)
-            .field("is_mobile", &self.is_mobile)
+            .field("is_mobile_override", &self.is_mobile_override)
+            .field("is_mobile_breakpoint", &self.is_mobile_breakpoint)
             .field("on_open_change", &self.on_open_change.is_some())
             .field(
                 "on_open_mobile_change",
@@ -554,7 +559,8 @@ impl SidebarProvider {
             default_open: true,
             open_mobile: None,
             default_open_mobile: false,
-            is_mobile: false,
+            is_mobile_override: None,
+            is_mobile_breakpoint: viewport_tailwind::MD,
             on_open_change: None,
             on_open_mobile_change: None,
         }
@@ -580,8 +586,20 @@ impl SidebarProvider {
         self
     }
 
+    /// Overrides whether the sidebar should use mobile/offcanvas behavior.
+    ///
+    /// When unset, `SidebarProvider` infers mobile mode from the committed per-window environment
+    /// snapshot (ADR 1171) using a Tailwind-aligned viewport breakpoint.
     pub fn is_mobile(mut self, is_mobile: bool) -> Self {
-        self.is_mobile = is_mobile;
+        self.is_mobile_override = Some(is_mobile);
+        self
+    }
+
+    /// Overrides the viewport breakpoint used to infer mobile mode when `is_mobile` is not set.
+    ///
+    /// This is intentionally viewport-driven (device shell), not container-query-driven.
+    pub fn is_mobile_breakpoint(mut self, breakpoint: Px) -> Self {
+        self.is_mobile_breakpoint = breakpoint;
         self
     }
 
@@ -649,17 +667,25 @@ impl SidebarProvider {
             SidebarState::Collapsed
         };
 
+        let is_mobile = self.is_mobile_override.unwrap_or_else(|| {
+            !viewport_width_at_least(
+                cx,
+                Invalidation::Layout,
+                self.is_mobile_breakpoint,
+                ViewportQueryHysteresis::default(),
+            )
+        });
         let context = SidebarContext {
             state,
             open: open.clone(),
             open_mobile: open_mobile.clone(),
-            is_mobile: self.is_mobile,
+            is_mobile,
         };
 
         let toggle_command = sidebar_toggle_command_id();
         let open_for_command = open.clone();
         let open_mobile_for_command = open_mobile.clone();
-        let is_mobile_for_command = self.is_mobile;
+        let is_mobile_for_command = is_mobile;
 
         with_sidebar_provider_state(cx, context, |cx| {
             let root = cx.root_id();
@@ -3770,6 +3796,67 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
             "expected mobile sidebar sheet content to render sidebar children"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_infers_mobile_from_viewport_width_when_unset() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(360.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(true);
+
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-mobile-infer-from-viewport",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .with(cx, |cx| {
+                        let content = SidebarMenuButton::new("Inbox")
+                            .test_id("sidebar-mobile-menu-button")
+                            .into_element(cx);
+                        let sidebar = Sidebar::new([content]).into_element(cx);
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::Dialog),
+            "expected inferred mobile sidebar branch to expose sheet dialog semantics"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
+            "expected inferred mobile sidebar sheet content to render sidebar children"
         );
     }
 
