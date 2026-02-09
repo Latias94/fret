@@ -1,6 +1,124 @@
 use super::*;
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LayoutScrollRecipe {
+    ScrollAreaDemoRootSize,
+    ScrollAreaDemoMaxOffsetY,
+    ScrollAreaHorizontalDemoMaxOffset,
+    ScrollAreaDemoScrollbarBoundsHover,
+    ScrollAreaDemoThumbBackgroundHoverLight,
+    ScrollAreaDemoThumbBackgroundHoverDark,
+    ScrollAreaDemoScrollbarHidesAfterHoverOutDelay,
+    ScrollAreaDemoThumbBoundsScrolled,
+    ScrollAreaHorizontalDemoScrollbarBoundsHover,
+    ScrollAreaHorizontalDemoThumbBackgroundHoverLight,
+    ScrollAreaHorizontalDemoThumbBackgroundHoverDark,
+    ScrollAreaHorizontalDemoScrollbarHidesAfterHoverOutDelay,
+    ScrollAreaHorizontalDemoThumbBoundsScrolled,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LayoutScrollCase {
+    id: String,
+    web_name: String,
+    #[serde(default)]
+    web_name_late: Option<String>,
+    recipe: LayoutScrollRecipe,
+}
+
 #[test]
+fn web_vs_fret_layout_scroll_geometry_matches_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/layout_scroll_cases_v1.json"
+    ));
+    let suite: FixtureSuite<LayoutScrollCase> =
+        serde_json::from_str(raw).expect("layout scroll fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
+
+    for case in suite.cases {
+        eprintln!("layout scroll case={}", case.id);
+        match case.recipe {
+            LayoutScrollRecipe::ScrollAreaDemoRootSize => {
+                assert_eq!(case.web_name, "scroll-area-demo");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_root_size();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoMaxOffsetY => {
+                assert_eq!(case.web_name, "scroll-area-demo");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web();
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoMaxOffset => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoScrollbarBoundsHover => {
+                assert_eq!(case.web_name, "scroll-area-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoThumbBackgroundHoverLight => {
+                assert_eq!(case.web_name, "scroll-area-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoThumbBackgroundHoverDark => {
+                assert_eq!(case.web_name, "scroll-area-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoScrollbarHidesAfterHoverOutDelay => {
+                assert_eq!(case.web_name, "scroll-area-demo.hover-out-550ms");
+                assert_eq!(
+                    case.web_name_late.as_deref(),
+                    Some("scroll-area-demo.hover-out-650ms")
+                );
+                web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay();
+            }
+            LayoutScrollRecipe::ScrollAreaDemoThumbBoundsScrolled => {
+                assert_eq!(case.web_name, "scroll-area-demo.scrolled");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled();
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoScrollbarBoundsHover => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hover();
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoThumbBackgroundHoverLight => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_light(
+                );
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoThumbBackgroundHoverDark => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo.hover");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_dark(
+                );
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoScrollbarHidesAfterHoverOutDelay => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo.hover-out-550ms");
+                assert_eq!(
+                    case.web_name_late.as_deref(),
+                    Some("scroll-area-horizontal-demo.hover-out-650ms")
+                );
+                web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay(
+                );
+            }
+            LayoutScrollRecipe::ScrollAreaHorizontalDemoThumbBoundsScrolled => {
+                assert_eq!(case.web_name, "scroll-area-horizontal-demo.scrolled");
+                assert!(case.web_name_late.is_none());
+                web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolled();
+            }
+        }
+    }
+}
+
 fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -57,7 +175,6 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -143,7 +260,6 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     assert!(max.y.0 > 0.0, "expected scroll area to overflow vertically");
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     let web = read_web_golden("scroll-area-horizontal-demo");
     let theme = web_theme(&web);
@@ -244,7 +360,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web_theme(&web);
@@ -446,7 +561,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -650,7 +764,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -854,7 +967,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -1152,7 +1264,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-demo.scrolled");
     let theme = web_theme(&web);
@@ -1363,7 +1474,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     assert_rect_close_px("scroll-area-demo thumb", thumb_bounds, expected_abs, 2.0);
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web_theme(&web);
@@ -1568,7 +1678,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -1777,7 +1886,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -1986,7 +2094,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-horizontal-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -2280,7 +2387,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-horizontal-demo.scrolled");
     let theme = web_theme(&web);
