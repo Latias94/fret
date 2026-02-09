@@ -55,27 +55,27 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_overlay_placement_smoke_cases_match_web_fixtures`)
   - Evidence (fixture-driven slice, layout trigger heights):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_trigger_height_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_trigger_heights_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_trigger_heights_match_web_fixtures`)
   - Evidence (fixture-driven slice, date picker trigger geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_date_picker_trigger_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, native select heights):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_native_select_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_native_select_heights_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/native_select.rs` (`web_vs_fret_layout_native_select_heights_match_web_fixtures`)
   - Evidence (fixture-driven slice, textarea geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_textarea_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_textarea_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/textarea.rs` (`web_vs_fret_layout_textarea_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, switch + radio-group layout):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_switch_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_radio_group_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures`)
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/switch.rs` (`web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs` (`web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, empty geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_empty_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_empty_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/empty.rs` (`web_vs_fret_layout_empty_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, resizable geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_resizable_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_resizable_geometry_matches_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/resizable.rs` (`web_vs_fret_layout_resizable_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, calendar variants geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_calendar_variant_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures`)
