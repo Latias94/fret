@@ -38,9 +38,17 @@ pub(super) fn paint_row(
     // font's actual line height. Measure a representative line to compute a stable baseline and
     // vertically center the glyph box within the row.
     let scale_factor = painter.scale_factor();
+    // Bucket the text shaping width to avoid re-preparing all visible rows on sub-cell resize
+    // deltas (especially noticeable while window-resize dragging).
+    let bucketed_max_width = if cell_w.0 > 0.01 {
+        let cols = (rect.size.width.0 / cell_w.0).ceil().max(1.0);
+        Px(cols * cell_w.0)
+    } else {
+        rect.size.width
+    };
     let scale_bits = scale_factor.to_bits();
     let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
-        cache.max_width == rect.size.width
+        cache.max_width == bucketed_max_width
             && cache.row_h == row_h
             && cache.scale_bits == scale_bits
             && &cache.text_style == text_style
@@ -54,7 +62,7 @@ pub(super) fn paint_row(
     } else {
         let (services, _) = painter.services_and_scene();
         let measure_constraints = fret_core::TextConstraints {
-            max_width: Some(rect.size.width),
+            max_width: Some(bucketed_max_width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             scale_factor,
@@ -70,7 +78,7 @@ pub(super) fn paint_row(
             Px(row_h.0.max(16.0))
         };
         st.baseline_measure_cache = Some(BaselineMeasureCache {
-            max_width: rect.size.width,
+            max_width: bucketed_max_width,
             row_h,
             scale_bits,
             text_style: text_style.clone(),
@@ -87,7 +95,7 @@ pub(super) fn paint_row(
     let scope = painter.key_scope(&"fret-code-editor-row-text");
     let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
     let constraints = CanvasTextConstraints {
-        max_width: Some(rect.size.width),
+        max_width: Some(bucketed_max_width),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
