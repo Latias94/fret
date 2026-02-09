@@ -594,3 +594,33 @@ fn golden_dataset_transform_sort_desc_from_dataset() {
     let json = serde_json::to_string(&option).expect("option json");
     assert_matches_golden("dataset-transform-sort-desc", &json);
 }
+
+#[test]
+fn golden_dataset_transform_chain_filter_then_sort_desc_from_dataset() {
+    let mut source = Vec::with_capacity(1 + 20);
+    source.push(serde_json::json!(["x", "y"]));
+    for i in 0..20 {
+        source.push(serde_json::json!([i as f64, i as f64]));
+    }
+
+    let option = serde_json::json!({
+      "dataset": [
+        { "source": source },
+        {
+          "fromDatasetIndex": 0,
+          "transform": { "type": "filter", "config": { "dimension": "y", "gte": 5, "lte": 14 } }
+        },
+        {
+          "fromDatasetIndex": 1,
+          "transform": { "type": "sort", "config": { "dimension": "y", "order": "desc" } }
+        }
+      ],
+      "xAxis": [{ "type": "value" }],
+      "yAxis": [{ "type": "value" }],
+      "series": [
+        { "type": "scatter", "datasetIndex": 2, "encode": { "x": "x", "y": "y" } }
+      ]
+    });
+    let json = serde_json::to_string(&option).expect("option json");
+    assert_matches_golden("dataset-transform-chain-filter-sort-desc", &json);
+}
