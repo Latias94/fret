@@ -141,7 +141,7 @@ Inspired by `repo-ref/kibo` (MIT), adapted to Fret primitives:
 ### M2: Medium complexity (adds more interaction policy)
 
 - `AvatarStack` (stacked avatars; implement with clipping/overlap rather than web-only mask tricks)
-- `Snippet` / `CodeBlock` (if not already covered by existing ecosystems; coordinate with `fret-ui-ai`)
+- `Snippet` / `CodeBlock` (decision: owned outside extras; see “Ownership decision” below)
 
 ### M3: Scheduling/animation-heavy blocks (defer until authoring patterns are stable)
 
@@ -156,3 +156,34 @@ We only port outcomes from permissive sources:
 - Avoid strong copyleft sources (GPL/AGPL) for direct code reuse.
 - For each extras component, record its upstream inspiration in rustdoc (short) and in a small
   “sources table” in `docs/workstreams/shadcn-extras-todo.md`.
+
+## Ownership decision: `Snippet` / `CodeBlock` (not in extras)
+
+Decision:
+
+- `Snippet` / `CodeBlock` do **not** land under `fret_ui_shadcn::extras`.
+
+Rationale (keep surfaces aligned with layering):
+
+- We already have a dedicated ecosystem for code rendering:
+  - `ecosystem/fret-code-view` provides the core “code block” UI surface.
+  - `ecosystem/fret-markdown` renders fenced code blocks via `fret-code-view`.
+- The “Snippet / CodeBlock” product surface is usually policy-heavy:
+  expand/collapse, copy actions, header slots, language labels, attachments, inline diffs, and
+  interaction scripts. These policies are better owned by:
+  - `ecosystem/fret-ui-ai` for AI/chat-driven “message parts” (see `docs/workstreams/ai-elements-port.md`), and
+  - `ecosystem/fret-markdown` for document rendering policies.
+- Keeping the implementation in `fret-code-view` avoids duplicating engines and reduces the risk of
+  accidental runtime-contract creep (ADR 0066).
+
+What extras may do later (optional, and only as a thin recipe):
+
+- If we need a “shadcn-feeling wrapper” around `fret-code-view`, introduce a differently named block
+  (e.g. `CodeSnippetCard`) that composes `fret_code_view::CodeBlock` without inventing a second
+  `CodeBlock` type under `fret-ui-shadcn`.
+
+Regression gates (where they belong):
+
+- `fret-code-view`: keep unit/integration tests for wrapping/selection/scroll policies.
+- `fret-ui-ai`: gate expand/collapse and message-part behaviors via deterministic `fretboard diag`
+  scripts (e.g. the existing UI gallery scripts referenced in the AI Elements workstream).

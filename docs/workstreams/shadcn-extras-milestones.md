@@ -42,6 +42,8 @@ Exit criteria:
   - stays in extras, or
   - owned by `fret-ui-ai` / `fret-markdown` ecosystems (preferred when policy-heavy).
 
+Decision note: documented in `docs/workstreams/shadcn-extras.md` (“Ownership decision: `Snippet` / `CodeBlock`”).
+
 ## M3 — Scheduling-heavy blocks (deferred)
 
 Exit criteria:
@@ -50,4 +52,3 @@ Exit criteria:
 - Each scheduling-heavy component ships with:
   - deterministic scripted gates, and
   - at least one perf regression note or diag gate where appropriate.
-

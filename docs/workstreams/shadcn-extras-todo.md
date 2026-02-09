@@ -57,7 +57,7 @@ Legend:
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
 | `AvatarStack` | `repo-ref/kibo/packages/avatar-stack` (MIT) | composition; avoid web-only mask tricks | snapshot |
-| `Snippet` / `CodeBlock` | (coordinate with existing crates) | may live outside extras | TBD |
+| `Snippet` / `CodeBlock` | AI Elements + markdown fences | owned by `fret-code-view` + `fret-markdown`; AI message-part policy in `fret-ui-ai` | diag script + existing crate tests |
 
 ### M3: Scheduling/animation-heavy
 
