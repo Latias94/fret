@@ -257,6 +257,8 @@ Acceptance:
 
 - `ui-gallery-steady` (canonical baseline) stays green.
 - `ui-resize-probes` and `ui-code-editor-resize-probes` are stable under attempts=3 on the primary dev machine(s).
+  - Evidence: perf log entries `2026-02-09 13:31:35` (commit `1778ba563`) and `2026-02-09 13:46:46`
+    (commit `007006b28`) in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
 
 ### M1: Resize-drag becomes predictable (bounded tail)
 
@@ -279,6 +281,7 @@ Goal:
 Acceptance:
 
 - `ui-code-editor-resize-probes` stays under budget with lower `Text::prepare` churn signals and fewer rare tail spikes.
+  - Evidence: perf log entry `2026-02-09 13:46:46` (commit `007006b28`) shows worst frames `~15.1–15.8ms` vs `16308us` target.
 
 ### M3: Frame scratch / allocation discipline (arena-first)
 
