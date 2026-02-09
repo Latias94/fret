@@ -53,6 +53,9 @@ ADR anchor:
 
 ## Remaining approximations (audit list)
 
-- [ ] `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`: responsive `sm`-like behavior should follow the
-  dialog's container width (not the viewport) once a stable query region is available for that
-  surface.
+- [x] `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`: responsive footer layout now tracks the
+  dialog's committed container width.
+- [ ] `ecosystem/fret-ui-shadcn/src/calendar*.rs`: audit which responsive branches should follow
+  container width (panels) vs viewport width (device-size).
+- [ ] `ecosystem/fret-ui-shadcn/src/empty.rs`: padding/layout should follow container width, not
+  viewport width.
