@@ -11310,6 +11310,175 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_j
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_web_ime_bridge_enabled(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(&bundle, bundle_path, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut satisfied: bool = false;
+    let mut observed_focus_true: bool = false;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let web_ime = s
+                .get("debug")
+                .and_then(|v| v.get("web_ime_bridge"))
+                .and_then(|v| v.as_object());
+            let Some(web_ime) = web_ime else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let enabled = web_ime
+                .get("enabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let mount_kind = web_ime.get("mount_kind").and_then(|v| v.as_str());
+            let position_mode = web_ime.get("position_mode").and_then(|v| v.as_str());
+            let textarea_has_focus = web_ime.get("textarea_has_focus").and_then(|v| v.as_bool());
+            let cursor_area_set_seen = web_ime
+                .get("cursor_area_set_seen")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let last_cursor_area = web_ime.get("last_cursor_area").cloned();
+
+            observed_focus_true |= textarea_has_focus == Some(true);
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "selected_page": selected_page,
+                "enabled": enabled,
+                "textarea_has_focus": textarea_has_focus,
+                "mount_kind": mount_kind,
+                "position_mode": position_mode,
+                "cursor_area_set_seen": cursor_area_set_seen,
+                "last_cursor_area": last_cursor_area,
+            }));
+
+            if enabled
+                && mount_kind.is_some()
+                && position_mode.is_some()
+                && textarea_has_focus.is_some()
+                && cursor_area_set_seen > 0
+            {
+                satisfied = true;
+                break;
+            }
+        }
+        if satisfied {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_web_ime_bridge_enabled.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_web_ime_bridge_enabled",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "satisfied": satisfied,
+        "observed_focus_true": observed_focus_true,
+        "last_observed": last_observed,
+        "expected": {
+            "selected_page": "markdown_editor_source",
+            "web_ime_bridge": {
+                "enabled": true,
+                "mount_kind": "non_null",
+                "position_mode": "non_null",
+                "textarea_has_focus": "some(true_or_false)",
+                "cursor_area_set_seen_gt": 0
+            }
+        }
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery web-ime bridge gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery web-ime bridge gate requires debug.web_ime_bridge snapshots on selected_page=markdown_editor_source after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}, ui_gallery_snapshots={ui_gallery_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if satisfied {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery web-ime bridge gate failed (expected bridge to be enabled with mount/position metadata and cursor area updates; focus may be best-effort)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 // ADR 0194: triple-click should select the logical line.
 pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click(
     bundle_path: &Path,

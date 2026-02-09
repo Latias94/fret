@@ -75,9 +75,10 @@ use stats::{
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
     check_bundle_for_ui_gallery_markdown_editor_source_word_boundary,
-    check_bundle_for_view_cache_reuse_min, check_bundle_for_view_cache_reuse_stable_min,
-    check_bundle_for_viewport_capture_min, check_bundle_for_viewport_input_min,
-    check_bundle_for_vlist_policy_key_stable, check_bundle_for_vlist_visible_range_refreshes_max,
+    check_bundle_for_ui_gallery_web_ime_bridge_enabled, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
+    check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
+    check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
@@ -162,6 +163,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_markdown_editor_source_disabled_blocks_edits: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_word_boundary: bool = false;
+    let mut check_ui_gallery_web_ime_bridge_enabled: bool = false;
     let mut check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool = false;
@@ -710,6 +712,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-markdown-editor-source-word-boundary" => {
                 check_ui_gallery_markdown_editor_source_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-web-ime-bridge-enabled" => {
+                check_ui_gallery_web_ime_bridge_enabled = true;
                 i += 1;
             }
             "--check-ui-gallery-markdown-editor-source-line-boundary-triple-click" => {
@@ -1720,6 +1726,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
                     || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                     || check_ui_gallery_markdown_editor_source_word_boundary
+                    || check_ui_gallery_web_ime_bridge_enabled
                     || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                     || check_ui_gallery_markdown_editor_source_a11y_composition
                     || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
@@ -1806,6 +1813,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
                         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary,
+                        check_ui_gallery_web_ime_bridge_enabled,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -2154,6 +2162,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
                         || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
                         || check_ui_gallery_markdown_editor_source_word_boundary
+                        || check_ui_gallery_web_ime_bridge_enabled
                         || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                         || check_ui_gallery_markdown_editor_source_a11y_composition
                         || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
@@ -2239,6 +2248,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
                             check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                             check_ui_gallery_markdown_editor_source_word_boundary,
+                            check_ui_gallery_web_ime_bridge_enabled,
                             check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                             check_ui_gallery_markdown_editor_source_a11y_composition,
                             check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -3498,6 +3508,7 @@ See: `docs/tracy.md`.\n";
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_web_ime_bridge_enabled
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
@@ -3550,6 +3561,7 @@ See: `docs/tracy.md`.\n";
                         &src,
                     )
                     || ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
+                    || ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
                         &src,
                     )
@@ -3785,6 +3797,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_markdown_editor_source_word_boundary =
                         ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_word_boundary;
+                    let suite_ui_gallery_web_ime_bridge_enabled =
+                        ui_gallery_script_requires_web_ime_bridge_enabled_gate(&src)
+                            && !check_ui_gallery_web_ime_bridge_enabled;
                     let suite_ui_gallery_markdown_editor_source_line_boundary_triple_click =
                         ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_line_boundary_triple_click;
@@ -3951,6 +3966,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
                         check_ui_gallery_markdown_editor_source_word_boundary
                             || suite_ui_gallery_markdown_editor_source_word_boundary,
+                        check_ui_gallery_web_ime_bridge_enabled
+                            || suite_ui_gallery_web_ime_bridge_enabled,
                         check_ui_gallery_markdown_editor_source_line_boundary_triple_click
                             || suite_ui_gallery_markdown_editor_source_line_boundary_triple_click,
                         check_ui_gallery_markdown_editor_source_a11y_composition
@@ -7686,6 +7703,17 @@ fn ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(script: 
     )
 }
 
+fn ui_gallery_script_requires_web_ime_bridge_enabled_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_markdown_editor_source_line_boundary_triple_click_gate(
     script: &Path,
 ) -> bool {
@@ -8236,6 +8264,7 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_disabled_blocks_edits: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_word_boundary: bool,
+    check_ui_gallery_web_ime_bridge_enabled: bool,
     check_ui_gallery_markdown_editor_source_line_boundary_triple_click: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool,
@@ -8435,6 +8464,9 @@ fn apply_post_run_checks(
             bundle_path,
             warmup_frames,
         )?;
+    }
+    if check_ui_gallery_web_ime_bridge_enabled {
+        check_bundle_for_ui_gallery_web_ime_bridge_enabled(bundle_path, warmup_frames)?;
     }
     if check_ui_gallery_markdown_editor_source_line_boundary_triple_click {
         check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click(
@@ -9366,6 +9398,7 @@ mod tests {
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_json,
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable_json,
         check_bundle_for_ui_gallery_markdown_editor_source_word_boundary_json,
+        check_bundle_for_ui_gallery_web_ime_bridge_enabled_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
         check_bundle_for_wheel_scroll_hit_changes_json,
@@ -13408,6 +13441,72 @@ mod tests {
             0,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_web_ime_bridge_gate_passes_when_enabled_and_cursor_area_seen() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": { "kind": "fret_ui_gallery", "selected_page": "markdown_editor_source" },
+                            "debug": { "web_ime_bridge": {
+                                "enabled": true,
+                                "mount_kind": "body",
+                                "position_mode": "fixed",
+                                "textarea_has_focus": true,
+                                "cursor_area_set_seen": 1,
+                                "last_cursor_area": { "origin": { "x": 0.0, "y": 0.0 }, "size": { "width": 1.0, "height": 1.0 } }
+                            } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_web_ime_bridge_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(&bundle, &bundle_path, 0).unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_web_ime_bridge_gate_fails_when_disabled() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": { "kind": "fret_ui_gallery", "selected_page": "markdown_editor_source" },
+                            "debug": { "web_ime_bridge": {
+                                "enabled": false,
+                                "mount_kind": "body",
+                                "position_mode": "fixed",
+                                "textarea_has_focus": false,
+                                "cursor_area_set_seen": 0,
+                                "last_cursor_area": null
+                            } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_web_ime_bridge_gate_fails");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(&bundle, &bundle_path, 0)
+            .unwrap_err();
+        assert!(err.contains("ui-gallery web-ime bridge gate failed"));
     }
 
     #[test]
