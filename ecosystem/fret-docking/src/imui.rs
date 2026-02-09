@@ -26,6 +26,11 @@ pub struct DockSpaceImUiOptions {
     pub layout: LayoutStyle,
     /// Optional semantics test id for the dock space root.
     pub test_id: Option<&'static str>,
+    /// Optional semantics-only drag anchor placed on the dock space tab bar.
+    ///
+    /// This is intended for scripted diagnostics runs (`fretboard diag`) so scripts can start a
+    /// deterministic dock drag without relying on brittle role/label selectors for tabs.
+    pub tab_drag_anchor_test_id: Option<&'static str>,
 }
 
 impl Default for DockSpaceImUiOptions {
@@ -37,6 +42,7 @@ impl Default for DockSpaceImUiOptions {
         Self {
             layout,
             test_id: None,
+            tab_drag_anchor_test_id: None,
         }
     }
 }
@@ -60,12 +66,21 @@ pub fn dock_space_with<H: UiHost + 'static>(
     let configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>> =
         Rc::new(RefCell::new(Box::new(configure)));
     let test_id = options.test_id;
+    let tab_drag_anchor_test_id = options.tab_drag_anchor_test_id;
 
     let props = fret_ui::retained_bridge::RetainedSubtreeProps {
         layout: options.layout,
         factory: fret_ui::retained_bridge::RetainedSubtreeFactory::new::<H>({
             let configure = configure.clone();
-            move |ui_tree| build_dock_host(ui_tree, window, test_id, configure.clone())
+            move |ui_tree| {
+                build_dock_host(
+                    ui_tree,
+                    window,
+                    test_id,
+                    tab_drag_anchor_test_id,
+                    configure.clone(),
+                )
+            }
         }),
     };
 
@@ -86,20 +101,44 @@ fn build_dock_host<H: UiHost + 'static>(
     ui_tree: &mut UiTree<H>,
     window: AppWindowId,
     test_id: Option<&'static str>,
+    tab_drag_anchor_test_id: Option<&'static str>,
     configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>>,
 ) -> fret_core::NodeId {
     let test_id = test_id.unwrap_or("dock-space");
     let dock_space = create_dock_space_node_with_test_id(ui_tree, window, test_id);
+    let tab_drag_anchor = tab_drag_anchor_test_id
+        .map(|id| ui_tree.create_node_retained(DockTabDragAnchor { test_id: id }));
     let root = ui_tree.create_node_retained(DockHostRoot::<H> {
         dock_space,
+        tab_drag_anchor,
         configure,
     });
-    ui_tree.set_children(root, vec![dock_space]);
+    let mut children = vec![dock_space];
+    if let Some(anchor) = tab_drag_anchor {
+        children.push(anchor);
+    }
+    ui_tree.set_children(root, children);
     root
+}
+
+struct DockTabDragAnchor {
+    test_id: &'static str,
+}
+
+impl<H: UiHost> Widget<H> for DockTabDragAnchor {
+    fn hit_test(&self, _bounds: fret_core::Rect, _position: fret_core::Point) -> bool {
+        false
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Group);
+        cx.set_test_id(self.test_id);
+    }
 }
 
 struct DockHostRoot<H: UiHost> {
     dock_space: fret_core::NodeId,
+    tab_drag_anchor: Option<fret_core::NodeId>,
     configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>>,
 }
 
@@ -126,6 +165,23 @@ impl<H: UiHost + 'static> Widget<H> for DockHostRoot<H> {
         );
 
         let _ = cx.layout_in(self.dock_space, cx.bounds);
+        if let Some(anchor) = self.tab_drag_anchor {
+            const SIZE_PX: f32 = 12.0;
+            const TAB_BAR_H_PX: f32 = 28.0;
+
+            let x = cx.bounds.origin.x.0 + cx.bounds.size.width.0 * 0.25;
+            let y = cx.bounds.origin.y.0 + TAB_BAR_H_PX * 0.5;
+            let half = SIZE_PX * 0.5;
+
+            let rect = fret_core::Rect::new(
+                fret_core::Point::new(
+                    fret_core::Px((x - half).max(cx.bounds.origin.x.0)),
+                    fret_core::Px((y - half).max(cx.bounds.origin.y.0)),
+                ),
+                fret_core::Size::new(fret_core::Px(SIZE_PX), fret_core::Px(SIZE_PX)),
+            );
+            let _ = cx.layout_in(anchor, rect);
+        }
         cx.available
     }
 
