@@ -26,6 +26,9 @@ When `ChartState.link.group` is `Some(_)`, the engine emits a link event wheneve
 
 The payload is the current selection (or `None` if cleared).
 
+In multi-grid charts, `BrushSelection2D` carries an optional `GridId`, making the event grid-addressable without
+requiring adapter-side guessing.
+
 ### 2) Events are change-based, not frame-based
 
 The engine must not emit brush events every frame. Emission is gated by a cached last value:

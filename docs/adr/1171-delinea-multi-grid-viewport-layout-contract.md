@@ -91,6 +91,8 @@ Opt-in behavior (contract decision; implementation may land incrementally):
 - Cross-grid linking is enabled only when an explicit policy is set (e.g. a `LinkConfig` flag or an
   explicit link rule list). When enabled, the engine may emit link events that are *grid-addressable*
   (either carrying `GridId` directly, or being unambiguous via `SeriesId -> GridId` mapping).
+  - v1 evidence: brush selection carries `grid: Option<GridId>` and link events propagate the selection (ADR 1146).
+  - v1 evidence: `LinkConfig.brush_x_export_policy` can opt into cross-grid derived X row ranges (ADR 1145).
 
 This keeps v1 deterministic and avoids accidentally coupling grids as we close M1.
 

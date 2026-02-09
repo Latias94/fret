@@ -37,6 +37,7 @@ Implementation steps (keep them small and regression-gated):
 - [x] DEL-ENG1-impl-013 Keep brush selection output scoped to the grid/axis pair and preserve link semantics.
 - [x] DEL-ENG1-impl-014 Emit `GridId` in `axisPointer` output so UI adapters can route without guessing.
 - [x] DEL-ENG1-impl-015 Add global controllers for retained multi-grid (single legend + tooltip/axisPointer overlay).
+- [x] DEL-ENG1-impl-016 Add an explicit opt-in policy for cross-grid brush-derived X exports (linking scaffold).
 
 Regression gates:
 

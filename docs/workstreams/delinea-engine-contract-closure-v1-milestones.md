@@ -42,7 +42,7 @@ Acceptance criteria:
 - The existing multi-axis harness can be extended into a multi-grid harness with deterministic routing outcomes.
 - At least one headless regression gate covers multi-grid window + marks outputs.
 
-Status: In progress (engine + retained adapter landed; global controllers landed; remaining: opt-in linking semantics).
+Status: In progress (engine + retained adapter landed; global controllers landed; brush+link scaffolds landed; remaining: broader linking semantics beyond brush X exports).
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 
