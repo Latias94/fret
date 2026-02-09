@@ -3957,6 +3957,11 @@ See: `docs/tracy.md`.\n";
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
+            } else if rest.len() == 1 && rest[0] == "extras-marquee-steady" {
+                ["tools/diag-scripts/extras-marquee-steady.json"]
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
