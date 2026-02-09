@@ -9,7 +9,7 @@ use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
 use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
-use delinea::{Action, AxisPointerAnchor, BrushSelection2D, ChartEngine, WorkBudget};
+use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
 use fret_canvas::cache::{PathCache, SceneOpCache};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
@@ -27,6 +27,7 @@ use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
+use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
 use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
@@ -208,9 +209,10 @@ pub struct ChartCanvas {
     visual_map_drag: Option<VisualMapDrag>,
     visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
-    linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
-    linked_axis_pointer_model: Option<Model<Option<AxisPointerAnchor>>>,
-    linked_domain_windows_model: Option<Model<BTreeMap<delinea::AxisId, Option<DataWindow>>>>,
+    link_router_cache: Option<(delinea::Revision, ChartLinkRouter)>,
+    linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
+    linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
+    linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
     output_model: Option<Model<ChartCanvasOutput>>,
     output: ChartCanvasOutput,
 }
@@ -391,6 +393,7 @@ impl ChartCanvas {
             visual_map_drag: None,
             visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
+            link_router_cache: None,
             linked_brush_model: None,
             linked_axis_pointer_model: None,
             linked_domain_windows_model: None,
@@ -482,19 +485,22 @@ impl ChartCanvas {
         self.input_map = map;
     }
 
-    pub fn linked_brush(mut self, brush: Model<Option<BrushSelection2D>>) -> Self {
+    pub fn linked_brush(mut self, brush: Model<Option<BrushSelectionLink2D>>) -> Self {
         self.linked_brush_model = Some(brush);
         self
     }
 
-    pub fn linked_axis_pointer(mut self, axis_pointer: Model<Option<AxisPointerAnchor>>) -> Self {
+    pub fn linked_axis_pointer(
+        mut self,
+        axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    ) -> Self {
         self.linked_axis_pointer_model = Some(axis_pointer);
         self
     }
 
     pub fn linked_domain_windows(
         mut self,
-        windows: Model<BTreeMap<delinea::AxisId, Option<DataWindow>>>,
+        windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
     ) -> Self {
         self.linked_domain_windows_model = Some(windows);
         self
@@ -503,6 +509,24 @@ impl ChartCanvas {
     pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
         self.output_model = Some(output);
         self
+    }
+
+    fn link_router(&mut self) -> &ChartLinkRouter {
+        let spec_rev = self.with_engine(|engine| engine.model().revs.spec);
+        let needs_rebuild = self
+            .link_router_cache
+            .as_ref()
+            .map(|(rev, _router)| *rev != spec_rev)
+            .unwrap_or(true);
+        if needs_rebuild {
+            let router = self.with_engine(|engine| ChartLinkRouter::from_model(engine.model()));
+            self.link_router_cache = Some((spec_rev, router));
+        }
+        &self
+            .link_router_cache
+            .as_ref()
+            .expect("router cache must be populated")
+            .1
     }
 
     fn sync_linked_brush<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -514,21 +538,36 @@ impl ChartCanvas {
         let Ok(selection) = model.read(cx.app, |_, s| *s) else {
             return;
         };
-        let current = self.with_engine(|engine| engine.state().brush_selection_2d);
-        let normalize = |mut s: BrushSelection2D| {
-            s.grid = None;
-            s
-        };
-        if selection.map(normalize) == current.map(normalize) {
+
+        let router = self.link_router().clone();
+        let current = self
+            .with_engine(|engine| engine.state().brush_selection_2d)
+            .and_then(|sel| {
+                let x_axis = router.axis_key(sel.x_axis)?;
+                let y_axis = router.axis_key(sel.y_axis)?;
+                Some(BrushSelectionLink2D {
+                    x_axis,
+                    y_axis,
+                    x: sel.x,
+                    y: sel.y,
+                })
+            });
+        if selection == current {
             return;
         }
 
         match selection {
             Some(sel) => {
+                let Some(x_axis) = router.axis_for_key(sel.x_axis) else {
+                    return;
+                };
+                let Some(y_axis) = router.axis_for_key(sel.y_axis) else {
+                    return;
+                };
                 self.with_engine_mut(|engine| {
                     engine.apply_action(Action::SetBrushSelection2D {
-                        x_axis: sel.x_axis,
-                        y_axis: sel.y_axis,
+                        x_axis,
+                        y_axis,
                         x: sel.x,
                         y: sel.y,
                     });
@@ -542,37 +581,44 @@ impl ChartCanvas {
         }
     }
 
-    fn linked_axis_pointer_anchor_for_engine(&self) -> Option<AxisPointerAnchor> {
-        self.with_engine(|engine| {
+    fn linked_axis_pointer_anchor_for_engine(&mut self) -> Option<AxisPointerLinkAnchor> {
+        let router = self.link_router().clone();
+        let (axis, value) = self.with_engine(|engine| {
             engine
                 .output()
                 .axis_pointer
                 .as_ref()
-                .map(|o| AxisPointerAnchor {
-                    grid: o.grid,
-                    axis_kind: o.axis_kind,
-                    axis: o.axis,
-                    value: o.axis_value,
-                })
-        })
+                .map(|o| (o.axis, o.axis_value))
+        })?;
+        if !value.is_finite() {
+            return None;
+        }
+        let axis = router.axis_key(axis)?;
+        Some(AxisPointerLinkAnchor { axis, value })
     }
 
-    fn hover_point_for_axis_pointer_anchor(&self, anchor: AxisPointerAnchor) -> Option<Point> {
+    fn hover_point_for_axis_pointer_anchor(
+        &mut self,
+        anchor: AxisPointerLinkAnchor,
+    ) -> Option<Point> {
+        let router = self.link_router().clone();
+        let axis = router.axis_for_key(anchor.axis)?;
+
         let (plot, axis_window) = self.with_engine(|engine| {
             let output = engine.output();
-            let plot = anchor
-                .grid
+            let grid = engine.model().axes.get(&axis).map(|a| a.grid);
+            let plot = grid
                 .and_then(|grid| output.plot_viewports_by_grid.get(&grid).copied())
                 .or(output.viewport)
                 .or_else(|| output.plot_viewports_by_grid.values().next().copied());
-            let axis_window = output.axis_windows.get(&anchor.axis).copied();
+            let axis_window = output.axis_windows.get(&axis).copied();
             (plot, axis_window)
         });
 
         let plot = plot?;
         let axis_window = axis_window?;
 
-        let px = match anchor.axis_kind {
+        let px = match anchor.axis.kind {
             delinea::AxisKind::X => {
                 let x =
                     delinea::engine::axis::x_px_at_data_in_rect(axis_window, anchor.value, plot);
@@ -633,13 +679,13 @@ impl ChartCanvas {
             return;
         };
 
-        for (axis, window) in windows {
-            let kind = self.with_engine(|engine| engine.model().axes.get(&axis).map(|a| a.kind));
-            let Some(kind) = kind else {
+        let router = self.link_router().clone();
+        for (key, window) in windows {
+            let Some(axis) = router.axis_for_key(key) else {
                 continue;
             };
 
-            match kind {
+            match key.kind {
                 delinea::AxisKind::X => {
                     let current = self.with_engine(|engine| {
                         engine.state().data_zoom_x.get(&axis).and_then(|s| s.window)
