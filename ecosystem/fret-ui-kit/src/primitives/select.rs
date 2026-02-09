@@ -20,8 +20,9 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, PointerDownCx,
-    PointerMoveCx, PointerUpCx, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, OnPressablePointerDown,
+    OnPressablePointerUp, PointerDownCx, PointerMoveCx, PointerUpCx, PressablePointerDownResult,
+    PressablePointerUpResult, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
@@ -1567,6 +1568,113 @@ pub fn select_item_pointer_up_handler_with_mouse_up_gate(
         host.request_redraw(action_cx.window);
         true
     })
+}
+
+/// Pressable pointer handlers for select listbox items.
+///
+/// This consolidates the Radix pointer-up guard (opening on trigger mouse `pointerdown`) with
+/// Base UI's delayed mouse-up commit policy (200/400ms) in one place so shadcn recipes can share
+/// the same behavior without re-assembling handler logic.
+#[derive(Clone)]
+pub struct SelectItemPressablePointerHandlers {
+    pub on_pointer_down: OnPressablePointerDown,
+    pub on_pointer_up: OnPressablePointerUp,
+}
+
+/// Builds item-level `Pressable` pointer handlers that:
+/// - record whether the item received a mouse `pointerdown`
+/// - commit selection on `pointerup` when the interaction is not treated as a click (`is_click=false`)
+/// - gate "mouse-up without pointerdown" commits using Radix's pointer-up guard + Base UI's
+///   delayed selection window.
+///
+/// Notes:
+/// - When the item had a pointer-down and the pointer-up is a click, this returns `Continue` so the
+///   default pressable activation path commits the selection.
+/// - `mouse_up_gate` is only consulted for the "no item pointerdown" mouse-up commit path, matching
+///   Base UI's semantics.
+pub fn select_item_pressable_pointer_handlers_with_mouse_up_gate(
+    open: Model<bool>,
+    value: Model<Option<Arc<str>>>,
+    item_value: Arc<str>,
+    item_disabled: bool,
+    mouse_open_guard: SelectMouseOpenGuard,
+    item_is_selected: bool,
+    mouse_up_gate: Option<Arc<Mutex<SelectMouseUpSelectionGateState>>>,
+    on_value_change: Option<Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
+) -> SelectItemPressablePointerHandlers {
+    let did_pointer_down = Arc::new(Mutex::new(false));
+
+    let did_pointer_down_for_down = did_pointer_down.clone();
+    let mouse_open_guard_for_down = mouse_open_guard.clone();
+    let on_pointer_down: OnPressablePointerDown = Arc::new(move |_host, _action_cx, down| {
+        if matches!(down.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            select_mouse_open_guard_clear(&mouse_open_guard_for_down);
+            let mut pressed = did_pointer_down_for_down
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            *pressed = true;
+        }
+        PressablePointerDownResult::Continue
+    });
+
+    let did_pointer_down_for_up = did_pointer_down.clone();
+    let open_for_up = open.clone();
+    let value_for_up = value.clone();
+    let item_value_for_up = item_value.clone();
+    let mouse_open_guard_for_up = mouse_open_guard.clone();
+    let on_value_change_for_up = on_value_change.clone();
+    let on_pointer_up: OnPressablePointerUp = Arc::new(move |host, action_cx, up| {
+        if up.button != fret_core::MouseButton::Left {
+            return PressablePointerUpResult::Continue;
+        }
+        if !matches!(up.pointer_type, PointerType::Mouse | PointerType::Unknown) {
+            return PressablePointerUpResult::Continue;
+        }
+        if item_disabled {
+            return PressablePointerUpResult::SkipActivate;
+        }
+
+        let had_pointer_down = {
+            let mut pressed = did_pointer_down_for_up
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            let had = *pressed;
+            *pressed = false;
+            had
+        };
+
+        if had_pointer_down && up.is_click {
+            return PressablePointerUpResult::Continue;
+        }
+
+        if !had_pointer_down {
+            if select_mouse_open_guard_should_suppress_pointer_up_shared(&mouse_open_guard_for_up, up)
+            {
+                return PressablePointerUpResult::SkipActivate;
+            }
+            if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
+                let gate = mouse_up_gate.lock().unwrap_or_else(|e| e.into_inner());
+                if !gate.should_allow_item_mouse_up(item_is_selected) {
+                    return PressablePointerUpResult::SkipActivate;
+                }
+            }
+        }
+
+        let _ = host
+            .models_mut()
+            .update(&value_for_up, |v| *v = Some(item_value_for_up.clone()));
+        let _ = host.models_mut().update(&open_for_up, |v| *v = false);
+        if let Some(on_value_change) = on_value_change_for_up.as_ref() {
+            on_value_change(host, action_cx, item_value_for_up.clone());
+        }
+        host.request_redraw(action_cx.window);
+        PressablePointerUpResult::SkipActivate
+    });
+
+    SelectItemPressablePointerHandlers {
+        on_pointer_down,
+        on_pointer_up,
+    }
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.
