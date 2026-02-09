@@ -9,7 +9,7 @@ use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
 use delinea::engine::window::{DataWindow, WindowSpanAnchor};
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
-use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
+use delinea::{Action, AxisPointerAnchor, BrushSelection2D, ChartEngine, WorkBudget};
 use fret_canvas::cache::{PathCache, SceneOpCache};
 use fret_canvas::diagnostics::{CanvasCacheKey, CanvasCacheStatsRegistry};
 use fret_canvas::scale::effective_scale_factor;
@@ -209,6 +209,8 @@ pub struct ChartCanvas {
     visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
     linked_brush_model: Option<Model<Option<BrushSelection2D>>>,
+    linked_axis_pointer_model: Option<Model<Option<AxisPointerAnchor>>>,
+    linked_domain_windows_model: Option<Model<BTreeMap<delinea::AxisId, Option<DataWindow>>>>,
     output_model: Option<Model<ChartCanvasOutput>>,
     output: ChartCanvasOutput,
 }
@@ -390,6 +392,8 @@ impl ChartCanvas {
             visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
             linked_brush_model: None,
+            linked_axis_pointer_model: None,
+            linked_domain_windows_model: None,
             output_model: None,
             output: ChartCanvasOutput::default(),
         }
@@ -483,6 +487,19 @@ impl ChartCanvas {
         self
     }
 
+    pub fn linked_axis_pointer(mut self, axis_pointer: Model<Option<AxisPointerAnchor>>) -> Self {
+        self.linked_axis_pointer_model = Some(axis_pointer);
+        self
+    }
+
+    pub fn linked_domain_windows(
+        mut self,
+        windows: Model<BTreeMap<delinea::AxisId, Option<DataWindow>>>,
+    ) -> Self {
+        self.linked_domain_windows_model = Some(windows);
+        self
+    }
+
     pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
         self.output_model = Some(output);
         self
@@ -521,6 +538,129 @@ impl ChartCanvas {
                 self.with_engine_mut(|engine| {
                     engine.apply_action(Action::ClearBrushSelection);
                 });
+            }
+        }
+    }
+
+    fn linked_axis_pointer_anchor_for_engine(&self) -> Option<AxisPointerAnchor> {
+        self.with_engine(|engine| {
+            engine
+                .output()
+                .axis_pointer
+                .as_ref()
+                .map(|o| AxisPointerAnchor {
+                    grid: o.grid,
+                    axis_kind: o.axis_kind,
+                    axis: o.axis,
+                    value: o.axis_value,
+                })
+        })
+    }
+
+    fn hover_point_for_axis_pointer_anchor(&self, anchor: AxisPointerAnchor) -> Option<Point> {
+        let (plot, axis_window) = self.with_engine(|engine| {
+            let output = engine.output();
+            let plot = anchor
+                .grid
+                .and_then(|grid| output.plot_viewports_by_grid.get(&grid).copied())
+                .or(output.viewport)
+                .or_else(|| output.plot_viewports_by_grid.values().next().copied());
+            let axis_window = output.axis_windows.get(&anchor.axis).copied();
+            (plot, axis_window)
+        });
+
+        let plot = plot?;
+        let axis_window = axis_window?;
+
+        let px = match anchor.axis_kind {
+            delinea::AxisKind::X => {
+                let x =
+                    delinea::engine::axis::x_px_at_data_in_rect(axis_window, anchor.value, plot);
+                let y = plot.origin.y.0 + 0.5 * plot.size.height.0;
+                Point::new(Px(x), Px(y))
+            }
+            delinea::AxisKind::Y => {
+                let x = plot.origin.x.0 + 0.5 * plot.size.width.0;
+                let y =
+                    delinea::engine::axis::y_px_at_data_in_rect(axis_window, anchor.value, plot);
+                Point::new(Px(x), Px(y))
+            }
+        };
+
+        if px.x.0.is_finite() && px.y.0.is_finite() {
+            Some(px)
+        } else {
+            None
+        }
+    }
+
+    fn sync_linked_axis_pointer<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some(model) = &self.linked_axis_pointer_model else {
+            return;
+        };
+        cx.observe_model(model, Invalidation::Paint);
+
+        let Ok(anchor) = model.read(cx.app, |_, a| a.clone()) else {
+            return;
+        };
+
+        let current = self.linked_axis_pointer_anchor_for_engine();
+        if anchor == current {
+            return;
+        }
+
+        match anchor {
+            Some(anchor) => {
+                if let Some(point) = self.hover_point_for_axis_pointer_anchor(anchor.clone()) {
+                    self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+                }
+            }
+            None => {
+                // No explicit "clear hover" action exists. Instead, hover far outside any plot viewport.
+                let point = Point::new(Px(1.0e9), Px(1.0e9));
+                self.with_engine_mut(|engine| engine.apply_action(Action::HoverAt { point }));
+            }
+        }
+    }
+
+    fn sync_linked_domain_windows<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let Some(model) = &self.linked_domain_windows_model else {
+            return;
+        };
+        cx.observe_model(model, Invalidation::Paint);
+
+        let Ok(windows) = model.read(cx.app, |_, w| w.clone()) else {
+            return;
+        };
+
+        for (axis, window) in windows {
+            let kind = self.with_engine(|engine| engine.model().axes.get(&axis).map(|a| a.kind));
+            let Some(kind) = kind else {
+                continue;
+            };
+
+            match kind {
+                delinea::AxisKind::X => {
+                    let current = self.with_engine(|engine| {
+                        engine.state().data_zoom_x.get(&axis).and_then(|s| s.window)
+                    });
+                    if current == window {
+                        continue;
+                    }
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::SetDataWindowX { axis, window });
+                    });
+                }
+                delinea::AxisKind::Y => {
+                    let current =
+                        self.with_engine(|engine| engine.state().data_window_y.get(&axis).copied());
+                    if current == window {
+                        continue;
+                    }
+                    self.with_engine_mut(|engine| {
+                        engine.apply_action(Action::SetDataWindowY { axis, window });
+                    });
+                }
             }
         }
     }
@@ -4826,6 +4966,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.last_layout = self.compute_layout(cx.bounds);
             self.sync_viewport(self.last_layout.plot);
         }
+
+        self.sync_linked_domain_windows(cx);
+        self.sync_linked_axis_pointer(cx);
 
         // Advance per-frame counters for optional cache pruning.
         self.axis_text.begin_frame();
