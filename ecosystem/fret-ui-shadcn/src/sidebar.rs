@@ -325,16 +325,28 @@ impl SidebarContext {
         self.state.collapsed()
     }
 
-    pub fn set_open<H: UiHost>(&self, host: &mut H, open: bool) {
+    pub fn set_open_with<H: UiHost>(&self, host: &mut H, update: impl Fn(bool) -> bool) {
         let _ = host.models_mut().update(&self.open, |v| {
-            *v = open;
+            *v = update(*v);
+        });
+    }
+
+    pub fn set_open<H: UiHost>(&self, host: &mut H, open: bool) {
+        self.set_open_with(host, |_| open);
+    }
+
+    pub fn set_open_mobile_with<H: UiHost>(
+        &self,
+        host: &mut H,
+        update: impl Fn(bool) -> bool,
+    ) {
+        let _ = host.models_mut().update(&self.open_mobile, |v| {
+            *v = update(*v);
         });
     }
 
     pub fn set_open_mobile<H: UiHost>(&self, host: &mut H, open_mobile: bool) {
-        let _ = host.models_mut().update(&self.open_mobile, |v| {
-            *v = open_mobile;
-        });
+        self.set_open_mobile_with(host, |_| open_mobile);
     }
 
     pub fn toggle_sidebar<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) {
@@ -6323,6 +6335,67 @@ mod tests {
         assert!(
             open_mobile_now,
             "expected ctx.set_open_mobile(true) to update open_mobile model"
+        );
+    }
+
+    #[test]
+    fn sidebar_context_function_style_setters_update_from_previous_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(false);
+        let open_for_assert = open_model.clone();
+        let open_mobile_for_assert = open_mobile_model.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-context-function-style-setters",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .open_mobile(Some(open_mobile_model.clone()))
+                    .with(cx, |cx| {
+                        if let Some(ctx) = use_sidebar(cx) {
+                            ctx.set_open_with(cx.app, |value| !value);
+                            ctx.set_open_mobile_with(cx.app, |value| !value);
+                        }
+                        Vec::<AnyElement>::new()
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let open_now = app
+            .models()
+            .get_copied(&open_for_assert)
+            .expect("open model value");
+        let open_mobile_now = app
+            .models()
+            .get_copied(&open_mobile_for_assert)
+            .expect("open mobile model value");
+
+        assert!(
+            open_now,
+            "expected ctx.set_open_with(|prev| !prev) to update open model"
+        );
+        assert!(
+            open_mobile_now,
+            "expected ctx.set_open_mobile_with(|prev| !prev) to update open_mobile model"
         );
     }
 
