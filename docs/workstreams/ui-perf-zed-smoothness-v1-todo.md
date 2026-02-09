@@ -179,6 +179,9 @@ Conventions:
       - `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_MAX_TEXT_LEN_BYTES` (default: `4096`; A/B tested at `16384`)
     - Evidence: perf log entry `2026-02-08 17:38:51` (A/B gates + worst-frame attribution; editor gate flips
       from FAIL to PASS when enabled).
+  - [x] Avoid cloning per-line glyph/cluster vectors when wrapping from cached unwrapped layouts (word wrap, LTR).
+    - Implementation: `perf(fret-render-wgpu): avoid cloning glyphs during wrap` (commit `7b9a98a8f`).
+    - Evidence: perf log entry `2026-02-09 22:12:02` (`ui-resize-probes` gate attempts=3 PASS; commit-bound).
   - [ ] Follow-up: validate memory bounds + eviction behavior on longer editor sessions (ensure the LRU remains
     bounded and does not retain pathological blobs indefinitely).
   - [ ] Follow-up: decide if `FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES` should become a default-on policy for

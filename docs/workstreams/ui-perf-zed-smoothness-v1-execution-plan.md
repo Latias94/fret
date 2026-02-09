@@ -201,6 +201,11 @@ Deliverables:
 2. **Make atlas eviction / re-upload observable** in perf snapshots (if not already sufficient).
 3. **Add a “text cache miss” gate** (lightweight; no pixel diffs) that fails when misses spike after warmup.
 
+Progress notes:
+
+- 2026-02-09: commit `7b9a98a8f` avoids cloning per-line glyph/cluster vectors when wrapping from cached unwrapped
+  layouts (word wrap, LTR). Evidence: `ui-resize-probes` gate PASS; see the perf log entry `2026-02-09 22:12:02`.
+
 Exit criteria:
 
 - Worst frame attribution for text-dominant scripts is actionable from bundle exports alone.

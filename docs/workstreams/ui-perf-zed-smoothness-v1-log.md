@@ -8933,3 +8933,38 @@ Notes:
   useful when validating changes locally under background load.
 - This does not, by itself, eliminate the `paint_text_prepare.reasons=width` churn observed in `drag-jitter` frames
   (many UI gallery nodes are sized via the layout engine’s measure callback rather than the host-widget layout path).
+
+## 2026-02-09 22:12:02 (commit `7b9a98a8f`)
+
+Change:
+- Avoid cloning per-line glyph/cluster vectors when word-wrapping from cached unwrapped layouts (LTR-only). This
+  reduces allocations and intermediate copies in `TextSystem::prepare` under interactive resize width jitter.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15892 | 16021 | 16021 | 9286 | 2299 | 6590 | 182 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15885 | 16318 | 16318 | 9954 | 2225 | 6775 | 217 |
+
+Worst bundles (selected attempt-1):
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/attempt-1/1770646073274-ui-gallery-window-resize-stress-steady/bundle.json`
+- `target/perf-samples/ui-resize-probes.wrap-slices.7b9a98a8f.20260209-220750/attempt-1/1770646103484-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The selected attempt still shows noise on `drag-jitter` `p95 layout_time_us`; consider validating this change against
+  a more text-amplifying probe (e.g. editor labels / status-bar churn) to confirm the allocation win translates into
+  frame-time improvements.
