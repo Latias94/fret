@@ -90,6 +90,9 @@ pub struct ChartOutput {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerOutput {
     pub grid: Option<GridId>,
+    pub axis_kind: crate::spec::AxisKind,
+    pub axis: crate::ids::AxisId,
+    pub axis_value: f64,
     pub crosshair_px: Point,
     pub hit: Option<HoverHit>,
     pub shadow_rect_px: Option<Rect>,
@@ -147,6 +150,8 @@ pub struct ChartEngine {
     lod_scratch: LodScratch,
     axis_pointer_cache: AxisPointerCache,
     brush_link_cache: BrushLinkCache,
+    axis_pointer_link_cache: AxisPointerLinkCache,
+    domain_window_link_cache: DomainWindowLinkCache,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -162,7 +167,71 @@ struct BrushLinkCache {
     last_brush: Option<BrushSelection2D>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct AxisPointerLinkCache {
+    last_anchor: Option<crate::link::AxisPointerAnchor>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct DomainWindowLinkCache {
+    last_windows: BTreeMap<crate::ids::AxisId, window::DataWindow>,
+}
+
 impl ChartEngine {
+    fn emit_domain_window_link_events(&mut self) {
+        let mut current = BTreeMap::new();
+        for (axis, st) in &self.state.data_zoom_x {
+            if let Some(window) = st.window {
+                current.insert(*axis, window);
+            }
+        }
+        for (axis, window) in &self.state.data_window_y {
+            current.insert(*axis, *window);
+        }
+
+        let mut all_axes: BTreeSet<crate::ids::AxisId> = BTreeSet::new();
+        all_axes.extend(self.domain_window_link_cache.last_windows.keys().copied());
+        all_axes.extend(current.keys().copied());
+
+        for axis in all_axes {
+            let prev = self
+                .domain_window_link_cache
+                .last_windows
+                .get(&axis)
+                .copied();
+            let next = current.get(&axis).copied();
+            if prev != next {
+                self.output
+                    .link_events
+                    .push(LinkEvent::DomainWindowChanged { axis, window: next });
+            }
+        }
+
+        self.domain_window_link_cache.last_windows = current;
+    }
+
+    fn emit_axis_pointer_link_event(&mut self) {
+        let anchor = self.output.axis_pointer.as_ref().and_then(|o| {
+            if o.axis_value.is_finite() {
+                Some(crate::link::AxisPointerAnchor {
+                    grid: o.grid,
+                    axis_kind: o.axis_kind,
+                    axis: o.axis,
+                    value: o.axis_value,
+                })
+            } else {
+                None
+            }
+        });
+
+        if self.axis_pointer_link_cache.last_anchor != anchor {
+            self.axis_pointer_link_cache.last_anchor = anchor.clone();
+            self.output
+                .link_events
+                .push(LinkEvent::AxisPointerChanged { anchor });
+        }
+    }
+
     fn apply_percent_windows_pre_view(&mut self) {
         for (axis, (start, end)) in self.state.axis_percent_windows.clone() {
             let Some(axis_model) = self.model.axes.get(&axis) else {
@@ -236,6 +305,8 @@ impl ChartEngine {
             lod_scratch: LodScratch::default(),
             axis_pointer_cache: AxisPointerCache::default(),
             brush_link_cache: BrushLinkCache::default(),
+            axis_pointer_link_cache: AxisPointerLinkCache::default(),
+            domain_window_link_cache: DomainWindowLinkCache::default(),
         };
         engine.init_visual_map_state();
         Ok(engine)
@@ -1037,6 +1108,10 @@ impl ChartEngine {
         // the derived X value windows (ECharts-class dataZoomProcessor ordering scaffold).
         self.apply_percent_windows_pre_view();
 
+        if self.state.link.group.is_some() {
+            self.emit_domain_window_link_events();
+        }
+
         self.output.brush_selection_2d = self.state.brush_selection_2d;
         self.output.brush_x_row_ranges_by_series.clear();
 
@@ -1334,11 +1409,15 @@ impl ChartEngine {
                         if let Some(series) = self.model.series.get(&hit.series)
                             && let Some(x_axis) = self.model.axes.get(&series.x_axis)
                         {
-                            hovered_grid_viewport = self
+                            if let Some(viewport) = self
                                 .output
                                 .plot_viewports_by_grid
                                 .get(&x_axis.grid)
-                                .copied();
+                                .copied()
+                                && rect_contains_point(viewport, hover_px)
+                            {
+                                hovered_grid_viewport = Some(viewport);
+                            }
                         }
                     }
                     if hovered_grid_viewport.is_none() {
@@ -1392,6 +1471,10 @@ impl ChartEngine {
 
         self.output.hover = self.axis_pointer_cache.hit;
         self.output.axis_pointer = self.axis_pointer_cache.output.clone();
+
+        if self.state.link.group.is_some() {
+            self.emit_axis_pointer_link_event();
+        }
 
         self.output.revision.bump();
         Ok(StepResult { unfinished })
@@ -1534,6 +1617,9 @@ fn compute_item_axis_pointer_output(
 
     Some(AxisPointerOutput {
         grid,
+        axis_kind: crate::spec::AxisKind::X,
+        axis: x_axis,
+        axis_value: hit.x_value,
         crosshair_px,
         hit: Some(hit),
         shadow_rect_px: None,
@@ -1932,6 +2018,9 @@ fn compute_axis_axis_pointer_output(
 
     Some(AxisPointerOutput {
         grid,
+        axis_kind: trigger_axis_kind,
+        axis: trigger_axis,
+        axis_value,
         crosshair_px,
         hit: hit_for_marker,
         shadow_rect_px,

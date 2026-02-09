@@ -1,7 +1,7 @@
-use fret_core::Point;
-
-use crate::ids::{LinkGroupId, SeriesId};
+use crate::engine::window::DataWindow;
+use crate::ids::{AxisId, GridId, LinkGroupId};
 use crate::selection::BrushSelection2D;
+use crate::spec::AxisKind;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -21,10 +21,26 @@ pub enum BrushXExportPolicy {
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AxisPointerAnchor {
+    pub grid: Option<GridId>,
+    pub axis_kind: AxisKind,
+    pub axis: AxisId,
+    pub value: f64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum LinkEvent {
-    CursorMoved { point: Point },
-    DomainWindowChanged { series: Option<SeriesId> },
-    BrushSelectionChanged { selection: Option<BrushSelection2D> },
+    AxisPointerChanged {
+        anchor: Option<AxisPointerAnchor>,
+    },
+    DomainWindowChanged {
+        axis: AxisId,
+        window: Option<DataWindow>,
+    },
+    BrushSelectionChanged {
+        selection: Option<BrushSelection2D>,
+    },
 }
 
 #[derive(Debug, Default, Clone)]

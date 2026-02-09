@@ -1122,6 +1122,9 @@ mod tests {
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
             grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1250,6 +1253,9 @@ mod tests {
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
             grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1380,6 +1386,9 @@ mod tests {
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
             grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,
@@ -1508,6 +1517,9 @@ mod tests {
 
         let axis_pointer = delinea::engine::AxisPointerOutput {
             grid: Some(grid_id),
+            axis_kind: AxisKind::X,
+            axis: x_axis,
+            axis_value: 0.5,
             crosshair_px: Point::new(Px(50.0), Px(50.0)),
             hit: None,
             shadow_rect_px: None,

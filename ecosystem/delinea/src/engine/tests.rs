@@ -1835,6 +1835,153 @@ fn brush_selection_emits_link_event_when_link_group_is_set() {
 }
 
 #[test]
+fn axis_pointer_emits_link_event_when_link_group_is_set() {
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    ));
+    spec.axis_pointer = Some(AxisPointerSpec::default());
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine
+        .datasets_mut()
+        .insert(crate::ids::DatasetId::new(1), table);
+
+    engine.apply_action(Action::SetLinkGroup {
+        group: Some(crate::ids::LinkGroupId::new(1)),
+    });
+
+    // Hover inside the plot viewport should emit an anchor once.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(50.0), Px(50.0)),
+    });
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged {
+                anchor: Some(anchor)
+            } if anchor.axis == crate::ids::AxisId::new(1)
+                && anchor.axis_kind == AxisKind::X
+                && anchor.value.is_finite()
+        )
+    }));
+
+    // Same hover again should not re-emit.
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().is_empty());
+
+    // Moving the hover should emit a new anchor.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(150.0), Px(50.0)),
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged {
+                anchor: Some(anchor)
+            } if anchor.axis == crate::ids::AxisId::new(1)
+                && anchor.axis_kind == AxisKind::X
+                && anchor.value.is_finite()
+        )
+    }));
+
+    // Leaving the viewport should emit a clear once.
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(10_000.0), Px(10_000.0)),
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::AxisPointerChanged { anchor: None }
+        )
+    }));
+}
+
+#[test]
+fn domain_window_emits_link_event_when_link_group_is_set() {
+    let x_axis = crate::ids::AxisId::new(1);
+
+    let mut spec = basic_spec();
+    spec.viewport = Some(Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    ));
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine
+        .datasets_mut()
+        .insert(crate::ids::DatasetId::new(1), table);
+
+    engine.apply_action(Action::SetLinkGroup {
+        group: Some(crate::ids::LinkGroupId::new(1)),
+    });
+
+    let window = DataWindow { min: 2.0, max: 5.0 };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(window),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let events = engine.drain_link_events();
+    assert!(events.iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::DomainWindowChanged { axis, window: Some(w) }
+                if *axis == x_axis && *w == window
+        )
+    }));
+
+    // Same window again should not re-emit.
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().is_empty());
+
+    // Clearing should emit once.
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: None,
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(engine.drain_link_events().iter().any(|e| {
+        matches!(
+            e,
+            crate::link::LinkEvent::DomainWindowChanged { axis, window: None } if *axis == x_axis
+        )
+    }));
+}
+
+#[test]
 fn pan_lock_prevents_pan_window_update() {
     let x_axis = crate::ids::AxisId::new(1);
     let mut engine = ChartEngine::new(basic_spec()).unwrap();
