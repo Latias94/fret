@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{AppWindowId, Event, Point, Rect, Size};
+use crate::{AppWindowId, Edges, Event, Point, Rect, Size};
 
 /// Window position in screen space, expressed in **logical pixels** (see ADR 0017).
 ///
@@ -23,6 +23,8 @@ pub struct WindowMetricsService {
     logical_positions: HashMap<AppWindowId, WindowLogicalPosition>,
     scale_factors: HashMap<AppWindowId, f32>,
     focused: HashMap<AppWindowId, bool>,
+    safe_area_insets: HashMap<AppWindowId, Option<Edges>>,
+    occlusion_insets: HashMap<AppWindowId, Option<Edges>>,
 }
 
 impl WindowMetricsService {
@@ -58,6 +60,30 @@ impl WindowMetricsService {
         self.focused.get(&window).copied()
     }
 
+    pub fn set_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.safe_area_insets.insert(window, insets);
+    }
+
+    pub fn safe_area_insets(&self, window: AppWindowId) -> Option<Edges> {
+        self.safe_area_insets.get(&window).copied().flatten()
+    }
+
+    pub fn safe_area_insets_is_known(&self, window: AppWindowId) -> bool {
+        self.safe_area_insets.contains_key(&window)
+    }
+
+    pub fn set_occlusion_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.occlusion_insets.insert(window, insets);
+    }
+
+    pub fn occlusion_insets(&self, window: AppWindowId) -> Option<Edges> {
+        self.occlusion_insets.get(&window).copied().flatten()
+    }
+
+    pub fn occlusion_insets_is_known(&self, window: AppWindowId) -> bool {
+        self.occlusion_insets.contains_key(&window)
+    }
+
     pub fn inner_bounds(&self, window: AppWindowId) -> Option<Rect> {
         let size = self.inner_size(window)?;
         Some(Rect::new(Point::new(crate::Px(0.0), crate::Px(0.0)), size))
@@ -86,6 +112,8 @@ impl WindowMetricsService {
         self.logical_positions.remove(&window);
         self.scale_factors.remove(&window);
         self.focused.remove(&window);
+        self.safe_area_insets.remove(&window);
+        self.occlusion_insets.remove(&window);
     }
 }
 
@@ -136,11 +164,29 @@ mod tests {
         svc.set_logical_position(window, WindowLogicalPosition { x: 1, y: 2 });
         svc.set_scale_factor(window, 1.5);
         svc.set_focused(window, true);
+        svc.set_safe_area_insets(window, Some(Edges::all(Px(1.0))));
+        svc.set_occlusion_insets(window, Some(Edges::all(Px(2.0))));
         svc.remove(window);
 
         assert_eq!(svc.inner_size(window), None);
         assert_eq!(svc.logical_position(window), None);
         assert_eq!(svc.scale_factor(window), None);
         assert_eq!(svc.focused(window), None);
+        assert_eq!(svc.safe_area_insets(window), None);
+        assert_eq!(svc.occlusion_insets(window), None);
+    }
+
+    #[test]
+    fn window_metrics_insets_can_be_explicitly_set_to_none() {
+        let mut svc = WindowMetricsService::default();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(3));
+
+        svc.set_safe_area_insets(window, None);
+        svc.set_occlusion_insets(window, None);
+
+        assert_eq!(svc.safe_area_insets(window), None);
+        assert_eq!(svc.occlusion_insets(window), None);
+        assert!(svc.safe_area_insets_is_known(window));
+        assert!(svc.occlusion_insets_is_known(window));
     }
 }

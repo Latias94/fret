@@ -1,14 +1,47 @@
-use fret_core::{AppWindowId, Point, Px, Rect, Size};
+use fret_core::{AppWindowId, Edges, Point, Px, Rect, Size, WindowMetricsService};
 use fret_render::RenderSceneParams;
 use fret_runtime::apply_window_metrics_event;
+use wasm_bindgen::JsCast;
 use winit::dpi::LogicalSize;
 use winit::event_loop::ActiveEventLoop;
+use winit::platform::web::WindowExtWeb;
 use winit::window::Window;
 
 use super::super::{RenderTargetUpdate, WinitEventContext, WinitRenderContext, WinitWindowContext};
 use super::{GfxState, WinitAppDriver, WinitRunner};
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    fn update_window_insets_for_frame(&mut self, window: &dyn Window) {
+        let Some(web_window) = web_sys::window() else {
+            return;
+        };
+
+        let safe_area_insets = read_safe_area_insets(&web_window, window);
+        let occlusion_insets = read_occlusion_insets(&web_window);
+
+        let metrics = self.app.global::<WindowMetricsService>();
+
+        let prev_safe_known =
+            metrics.is_some_and(|svc| svc.safe_area_insets_is_known(self.app_window));
+        let prev_safe_area_insets = metrics.and_then(|svc| svc.safe_area_insets(self.app_window));
+        if !prev_safe_known || prev_safe_area_insets != safe_area_insets {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_safe_area_insets(self.app_window, safe_area_insets);
+                });
+        }
+
+        let prev_occlusion_known =
+            metrics.is_some_and(|svc| svc.occlusion_insets_is_known(self.app_window));
+        let prev_occlusion_insets = metrics.and_then(|svc| svc.occlusion_insets(self.app_window));
+        if !prev_occlusion_known || prev_occlusion_insets != occlusion_insets {
+            self.app
+                .with_global_mut(WindowMetricsService::default, |svc, _app| {
+                    svc.set_occlusion_insets(self.app_window, occlusion_insets);
+                });
+        }
+    }
+
     pub(super) fn drain_inboxes(&mut self, window: Option<AppWindowId>) -> bool {
         let did_work = self.app.with_global_mut_untracked(
             fret_runtime::InboxDrainRegistry::default,
@@ -111,6 +144,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.app.set_frame_id(self.frame_id);
 
         self.platform.prepare_frame(window);
+        self.update_window_insets_for_frame(window);
 
         let scale = window.scale_factor();
         let physical = Self::desired_surface_size(window).unwrap_or_else(|| window.surface_size());
@@ -225,4 +259,91 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.window_state = Some(state);
         self.gfx = Some(gfx);
     }
+}
+
+fn read_safe_area_insets(
+    window: &web_sys::Window,
+    winit_window: &dyn winit::window::Window,
+) -> Option<Edges> {
+    let document = window.document()?;
+    let root = document.document_element()?;
+
+    let probe = match document.get_element_by_id("fret_safe_area_probe") {
+        Some(existing) => existing,
+        None => {
+            let probe = document.create_element("div").ok()?;
+            probe.set_id("fret_safe_area_probe");
+            let probe_el: web_sys::HtmlElement = probe.clone().dyn_into().ok()?;
+            let style = probe_el.style();
+            let _ = style.set_property("position", "fixed");
+            let _ = style.set_property("left", "0");
+            let _ = style.set_property("top", "0");
+            let _ = style.set_property("width", "0");
+            let _ = style.set_property("height", "0");
+            let _ = style.set_property("pointer-events", "none");
+            let _ = style.set_property("visibility", "hidden");
+            let _ = style.set_property(
+                "padding",
+                "env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)",
+            );
+
+            // Prefer mounting to the winit canvas parent so we don't depend on `document.body`.
+            // This also keeps the probe in the same DOM subtree as the actual UI surface.
+            let mounted = winit_window
+                .canvas()
+                .and_then(|canvas| canvas.parent_node())
+                .and_then(|parent| parent.append_child(&probe).ok())
+                .is_some();
+            if !mounted {
+                let _ = root.append_child(&probe);
+            }
+
+            probe
+        }
+    };
+
+    let style = window.get_computed_style(&probe).ok()??;
+    let top = parse_px(&style.get_property_value("padding-top").ok()?);
+    let right = parse_px(&style.get_property_value("padding-right").ok()?);
+    let bottom = parse_px(&style.get_property_value("padding-bottom").ok()?);
+    let left = parse_px(&style.get_property_value("padding-left").ok()?);
+
+    Some(Edges {
+        top: Px(top),
+        right: Px(right),
+        bottom: Px(bottom),
+        left: Px(left),
+    })
+}
+
+fn read_occlusion_insets(window: &web_sys::Window) -> Option<Edges> {
+    let viewport = window.visual_viewport()?;
+
+    let inner_width = window.inner_width().ok()?.as_f64()?;
+    let inner_height = window.inner_height().ok()?.as_f64()?;
+
+    let offset_left = viewport.offset_left().max(0.0);
+    let offset_top = viewport.offset_top().max(0.0);
+    let visible_width = viewport.width().max(0.0);
+    let visible_height = viewport.height().max(0.0);
+
+    let right = (inner_width - (offset_left + visible_width)).max(0.0);
+    let bottom = (inner_height - (offset_top + visible_height)).max(0.0);
+
+    Some(Edges {
+        top: Px(offset_top as f32),
+        right: Px(right as f32),
+        bottom: Px(bottom as f32),
+        left: Px(offset_left as f32),
+    })
+}
+
+fn parse_px(value: &str) -> f32 {
+    let value = value.trim();
+    if value.is_empty() {
+        return 0.0;
+    }
+
+    let px = value.strip_suffix("px").unwrap_or(value).trim();
+    px.parse::<f32>().unwrap_or(0.0)
 }

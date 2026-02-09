@@ -95,12 +95,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         runtime.prepare_window_for_frame(window, frame_id);
 
         let window_state = runtime.for_window_mut(window);
-        let scale_factor = app
-            .global::<WindowMetricsService>()
+        let metrics = app.global::<WindowMetricsService>();
+        let scale_factor = metrics
             .and_then(|svc| svc.scale_factor(window))
             .unwrap_or(1.0);
         window_state.record_committed_viewport_bounds(bounds);
         window_state.record_committed_scale_factor(scale_factor);
+        if let Some(metrics) = metrics {
+            if metrics.safe_area_insets_is_known(window) {
+                window_state.record_committed_safe_area_insets(metrics.safe_area_insets(window));
+            }
+            if metrics.occlusion_insets_is_known(window) {
+                window_state.record_committed_occlusion_insets(metrics.occlusion_insets(window));
+            }
+        }
 
         Self {
             app,
@@ -3325,5 +3333,43 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::test_host::TestHost;
+    use fret_core::{Point, Size};
+
+    #[test]
+    fn element_context_commits_window_insets_from_window_metrics_service() {
+        let mut app = TestHost::new();
+        let window = AppWindowId::from(slotmap::KeyData::from_ffi(1));
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(50.0)));
+
+        app.with_global_mut(WindowMetricsService::default, |svc, _app| {
+            svc.set_safe_area_insets(window, Some(Edges::symmetric(Px(8.0), Px(4.0))));
+            svc.set_occlusion_insets(window, Some(Edges::all(Px(16.0))));
+            svc.set_scale_factor(window, 2.0);
+        });
+
+        let mut runtime = ElementRuntime::default();
+        {
+            let _cx =
+                ElementContext::new_for_root_name(&mut app, &mut runtime, window, bounds, "test");
+        }
+
+        let state = runtime.for_window_mut(window);
+        assert_eq!(
+            state.committed_safe_area_insets(),
+            Some(Edges::symmetric(Px(8.0), Px(4.0)))
+        );
+        assert_eq!(
+            state.committed_occlusion_insets(),
+            Some(Edges::all(Px(16.0)))
+        );
+        assert_eq!(state.committed_scale_factor(), 2.0);
     }
 }
