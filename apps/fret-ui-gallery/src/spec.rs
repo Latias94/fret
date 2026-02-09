@@ -113,6 +113,7 @@ pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
+pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
@@ -247,6 +248,7 @@ pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
+pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str = "ui_gallery.nav.select.ai_suggestions_demo";
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
@@ -831,6 +833,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "shimmer", "loading", "text", "animation", "demo"],
                 docs::DOC_AI_SHIMMER_DEMO,
                 docs::USAGE_AI_SHIMMER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_SUGGESTIONS_DEMO,
+                "AI Suggestions (Demo)",
+                "AI Elements Suggestions / Horizontal Pills Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_SUGGESTIONS_DEMO,
+                &["ai", "suggestion", "suggestions", "scroll", "chips", "demo"],
+                docs::DOC_AI_SUGGESTIONS_DEMO,
+                docs::USAGE_AI_SUGGESTIONS_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_FILE_TREE_DEMO,

@@ -225,8 +225,8 @@ impl FileTree {
         let items = self.items;
         let test_id_root = self.test_id_root;
 
-        cx.container(props, move |cx| {
-            let root = stack::vstack(
+        let tree = cx.container(props, move |cx| {
+            vec![stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -243,22 +243,16 @@ impl FileTree {
                         &items,
                     )
                 },
-            );
+            )]
+        });
 
-            let root = if let Some(test_id_root) = test_id_root.clone() {
-                root.attach_semantics(fret_ui::element::SemanticsDecoration {
-                    role: Some(SemanticsRole::List),
-                    test_id: Some(test_id_root),
-                    ..Default::default()
-                })
-            } else {
-                root.attach_semantics(fret_ui::element::SemanticsDecoration {
-                    role: Some(SemanticsRole::List),
-                    ..Default::default()
-                })
-            };
-
-            vec![root]
+        tree.attach_semantics(fret_ui::element::SemanticsDecoration {
+            // Fret currently does not model a distinct `Tree` role at the contract layer; we
+            // expose the surface as a list root with `TreeItem` children (consistent with
+            // `fret-ui-kit` file tree helpers).
+            role: Some(SemanticsRole::List),
+            test_id: test_id_root,
+            ..Default::default()
         })
     }
 }

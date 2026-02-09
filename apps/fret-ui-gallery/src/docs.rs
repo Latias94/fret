@@ -636,6 +636,26 @@ use fret_ui_ai::Shimmer;
 ```
 "#;
 
+pub(crate) const DOC_AI_SUGGESTIONS_DEMO: &str = r#"
+## AI suggestions (demo)
+
+This page demonstrates the AI Elements-aligned suggestions surfaces in `fret-ui-ai`:
+
+- `Suggestions` (horizontally scrollable row),
+- `Suggestion` (pill button that emits a suggestion string intent).
+
+It exists to validate:
+
+- horizontal scroll sizing behavior (no wrapping),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_SUGGESTIONS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Suggestion, Suggestions};
+```
+"#;
+
 pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
 ## AI file tree (demo)
 

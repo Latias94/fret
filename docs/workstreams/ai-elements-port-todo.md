@@ -50,7 +50,7 @@ Status legend:
 | `sources` | Prototype | `fret-ui-ai` | Collapsible parity (`Used N sources`) is implemented; keep iterating on styling and payload richness (excerpt/link affordances). |
 | `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
 | `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
-| `suggestion` | Not started | `fret-ui-ai` | Optional. |
+| `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
 | `queue` | Not started | `fret-ui-ai` | Optional. |
 | `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
 | `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
@@ -135,6 +135,10 @@ Existing gates (UI Gallery `ai_artifact_demo`):
 Existing gates (UI Gallery `ai_shimmer_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
+
+Existing gates (UI Gallery `ai_suggestions_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`
 
 Existing gates (UI Gallery `ai_code_block_demo`):
 

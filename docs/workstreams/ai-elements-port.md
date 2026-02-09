@@ -69,6 +69,7 @@ an interactive chat demo:
 - `MessageResponse`: markdown rendering backed by `ecosystem/fret-markdown` with streaming-friendly
   updates and code-block actions (copy + expand/collapse).
 - `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
+- `Suggestions` + `Suggestion`: horizontally scrollable suggestion pills row (prompt-adjacent utility).
 - `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
   calls, sources list, citation highlight selection).
 - `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
@@ -97,6 +98,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
   - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
+  - `AI suggestions (demo)` (`ai_suggestions_demo`): `Suggestions`/`Suggestion` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-suggestions-demo-click.json`
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
@@ -679,7 +682,8 @@ Definition of done:
   - copy actions,
   - long-code scrolling outcomes,
   - stable block IDs for per-block state.
-- File-tree output is usable (virtualized) and stable under view-cache reuse.
+- File-tree output is usable for small trees (AI Elements parity), and there is a clear large-tree
+  strategy (prefer `fret-ui-kit` virtualization/retained helpers to avoid new engines in `fret-ui-ai`).
 
 Later milestones (workflow/voice) are explicitly optional and should not be started without a
 concrete app consumer.

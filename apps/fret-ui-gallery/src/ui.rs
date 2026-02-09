@@ -707,6 +707,7 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
+        PAGE_AI_SUGGESTIONS_DEMO => preview_ai_suggestions_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
@@ -17927,6 +17928,116 @@ fn preview_ai_shimmer_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> 
                 slow_wide,
                 long,
             ]
+        },
+    )]
+}
+
+fn preview_ai_suggestions_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::ActionCx;
+    use fret_ui::element::SemanticsProps;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct SuggestionsModels {
+        clicked: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let clicked = cx.with_state(SuggestionsModels::default, |st| st.clicked.clone());
+    let clicked = match clicked {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SuggestionsModels::default, |st| {
+                st.clicked = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let clicked_value = cx.watch_model(&clicked).layout().cloned().flatten();
+
+    let on_click: ui_ai::OnSuggestionClick = Arc::new({
+        let clicked = clicked.clone();
+        move |host: &mut dyn fret_ui::action::UiActionHost,
+              _action_cx: ActionCx,
+              suggestion: Arc<str>| {
+            let _ = host
+                .models_mut()
+                .update(&clicked, |v| *v = Some(suggestion));
+        }
+    });
+
+    let suggestions = ui_ai::Suggestions::new([
+        ui_ai::Suggestion::new("Summarize the repo")
+            .test_id("ui-ai-suggestion-summarize")
+            .on_click(Arc::clone(&on_click))
+            .into_element(cx),
+        ui_ai::Suggestion::new("Explain the architecture")
+            .test_id("ui-ai-suggestion-architecture")
+            .on_click(Arc::clone(&on_click))
+            .into_element(cx),
+        ui_ai::Suggestion::new("Add a new component")
+            .test_id("ui-ai-suggestion-component")
+            .on_click(Arc::clone(&on_click))
+            .into_element(cx),
+        ui_ai::Suggestion::new("Show me the TODOs")
+            .test_id("ui-ai-suggestion-todos")
+            .on_click(Arc::clone(&on_click))
+            .into_element(cx),
+    ])
+    .test_id_root("ui-ai-suggestions-root")
+    .viewport_test_id("ui-ai-suggestions-viewport")
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let clicked_label_text = clicked_value
+        .as_deref()
+        .map(|s| format!("Clicked: {s}"))
+        .unwrap_or_else(|| "Clicked: <none>".to_string());
+
+    let clicked_label = cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Text,
+            test_id: Some(Arc::<str>::from("ui-ai-suggestions-clicked-label")),
+            ..Default::default()
+        },
+        move |cx| vec![cx.text(clicked_label_text)],
+    );
+
+    let clicked_marker =
+        (clicked_value.as_deref() == Some("Explain the architecture")).then(|| {
+            cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Generic,
+                    test_id: Some(Arc::<str>::from("ui-ai-suggestions-clicked-marker")),
+                    ..Default::default()
+                },
+                move |_cx| vec![],
+            )
+        });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| {
+            let mut out = vec![
+                cx.text("Suggestions (AI Elements)"),
+                suggestions,
+                clicked_label,
+            ];
+            if let Some(marker) = clicked_marker {
+                out.push(marker);
+            }
+            out
         },
     )]
 }

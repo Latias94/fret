@@ -79,7 +79,8 @@ Acceptance criteria:
 - Code fences render with stable per-block actions (copy / expand / download) and preserve per-block
   state during streaming growth.
 - `CodeBlock` / `Snippet` are backed by `ecosystem/fret-code-view` (no new engines).
-- `FileTree` is virtualized and keyed correctly (stable identity; no state jumping).
+- `FileTree` preserves keyed identity (no state jumping) and has a clear large-tree strategy
+  (prefer `fret-ui-kit` virtualization/retained helpers).
 
 Status: In progress (FileTree v0 + CodeBlock/Snippet v0 shipped; parity pending).
 Notes:
