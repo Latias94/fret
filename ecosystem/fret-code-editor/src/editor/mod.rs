@@ -48,7 +48,7 @@ use a11y::{
 use geom::{
     RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
     caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
-    map_row_local_to_buffer_byte, preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
+    preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
@@ -78,6 +78,7 @@ fn drag_autoscroll_delta_y(viewport_h: Px, row_h: Px, viewport_y: Px) -> Px {
     }
 }
 
+#[cfg(test)]
 fn display_row_for_pointer_y(bounds: Rect, row_h: Px, pointer_y: Px, rows: usize) -> Option<usize> {
     if rows == 0 || row_h.0 <= 0.0 {
         return None;
@@ -373,9 +374,16 @@ struct BaselineMeasureCache {
 
 impl CodeEditorState {
     fn refresh_display_map(&mut self) {
-        // v1 contract: inline IME preedit is modeled as a paint-time injection. While preedit is
-        // active, we suppress fold placeholders and inlays to keep buffer↔display mapping stable.
-        self.display_map = if self.preedit.is_some() {
+        // ADR 0200 / ADR 0203:
+        //
+        // v1: inline IME preedit is modeled as a paint-time injection. This means we cannot allow
+        // wrap-driven row breaking to depend on the preedit string, so in wrapped mode we keep the
+        // conservative behavior and suppress fold placeholders / inlays while preedit is active.
+        //
+        // Unwrapped mode is safe to compose at the paint/hit-test layer (no row-breaking), so we
+        // keep folds/inlays enabled even while preedit is active.
+        let suppress_decorations = self.preedit.is_some() && self.display_wrap_cols.is_some();
+        self.display_map = if suppress_decorations {
             DisplayMap::new(&self.buffer, self.display_wrap_cols)
         } else {
             DisplayMap::new_with_decorations(

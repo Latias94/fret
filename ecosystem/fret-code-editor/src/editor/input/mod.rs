@@ -1,5 +1,6 @@
 //! Input, editing, and command handling for the code editor surface.
 
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
@@ -589,12 +590,7 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
         && geom.preedit.is_some() == st.preedit.is_some()
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
-        let local = geom
-            .fold_map
-            .as_ref()
-            .map(|m| m.display_local_to_buffer_local(local))
-            .unwrap_or(local);
-        let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
+        let byte = map_row_display_local_to_buffer_byte(&st.buffer, geom, local);
         st.buffer
             .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()))
     } else {

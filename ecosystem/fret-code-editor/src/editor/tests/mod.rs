@@ -1,3 +1,4 @@
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use super::{input, paint};
 use fret_core::Point;
@@ -226,7 +227,7 @@ fn caret_stops_hit_test_handles_non_monotonic_x() {
 }
 
 #[test]
-fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
+fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let doc = DocId::new();
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
@@ -243,15 +244,15 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     };
 
     // Before the injection point maps 1:1.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 0), 0);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 2), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 0), 0);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 2), 2);
 
     // Inside the injected preedit snaps to the injection point.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 3), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 3), 2);
 
     // After the injected preedit shifts by `preedit_len`.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 4), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 5), 3);
 }
 
 #[test]

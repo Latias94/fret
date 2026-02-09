@@ -100,7 +100,13 @@ pub(super) fn paint_row(
         let caret = st.selection.caret().min(st.buffer.len_bytes());
         let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
         if caret_pt.row == row {
-            let mut caret_in_line = caret.saturating_sub(row_range.start).min(line.len());
+            let caret_local = caret.saturating_sub(row_range.start);
+            let mut caret_in_line = caret_local.min(line.len());
+            if let Some(folds) = row_folds.as_ref() {
+                caret_in_line = folds
+                    .buffer_local_to_display_local(caret_local)
+                    .min(line.len());
+            }
             caret_in_line =
                 fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
 
@@ -607,7 +613,8 @@ pub(super) fn cached_row_text_with_range(
     let range_for_return = range.clone();
     let base: String = st.buffer.slice_to_string(range.clone()).unwrap_or_default();
 
-    let (text, fold_map) = if st.preedit.is_none() {
+    let suppress_decorations = st.preedit.is_some() && st.display_wrap_cols.is_some();
+    let (text, fold_map) = if !suppress_decorations {
         let line = st.display_map.display_row_line(row);
         let folds = st.line_folds.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
         let inlays = st.line_inlays.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
