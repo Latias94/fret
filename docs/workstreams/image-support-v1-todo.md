@@ -23,9 +23,16 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
 
-- [ ] IMG-guard-010 Add a minimal regression gate checklist for image work (fast vs full).
-  - Fast: `cargo fmt`, `cargo clippy -p fret-ui -p fret-render-wgpu -p fret-ui-shadcn --all-targets -- -D warnings`
-  - Full: `cargo nextest run` (workspace) + key web_vs_fret suites.
+- [x] IMG-guard-010 Add a minimal regression gate checklist for image work (fast vs full).
+  - Fast (mechanism + renderer math):
+    - `cargo fmt`
+    - `cargo clippy -p fret-core -p fret-ui -p fret-render-wgpu --all-targets -- -D warnings`
+    - `cargo nextest run -p fret-core image_object_fit`
+    - `cargo nextest run -p fret-render-wgpu image_fit`
+  - Full (user-visible shadcn outcomes):
+    - `cargo nextest run -p fret-ui-shadcn media_image`
+    - Optional: `cargo nextest run -p fret-ui-shadcn avatar_image_emits_cover_fit_scene_op`
+    - Optional: `cargo nextest run -p fret-ui-shadcn --no-fail-fast` (may include known-non-image failures)
 
 ## M1 — Core fit semantics (mechanism layer)
 
@@ -63,28 +70,44 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M3 — Metadata query seam (optional but likely needed)
 
-- [ ] IMG-meta-300 Decide whether to add an `ImageService` to `UiServices` (intrinsic size query).
-  - If accepted, land an ADR or extend the fit ADR with the query contract.
-
-- [ ] IMG-meta-310 Implement `ImageService` in the renderer and add a fake implementation for tests.
-  - Evidence anchors:
-    - `crates/fret-render-wgpu/src/renderer/services.rs`
-    - `crates/fret-core/src/services.rs`
+- [x] IMG-meta-300 Provide a policy-owned intrinsic metadata seam (no `UiServices` expansion).
+  - Decision: do **not** add an `ImageService` to `UiServices` for v1.
+  - Apps/components can record and read intrinsic dimensions via an app-global store:
+    - `ecosystem/fret-ui-kit/src/image_metadata.rs` (`ImageMetadataStore`, `with_image_metadata_store_mut`)
+  - Ecosystem ergonomics:
+    - `ecosystem/fret-ui-shadcn/src/media_image.rs` (`intrinsic_aspect_ratio_from_metadata`)
 
 ## M4 — Ecosystem `img(source)` (deferred until M1/M2 are stable)
 
-- [ ] IMG-eco-400 Add an ecosystem crate (or module) for `ImageSource` + decode/load + cache integration.
+- [x] IMG-eco-400 Add an ecosystem crate (or module) for `ImageSource` + decode/load + cache integration.
   - Non-goal: framework-owned media engine.
   - Must integrate with: `fret-ui-assets` / `fret-asset-cache` budgets.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-assets/src/image_source.rs` (`ImageSource`, `use_image_source_state`)
+    - `ecosystem/fret-ui-assets/Cargo.toml` (`image-decode`, `image-metadata` features)
+    - `apps/fret-ui-gallery/src/driver.rs` (`UiGalleryImageSourceDemoAssets`)
+    - `apps/fret-ui-gallery/src/ui.rs` (`Ecosystem ImageSource (bytes decode)` section)
 
-- [ ] IMG-eco-410 Add a demo + at least one diag script for:
+- [x] IMG-eco-410 Add a demo + at least one diag script for:
   - scrolling thumbnails (virtual list),
   - video-like streaming updates (existing demos ok; add UI composition around them).
+  - Evidence anchors:
+    - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_IMAGE_OBJECT_FIT`)
+    - `apps/fret-ui-gallery/src/ui.rs` (`preview_image_object_fit`)
+    - `apps/fret-ui-gallery/src/driver.rs` (demo image register + streaming `ImageUpdateRgba8`)
+    - `tools/diag-scripts/ui-gallery-image-object-fit-screenshots.json`
 
 ## M5 — Video fast paths (capability-gated)
 
 - [ ] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
   - References: ADR 0123/0124/0126.
+  - Desktop (Windows-local):
+    - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
+    - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
+    - Command:
+      - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
+  - WASM: TODO (record a baseline once the web perf workflow is stable for this suite).
+  - Note: `--perf-baseline-seed` / `--perf-baseline-seed-preset` are currently rejected by `fret-diag` (even though `fretboard help` mentions them), so this baseline uses the default seeding behavior.
 
 - [ ] IMG-video-510 Decide the next capability-gated step for “external texture import”.
   - Must not leak backend handles into `fret-ui`.
