@@ -261,7 +261,10 @@ Evidence anchors:
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap`)
   - [x] Define v1 behavior for inline preedit: suppress fold placeholders while inline preedit is active, and lock it with a regression gate:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json`
-    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit`)
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit`)
+  - [x] Follow-up: allow fold placeholders under inline preedit when soft wrap is off (unwrapped baseline) and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped`)
   - [x] Decision (v2): keep v1 behavior — suppress fold placeholders while inline preedit is active.
     - Rationale: composing fold placeholders with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (similar to inlays) rather than a paint-time string splice.
@@ -275,7 +278,10 @@ Evidence anchors:
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap`)
   - [x] Define v1 behavior for inline preedit: suppress inlays while inline preedit is active, and lock it with a regression gate:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json`
-    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit`)
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit`)
+  - [x] Follow-up: allow inlays under inline preedit when soft wrap is off (unwrapped baseline) and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped`)
   - [x] Decision (v2): keep v1 behavior — suppress inlays while inline preedit is active.
     - Rationale: composing inlays with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (and the mapping surface can compose multiple fragment sources deterministically).
