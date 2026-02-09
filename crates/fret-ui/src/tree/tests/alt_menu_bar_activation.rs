@@ -21,7 +21,7 @@ fn alt_key_up_emits_focus_menu_bar_when_present() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;
@@ -78,7 +78,7 @@ fn alt_key_up_does_not_emit_when_canceled_by_other_key() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;

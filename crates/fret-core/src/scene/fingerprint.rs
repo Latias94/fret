@@ -164,12 +164,21 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             order,
             rect,
             image,
+            fit,
             opacity,
         } => {
             let mut state = mix_u64(state, 4);
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
             state = mix_u64(state, image.data().as_ffi());
+            state = mix_u64(
+                state,
+                match fit {
+                    crate::ViewportFit::Stretch => 1,
+                    crate::ViewportFit::Contain => 2,
+                    crate::ViewportFit::Cover => 3,
+                },
+            );
             mix_f32(state, opacity)
         }
         SceneOp::ImageRegion {

@@ -112,6 +112,7 @@ Examples:
   fretboard diag perf ui-gallery-steady --repeat 5 --warmup-frames 5 --perf-baseline-out .fret/perf.baseline.json --perf-baseline-seed this-suite@top_layout_time_us=p90 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery-steady --repeat 5 --warmup-frames 5 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json --perf-baseline-seed this-suite@top_layout_time_us=p90 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery --repeat 5 --warmup-frames 5 --perf-baseline .fret/perf.baseline.json --launch -- cargo run -p fret-ui-gallery --release
+  fretboard diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/1234 --perf-baseline-out .fret/perf.web.baseline.json
   fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json --repeat 3 --min-run-paint-cache-hit-test-only-replay-allowed-max 10 --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max 0 --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf tools/diag-scripts/ui-gallery-overlay-torture.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release

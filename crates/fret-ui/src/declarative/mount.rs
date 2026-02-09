@@ -1732,7 +1732,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let reconcile_start = std::time::Instant::now();
+        let reconcile_start = fret_core::time::Instant::now();
 
         let prev_items_len = props.visible_items.len();
         let next_items_len = desired_items.len();

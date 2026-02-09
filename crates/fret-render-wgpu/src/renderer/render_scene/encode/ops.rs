@@ -83,10 +83,11 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
         SceneOp::Image {
             rect,
             image,
+            fit,
             opacity,
             ..
         } => {
-            draw::encode_image(renderer, state, rect, image, opacity);
+            draw::encode_image(renderer, state, rect, image, fit, opacity);
         }
         SceneOp::ImageRegion {
             rect,

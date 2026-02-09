@@ -568,7 +568,7 @@ impl DockGraph {
         match n {
             DockNode::Tabs { .. } => None,
             DockNode::Split { children, .. } => {
-                if children.iter().any(|c| *c == target) {
+                if children.contains(&target) {
                     return Some(node);
                 }
                 children

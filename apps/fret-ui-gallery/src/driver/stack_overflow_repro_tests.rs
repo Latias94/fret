@@ -68,7 +68,7 @@ fn run_datatable_layout(configure_stacksafe: bool) {
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(1280.0), Px(720.0)),
     );
-    let mut services = FakeUiServices::default();
+    let mut services = FakeUiServices;
 
     UiGalleryDriver::render_ui(&mut app, &mut services, window, &mut state, bounds);
 

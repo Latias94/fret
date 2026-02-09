@@ -64,8 +64,7 @@ mod tests {
 
     use fret_core::{
         ClipboardToken, FrameId, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-        PathStyle, Px, Size, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle,
-        TimerToken,
+        PathStyle, Px, Size, TextBlobId, TextConstraints, TextMetrics, TextService, TimerToken,
     };
     use fret_runtime::TickId;
     use slotmap::KeyData;

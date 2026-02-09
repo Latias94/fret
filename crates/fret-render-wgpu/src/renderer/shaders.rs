@@ -1888,14 +1888,12 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let mdims = vec2<f32>(f32(mdims_u.x), f32(mdims_u.y));
   let local_x = (f32(x) + 0.5) - viewport.mask_viewport_origin.x;
   let local_y = (f32(y) + 0.5) - viewport.mask_viewport_origin.y;
-  if (local_x < 0.0 || local_y < 0.0 ||
-      local_x >= viewport.mask_viewport_size.x || local_y >= viewport.mask_viewport_size.y) {
-    return vec4<f32>(0.0);
-  }
+  let inside = local_x >= 0.0 && local_y >= 0.0 &&
+      local_x < viewport.mask_viewport_size.x && local_y < viewport.mask_viewport_size.y;
   let mx = clamp(i32(floor(local_x * mdims.x / viewport.mask_viewport_size.x)), 0, i32(mdims_u.x) - 1);
   let my = clamp(i32(floor(local_y * mdims.y / viewport.mask_viewport_size.y)), 0, i32(mdims_u.y) - 1);
-  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x;
   let sample = textureSample(tex, tex_sampler, input.uv);
+  let mask = textureLoad(mask_texture, vec2<i32>(mx, my), 0).x * select(0.0, 1.0, inside);
   let o = clamp(input.opacity, 0.0, 1.0);
   let out = vec4<f32>(sample.rgb * o, sample.a * o) * mask;
   return encode_output_premul(out);
