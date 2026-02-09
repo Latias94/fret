@@ -1734,6 +1734,26 @@ fn brush_selection_is_scoped_to_grid_and_filters_series_ranges() {
             .contains_key(&series_b)
     );
 
+    // Opt-in: allow cross-grid X linking by matching `(dataset, encode.x)` across series.
+    engine.apply_action(Action::SetLinkBrushXExportPolicy {
+        policy: crate::link::BrushXExportPolicy::SameDatasetXField,
+    });
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_a)
+    );
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_b)
+    );
+
     // Mismatched grids should clear the selection defensively.
     engine.apply_action(Action::SetBrushSelection2D {
         x_axis: x_a,

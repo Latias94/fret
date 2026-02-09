@@ -25,6 +25,7 @@ use crate::transform::{RowRange, RowSelection};
 use crate::transform_graph::{DataViewStage, TransformGraph};
 use crate::view::ViewState;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 pub mod axis;
 pub mod bar;
@@ -666,6 +667,10 @@ impl ChartEngine {
                 self.state.link.group = group;
                 self.state.revision.bump();
             }
+            Action::SetLinkBrushXExportPolicy { policy } => {
+                self.state.link.brush_x_export_policy = policy;
+                self.state.revision.bump();
+            }
             Action::SetSeriesVisible { series, visible } => {
                 if let Some(existing) = self.model.series.get_mut(&series)
                     && existing.visible != visible
@@ -1152,6 +1157,25 @@ impl ChartEngine {
         // row range output after the participation contract has been updated so the output is
         // scoped to the effective series view (base range + X dataZoom + optional indices views).
         if let Some(brush) = self.state.brush_selection_2d {
+            let mut x_link_keys: BTreeSet<(crate::ids::DatasetId, crate::ids::FieldId)> =
+                BTreeSet::new();
+            if self.state.link.brush_x_export_policy
+                == crate::link::BrushXExportPolicy::SameDatasetXField
+            {
+                for series_id in &self.model.series_order {
+                    let Some(series) = self.model.series.get(series_id) else {
+                        continue;
+                    };
+                    if !series.visible {
+                        continue;
+                    }
+                    if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                        continue;
+                    }
+                    x_link_keys.insert((series.dataset, series.encode.x));
+                }
+            }
+
             for series_id in &self.model.series_order {
                 let Some(series) = self.model.series.get(series_id) else {
                     continue;
@@ -1159,8 +1183,21 @@ impl ChartEngine {
                 if !series.visible {
                     continue;
                 }
-                if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
-                    continue;
+
+                match self.state.link.brush_x_export_policy {
+                    crate::link::BrushXExportPolicy::AxisPairOnly => {
+                        if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                            continue;
+                        }
+                    }
+                    crate::link::BrushXExportPolicy::SameDatasetXField => {
+                        if series.x_axis != brush.x_axis || series.y_axis != brush.y_axis {
+                            let key = (series.dataset, series.encode.x);
+                            if !x_link_keys.contains(&key) {
+                                continue;
+                            }
+                        }
+                    }
                 }
 
                 let Some(participation) = self.participation.series_participation(*series_id)
