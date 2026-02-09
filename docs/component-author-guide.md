@@ -113,6 +113,25 @@ Guidance:
 - Accept children as `impl IntoIterator<Item = AnyElement>` and store them as `Vec<AnyElement>`
   internally (call-site flexibility; internal stability).
 
+### 2.2) Theme access (avoid long-lived borrows)
+
+Component code often needs theme tokens (colors/metrics). Avoid holding a `&Theme` borrow across
+other `cx` calls, otherwise you may be forced into noisy `Theme::global(&*cx.app).clone()`
+workarounds.
+
+Recommended patterns:
+
+- For pure token reads: use `ThemeSnapshot` via `cx.theme_snapshot()` (cheap `Copy`, no long-lived
+  `&Theme` borrow).
+- If you need a full `Theme` (e.g. some `fret-ui-kit` helpers take `&Theme`): prefer
+  `let theme = cx.theme().clone();` so theme observation is wired automatically.
+
+```rust
+let theme = cx.theme_snapshot();
+let padding = theme.metric_required("metric.padding.md");
+let fg = theme.color_required("foreground");
+```
+
 ## 3) Commands + shortcuts: always go through `CommandId` + keymap
 
 If an action can be triggered by keyboard/menu/palette, it should be a `CommandId`.

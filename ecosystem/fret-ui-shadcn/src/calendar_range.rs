@@ -1262,19 +1262,6 @@ fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]
     out.into()
 }
 
-fn ordinal_suffix(day: u8) -> &'static str {
-    let mod_100 = day % 100;
-    if mod_100 >= 11 && mod_100 <= 13 {
-        return "th";
-    }
-    match day % 10 {
-        1 => "st",
-        2 => "nd",
-        3 => "rd",
-        _ => "th",
-    }
-}
-
 fn calendar_icon_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,

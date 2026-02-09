@@ -1,0 +1,14 @@
+{
+  "menu_bar_version": 2,
+  "menus": [
+    {
+      "title": "File",
+      "role": "file",
+      "items": [
+        { "type": "command", "command": "app.open", "when": "platform != \"web\"" },
+        { "type": "separator" },
+        { "type": "label", "title": "Recent" }
+      ]
+    }
+  ]
+}

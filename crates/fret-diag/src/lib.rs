@@ -2599,6 +2599,8 @@ See: `docs/tracy.md`.\n";
             }
 
             let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_overlay_steady_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-overlay-steady";
             let is_ui_gallery_code_editor_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-code-editor";
             let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
@@ -2671,6 +2673,14 @@ See: `docs/tracy.md`.\n";
                     push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_overlay_steady_suite {
+                    (
+                        ui_gallery_overlay_steady_suite_scripts()
                             .into_iter()
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
@@ -7250,6 +7260,15 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 27] {
         "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline.json",
+    ]
+}
+
+fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
+    [
+        "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+        "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
     ]
 }
 

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "demo", "web_name": "resizable-demo", "recipe": "demo" },
+    {
+      "id": "demo_with_handle",
+      "web_name": "resizable-demo-with-handle",
+      "recipe": "demo_with_handle"
+    },
+    { "id": "handle", "web_name": "resizable-handle", "recipe": "handle" },
+    { "id": "vertical", "web_name": "resizable-vertical", "recipe": "vertical" }
+  ]
+}

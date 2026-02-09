@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "calendar_01", "web_name": "calendar-01", "recipe": "single_month" },
+    { "id": "calendar_04", "web_name": "calendar-04", "recipe": "single_month" },
+    { "id": "calendar_06", "web_name": "calendar-06", "recipe": "single_month" },
+    { "id": "calendar_08", "web_name": "calendar-08", "recipe": "single_month" },
+    { "id": "calendar_10", "web_name": "calendar-10", "recipe": "single_month" },
+    { "id": "calendar_13", "web_name": "calendar-13", "recipe": "single_month" },
+    { "id": "calendar_14", "web_name": "calendar-14", "recipe": "single_month" },
+    { "id": "calendar_15", "web_name": "calendar-15", "recipe": "single_month" },
+    { "id": "calendar_16", "web_name": "calendar-16", "recipe": "single_month" },
+    { "id": "calendar_17", "web_name": "calendar-17", "recipe": "single_month" },
+    { "id": "calendar_18", "web_name": "calendar-18", "recipe": "single_month" },
+    { "id": "calendar_19", "web_name": "calendar-19", "recipe": "single_month" },
+    { "id": "calendar_20", "web_name": "calendar-20", "recipe": "single_month" },
+    { "id": "calendar_21", "web_name": "calendar-21", "recipe": "single_month" },
+    { "id": "calendar_31", "web_name": "calendar-31", "recipe": "single_month" },
+
+    { "id": "calendar_02", "web_name": "calendar-02", "recipe": "multi_month" },
+    { "id": "calendar_03", "web_name": "calendar-03", "recipe": "multi_month" },
+    { "id": "calendar_05", "web_name": "calendar-05", "recipe": "multi_month" },
+    { "id": "calendar_07", "web_name": "calendar-07", "recipe": "multi_month" },
+    { "id": "calendar_09", "web_name": "calendar-09", "recipe": "multi_month" },
+    { "id": "calendar_11", "web_name": "calendar-11", "recipe": "multi_month" },
+    { "id": "calendar_12", "web_name": "calendar-12", "recipe": "multi_month" }
+  ]
+}

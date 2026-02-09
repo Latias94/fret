@@ -6,7 +6,8 @@ mod hotpatch {
     use fret_core::{AppWindowId, UiServices};
     use fret_runtime::Model;
     use fret_ui::element::AnyElement;
-    use fret_ui::{ElementContext, Invalidation, Theme};
+    use fret_ui::{ElementContext, Invalidation};
+    use fret_ui_kit::declarative::ElementContextThemeExt as _;
     use fret_ui_shadcn as shadcn;
 
     use std::sync::Arc;
@@ -78,7 +79,6 @@ mod hotpatch {
 
         cx.observe_model(&st.counter, Invalidation::Paint);
         cx.observe_model(&st.debug, Invalidation::Paint);
-        let theme = Theme::global(&*cx.app).clone();
 
         let value = cx
             .app
@@ -122,14 +122,16 @@ mod hotpatch {
         ])
         .into_element(cx);
 
-        let bg = theme.color_required("background");
-        let wrap = fret_ui_kit::declarative::style::container_props(
-            &theme,
-            fret_ui_kit::ChromeRefinement::default()
-                .bg(fret_ui_kit::ColorRef::Color(bg))
-                .p(fret_ui_kit::Space::N6),
-            fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
-        );
+        let wrap = cx.with_theme(|theme| {
+            let bg = theme.color_required("background");
+            fret_ui_kit::declarative::style::container_props(
+                theme,
+                fret_ui_kit::ChromeRefinement::default()
+                    .bg(fret_ui_kit::ColorRef::Color(bg))
+                    .p(fret_ui_kit::Space::N6),
+                fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
+            )
+        });
 
         vec![cx.container(wrap, |_cx| [content])].into()
     }

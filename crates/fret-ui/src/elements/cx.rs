@@ -29,7 +29,7 @@ use crate::element::{
     VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
-use crate::{SvgSource, Theme, UiHost};
+use crate::{SvgSource, Theme, ThemeSnapshot, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
@@ -487,6 +487,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
+    }
+
+    pub fn theme_snapshot(&mut self) -> ThemeSnapshot {
+        self.theme().snapshot()
     }
 
     #[track_caller]

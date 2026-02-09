@@ -16,6 +16,7 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{
     OverlayController, OverlayRequest, ToastAction, ToastButtonStyle, ToastId, ToastLayerStyle,
     ToastPosition, ToastRequest, ToastStore, ToastTextStyle,
@@ -194,7 +195,6 @@ impl SnackbarHost {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
-            let theme = Theme::global(&*cx.app).clone();
 
             let config_changed = cx.with_state(SnackbarHostConfigState::default, |st| {
                 let max = Some(self.max_snackbars);
@@ -210,7 +210,7 @@ impl SnackbarHost {
                 });
             }
 
-            let style = snackbar_toast_layer_style(&theme);
+            let style = cx.with_theme(snackbar_toast_layer_style);
 
             let mut request = OverlayRequest::toast_layer(id, self.store.clone())
                 .toast_position(self.position)

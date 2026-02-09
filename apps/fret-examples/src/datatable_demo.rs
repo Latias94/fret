@@ -10,7 +10,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
@@ -197,7 +197,7 @@ impl WinitAppDriver for DataTableDemoDriver {
                     cx.observe_model(&table_state, Invalidation::Layout);
                     cx.observe_model(&table_output, Invalidation::Layout);
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
                     let padding = theme.metric_required("metric.padding.md");
 
                     let (selected, sorting) = cx

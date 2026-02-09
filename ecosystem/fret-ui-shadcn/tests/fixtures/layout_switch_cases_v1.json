@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "switch-demo.track-size",
+      "web_name": "switch-demo",
+      "recipe": "track_size"
+    },
+    {
+      "id": "switch-demo.thumb-offset-unchecked",
+      "web_name": "switch-demo",
+      "recipe": "thumb_offset_unchecked"
+    }
+  ]
+}
+

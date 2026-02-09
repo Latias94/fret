@@ -1143,9 +1143,8 @@ impl UiDiagnosticsService {
                         };
 
                         if state.remaining_frames == 0 {
-                            force_dump_label = Some(format!(
-                                "script-step-{step_index:04}-click_stable-timeout"
-                            ));
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
                             stop_script = true;
                             failure_reason = Some("click_stable_timeout".to_string());
                             active.v2_step_state = None;

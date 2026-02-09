@@ -105,13 +105,32 @@ Symptom:
 
 Recommended pattern:
 
-- Prefer `ThemeSnapshot` to avoid cloning and to keep the borrow scoped:
+- Prefer `ThemeSnapshot` for pure token reads (cheap `Copy` snapshot; no long-lived `&Theme` borrow):
 
 ```rust
 let theme = Theme::global(&*cx.app).snapshot();
 ```
 
 `ThemeSnapshot` is `Copy` and provides `color_required(...)` / `metric_required(...)` for common token reads.
+
+When you need `&Theme` (e.g. `MetricRef::resolve(&Theme)`, `ColorRef::resolve(&Theme)`, or extra theme tokens),
+prefer a scoped borrow that produces owned resolved values, then drops the borrow before the next `cx` call:
+
+```rust
+let (container, gap) = cx.with_theme(|theme| {
+    // Note: many `fret-ui-kit` helpers take `&Theme`, not `ThemeSnapshot`.
+    let container = decl_style::container_props(theme, chrome, layout);
+    let gap = MetricRef::space(Space::N2).resolve(theme);
+    (container, gap)
+});
+
+cx.container(container, move |cx| {
+    // use `gap` here (no `Theme` clone required)
+    vec![/* ... */]
+});
+```
+
+If you depend on `fret-ui-kit`, `ElementContextThemeExt::with_theme(...)` is the recommended way to get a scoped `&Theme` borrow that does not leak across the next `cx` call.
 
 ## Comparisons (What to Learn, What to Avoid)
 

@@ -418,7 +418,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(
             &theme,
         )));
-        let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
+        let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: is_open,

@@ -75,8 +75,6 @@ pub(super) fn preview_alert_dialog(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -99,17 +97,17 @@ pub(super) fn preview_alert_dialog(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -121,20 +119,6 @@ pub(super) fn preview_alert_dialog(
 
     let media_chip =
         |cx: &mut ElementContext<'_, App>, icon_name: &'static str, destructive: bool| {
-            let (bg, border, fg) = if destructive {
-                (
-                    ColorRef::Color(theme.color_required("destructive")),
-                    ColorRef::Color(theme.color_required("destructive")),
-                    ColorRef::Color(theme.color_required("destructive-foreground")),
-                )
-            } else {
-                (
-                    ColorRef::Color(theme.color_required("muted")),
-                    ColorRef::Color(theme.color_required("border")),
-                    ColorRef::Color(theme.color_required("foreground")),
-                )
-            };
-
             let icon = stack::hstack(
                 cx,
                 stack::HStackProps::default()
@@ -149,9 +133,23 @@ pub(super) fn preview_alert_dialog(
                 },
             );
 
-            cx.container(
+            let props = cx.with_theme(|theme| {
+                let (bg, border, fg) = if destructive {
+                    (
+                        ColorRef::Color(theme.color_required("destructive")),
+                        ColorRef::Color(theme.color_required("destructive")),
+                        ColorRef::Color(theme.color_required("destructive-foreground")),
+                    )
+                } else {
+                    (
+                        ColorRef::Color(theme.color_required("muted")),
+                        ColorRef::Color(theme.color_required("border")),
+                        ColorRef::Color(theme.color_required("foreground")),
+                    )
+                };
+
                 decl_style::container_props(
-                    &theme,
+                    theme,
                     ChromeRefinement::default()
                         .border_1()
                         .rounded(Radius::Full)
@@ -160,9 +158,10 @@ pub(super) fn preview_alert_dialog(
                         .text_color(fg)
                         .p(Space::N2),
                     LayoutRefinement::default().w_px(Px(40.0)).h_px(Px(40.0)),
-                ),
-                move |_cx| [icon],
-            )
+                )
+            });
+
+            cx.container(props, move |_cx| [icon])
         };
 
     let build_dialog = |cx: &mut ElementContext<'_, App>,

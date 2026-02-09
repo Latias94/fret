@@ -159,6 +159,30 @@ Exit criteria (v1):
 - No new backend coupling has leaked into core crates (layering remains green).
 - At least one regression gate exists for the “core hazard” categories (IDs/stability/serialization invariants).
 
+#### Serialization stability checklist (v1)
+
+Core crates own several “hard-to-change” persisted/config surfaces. For fearless refactors, treat each
+surface as a **versioned contract** with at least one executable regression gate.
+
+1) Classify the surface:
+
+- **User-authored config** (e.g. `keymap.json`, menubar config): prefer strict decoding and clear errors.
+- **App-owned persisted state** (e.g. docking layouts, window placement, settings snapshots): require an explicit version and a defined compatibility policy.
+
+2) Minimum checklist per surface:
+
+- A version field exists (e.g. `*_version`, `layout_version`) and is checked on load.
+- Defaulting is explicit (`#[serde(default)]`) for optional additions that should not break older files.
+- Renames are explicit (`#[serde(rename = ...)]`) to avoid accidental drift.
+- Validation is explicit and failure messages are actionable (reject invalid graphs/ranges/non-finite values).
+- At least one gate exists:
+  - **Decode fixture test** (hand-authored JSON samples) for config surfaces.
+  - **JSON roundtrip + validate** for app-owned persisted structs (to catch schema drift during refactors).
+
+Evidence anchors (initial):
+
+- Dock layout JSON roundtrip gate: `crates/fret-core/src/dock/tests.rs` (`dock_layout_json_roundtrips_and_validates`)
+
 ### M2 — UI runtime closure (mechanism-only, debuggable, cache-safe)
 
 Outcome: `crates/fret-ui` is a stable substrate, not a component library.
@@ -376,6 +400,68 @@ Use this checklist when refactoring a crate bottom-up:
 6. **Docs alignment**
    - Link the work to ADRs and update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when relevant.
 
+## 4.3) Code-quality audits (crate-by-crate, bottom-up)
+
+The directory/module reshuffles in this workstream are only the first pass. To converge toward a
+“Bevy-like” baseline, we will likely need a second pass that is explicitly **code-quality driven**:
+
+- read each crate end-to-end (or at least its critical paths),
+- audit for Rust best practices and architectural intent,
+- and land small, gated refactors that reduce long-term maintenance risk.
+
+### Audit outputs (lightweight, reviewable artifacts)
+
+- A stable template: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+- A single index for progress tracking: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+- One “crate audit note” per crate (linked from the index) once we start doing deep dives.
+
+### Audit levels (so we can scale across a large repo)
+
+- **L0 — Quick scan (30–60 min)**: surface map, top hazards, biggest files, dependency smells.
+- **L1 — Targeted deep dive (half-day)**: critical paths + invariants, remove obvious footguns,
+  add at least one executable gate.
+- **L2 — Closure audit (multi-day)**: contract closure + portability review + perf/interaction gates,
+  plus alignment updates if ADR-covered behavior is touched.
+
+### Minimum gates per audit level (recommended)
+
+These are intentionally small “default minima” so audits remain landable.
+If a change touches a hot path (dispatch/layout/paint) or interaction semantics, add additional gates.
+
+| level | minimum gates | typical outputs |
+| --- | --- | --- |
+| L0 | `pwsh -NoProfile -File tools/audit_crate.ps1 -Crate <crate>` | 3–10 hazards + a short next-steps list |
+| L1 | L0 + `pwsh -NoProfile -File tools/check_layering.ps1` + `cargo fmt` + `cargo nextest run -p <crate>` | at least one new regression gate, plus 3–8 landable refactor steps |
+| L2 | L1 + `cargo clippy --workspace --all-targets -- -D warnings` + at least one `fretboard diag` suite or perf gate (as applicable) | contract closure notes, portability review, and ADR alignment updates if touched |
+
+### What “Rust best practices” means in this repo (non-normative)
+
+We prioritize changes that reduce risk and improve reviewability over micro-optimizations.
+Common targets to look for during audits:
+
+- **API surface hygiene**
+  - Keep public exports intentional; avoid “accidental” re-exports.
+  - Prefer data-only contract types in portable crates; keep platform bindings behind adapters.
+- **Ownership clarity**
+  - Avoid “god modules” and unclear ownership; split by responsibility and keep facades thin.
+  - Prefer directory modules once a subsystem is non-trivial.
+- **Error handling**
+  - Use structured error types (`thiserror`) for contract surfaces; reserve `anyhow`-style context for
+    app/backends where the contract is “best effort”.
+  - Avoid `unwrap()`/`expect()` in production paths (tests are fine).
+- **Determinism and testability**
+  - Prefer deterministic iteration and explicit ordering in user-visible behavior.
+  - Extract pure helpers where possible and add unit tests around invariants.
+- **Hot-path discipline**
+  - Avoid accidental allocations/clones in dispatch/layout/paint hot paths.
+  - Avoid blocking I/O or long CPU work on the UI thread; push it behind effects/dispatchers.
+- **Unsafe and platform glue**
+  - Keep `unsafe` localized, documented, and covered by tests where possible.
+  - Prefer capability modeling over ad-hoc `cfg` forks in portable layers.
+
+If a refactor changes an ADR-covered contract, it must go through ADR alignment workflow (see repo
+guidelines in `docs/README.md`).
+
 ## 5) Where this workstream plugs in (existing trackers)
 
 This program should not duplicate detailed plans; it should link and provide cross-cutting guardrails.
@@ -403,11 +489,30 @@ Recommended default gates (adjust per workstream):
 - Format: `cargo fmt`
 - Lint (when affordable): `cargo clippy --workspace --all-targets -- -D warnings`
 - Tests (subset, then expand): `cargo nextest run -p fret-ui` and `cargo nextest run -p fret-ui-shadcn`
+- Diag (interaction subset): `cargo run -p fretboard -- diag suite ui-gallery-overlay-steady --env FRET_DIAG=1 --launch -- cargo run -p fret-ui-gallery --release`
 
 Gate tiers (suggested; tune to your machine/CI budgets):
 
 - Fast (developer inner loop): layering + fmt + a small nextest subset for the touched crate(s).
 - Full (pre-merge / nightly): layering + fmt + clippy + wider nextest coverage + at least one diag suite.
+
+Canonical scripts (keep these stable so “fearless” stays repeatable):
+
+- Fast: `pwsh -NoProfile -File tools/gates_fast.ps1`
+- Full: `pwsh -NoProfile -File tools/gates_full.ps1`
+  - Note: the heaviest shadcn web-golden-backed conformance tests are gated behind
+    `--features web-goldens` for `fret-ui-shadcn` to keep the default inner loop cheaper.
+
+## 6.2) Skills (recommended)
+
+Repo-local skills exist to make the refactor loop repeatable for humans and AI.
+When doing work under this workstream, prefer using the following skills as “procedural checklists”:
+
+- `fret-boundary-checks`: layering + largest-files drift + quick crate snapshots.
+- `fret-crate-audits`: L0/L1/L2 audit workflow and artifact expectations.
+- `fret-diag-workflow`: turn regressions into reproducible `fretboard diag` gates.
+- `fret-app-architecture-and-effects`: async/effects boundaries; avoid UI-thread blocking.
+- UI-focused skills as needed (`fret-overlays-and-focus`, `fret-text-input-and-ime`, `fret-layout-and-style`, `fret-scroll-and-virtualization`).
 
 ## 7) Initial “mis-modularization” targets (concrete examples)
 
@@ -417,3 +522,8 @@ These are examples of the type of crate-internal module hygiene issues this work
   Prefer regrouping these into a single `text/` subsystem module with clear submodules (`input`, `area`, `edit`, `props`, `style`, `surface`),
   keeping public exports unchanged.
 - Large conformance tests should avoid living as multi-ten-thousand-line Rust sources; prefer `goldens/` + a thin harness.
+  - Early targets:
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+- `ecosystem/fret-ui-kit` overlay tests are currently concentrated in a very large `src/window_overlays/tests.rs`.
+  Prefer splitting by scenario class + moving scenario matrices to fixtures to reduce merge/conflict risk and improve reviewability.

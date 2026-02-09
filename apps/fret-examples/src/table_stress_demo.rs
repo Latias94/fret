@@ -11,7 +11,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
+use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::headless::table::{
     ColumnDef, ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
     contains_ascii_case_insensitive, create_column_helper,
@@ -515,7 +515,7 @@ impl WinitAppDriver for TableStressDriver {
                         .read(&state.items_revision, |v| *v)
                         .unwrap_or(0);
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
 
                     let mut root_layout = LayoutStyle::default();
                     root_layout.size.width = Length::Fill;

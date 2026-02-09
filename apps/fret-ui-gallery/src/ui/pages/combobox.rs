@@ -254,8 +254,7 @@ pub(super) fn preview_combobox(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -278,18 +277,21 @@ pub(super) fn preview_combobox(
         )
     };
 
+    let container_props =
+        |cx: &mut ElementContext<'_, App>, chrome: ChromeRefinement, layout: LayoutRefinement| {
+            cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
+        };
+
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+        let props = container_props(
+            cx,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .p(Space::N4),
+            LayoutRefinement::default().w_full().max_w(Px(760.0)),
+        );
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -616,18 +618,18 @@ pub(super) fn preview_combobox(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     |cx| {
                         vec![
-                            cx.container(
-                                decl_style::container_props(
-                                    &theme,
+                            {
+                                let props = container_props(
+                                    cx,
                                     ChromeRefinement::default()
                                         .border_1()
                                         .rounded(Radius::Sm)
                                         .px(Space::N2)
                                         .py(Space::N1),
                                     LayoutRefinement::default(),
-                                ),
-                                |cx| vec![shadcn::typography::muted(cx, "Cmd")],
-                            ),
+                                );
+                                cx.container(props, |cx| vec![shadcn::typography::muted(cx, "Cmd")])
+                            },
                             input_group_combo,
                         ]
                     },
