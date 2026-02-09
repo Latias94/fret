@@ -126,3 +126,54 @@ When fragment composition is enabled for inline preedit, the editor’s semantic
 - Regression gates (v1 policy): `tools/diag-scripts/ui-gallery-code-editor-torture-*-inline-preedit-baseline.json`,
   `apps/fretboard/src/diag/stats.rs` (fold/inlay absent under inline preedit).
 
+## Implementation gap checklist (as of 2026-02-09)
+
+This section tracks concrete gaps between the contract in this ADR and the current implementation.
+It is intentionally code-oriented so migration work is easy to scope and review.
+
+### Already aligned (v1)
+
+- View-layer fold placeholders and inlays participate in wrapped row-breaking and buffer↔display mapping:
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`DisplayRowFragment`, `compute_wrapped_row_start_cols`,
+    `decorated_byte_to_col`, `decorated_col_to_byte`).
+- Fold placeholder atomicity and clamping rules are enforced at the view layer:
+  - `ecosystem/fret-code-editor-view/src/folds.rs` (`folded_*` mapping helpers and tests).
+- Inlays that land inside folded ranges are ignored (v1 contract):
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (inlay cursor advancement around folds).
+- v1 policy and staging are locked by diagnostics:
+  - v1 suppress gates (decorations absent under inline preedit):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-*-soft-wrap-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`*_absent_under_inline_preedit`).
+  - ADR 0203 staging opt-ins (decorations present under inline preedit in specific baselines):
+    - unwrapped: `tools/diag-scripts/ui-gallery-code-editor-torture-*-inline-preedit-baseline.json`
+    - wrapped: `tools/diag-scripts/ui-gallery-code-editor-torture-*-with-decorations-baseline.json`
+    - gates: `crates/fret-diag/src/stats.rs` (`*_present_under_inline_preedit_*`).
+  - opt-in surface (editor policy): `ecosystem/fret-code-editor/src/editor/mod.rs`
+    (`allow_decorations_under_inline_preedit`).
+
+### Remaining gaps (v2+; ADR 0203)
+
+- [ ] Promote inline IME preedit from paint-time string splicing to a view-layer fragment source.
+  - Current paint-time injection: `ecosystem/fret-code-editor/src/editor/paint/mod.rs`
+    (`RowPreeditMapping`, `materialize_preedit_rich_text`).
+- [ ] Add a preedit fragment representation to `fret-code-editor-view` (data model + composition order).
+  - Suggested: a new `DisplayRowFragment` variant (or a dedicated preedit fragment stream) with a stable `maps_to`.
+  - Ensure deterministic tie-break rules when multiple insertions share the same anchor (ADR text).
+- [ ] Extend view-layer mapping and wrapping helpers to account for preedit insertion.
+  - Must cover: wrapped row breaking (`compute_wrapped_row_start_cols`) and both directions of mapping
+    (`decorated_byte_to_col` / `decorated_col_to_byte`).
+  - Rule: any display offset “inside” a fragment maps back to the fragment’s `maps_to` anchor.
+- [ ] Provide a view-owned way to materialize composed display text for windowed export ranges.
+  - Used by: paint row text (shaping), semantics `TextField.value`, and debug snapshots.
+  - Constraint: windowed-only outputs (ADR 0190); avoid full-document composed strings.
+- [ ] Migrate editor paint + hit-test + caret/selection mapping to consume the composed view mapping.
+  - Goal: remove the paint-time preedit injection path and avoid “dual mapping” seams.
+- [ ] Update a11y export to consume the composed display value (and composition range) from the view layer.
+  - Current a11y preedit handling lives in: `ecosystem/fret-code-editor/src/editor/a11y/mod.rs`
+    (`a11y_composed_text_window`, `map_a11y_offset_to_buffer_with_preedit`).
+  - Goal: keep ADR 0071 invariants while relying on one mapping surface.
+- [ ] Add a dedicated diag baseline + gate for “soft wrap + folds + inlays + inline preedit” coexistence.
+  - Baseline (new): `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
+  - Gate (new): asserts at least one snapshot where folds and inlays are observed while preedit is active,
+    plus a minimal mapping sanity check (e.g. caret does not jump during controlled toggles).
+  - Keep the existing v1 suppress + staging opt-in gates until this composed path is stable.

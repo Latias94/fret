@@ -41,14 +41,21 @@
 //! # }
 //! ```
 
-use std::path::Path;
 use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use fret_app::SettingsFileV1;
+#[cfg(not(target_arch = "wasm32"))]
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
+use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError};
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
+#[cfg(not(target_arch = "wasm32"))]
 use fret_icons::IconRegistry;
 
 #[derive(Debug, thiserror::Error)]
@@ -582,6 +589,13 @@ pub mod ui_app_driver;
 
 #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
+
+#[cfg(all(
+    feature = "ui-app-driver",
+    feature = "diagnostics",
+    feature = "diagnostics-ws"
+))]
+mod ui_diagnostics_ws_bridge;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
 pub fn init_diagnostics() {

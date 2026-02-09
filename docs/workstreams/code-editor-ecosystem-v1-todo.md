@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 This is the checkbox tracker companion to:
 
@@ -261,7 +261,13 @@ Evidence anchors:
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap`)
   - [x] Define v1 behavior for inline preedit: suppress fold placeholders while inline preedit is active, and lock it with a regression gate:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json`
-    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit`)
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit`)
+  - [x] Follow-up: allow fold placeholders under inline preedit when soft wrap is off (unwrapped baseline) and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped`)
+  - [x] Staging: add an opt-in to allow fold placeholders under inline preedit when soft wrap is on (wrapped baseline), and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations`)
   - [x] Decision (v2): keep v1 behavior — suppress fold placeholders while inline preedit is active.
     - Rationale: composing fold placeholders with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (similar to inlays) rather than a paint-time string splice.
@@ -275,19 +281,66 @@ Evidence anchors:
     - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap`)
   - [x] Define v1 behavior for inline preedit: suppress inlays while inline preedit is active, and lock it with a regression gate:
     - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json`
-    - `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit`)
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit`)
+  - [x] Follow-up: allow inlays under inline preedit when soft wrap is off (unwrapped baseline) and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-inline-preedit-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped`)
+  - [x] Staging: add an opt-in to allow inlays under inline preedit when soft wrap is on (wrapped baseline), and lock it with a regression gate (ADR 0203 staging):
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json`
+    - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations`)
   - [x] Decision (v2): keep v1 behavior — suppress inlays while inline preedit is active.
     - Rationale: composing inlays with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (and the mapping surface can compose multiple fragment sources deterministically).
-  - [ ] Follow-up (v2+): define a fragment-based DisplayMap composition model so fold/inlay/preedit can compose under a single mapping surface.
-    - Proposed: `docs/adr/0203-code-editor-display-fragments-and-displaymap-composition-v1.md`.
+  ### M8.4 — Display fragments composition (v2+) (ADR 0203)
+
+  This follow-up is the v2+ unlock for “editor-grade display mapping”: fold placeholders, inlays,
+  and inline IME preedit must coexist under one deterministic mapping surface (buffer↔display↔a11y).
+
+  - [ ] Promote inline IME preedit to a view-layer fragment source (stop paint-time string splicing).
+    - Target: `ecosystem/fret-code-editor-view` (`DisplayMap` / `DisplayRowFragment`).
+    - Composition order (normative; ADR 0203): folds → inlays → preedit.
+  - [ ] Extend view-layer mapping helpers so positions “inside” a fragment clamp to its `maps_to` anchor.
+    - Applies to: caret mapping, hit-testing mapping, selection normalization, and a11y range conversion.
+  - [ ] Provide a view-owned way to materialize the composed display text for a windowed export range.
+    - Used by: paint row text, a11y `TextField.value`, and debug snapshots.
+    - Must remain bounded: produce windowed slices only (ADR 0190), not full-document strings.
+  - [ ] Update the editor surface to consume the composed DisplayMap for:
+    - paint row text (no preedit injection in `fret-code-editor`),
+    - caret/selection/hit-test mapping (single source of truth),
+    - a11y export (`value` + `text_selection` + `text_composition`, ADR 0071).
+  - [ ] Add a dedicated UI Gallery baseline + gate for “soft wrap + folds + inlays + preedit” coexistence.
+    - Script (new): `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
+    - Gate (new): assert at least one snapshot with:
+      - `soft_wrap_cols != null`,
+      - `folds_fixture=true`, `inlays_fixture=true`,
+      - `torture.preedit_active=true`,
+      - fold placeholder observed and inlay observed while preedit is active,
+      - plus a minimal mapping sanity check (e.g. caret does not jump when toggling the fixtures).
+  - [ ] Keep the current v1 behavior + staging opt-ins gated until the composed preedit path is proven stable.
+    - v1 suppress gates: `*-soft-wrap-inline-preedit-baseline.json` (folds/inlays absent).
+    - staging opt-ins: `*-with-decorations-baseline.json` (folds/inlays present) (ADR 0203 staging).
 
 ---
 
 ## M9 — Retained Host / Composable Rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
-- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+  - Default decision (recommended): keep the code editor paint-driven (stable tree).
+  - “Yes” only if we need row-level composability that cannot be expressed as paint-only decorations.
+- [ ] Define the decision rubric (write it down here so it’s auditable):
+  - Need per-row interactive widgets (e.g. breakpoint toggles, per-row buttons) that must participate in layout/hit-test/semantics.
+  - Need rich gutters that are not feasible as a canvas overlay (variable-sized widgets, focusable controls).
+  - Need inline non-text widgets embedded in the flow (beyond “display fragments” text injection).
+- [ ] If “yes”: adopt the retained host direction (ADR 0192) for the relevant surface(s).
+  - Use fixed/known-height first; defer measured variable-height until required.
+  - Add a minimal spike surface (e.g. gutter with a focusable widget) and prove:
+    - window boundary changes do not force parent cache-root rerenders,
+    - attach/detach/reuse behavior is explainable in diagnostics bundles.
+  - Add or reuse fretboard gates:
+    - retained reconcile on cache-hit frames,
+    - attach/detach bounds,
+    - keep-alive reuse behavior (if enabled),
+    - stale-paint protection during scroll.
 
 ---
 
@@ -296,6 +349,8 @@ Evidence anchors:
 This milestone is defined in `docs/workstreams/code-editor-ecosystem-v1.md` (“Downstream Milestone:
 Markdown Editor v0”).
 
+### M10.1 — Source editor shell + interaction control
+
 - [x] Define a minimal interaction control surface for `fret-code-editor`:
   - `CodeEditorInteractionOptions` (policy surface) + input gating.
   - Evidence: `ecosystem/fret-code-editor/src/editor/mod.rs` (`CodeEditorInteractionOptions`, `CodeEditorState::set_interaction`),
@@ -303,7 +358,7 @@ Markdown Editor v0”).
 - [x] Add a UI Gallery toggle + diag coverage for read-only behavior (typing does not mutate the buffer).
   - UI: `apps/fret-ui-gallery/src/ui.rs` (Mode: edit/read-only/disabled buttons).
   - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-read-only-baseline.json`.
-  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits`).
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits`).
 - [x] Add Markdown syntax highlighting support (feature-gated; prefer `fret-syntax/lang-md`).
   - Evidence: `ecosystem/fret-code-editor/Cargo.toml` (`syntax-markdown`), `apps/fret-ui-gallery/Cargo.toml` (enables feature),
     `apps/fret-ui-gallery/src/ui.rs` (`handle.set_language(Some(\"markdown\"))`).
@@ -312,25 +367,73 @@ Markdown Editor v0”).
   - split preview via `fret-markdown`.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MARKDOWN_EDITOR_SOURCE`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`).
+- [x] Add a UI Gallery toggle + diag coverage for disabled behavior on the Markdown editor page.
+  - UI: `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-markdown-editor-mode-disabled`).
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-inject-preedit-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits`).
+    - Asserts: no buffer mutations, and the disabled editor is not focused with no composition.
+
+### M10.2 — Soft-wrap + selection/navigation consistency
+
 - [x] Add a read-only regression gate for the Markdown editor page (typing does not mutate the buffer).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-read-only-baseline.json`.
-  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits`).
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits`).
 - [x] Add a soft-wrap toggle stability gate for the Markdown editor page (caret/revision remain stable).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json`.
-  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable`).
-- [x] Add a Markdown editor word-boundary regression (ADR 0194 baseline via UnicodeWord) using semantics selection.
-  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json`.
-  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_word_boundary`).
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable`).
+- [x] Add Markdown editor word-boundary regressions (ADR 0194; UnicodeWord baseline) using semantics selection.
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json`
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json`
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json`
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json`
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_word_boundary`).
+- [x] Add a soft-wrap editing regression: selection mapping remains stable under wrap while editing (not just toggles).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable`).
+- [x] Follow-up: add a triple-click select-line baseline for the Markdown editor page (ADR 0194).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click`).
+- [x] Add fold/inlay decoration baselines for the Markdown editor page (ADR 0200; present under wrap; suppressed under inline preedit).
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json`.
+  - Gates: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_*folds*`, `check_bundle_for_ui_gallery_markdown_editor_source_*inlays*`).
+- [x] Add a folds clamp-selection regression for the Markdown editor fixture (ADR 0200).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds`).
+  - Flag: `--check-ui-gallery-markdown-editor-source-folds-clamp-selection-out-of-folds`.
+- [x] Add an inlays caret-navigation regression for the Markdown editor fixture (ADR 0200).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable`).
+  - Flag: `--check-ui-gallery-markdown-editor-source-inlays-caret-navigation-stable`.
+
+### M10.3 — IME bridge seam validation (native + web)
+
 - [x] Add a Markdown editor a11y composition regression (ADR 0071 range invariants; synthetic preedit injection).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`.
-  - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition`).
-- [~] Add a minimal diag script suite that validates the Markdown editor milestone end-to-end:
-  - [x] Read-only blocks edits (buffer revision stable).
-  - [x] Soft-wrap toggle does not mutate caret/revision/len.
-  - [x] Word-boundary navigation/select behavior baseline (ADR 0194, UnicodeWord).
-  - [x] A11y composition ranges baseline (ADR 0071; synthetic preedit injection).
-  - [x] Soft-wrap caret/selection mapping remains stable under edits (not just toggles).
-    - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`.
-    - Gate: `apps/fretboard/src/diag/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable`).
-  - [!] Deferred: Web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
-    - Decision: skip for now (too flaky for a stable suite gate).
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition`).
+- [x] Add a soft-wrap a11y composition regression (same invariants with wrap=80 enabled).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap`).
+- [x] Add a web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
+  - Script: `tools/diag-scripts/ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_web_ime_bridge_enabled`).
+  - Flag: `--check-ui-gallery-web-ime-bridge-enabled`.
+  - Notes: the broader IME enable/focus workflow can still be flaky on some browsers; keep the harness for manual triage.
+
+### M10.4 — Diag suite / definition-of-done
+
+- [x] Minimal diag script suite validates the Markdown editor milestone end-to-end:
+  - read-only blocks edits,
+  - soft-wrap toggle stability,
+  - word-boundary baselines (including double-click),
+  - a11y composition baseline,
+  - soft-wrap editing selection-wrap stability.
