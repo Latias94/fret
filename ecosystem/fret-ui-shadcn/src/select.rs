@@ -2120,19 +2120,17 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
 
-                            if is_open {
-                                if !state.was_open {
-                                    state.was_open = true;
-                                    state.content.reset_on_open(initial_active_row);
-                                    state.trigger.reset_typeahead_buffer();
-                                    state.pending_active_align_top_scroll = !state.opened_by_pointer;
-                                } else if state.content.active_row().is_none() {
-                                    state.content.set_active_row(initial_active_row);
-                                }
-                            } else {
-                                state.was_open = false;
-                                state.content.set_active_row(None);
-                                state.pending_active_align_top_scroll = false;
+                             if is_open {
+                                 if !state.was_open {
+                                     state.was_open = true;
+                                     state.content.reset_on_open(initial_active_row);
+                                     state.trigger.reset_typeahead_buffer();
+                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
+                                 }
+                             } else {
+                                 state.was_open = false;
+                                 state.content.set_active_row(None);
+                                 state.pending_active_align_top_scroll = false;
                                 state.opened_by_pointer = false;
                             }
 
@@ -2586,28 +2584,36 @@ fn select_impl<H: UiHost>(
                                                                                         );
                                                                                     }
 
-                                                                                    if !item_disabled {
-                                                                                        cx.pressable_add_on_hover_change(Arc::new(
-                                                                                            move |host, action_cx, hovered| {
-                                                                                                if !hovered {
-                                                                                                    return;
-                                                                                                }
-                                                                                                let mut state = state_for_hover
-                                                                                                    .lock()
-                                                                                                    .unwrap_or_else(|e| e.into_inner());
-                                                                                                if state.content.active_row()
-                                                                                                    != Some(row_idx_for_hover)
-                                                                                                {
-                                                                                                    state.content.set_active_row(
-                                                                                                        Some(row_idx_for_hover),
-                                                                                                    );
-                                                                                                    host.request_redraw(
-                                                                                                        action_cx.window,
-                                                                                                    );
-                                                                                                }
-                                                                                            },
-                                                                                        ));
-                                                                                    }
+                                                                                     if !item_disabled {
+                                                                                         cx.pressable_add_on_hover_change(Arc::new(
+                                                                                             move |host, action_cx, hovered| {
+                                                                                                 let mut state = state_for_hover
+                                                                                                     .lock()
+                                                                                                     .unwrap_or_else(|e| e.into_inner());
+                                                                                                 if hovered {
+                                                                                                     if state.content.active_row()
+                                                                                                         != Some(row_idx_for_hover)
+                                                                                                     {
+                                                                                                         state.content.set_active_row(
+                                                                                                             Some(row_idx_for_hover),
+                                                                                                         );
+                                                                                                         host.request_redraw(
+                                                                                                             action_cx.window,
+                                                                                                         );
+                                                                                                     }
+                                                                                                 } else if state.content.active_row()
+                                                                                                     == Some(row_idx_for_hover)
+                                                                                                 {
+                                                                                                     // Base UI clears the active index when the pointer leaves the
+                                                                                                     // popup so the highlight does not become "stuck" on the last
+                                                                                                     // hovered option. Mirror that behavior per-row by clearing when
+                                                                                                     // the active row stops being hovered.
+                                                                                                     state.content.set_active_row(None);
+                                                                                                     host.request_redraw(action_cx.window);
+                                                                                                 }
+                                                                                             },
+                                                                                         ));
+                                                                                     }
 
                                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
@@ -4110,6 +4116,185 @@ mod tests {
             app.models().get_copied(&on_value_change_count),
             Some(1),
             "expected exactly one `on_value_change` callback for an item click"
+        );
+    }
+
+    #[test]
+    fn select_mouse_hover_leave_clears_active_descendant() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana"))
+            .expect("banana option node");
+        let listbox_id = listbox.id;
+        let listbox_bounds = listbox.bounds;
+        let banana_id = banana.id;
+
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox_after_hover = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == listbox_id)
+            .expect("listbox node after hover");
+        assert_eq!(
+            listbox_after_hover.active_descendant,
+            Some(banana_id),
+            "expected hovering an item to set `active_descendant`"
+        );
+
+        let outside = Point::new(
+            Px((listbox_bounds.origin.x.0 + 2.0).max(0.0)),
+            Px((listbox_bounds.origin.y.0 - 10.0).max(0.0)),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(1),
+                position: outside,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox_after_leave = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == listbox_id)
+            .expect("listbox node after leave");
+        assert_eq!(
+            listbox_after_leave.active_descendant,
+            None,
+            "expected pointer leave to clear `active_descendant`"
         );
     }
 
