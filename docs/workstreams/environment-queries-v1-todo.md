@@ -32,6 +32,7 @@ ADR anchor:
   - [x] view-cache key participation via deps fingerprint,
   - [x] revision tracking for pointer capability keys,
   - [x] safe-area insets revision + invalidation,
+  - [x] occlusion insets revision + invalidation,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
@@ -41,6 +42,7 @@ ADR anchor:
   - [x] pointer capability gates (hover vs touch-first),
   - [x] reduced-motion preference helpers (if available),
   - [x] safe-area insets helpers (future mobile).
+  - [x] occlusion insets helpers (virtual keyboard / transient obstructions).
 - [x] Add unit tests for hysteresis / non-oscillation where applicable.
 
 ## Ecosystem adoption (initial targets)
@@ -57,3 +59,7 @@ ADR anchor:
   hover-only UI):
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+
+- [x] Apply safe-area + occlusion insets to “mobile shell” overlays (Drawer / Sheet) to avoid
+  system UI + virtual keyboard overlap:
+  - Evidence: `ecosystem/fret-ui-shadcn/src/sheet.rs`

@@ -25,6 +25,7 @@ pub(crate) enum EnvironmentQueryKey {
     PrefersReducedMotion,
     PrimaryPointerType,
     SafeAreaInsets,
+    OcclusionInsets,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -103,6 +104,7 @@ pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub prefers_reduced_motion: Option<bool>,
     pub primary_pointer_type: PointerType,
     pub safe_area_insets: Option<Edges>,
+    pub occlusion_insets: Option<Edges>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -175,6 +177,11 @@ impl ElementRuntime {
     pub fn set_window_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
         self.for_window_mut(window)
             .record_committed_safe_area_insets(insets);
+    }
+
+    pub fn set_window_occlusion_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.for_window_mut(window)
+            .record_committed_occlusion_insets(insets);
     }
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
@@ -287,6 +294,7 @@ pub struct WindowElementState {
     committed_prefers_reduced_motion: Option<bool>,
     committed_primary_pointer_type: Option<PointerType>,
     committed_safe_area_insets: Option<Edges>,
+    committed_occlusion_insets: Option<Edges>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -649,6 +657,7 @@ impl WindowElementState {
             EnvironmentQueryKey::PrefersReducedMotion => 2u8,
             EnvironmentQueryKey::PrimaryPointerType => 3u8,
             EnvironmentQueryKey::SafeAreaInsets => 4u8,
+            EnvironmentQueryKey::OcclusionInsets => 5u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1234,6 +1243,10 @@ impl WindowElementState {
         self.committed_safe_area_insets
     }
 
+    pub(crate) fn committed_occlusion_insets(&self) -> Option<Edges> {
+        self.committed_occlusion_insets
+    }
+
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
         if self.committed_prefers_reduced_motion == value {
             return;
@@ -1271,6 +1284,19 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::SafeAreaInsets);
+    }
+
+    pub(crate) fn record_committed_occlusion_insets(&mut self, insets: Option<Edges>) {
+        if self.committed_occlusion_insets == insets {
+            return;
+        }
+        self.committed_occlusion_insets = insets;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::OcclusionInsets)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::OcclusionInsets);
     }
 
     pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
@@ -1334,6 +1360,7 @@ impl WindowElementState {
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
             EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
+            EnvironmentQueryKey::OcclusionInsets => "occlusion_insets",
         };
 
         let bounds_for = |element: Option<GlobalElementId>| {
@@ -1463,6 +1490,7 @@ impl WindowElementState {
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
             primary_pointer_type: self.committed_primary_pointer_type(),
             safe_area_insets: self.committed_safe_area_insets,
+            occlusion_insets: self.committed_occlusion_insets,
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1928,6 +1956,52 @@ mod tests {
             state
                 .environment_revisions
                 .get(&EnvironmentQueryKey::SafeAreaInsets)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn occlusion_insets_is_none_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_occlusion_insets(), None);
+    }
+
+    #[test]
+    fn occlusion_insets_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::OcclusionInsets)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::OcclusionInsets)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_occlusion_insets(None);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
                 .copied()
                 .unwrap(),
             first_revision + 1

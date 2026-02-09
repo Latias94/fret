@@ -8,10 +8,11 @@ use fret_ui::element::{
     PositionStyle, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{occlusion_insets_or_zero, safe_area_insets_or_zero};
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
@@ -596,6 +597,42 @@ impl SheetContent {
 
         let props = {
             let mut props = decl_style::container_props(&theme, chrome, layout);
+
+            // Apply environment-driven window insets to avoid system UI and virtual keyboard
+            // occlusion on future mobile targets (ADR 1171).
+            let safe = safe_area_insets_or_zero(cx, Invalidation::Layout);
+            let occlusion = occlusion_insets_or_zero(cx, Invalidation::Layout);
+            let max_px = |a: Px, b: Px| if a.0 > b.0 { a } else { b };
+            let insets = Edges {
+                top: max_px(safe.top, occlusion.top),
+                right: max_px(safe.right, occlusion.right),
+                bottom: max_px(safe.bottom, occlusion.bottom),
+                left: max_px(safe.left, occlusion.left),
+            };
+
+            match side {
+                SheetSide::Left => {
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.bottom.0 += insets.bottom.0;
+                }
+                SheetSide::Right => {
+                    props.padding.right.0 += insets.right.0;
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.bottom.0 += insets.bottom.0;
+                }
+                SheetSide::Top => {
+                    props.padding.top.0 += insets.top.0;
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.right.0 += insets.right.0;
+                }
+                SheetSide::Bottom => {
+                    props.padding.bottom.0 += insets.bottom.0;
+                    props.padding.left.0 += insets.left.0;
+                    props.padding.right.0 += insets.right.0;
+                }
+            }
+
             let border_w = props.border.top;
             props.border = match side {
                 SheetSide::Left => Edges {
@@ -772,12 +809,12 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{AppWindowId, Edges, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
-    use fret_ui::element::PressableProps;
+    use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -855,6 +892,67 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn sheet_content_padding_includes_window_insets_for_bottom_side() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.with_global_mut_untracked(fret_ui::elements::ElementRuntime::new, |rt, _| {
+            rt.set_window_safe_area_insets(window, None);
+            rt.set_window_occlusion_insets(window, None);
+        });
+        let base_padding =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
+                    SheetContent::new([cx.text("child")]).into_element(cx)
+                });
+                match element.kind {
+                    ElementKind::Container(ContainerProps { padding, .. }) => padding,
+                    other => panic!("expected container root, got {other:?}"),
+                }
+            });
+
+        // Safe area contributes left/right, occlusion contributes bottom and should win via max().
+        app.with_global_mut_untracked(fret_ui::elements::ElementRuntime::new, |rt, _| {
+            rt.set_window_safe_area_insets(
+                window,
+                Some(Edges {
+                    top: Px(0.0),
+                    right: Px(8.0),
+                    bottom: Px(20.0),
+                    left: Px(6.0),
+                }),
+            );
+            rt.set_window_occlusion_insets(
+                window,
+                Some(Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(48.0),
+                    left: Px(0.0),
+                }),
+            );
+        });
+        let inset_padding =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                let element = with_sheet_side_provider(cx, SheetSide::Bottom, |cx| {
+                    SheetContent::new([cx.text("child")]).into_element(cx)
+                });
+                match element.kind {
+                    ElementKind::Container(ContainerProps { padding, .. }) => padding,
+                    other => panic!("expected container root, got {other:?}"),
+                }
+            });
+
+        assert_eq!(inset_padding.left.0 - base_padding.left.0, 6.0);
+        assert_eq!(inset_padding.right.0 - base_padding.right.0, 8.0);
+        assert_eq!(inset_padding.bottom.0 - base_padding.bottom.0, 48.0);
     }
 
     #[derive(Default)]

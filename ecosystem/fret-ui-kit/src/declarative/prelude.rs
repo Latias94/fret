@@ -7,6 +7,7 @@ pub use super::container_queries::{
 };
 pub use super::global_watch::GlobalWatchExt;
 pub use super::model_watch::ModelWatchExt;
+pub use super::occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use super::pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };

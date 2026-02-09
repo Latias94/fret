@@ -18,6 +18,7 @@ pub mod global_watch;
 pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
+pub mod occlusion_queries;
 pub mod overlay_motion;
 #[cfg(feature = "recipes")]
 pub mod pixelate;
@@ -51,6 +52,7 @@ pub use container_queries::{
 };
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
+pub use occlusion_queries::{occlusion_insets, occlusion_insets_or_zero};
 pub use pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };

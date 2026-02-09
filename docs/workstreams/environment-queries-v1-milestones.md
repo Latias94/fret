@@ -57,6 +57,7 @@ Definition of done:
   - viewport/device breakpoints (tokens + optional hysteresis),
   - pointer capability gates (hover vs touch-first),
   - safe-area insets (future mobile),
+  - occlusion insets (virtual keyboard / transient obstructions),
   - reduced-motion defaults (if provided by the runner/app).
 
 Evidence:
@@ -72,6 +73,7 @@ Definition of done:
   the environment query helpers.
 - Known hover-driven affordances are gated by pointer capability helpers (touch-first should not
   open hover-only UI).
+- Mobile-shell overlays (Drawer / Sheet) respect safe-area + occlusion insets by default.
 - At least one migration is gated by an automated test or `fretboard diag` script.
 
 Recommended first target:

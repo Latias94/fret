@@ -118,6 +118,9 @@ The current implementation provides a small set of typed environment query keys 
 - `safe_area_insets_logical: Option<Edges>` (key: `SafeAreaInsets`)
   - Best-effort: currently `None` unless a runner (future mobile) commits safe-area insets for the
     window.
+- `occlusion_insets_logical: Option<Edges>` (key: `OcclusionInsets`)
+  - Best-effort: currently `None` unless a runner (future mobile) commits viewport occlusion
+    insets (e.g. virtual keyboard) for the window.
 
 Policy remains in ecosystem crates. `ecosystem/fret-ui-kit` exposes small helpers that derive
 `primary_pointer_can_hover` and `primary_pointer_is_coarse` from `primary_pointer_type` so recipes

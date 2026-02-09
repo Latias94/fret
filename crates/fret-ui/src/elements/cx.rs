@@ -565,6 +565,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.committed_safe_area_insets()
     }
 
+    pub fn environment_occlusion_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
+        self.observe_environment_query(EnvironmentQueryKey::OcclusionInsets, invalidation);
+        self.window_state.committed_occlusion_insets()
+    }
+
     pub fn environment_primary_pointer_type(&mut self, invalidation: Invalidation) -> PointerType {
         self.observe_environment_query(EnvironmentQueryKey::PrimaryPointerType, invalidation);
         self.window_state.committed_primary_pointer_type()
