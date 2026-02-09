@@ -76,6 +76,28 @@ Optional:
 
 - If there is a web reference golden (rare for non-v4 blocks), add a targeted “web vs fret” gate.
 
+## Scheduling-heavy authoring notes (M3)
+
+When an extras block needs continuous motion or timer-driven updates, keep the scheduling policy in
+the component layer and use runner-owned time sources:
+
+- Prefer `fret_ui_kit::declarative::scheduling::set_continuous_frames(cx, animating)` for
+  continuously animating blocks. The helper ties the `ContinuousFrames` lease to element lifetime
+  so unmount drops the lease and stops RAF requests.
+- Derive animation progress from runner-owned clocks (`App::frame_id()` or tokened timers), not
+  wall-clock threads. This keeps behavior deterministic and diagnosable.
+- Avoid calling `fret_ui::elements::bounds_for_element` during declarative render. It can conflict
+  with runtime leases (global `ElementRuntime` lease) and panic. Prefer `cx.bounds` or accept an
+  explicit measured override where seamless looping depends on exact track width.
+
+Recommended minimum gates for scheduling-heavy extras:
+
+- Add a deterministic Rust test that asserts:
+  - the first frame emits `Effect::RequestAnimationFrame`, and
+  - a visible scene op changes across `FrameId` (e.g. `SceneOp::PushTransform.tx`).
+- Add a short perf note (or a `fretboard diag perf` gate) when the animation is expected to be
+  long-lived or scene-op heavy.
+
 ## Component template (recommended baseline)
 
 Use this template to keep extras consistent and reviewable:
