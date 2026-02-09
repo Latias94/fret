@@ -43,6 +43,40 @@ if [[ ! -f "$summary_json" ]]; then
   exit 2
 fi
 
+out_dir_abs="$(cd "$out_dir" && pwd)"
+summary_out_dir_rel="$(jq -r '.out_dir // ""' "$summary_json" 2>/dev/null || echo "")"
+
+resolve_attempt_dir() {
+  local attempt_dir="$1"
+
+  if [[ -z "$attempt_dir" ]]; then
+    return 1
+  fi
+
+  # 1) absolute path
+  if [[ "$attempt_dir" = /* ]]; then
+    echo "$attempt_dir"
+    return 0
+  fi
+
+  # 2) relative to the current working directory
+  if [[ -d "$attempt_dir" ]]; then
+    echo "$attempt_dir"
+    return 0
+  fi
+
+  # 3) relative to the gate out_dir (common when summary stores workspace-relative paths)
+  if [[ -n "$summary_out_dir_rel" && "$attempt_dir" == "$summary_out_dir_rel"* ]]; then
+    local suffix="${attempt_dir#"$summary_out_dir_rel"}"
+    suffix="${suffix#/}"
+    echo "$out_dir_abs/$suffix"
+    return 0
+  fi
+
+  # Fall back to the raw value (will likely fail the existence checks).
+  echo "$attempt_dir"
+}
+
 echo "== gate summary =="
 jq -r '"pass=\(.pass) suite=\(.suite) attempts=\(.attempts) pass_attempts=\(.pass_attempts) fail_attempts=\(.fail_attempts) selected=\(.selected_attempt_dir)"' "$summary_json"
 
@@ -54,7 +88,8 @@ attempt_dirs="$(jq -r '.attempt_summaries[].attempt_dir' "$summary_json")"
 
 echo
 for attempt_dir in $attempt_dirs; do
-  check_json="$attempt_dir/check.perf_thresholds.json"
+  attempt_dir_resolved="$(resolve_attempt_dir "$attempt_dir")"
+  check_json="$attempt_dir_resolved/check.perf_thresholds.json"
   if [[ ! -f "$check_json" ]]; then
     continue
   fi
@@ -67,7 +102,7 @@ for attempt_dir in $attempt_dirs; do
   echo "== FAIL: $attempt_dir ($failures_len threshold(s)) =="
   jq -r '.failures[] | "- \(.script) :: \(.metric) actual=\(.actual_us)us threshold=\(.threshold_us)us"' "$check_json"
 
-  stdout_path="$attempt_dir/stdout.json"
+  stdout_path="$attempt_dir_resolved/stdout.json"
   if [[ ! -f "$stdout_path" ]]; then
     echo "- note: missing stdout.json (cannot resolve worst bundles)"
     echo
@@ -76,7 +111,7 @@ for attempt_dir in $attempt_dirs; do
 
   # Extract the JSON payload (skip leading log lines).
   payload="$(
-    awk 'BEGIN{f=0} {if(!f && $0 ~ /^\\{/){f=1} if(f){print}}' "$stdout_path"
+    awk 'BEGIN{f=0} {if(!f && substr($0,1,1)=="{"){f=1} if(f){print}}' "$stdout_path"
   )"
 
   if [[ -z "$payload" ]]; then
