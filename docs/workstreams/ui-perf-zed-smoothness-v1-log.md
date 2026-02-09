@@ -8725,3 +8725,65 @@ Finding (drag-jitter probe; selected attempt):
   - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
 - Hypothesis: the added per-frame `HashMap` memoization overhead outweighs the saved wrapper-chain scans. This is a
   good candidate to revert, and instead pursue the broader M1 direction (hashing → dense tables) in the layout engine.
+
+## 2026-02-09 15:58:00 (commit `56a1261dc`)
+
+Change:
+- Convert layout-engine request/build maps (`node_to_layout`, `styles`, `children`, `parent`) to dense tables
+  (`slotmap::SecondaryMap`), and experiment with generation-stamped `seen` tracking.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 56a1261dc
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/summary.json`
+
+Finding:
+- Attempt-1 exceeded `drag-jitter` total threshold:
+  - `top_total_time_us=19826us` (threshold `19128us`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-1/1770623967894-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Attempts 2/3 exceeded `stress` solve-time threshold:
+  - `top_layout_engine_solve_time_us=3087us` / `3535us` (threshold `3060us`)
+  - bundles:
+    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-2/1770623996413-ui-gallery-window-resize-stress-steady/bundle.json`
+    - `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.56a1261dc.20260209-1558/attempt-3/1770624057366-ui-gallery-window-resize-stress-steady/bundle.json`
+- Conclusion: the `seen` generation-stamp approach is a likely regression source; keep the dense tables but revert
+  `seen` to the prior `HashSet` tracking.
+
+## 2026-02-09 16:10:00 (commit `e9ea4522a`)
+
+Change:
+- Keep the dense layout-engine request/build tables, but restore `HashSet`-based `seen` tracking.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout e9ea4522a
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.e9ea4522a.20260209-1614
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.e9ea4522a.20260209-1614/summary.json`
+
+Finding (drag-jitter probe; selected attempt):
+- Max `top_total_time_us=17087us` (threshold `19128us`).
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.e9ea4522a.20260209-1610/attempt-1/1770624678123-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `layout_request_build_roots_time_us` improved vs the prior stable run (`58db05d7c`) for the same probe:
+  - `e9ea4522a`: mean/p95/max = `1962/2116/2136us`
+  - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
+  - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
