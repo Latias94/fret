@@ -3530,10 +3530,18 @@ pub fn build_app() -> App {
                             let selection = handle.selection();
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
+                            let preedit_active = handle.preedit_active();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
+                            let fold_placeholder_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains('…'));
+                            let inlay_present = handle
+                                .debug_decorated_line_text(0)
+                                .is_some_and(|t| t.contains("<inlay>"));
                             serde_json::json!({
                                 "schema_version": 1,
+                                "preedit_active": preedit_active,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3541,6 +3549,8 @@ pub fn build_app() -> App {
                                     "editable": interaction.editable,
                                 },
                                 "buffer_revision": buffer_revision,
+                                "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
+                                "inlays": { "enabled": inlays, "line0_present": inlay_present },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                             })
