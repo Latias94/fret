@@ -90,11 +90,37 @@ impl ComboboxItem {
 #[derive(Default)]
 struct ComboboxState {
     query: Option<Model<String>>,
+    open_change_reason: Option<Model<Option<ComboboxOpenChangeReason>>>,
     was_open: bool,
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnOpenChangeWithReason = Arc<dyn Fn(bool, ComboboxOpenChangeReason) + Send + Sync + 'static>;
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+/// Open-change reasons aligned with Base UI combobox semantics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComboboxOpenChangeReason {
+    TriggerPress,
+    OutsidePress,
+    ItemPress,
+    EscapeKey,
+    FocusOut,
+    None,
+}
+
+fn combobox_open_change_reason_from_dismiss_reason(
+    reason: fret_ui::action::DismissReason,
+) -> ComboboxOpenChangeReason {
+    match reason {
+        fret_ui::action::DismissReason::Escape => ComboboxOpenChangeReason::EscapeKey,
+        fret_ui::action::DismissReason::OutsidePress { .. } => {
+            ComboboxOpenChangeReason::OutsidePress
+        }
+        fret_ui::action::DismissReason::FocusOutside => ComboboxOpenChangeReason::FocusOut,
+        fret_ui::action::DismissReason::Scroll => ComboboxOpenChangeReason::None,
+    }
+}
 
 #[derive(Default)]
 struct ComboboxOpenChangeCallbackState {
@@ -170,6 +196,7 @@ pub struct Combobox {
     consume_outside_pointer_events: bool,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
     on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -196,6 +223,7 @@ impl Combobox {
             consume_outside_pointer_events: false,
             on_value_change: None,
             on_open_change: None,
+            on_open_change_with_reason: None,
             on_open_change_complete: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -300,6 +328,15 @@ impl Combobox {
         self
     }
 
+    /// Called when the open state changes, with reason metadata.
+    pub fn on_open_change_with_reason(
+        mut self,
+        on_open_change_with_reason: Option<OnOpenChangeWithReason>,
+    ) -> Self {
+        self.on_open_change_with_reason = on_open_change_with_reason;
+        self
+    }
+
     /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
     pub fn on_open_change_complete(
         mut self,
@@ -342,6 +379,7 @@ impl Combobox {
             self.consume_outside_pointer_events,
             self.on_value_change,
             self.on_open_change,
+            self.on_open_change_with_reason,
             self.on_open_change_complete,
             self.chrome,
             self.layout,
@@ -384,6 +422,7 @@ pub fn combobox<H: UiHost>(
         None,
         None,
         None,
+        None,
         ChromeRefinement::default(),
         LayoutRefinement::default(),
         ComboboxStyle::default(),
@@ -408,6 +447,7 @@ fn combobox_with_patch<H: UiHost>(
     consume_outside_pointer_events: bool,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_with_reason: Option<OnOpenChangeWithReason>,
     on_open_change_complete: Option<OnOpenChange>,
     chrome_patch: ChromeRefinement,
     layout_patch: LayoutRefinement,
@@ -415,25 +455,48 @@ fn combobox_with_patch<H: UiHost>(
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
+        let open_change_reason_model = {
+            let existing =
+                cx.with_state(ComboboxState::default, |st| st.open_change_reason.clone());
+            if let Some(model) = existing {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(None::<ComboboxOpenChangeReason>);
+                cx.with_state(ComboboxState::default, |st| {
+                    st.open_change_reason = Some(model.clone())
+                });
+                model
+            }
+        };
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         if let Some(handler) = on_value_change.as_ref() {
-            let value_change =
-                cx.with_state(ComboboxValueChangeCallbackState::default, |state| {
-                    combobox_value_change_event(state, selected.clone())
-                });
+            let value_change = cx.with_state(ComboboxValueChangeCallbackState::default, |state| {
+                combobox_value_change_event(state, selected.clone())
+            });
             if let Some(value) = value_change {
                 handler(value);
             }
         }
         let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-        let (open_change, open_change_complete) =
-            cx.with_state(ComboboxOpenChangeCallbackState::default, |state| {
+        let open_change_reason = cx
+            .watch_model(&open_change_reason_model)
+            .layout()
+            .copied()
+            .unwrap_or(None)
+            .unwrap_or(ComboboxOpenChangeReason::None);
+        let (open_change, open_change_complete) = cx
+            .with_state(ComboboxOpenChangeCallbackState::default, |state| {
                 combobox_open_change_events(state, is_open, is_open, false)
             });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
             handler(open);
         }
-        if let (Some(open), Some(handler)) = (open_change_complete, on_open_change_complete.as_ref()) {
+        if let (Some(open), Some(handler)) = (open_change, on_open_change_with_reason.as_ref()) {
+            handler(open, open_change_reason);
+        }
+        if let (Some(open), Some(handler)) =
+            (open_change_complete, on_open_change_complete.as_ref())
+        {
             handler(open);
         }
 
@@ -573,287 +636,345 @@ fn combobox_with_patch<H: UiHost>(
         let theme_for_trigger = theme.clone();
 
         if responsive && cx.bounds.size.width.0 < 768.0 {
-            return Drawer::new(open.clone()).into_element(
-                cx,
-                move |cx| {
-                    cx.pressable_with_id_props(|cx, st, _trigger_id| {
-                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                        states.set(WidgetState::Open, is_open);
+            let open_change_reason_model_for_trigger = open_change_reason_model.clone();
+            let open_change_reason_model_for_content = open_change_reason_model.clone();
+            return Drawer::new(open.clone())
+                .on_dismiss_request(Some(Arc::new({
+                    let open_change_reason_model = open_change_reason_model.clone();
+                    move |host, _cx, req| {
+                        let reason = combobox_open_change_reason_from_dismiss_reason(req.reason);
+                        let _ = host
+                            .models_mut()
+                            .update(&open_change_reason_model, |v| *v = Some(reason));
+                    }
+                })))
+                .into_element(
+                    cx,
+                    move |cx| {
+                        let open_change_reason_model = open_change_reason_model_for_trigger.clone();
+                        cx.pressable_with_id_props(|cx, st, _trigger_id| {
+                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                            states.set(WidgetState::Open, is_open);
 
-                        let bg_ref = resolve_override_slot(
-                            style_override.trigger_background.as_ref(),
-                            &default_trigger_bg,
-                            states,
-                        );
-                        let fg_ref = resolve_override_slot(
-                            style_override.trigger_foreground.as_ref(),
-                            &default_trigger_fg,
-                            states,
-                        );
-                        let border_ref = resolve_override_slot(
-                            style_override.trigger_border_color.as_ref(),
-                            &default_trigger_border,
-                            states,
-                        );
+                            let bg_ref = resolve_override_slot(
+                                style_override.trigger_background.as_ref(),
+                                &default_trigger_bg,
+                                states,
+                            );
+                            let fg_ref = resolve_override_slot(
+                                style_override.trigger_foreground.as_ref(),
+                                &default_trigger_fg,
+                                states,
+                            );
+                            let border_ref = resolve_override_slot(
+                                style_override.trigger_border_color.as_ref(),
+                                &default_trigger_border,
+                                states,
+                            );
 
-                        let bg = bg_ref.resolve(&theme_for_trigger);
-                        let fg = fg_ref.resolve(&theme_for_trigger);
-                        let border = border_ref.resolve(&theme_for_trigger);
-                        let icon_fg = alpha_mul(fg, 0.5);
+                            let bg = bg_ref.resolve(&theme_for_trigger);
+                            let fg = fg_ref.resolve(&theme_for_trigger);
+                            let border = border_ref.resolve(&theme_for_trigger);
+                            let icon_fg = alpha_mul(fg, 0.5);
 
-                        cx.pressable_toggle_bool(&open_for_trigger);
-
-                        let props = PressableProps {
-                            layout: trigger_layout,
-                            enabled,
-                            focusable: true,
-                            focus_ring: Some(ring),
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::ComboBox),
-                                label: a11y_label_for_trigger
-                                    .clone()
-                                    .or_else(|| Some(resolved_label.clone())),
-                                expanded: Some(is_open),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-
-                        let children = vec![cx.container(
-                            ContainerProps {
-                                layout: LayoutStyle::default(),
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
+                            let open_change_reason_model = open_change_reason_model.clone();
+                            cx.pressable_add_on_activate(Arc::new(
+                                move |host, action_cx, _reason| {
+                                    let _ =
+                                        host.models_mut().update(&open_change_reason_model, |v| {
+                                            *v = Some(ComboboxOpenChangeReason::TriggerPress)
+                                        });
+                                    host.request_redraw(action_cx.window);
                                 },
-                                background: Some(bg),
-                                shadow: None,
-                                border: Edges::all(border_w),
-                                border_color: Some(border),
-                                corner_radii: Corners::all(radius),
+                            ));
+                            cx.pressable_toggle_bool(&open_for_trigger);
+
+                            let props = PressableProps {
+                                layout: trigger_layout,
+                                enabled,
+                                focusable: true,
+                                focus_ring: Some(ring),
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::ComboBox),
+                                    label: a11y_label_for_trigger
+                                        .clone()
+                                        .or_else(|| Some(resolved_label.clone())),
+                                    expanded: Some(is_open),
+                                    ..Default::default()
+                                },
                                 ..Default::default()
-                            },
-                            move |cx| {
-                                vec![cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: trigger_gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::SpaceBetween,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
+                            };
+
+                            let children = vec![cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle::default(),
+                                    padding: Edges {
+                                        top: pad_top,
+                                        right: pad_right,
+                                        bottom: pad_bottom,
+                                        left: pad_left,
                                     },
-                                    move |cx| {
-                                        let label_style = text_style.clone();
-                                        vec![
-                                            {
-                                                let mut label =
-                                                    ui::label(cx, resolved_label.clone())
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .flex_1()
-                                                        .basis_0()
-                                                        .text_size_px(label_style.size)
-                                                        .font_weight(label_style.weight)
-                                                        .text_color(fg_ref.clone())
-                                                        .truncate();
-                                                if let Some(line_height) = label_style.line_height {
-                                                    label = label.line_height_px(line_height);
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    label_style.letter_spacing_em
+                                    background: Some(bg),
+                                    shadow: None,
+                                    border: Edges::all(border_w),
+                                    border_color: Some(border),
+                                    corner_radii: Corners::all(radius),
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: trigger_gap,
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::SpaceBetween,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let label_style = text_style.clone();
+                                            vec![
                                                 {
-                                                    label =
-                                                        label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                label.into_element(cx)
-                                            },
-                                            decl_icon::icon_with(
-                                                cx,
-                                                ids::ui::CHEVRON_DOWN,
-                                                Some(Px(16.0)),
-                                                Some(ColorRef::Color(icon_fg)),
-                                            ),
-                                        ]
-                                    },
-                                )]
-                            },
-                        )];
+                                                    let mut label =
+                                                        ui::label(cx, resolved_label.clone())
+                                                            .w_full()
+                                                            .min_w_0()
+                                                            .flex_1()
+                                                            .basis_0()
+                                                            .text_size_px(label_style.size)
+                                                            .font_weight(label_style.weight)
+                                                            .text_color(fg_ref.clone())
+                                                            .truncate();
+                                                    if let Some(line_height) =
+                                                        label_style.line_height
+                                                    {
+                                                        label = label.line_height_px(line_height);
+                                                    }
+                                                    if let Some(letter_spacing_em) =
+                                                        label_style.letter_spacing_em
+                                                    {
+                                                        label = label
+                                                            .letter_spacing_em(letter_spacing_em);
+                                                    }
+                                                    label.into_element(cx)
+                                                },
+                                                decl_icon::icon_with(
+                                                    cx,
+                                                    ids::ui::CHEVRON_DOWN,
+                                                    Some(Px(16.0)),
+                                                    Some(ColorRef::Color(icon_fg)),
+                                                ),
+                                            ]
+                                        },
+                                    )]
+                                },
+                            )];
 
-                        (props, children)
-                    })
-                },
-                move |cx| {
-                    let theme_max_list_h = theme
-                        .metric_by_key("component.combobox.max_list_height")
-                        .or_else(|| theme.metric_by_key("component.select.max_list_height"))
-                        .unwrap_or(Px(280.0));
+                            (props, children)
+                        })
+                    },
+                    move |cx| {
+                        let open_change_reason_model = open_change_reason_model_for_content.clone();
+                        let theme_max_list_h = theme
+                            .metric_by_key("component.combobox.max_list_height")
+                            .or_else(|| theme.metric_by_key("component.select.max_list_height"))
+                            .unwrap_or(Px(280.0));
 
-                    let transparent = Color::TRANSPARENT;
-                    let list = if search_enabled {
-                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                        let transparent = Color::TRANSPARENT;
+                        let list = if search_enabled {
+                            let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
-                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                        for item in items.iter().cloned() {
-                            let item_disabled = disabled || item.disabled;
-                            let is_selected = selected
-                                .as_ref()
-                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                            let mut command_items: Vec<CommandItem> =
+                                Vec::with_capacity(items.len());
+                            for item in items.iter().cloned() {
+                                let item_disabled = disabled || item.disabled;
+                                let is_selected = selected
+                                    .as_ref()
+                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                            let model_for_select = model.clone();
-                            let open_for_select = open.clone();
-                            let query_for_select = query_model.clone();
-                            let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
+                                let model_for_select = model.clone();
+                                let open_for_select = open.clone();
+                                let query_for_select = query_model.clone();
+                                let open_change_reason_model_for_select =
+                                    open_change_reason_model.clone();
+                                let value_for_select = item.value.clone();
+                                let on_select: fret_ui::action::OnActivate =
+                                    Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host.models_mut().update(&model_for_select, |v| {
+                                            if v.as_ref().is_some_and(|cur| {
+                                                cur.as_ref() == value_for_select.as_ref()
+                                            }) {
+                                                *v = None;
+                                            } else {
+                                                *v = Some(value_for_select.clone());
+                                            }
+                                        });
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&open_change_reason_model_for_select, |v| {
+                                                *v = Some(ComboboxOpenChangeReason::ItemPress)
+                                            });
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&open_for_select, |v| *v = false);
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&query_for_select, |v| v.clear());
+                                        host.request_redraw(action_cx.window);
                                     });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
 
-                            command_items.push(
-                                CommandItem::new(item.label.clone())
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .checkmark(is_selected)
-                                    .on_select_action(on_select),
-                            );
-                        }
+                                command_items.push(
+                                    CommandItem::new(item.label.clone())
+                                        .value(item.value.clone())
+                                        .disabled(item_disabled)
+                                        .checkmark(is_selected)
+                                        .on_select_action(on_select),
+                                );
+                            }
 
-                        CommandPalette::new(query_model.clone(), command_items)
-                            .a11y_label("Combobox list")
-                            .input_role(SemanticsRole::ComboBox)
-                            .input_expanded(true)
-                            .placeholder(search_placeholder.clone())
-                            .disabled(disabled)
-                            .empty_text(empty_text.clone())
-                            .refine_style(
-                                ChromeRefinement::default()
-                                    .radius(Px(0.0))
-                                    .border_width(Px(0.0))
-                                    .bg(ColorRef::Color(transparent))
-                                    .border_color(ColorRef::Color(transparent)),
-                            )
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
-                            .into_element(cx)
-                    } else {
-                        let max_list_h = Px(theme_max_list_h.0.max(0.0));
+                            CommandPalette::new(query_model.clone(), command_items)
+                                .a11y_label("Combobox list")
+                                .input_role(SemanticsRole::ComboBox)
+                                .input_expanded(true)
+                                .placeholder(search_placeholder.clone())
+                                .disabled(disabled)
+                                .empty_text(empty_text.clone())
+                                .refine_style(
+                                    ChromeRefinement::default()
+                                        .radius(Px(0.0))
+                                        .border_width(Px(0.0))
+                                        .bg(ColorRef::Color(transparent))
+                                        .border_color(ColorRef::Color(transparent)),
+                                )
+                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                                .into_element(cx)
+                        } else {
+                            let max_list_h = Px(theme_max_list_h.0.max(0.0));
 
-                        let fg = theme
-                            .color_by_key("foreground")
-                            .unwrap_or_else(|| theme.color_required("foreground"));
-                        let fg_disabled = alpha_mul(fg, 0.5);
-                        let item_text_style = crate::command::item_text_style(&theme);
+                            let fg = theme
+                                .color_by_key("foreground")
+                                .unwrap_or_else(|| theme.color_required("foreground"));
+                            let fg_disabled = alpha_mul(fg, 0.5);
+                            let item_text_style = crate::command::item_text_style(&theme);
 
-                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
-                        for item in items.iter().cloned() {
-                            let item_disabled = disabled || item.disabled;
-                            let is_selected = selected
-                                .as_ref()
-                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+                            let mut command_items: Vec<CommandItem> =
+                                Vec::with_capacity(items.len());
+                            for item in items.iter().cloned() {
+                                let item_disabled = disabled || item.disabled;
+                                let is_selected = selected
+                                    .as_ref()
+                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
 
-                            let model_for_select = model.clone();
-                            let open_for_select = open.clone();
-                            let query_for_select = query_model.clone();
-                            let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
+                                let model_for_select = model.clone();
+                                let open_for_select = open.clone();
+                                let query_for_select = query_model.clone();
+                                let open_change_reason_model_for_select =
+                                    open_change_reason_model.clone();
+                                let value_for_select = item.value.clone();
+                                let on_select: fret_ui::action::OnActivate =
+                                    Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host.models_mut().update(&model_for_select, |v| {
+                                            if v.as_ref().is_some_and(|cur| {
+                                                cur.as_ref() == value_for_select.as_ref()
+                                            }) {
+                                                *v = None;
+                                            } else {
+                                                *v = Some(value_for_select.clone());
+                                            }
+                                        });
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&open_change_reason_model_for_select, |v| {
+                                                *v = Some(ComboboxOpenChangeReason::ItemPress)
+                                            });
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&open_for_select, |v| *v = false);
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&query_for_select, |v| v.clear());
+                                        host.request_redraw(action_cx.window);
                                     });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
 
-                            let label_text = item.label.clone();
-                            let label_style = item_text_style.clone();
-                            let icon = decl_icon::icon_with(
-                                cx,
-                                ids::ui::CHECK,
-                                Some(Px(16.0)),
-                                Some(ColorRef::Color(if item_disabled {
-                                    fg_disabled
-                                } else {
-                                    fg
-                                })),
-                            );
-                            let icon = cx
-                                .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
-                                    vec![icon]
-                                });
-
-                            let text = {
-                                let mut label = ui::label(cx, label_text.clone())
-                                    .text_size_px(label_style.size)
-                                    .font_weight(label_style.weight)
-                                    .text_color(ColorRef::Color(if item_disabled {
+                                let label_text = item.label.clone();
+                                let label_style = item_text_style.clone();
+                                let icon = decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHECK,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(if item_disabled {
                                         fg_disabled
                                     } else {
                                         fg
-                                    }))
-                                    .truncate();
-                                if let Some(line_height) = label_style.line_height {
-                                    label = label.line_height_px(line_height);
-                                }
-                                if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                                    label = label.letter_spacing_em(letter_spacing_em);
-                                }
-                                label.into_element(cx)
-                            };
+                                    })),
+                                );
+                                let icon = cx
+                                    .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
+                                        vec![icon]
+                                    });
 
-                            command_items.push(
-                                CommandItem::new(label_text)
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .on_select_action(on_select)
-                                    .children(vec![text, icon]),
-                            );
-                        }
+                                let text = {
+                                    let mut label = ui::label(cx, label_text.clone())
+                                        .text_size_px(label_style.size)
+                                        .font_weight(label_style.weight)
+                                        .text_color(ColorRef::Color(if item_disabled {
+                                            fg_disabled
+                                        } else {
+                                            fg
+                                        }))
+                                        .truncate();
+                                    if let Some(line_height) = label_style.line_height {
+                                        label = label.line_height_px(line_height);
+                                    }
+                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em {
+                                        label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    label.into_element(cx)
+                                };
 
-                        CommandList::new(command_items)
-                            .disabled(disabled)
-                            .empty_text(empty_text.clone())
-                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                                command_items.push(
+                                    CommandItem::new(label_text)
+                                        .value(item.value.clone())
+                                        .disabled(item_disabled)
+                                        .on_select_action(on_select)
+                                        .children(vec![text, icon]),
+                                );
+                            }
+
+                            CommandList::new(command_items)
+                                .disabled(disabled)
+                                .empty_text(empty_text.clone())
+                                .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
+                                .into_element(cx)
+                        };
+
+                        DrawerContent::new(vec![list])
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                             .into_element(cx)
-                    };
-
-                    DrawerContent::new(vec![list])
-                        .refine_style(ChromeRefinement::default().p(Space::N0))
-                        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-                        .into_element(cx)
-                },
-            );
+                    },
+                );
         }
 
+        let open_change_reason_model_for_trigger = open_change_reason_model.clone();
+        let open_change_reason_model_for_content = open_change_reason_model.clone();
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
+            .on_dismiss_request(Some(Arc::new({
+                let open_change_reason_model = open_change_reason_model.clone();
+                move |host, _cx, req| {
+                    let reason = combobox_open_change_reason_from_dismiss_reason(req.reason);
+                    let _ = host
+                        .models_mut()
+                        .update(&open_change_reason_model, |v| *v = Some(reason));
+                }
+            })))
             .into_element_with_anchor(
                 cx,
                 move |cx| {
+                    let open_change_reason_model = open_change_reason_model_for_trigger.clone();
                     cx.pressable_with_id_props(|cx, st, _trigger_id| {
                         let mut states = WidgetStates::from_pressable(cx, st, enabled);
                         states.set(WidgetState::Open, is_open);
@@ -879,6 +1000,13 @@ fn combobox_with_patch<H: UiHost>(
                         let border = border_ref.resolve(&theme_for_trigger);
                         let icon_fg = alpha_mul(fg, 0.5);
 
+                        let open_change_reason_model = open_change_reason_model.clone();
+                        cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                            let _ = host.models_mut().update(&open_change_reason_model, |v| {
+                                *v = Some(ComboboxOpenChangeReason::TriggerPress)
+                            });
+                            host.request_redraw(action_cx.window);
+                        }));
                         cx.pressable_toggle_bool(&open_for_trigger);
 
                         let props = PressableProps {
@@ -965,6 +1093,7 @@ fn combobox_with_patch<H: UiHost>(
                     })
                 },
                 move |cx, anchor| {
+                    let open_change_reason_model = open_change_reason_model_for_content.clone();
                     let theme_max_list_h = theme
                         .metric_by_key("component.combobox.max_list_height")
                         .or_else(|| theme.metric_by_key("component.select.max_list_height"))
@@ -985,6 +1114,8 @@ fn combobox_with_patch<H: UiHost>(
                             let model_for_select = model.clone();
                             let open_for_select = open.clone();
                             let query_for_select = query_model.clone();
+                            let open_change_reason_model_for_select =
+                                open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
                             let on_select: fret_ui::action::OnActivate =
                                 Arc::new(move |host, action_cx, _reason| {
@@ -997,6 +1128,11 @@ fn combobox_with_patch<H: UiHost>(
                                             *v = Some(value_for_select.clone());
                                         }
                                     });
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&open_change_reason_model_for_select, |v| {
+                                            *v = Some(ComboboxOpenChangeReason::ItemPress)
+                                        });
                                     let _ =
                                         host.models_mut().update(&open_for_select, |v| *v = false);
                                     let _ =
@@ -1048,6 +1184,8 @@ fn combobox_with_patch<H: UiHost>(
                             let model_for_select = model.clone();
                             let open_for_select = open.clone();
                             let query_for_select = query_model.clone();
+                            let open_change_reason_model_for_select =
+                                open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
                             let on_select: fret_ui::action::OnActivate =
                                 Arc::new(move |host, action_cx, _reason| {
@@ -1060,6 +1198,11 @@ fn combobox_with_patch<H: UiHost>(
                                             *v = Some(value_for_select.clone());
                                         }
                                     });
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&open_change_reason_model_for_select, |v| {
+                                            *v = Some(ComboboxOpenChangeReason::ItemPress)
+                                        });
                                     let _ =
                                         host.models_mut().update(&open_for_select, |v| *v = false);
                                     let _ =
@@ -1440,6 +1583,17 @@ mod tests {
     }
 
     #[test]
+    fn combobox_open_change_with_reason_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox = Combobox::new(value, open)
+            .on_open_change_with_reason(Some(Arc::new(|_open, _reason| {})));
+
+        assert!(combobox.on_open_change_with_reason.is_some());
+    }
+
+    #[test]
     fn combobox_open_change_complete_builder_sets_handler() {
         let mut app = App::new();
         let value = app.models_mut().insert(None::<Arc<str>>);
@@ -1497,6 +1651,30 @@ mod tests {
         let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
         assert_eq!(changed, Some(false));
         assert_eq!(completed, Some(false));
+    }
+
+    #[test]
+    fn combobox_open_change_reason_maps_dismiss_reasons() {
+        use fret_ui::action::DismissReason;
+
+        assert_eq!(
+            combobox_open_change_reason_from_dismiss_reason(DismissReason::Escape),
+            ComboboxOpenChangeReason::EscapeKey
+        );
+        assert_eq!(
+            combobox_open_change_reason_from_dismiss_reason(DismissReason::OutsidePress {
+                pointer: None,
+            }),
+            ComboboxOpenChangeReason::OutsidePress
+        );
+        assert_eq!(
+            combobox_open_change_reason_from_dismiss_reason(DismissReason::FocusOutside),
+            ComboboxOpenChangeReason::FocusOut
+        );
+        assert_eq!(
+            combobox_open_change_reason_from_dismiss_reason(DismissReason::Scroll),
+            ComboboxOpenChangeReason::None
+        );
     }
 
     #[test]

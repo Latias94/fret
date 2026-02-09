@@ -28,6 +28,8 @@ Base UI combobox lifecycle semantics.
 
 - Pass: `Combobox::on_value_change(...)` is exposed (Base UI `onValueChange`).
 - Pass: `Combobox::on_open_change(...)` is exposed (Base UI `onOpenChange`).
+- Pass: `Combobox::on_open_change_with_reason(...)` is exposed for reason-aware callbacks
+  (`TriggerPress` / `OutsidePress` / `ItemPress` / `EscapeKey` / `FocusOut` / `None`).
 - Pass: `Combobox::on_open_change_complete(...)` is exposed (Base UI `onOpenChangeComplete`).
 - Pass: Value/open callbacks are edge-triggered (no duplicate emission on unchanged state).
 
@@ -40,13 +42,16 @@ Base UI combobox lifecycle semantics.
 
 ## Known gaps
 
-- Gap: Base UI callbacks include richer event details/reason payloads; Fret currently exposes simplified value/bool callbacks.
+- Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
+  but does not provide cancelable `eventDetails` contracts.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn combobox_on_value_change_builder_sets_handler`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_with_reason_builder_sets_handler`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_complete_builder_sets_handler`
 - `cargo nextest run -p fret-ui-shadcn combobox_value_change_event_emits_only_on_state_change`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_emit_change_and_complete_after_settle`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_complete_without_animation`
+- `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
