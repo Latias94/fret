@@ -9056,12 +9056,27 @@ pub(super) fn run_script_and_wait(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<ScriptResultSummary, String> {
+    fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
+        // Give the app a little time to observe the initial trigger file state. On cold start,
+        // the first observed stamp is treated as a baseline (not a trigger) to avoid replaying
+        // stale scripts when the diagnostics directory is reused.
+        //
+        // If the external driver touches the file before the app has observed it once, the touch
+        // can be consumed as the baseline and the script will never run unless the stamp advances
+        // again. We mitigate this by re-touching once after a short grace period if no run starts.
+        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
+    }
+
     let prev_run_id = read_script_result_run_id(script_result_path).unwrap_or(0);
     let mut target_run_id: Option<u64> = None;
+    let mut did_retouch = false;
 
     write_script(src, script_path)?;
     touch(script_trigger_path)?;
 
+    let start_deadline =
+        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
     loop {
         if Instant::now() >= deadline {
@@ -9070,6 +9085,12 @@ pub(super) fn run_script_and_wait(
                 script_result_path.display(),
                 script_result_trigger_path.display()
             ));
+        }
+
+        if !did_retouch && target_run_id.is_none() && Instant::now() >= start_deadline {
+            // See comment in `start_grace_ms`.
+            touch(script_trigger_path)?;
+            did_retouch = true;
         }
 
         if let Some(result) = read_script_result(script_result_path) {
@@ -9234,11 +9255,20 @@ pub(super) fn run_pick_and_wait(
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<PickResultSummary, String> {
+    fn start_grace_ms(timeout_ms: u64, poll_ms: u64) -> u64 {
+        // Same baseline-race mitigation as `run_script_and_wait`.
+        let baseline_race_ms = poll_ms.saturating_mul(4).max(250).min(5_000);
+        baseline_race_ms.min(timeout_ms.saturating_div(2).max(250))
+    }
+
     let prev_run_id = read_pick_result_run_id(pick_result_path).unwrap_or(0);
     let mut target_run_id: Option<u64> = None;
+    let mut did_retouch = false;
 
     touch(pick_trigger_path)?;
 
+    let start_deadline =
+        Instant::now() + Duration::from_millis(start_grace_ms(timeout_ms, poll_ms));
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
     loop {
         if Instant::now() >= deadline {
@@ -9247,6 +9277,11 @@ pub(super) fn run_pick_and_wait(
                 pick_result_path.display(),
                 pick_result_trigger_path.display()
             ));
+        }
+
+        if !did_retouch && target_run_id.is_none() && Instant::now() >= start_deadline {
+            touch(pick_trigger_path)?;
+            did_retouch = true;
         }
 
         if let Some(result) = read_pick_result(pick_result_path) {
