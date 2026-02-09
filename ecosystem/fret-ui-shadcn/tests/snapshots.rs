@@ -546,3 +546,56 @@ fn snapshot_extras_banner_default() {
         ]
     });
 }
+
+#[test]
+fn snapshot_extras_tags_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_tags_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Tags::new([
+                "Alpha",
+                "Beta",
+                "Gamma",
+                "A much longer tag label",
+                "Zeta",
+            ])
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_relative_time_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(240.0)),
+    );
+    snapshot_for_root("extras_relative_time_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::RelativeTime::new([
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "UTC",
+                    "February 9, 2026",
+                    "15:04:05",
+                )
+                .into_element(cx),
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "PST",
+                    "February 9, 2026",
+                    "07:04:05",
+                )
+                .into_element(cx),
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "CET",
+                    "February 9, 2026",
+                    "16:04:05",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    });
+}

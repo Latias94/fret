@@ -11,6 +11,13 @@
 
 pub mod announcement;
 pub mod banner;
+pub mod relative_time;
+pub mod tags;
 
 pub use announcement::{Announcement, AnnouncementTag, AnnouncementTitle};
 pub use banner::{Banner, BannerAction, BannerClose, BannerIcon, BannerTitle};
+pub use relative_time::{
+    RelativeTime, RelativeTimeZone, RelativeTimeZoneDate, RelativeTimeZoneDisplay,
+    RelativeTimeZoneLabel,
+};
+pub use tags::{Tag, Tags};
