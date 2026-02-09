@@ -37,6 +37,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -88,6 +89,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -135,6 +137,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -183,6 +186,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -234,6 +238,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -280,6 +285,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );

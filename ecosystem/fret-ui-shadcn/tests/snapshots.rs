@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, Corners, Edges, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
     PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-    TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle, Transform2D, UvRect,
+    TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
@@ -83,6 +83,7 @@ enum SnapSceneOp {
     },
     Image {
         rect: SnapRect,
+        fit: String,
         opacity: f32,
     },
     ImageRegion {
@@ -248,8 +249,11 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             border_color: snap_color(border_color),
             corner_radii: snap_corners(corner_radii),
         },
-        SceneOp::Image { rect, opacity, .. } => SnapSceneOp::Image {
+        SceneOp::Image {
+            rect, fit, opacity, ..
+        } => SnapSceneOp::Image {
             rect: snap_rect(rect),
+            fit: format!("{fit:?}"),
             opacity: round3(opacity),
         },
         SceneOp::ImageRegion {
@@ -501,6 +505,264 @@ fn snapshot_tabs_default() {
         vec![
             fret_ui_shadcn::Tabs::uncontrolled(Some("alpha"))
                 .items(items)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_announcement_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_announcement_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Announcement::new([
+                fret_ui_shadcn::extras::AnnouncementTag::new("New").into_element(cx),
+                fret_ui_shadcn::extras::AnnouncementTitle::new([cx.text("Announcement")])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_banner_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(720.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_banner_default", bounds, |cx| {
+        let icon =
+            fret_ui_kit::declarative::icon::icon(cx, fret_icons::IconId::new_static("lucide.info"));
+        vec![
+            fret_ui_shadcn::extras::Banner::new([
+                fret_ui_shadcn::extras::BannerIcon::new(icon).into_element(cx),
+                fret_ui_shadcn::extras::BannerTitle::new("A new version is available.")
+                    .into_element(cx),
+                fret_ui_shadcn::extras::BannerAction::new("Upgrade").into_element(cx),
+                fret_ui_shadcn::extras::BannerClose::new().into_element(cx),
+            ])
+            .inset(true)
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_tags_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_tags_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Tags::new([
+                "Alpha",
+                "Beta",
+                "Gamma",
+                "A much longer tag label",
+                "Zeta",
+            ])
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_marquee_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_marquee_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_marquee_right_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_marquee_right_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+                .direction(fret_ui_shadcn::extras::MarqueeDirection::Right)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_marquee_static_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_marquee_static_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+                .speed_px_per_frame(Px(0.0))
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_marquee_cycle_width_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_marquee_cycle_width_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Marquee::new(["Alpha", "Beta", "Gamma", "Delta", "Epsilon"])
+                .cycle_width_px(Px(240.0))
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_ticker_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_ticker_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Ticker::new("AAPL")
+                .price("$199.18")
+                .change("+1.01%")
+                .change_kind(fret_ui_shadcn::extras::TickerChangeKind::Up)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_relative_time_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(240.0)),
+    );
+    snapshot_for_root("extras_relative_time_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::RelativeTime::new([
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "UTC",
+                    "February 9, 2026",
+                    "15:04:05",
+                )
+                .into_element(cx),
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "PST",
+                    "February 9, 2026",
+                    "07:04:05",
+                )
+                .into_element(cx),
+                fret_ui_shadcn::extras::RelativeTimeZone::new(
+                    "CET",
+                    "February 9, 2026",
+                    "16:04:05",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_rating_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_rating_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Rating::uncontrolled(3)
+                .count(5)
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_avatar_stack_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_avatar_stack_default", bounds, |cx| {
+        let a =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
+            );
+        let b =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
+            );
+        let c =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
+            );
+        let d =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
+            );
+
+        vec![
+            fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d])
+                .size_px(Px(40.0))
+                .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_avatar_stack_overflow_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_avatar_stack_overflow_default", bounds, |cx| {
+        let a =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
+            );
+        let b =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
+            );
+        let c =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
+            );
+        let d =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
+            );
+        let e =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("E").into_element(cx)],
+            );
+        let f =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("F").into_element(cx)],
+            );
+
+        vec![
+            fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d, e, f])
+                .size_px(Px(40.0))
+                .max_visible(4)
                 .into_element(cx),
         ]
     });

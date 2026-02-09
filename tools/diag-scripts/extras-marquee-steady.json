@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "reset_diagnostics" },
+
+    { "type": "wait_frames", "n": 120 },
+    { "type": "capture_bundle", "label": "extras-marquee-steady" },
+
+    { "type": "wait_frames", "n": 2 }
+  ]
+}
+

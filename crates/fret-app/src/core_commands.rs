@@ -562,7 +562,7 @@ fn localized_or_fallback(
 mod tests {
     use super::*;
 
-    use std::sync::Arc;
+    use std::rc::Rc;
 
     use fret_runtime::fret_i18n::{I18nLookup, I18nLookupError, LocalizedMessage, MessageKey};
 
@@ -605,7 +605,7 @@ mod tests {
             .global::<fret_runtime::fret_i18n::I18nService>()
             .cloned()
             .unwrap_or_default();
-        service.set_lookup(Some(Arc::new(TestLookup)));
+        service.set_lookup(Some(Rc::new(TestLookup)));
         app.set_global(service);
 
         let mut settings = crate::SettingsFileV1::default();
@@ -633,7 +633,7 @@ mod tests {
             .global::<fret_runtime::fret_i18n::I18nService>()
             .cloned()
             .unwrap_or_default();
-        service.set_lookup(Some(Arc::new(TestLookup)));
+        service.set_lookup(Some(Rc::new(TestLookup)));
         app.set_global(service);
 
         let mut settings = crate::SettingsFileV1::default();

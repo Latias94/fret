@@ -35,7 +35,6 @@ pub struct ImageDescriptor {
 
 struct ImageEntry {
     view: wgpu::TextureView,
-    #[allow(dead_code)]
     size: (u32, u32),
     #[allow(dead_code)]
     format: wgpu::TextureFormat,
@@ -93,6 +92,10 @@ impl ImageRegistry {
 
     pub(crate) fn alpha_mode(&self, id: ImageId) -> Option<AlphaMode> {
         self.images.get(id).map(|t| t.alpha_mode)
+    }
+
+    pub(crate) fn size_px(&self, id: ImageId) -> Option<(u32, u32)> {
+        self.images.get(id).map(|t| t.size)
     }
 }
 

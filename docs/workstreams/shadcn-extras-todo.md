@@ -14,16 +14,44 @@ Milestones (one-screen): `docs/workstreams/shadcn-extras-milestones.md`
 
 ## M0 — Extras skeleton + gates
 
-- [ ] Add `ecosystem/fret-ui-shadcn/src/extras/mod.rs` with module docs and export policy.
-- [ ] Add `pub mod extras;` to `ecosystem/fret-ui-shadcn/src/lib.rs` (no root re-exports).
-- [ ] Add snapshot coverage for at least one extras root (new snapshot file under
+- [x] Add `ecosystem/fret-ui-shadcn/src/extras/mod.rs` with module docs and export policy.
+- [x] Add `pub mod extras;` to `ecosystem/fret-ui-shadcn/src/lib.rs` (no root re-exports).
+- [x] Add snapshot coverage for at least one extras root (new snapshot file under
       `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`).
-- [ ] Add a small “component template” section to `docs/workstreams/shadcn-extras.md` (or a dedicated
+- [x] Add a small “component template” section to `docs/workstreams/shadcn-extras.md` (or a dedicated
       appendix) that standardizes:
       - controlled/uncontrolled pattern (use `fret-ui-kit::declarative::controllable_state`),
       - semantics roles + labels,
       - `test_id` conventions,
       - and required gates.
+
+Landed snapshot gates (in-tree):
+
+- `extras_announcement_default.json`
+- `extras_avatar_stack_default.json`
+- `extras_avatar_stack_overflow_default.json`
+- `extras_banner_default.json`
+- `extras_marquee_default.json`
+- `extras_marquee_right_default.json`
+- `extras_marquee_static_default.json`
+- `extras_marquee_cycle_width_default.json`
+- `extras_rating_default.json`
+- `extras_ticker_default.json`
+- `extras_tags_default.json`
+- `extras_relative_time_default.json`
+
+Landed behavior gates (in-tree):
+
+- `ecosystem/fret-ui-shadcn/tests/extras_rating_keyboard.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_motion.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_pause_on_hover.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
+
+Landed perf gates (in-tree):
+
+- `tools/diag-scripts/extras-marquee-steady.json`
+- `tools/perf/diag_extras_marquee_gate.sh`
+- `docs/workstreams/perf-baselines/policies/extras-marquee-steady.v1.json`
 
 ## Candidate components (staged)
 
@@ -48,14 +76,15 @@ Legend:
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
 | `AvatarStack` | `repo-ref/kibo/packages/avatar-stack` (MIT) | composition; avoid web-only mask tricks | snapshot |
-| `Snippet` / `CodeBlock` | (coordinate with existing crates) | may live outside extras | TBD |
+| `Snippet` / `CodeBlock` | AI Elements + markdown fences | owned by `fret-code-view` + `fret-markdown`; AI message-part policy in `fret-ui-ai` | diag script + existing crate tests |
 
 ### M3: Scheduling/animation-heavy
 
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
-| `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | scripted + perf note |
-| `Marquee` / `Ticker` | `repo-ref/kibo/packages/marquee`, `.../ticker` (MIT) | continuous frames lease | scripted + perf gate |
+| `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | Rust test + perf note |
+| `Marquee` | `repo-ref/kibo/packages/marquee` (MIT) | continuous frames lease | scripted + perf suite (`extras-marquee-steady`) |
+| `Ticker` | `repo-ref/kibo/packages/ticker` (MIT) | pure composition | snapshot |
 
 ## Per-component checklist (copy/paste into PRs)
 
@@ -66,4 +95,3 @@ Legend:
 - [ ] At least one regression gate lands (snapshot or diag script).
 - [ ] No new runtime contract changes; no platform deps.
 - [ ] Rustdoc includes upstream inspiration + license note (short).
-

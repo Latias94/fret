@@ -9,6 +9,22 @@ use super::shaders::{
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
+use fret_core::{DrawOrder, Rect, Scene, SceneOp, Size, ViewportFit};
+
+fn assert_approx_eq(a: f32, b: f32) {
+    assert!(
+        (a - b).abs() <= 1.0e-6,
+        "expected {a} ~= {b} (diff={})",
+        (a - b).abs()
+    );
+}
+
+fn assert_vertex(v: &super::types::ViewportVertex, pos: (f32, f32), uv: (f32, f32)) {
+    assert_approx_eq(v.pos_px[0], pos.0);
+    assert_approx_eq(v.pos_px[1], pos.1);
+    assert_approx_eq(v.uv[0], uv.0);
+    assert_approx_eq(v.uv[1], uv.1);
+}
 
 #[test]
 fn shaders_parse_as_wgsl() {
@@ -178,6 +194,189 @@ fn svg_draw_rect_width_can_overflow_height() {
         fret_core::SvgFit::Width,
     );
     assert_eq!((x0, y0, x1, y1), (0.0, -25.0, 50.0, 75.0));
+}
+
+#[test]
+fn image_fit_cover_encodes_cropped_uvs() {
+    use crate::images::{AlphaMode, ImageColorSpace, ImageDescriptor};
+
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let source_size = (200u32, 100u32);
+    let source_tex = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image fit cover test source"),
+        size: wgpu::Extent3d {
+            width: source_size.0,
+            height: source_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    let source_view = source_tex.create_view(&wgpu::TextureViewDescriptor::default());
+    let image = renderer.register_image(ImageDescriptor {
+        view: source_view,
+        size: source_size,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        color_space: ImageColorSpace::Srgb,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image fit cover test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Image {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ),
+        image,
+        fit: ViewportFit::Cover,
+        opacity: 1.0,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = &renderer.scene_encoding_cache;
+    let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one image draw");
+    };
+    assert_eq!(draw.vertex_count, 6);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 6];
+
+    assert_vertex(&verts[0], (0.0, 0.0), (0.25, 0.0));
+    assert_vertex(&verts[1], (100.0, 0.0), (0.75, 0.0));
+    assert_vertex(&verts[2], (100.0, 100.0), (0.75, 1.0));
+    assert_vertex(&verts[3], (0.0, 0.0), (0.25, 0.0));
+    assert_vertex(&verts[4], (100.0, 100.0), (0.75, 1.0));
+    assert_vertex(&verts[5], (0.0, 100.0), (0.25, 1.0));
+}
+
+#[test]
+fn image_fit_contain_encodes_centered_draw_rect() {
+    use crate::images::{AlphaMode, ImageColorSpace, ImageDescriptor};
+
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+
+    let source_size = (200u32, 100u32);
+    let source_tex = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image fit contain test source"),
+        size: wgpu::Extent3d {
+            width: source_size.0,
+            height: source_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    let source_view = source_tex.create_view(&wgpu::TextureViewDescriptor::default());
+    let image = renderer.register_image(ImageDescriptor {
+        view: source_view,
+        size: source_size,
+        format: wgpu::TextureFormat::Rgba8UnormSrgb,
+        color_space: ImageColorSpace::Srgb,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (128u32, 128u32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("image fit contain test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&wgpu::TextureViewDescriptor::default());
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Image {
+        order: DrawOrder(0),
+        rect: Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ),
+        image,
+        fit: ViewportFit::Contain,
+        opacity: 1.0,
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let encoding = &renderer.scene_encoding_cache;
+    let [super::types::OrderedDraw::Image(draw)] = encoding.ordered_draws.as_slice() else {
+        panic!("expected exactly one image draw");
+    };
+    assert_eq!(draw.vertex_count, 6);
+
+    let first = draw.first_vertex as usize;
+    let verts = &encoding.viewport_vertices[first..first + 6];
+
+    // Contain: 200x100 in 100x100 -> 100x50 centered at y=25.
+    assert_vertex(&verts[0], (0.0, 25.0), (0.0, 0.0));
+    assert_vertex(&verts[1], (100.0, 25.0), (1.0, 0.0));
+    assert_vertex(&verts[2], (100.0, 75.0), (1.0, 1.0));
+    assert_vertex(&verts[3], (0.0, 25.0), (0.0, 0.0));
+    assert_vertex(&verts[4], (100.0, 75.0), (1.0, 1.0));
+    assert_vertex(&verts[5], (0.0, 75.0), (0.0, 1.0));
 }
 
 #[test]

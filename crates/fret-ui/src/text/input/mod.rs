@@ -1,5 +1,6 @@
 mod bound;
 mod cx;
+#[allow(clippy::module_inception)]
 mod input;
 mod widget;
 

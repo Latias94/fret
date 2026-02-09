@@ -3,6 +3,8 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
+#[cfg(feature = "diagnostics-ws")]
+use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -10,6 +12,9 @@ use slotmap::{Key as _, KeyData};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+#[cfg(feature = "diagnostics-ws")]
+use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
@@ -41,13 +46,48 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+
+    /// Optional DevTools WebSocket endpoint for diagnostics control (script/pick/dump).
+    ///
+    /// When set (with `devtools_token`), diagnostics enablement is implied even if `FRET_DIAG` is
+    /// not set. This is required for web runners that do not have filesystem access.
+    pub devtools_ws_url: Option<String>,
+    pub devtools_token: Option<String>,
+    /// Whether `bundle.dumped` should embed the full `bundle.json` payload in the WS message.
+    ///
+    /// Web runners should enable this so tooling can materialize bundles without filesystem
+    /// access inside the browser.
+    pub devtools_embed_bundle: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let enabled =
+        let diag_enabled =
             std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
+
+        let (devtools_ws_url, devtools_token) = {
+            #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
+            {
+                fret_diag_ws::client::devtools_ws_config_from_window_query()
+            }
+            #[cfg(all(feature = "diagnostics-ws", not(target_arch = "wasm32")))]
+            {
+                let ws_url = std::env::var("FRET_DEVTOOLS_WS")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty());
+                let token = std::env::var("FRET_DEVTOOLS_TOKEN")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty());
+                (ws_url, token)
+            }
+            #[cfg(not(feature = "diagnostics-ws"))]
+            {
+                (None, None)
+            }
+        };
+
+        let enabled = diag_enabled || (devtools_ws_url.is_some() && devtools_token.is_some());
         let out_dir = out_dir_env
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
@@ -170,6 +210,9 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            devtools_ws_url,
+            devtools_token,
+            devtools_embed_bundle: cfg!(target_arch = "wasm32"),
         }
     }
 }
@@ -211,6 +254,8 @@ pub struct UiDiagnosticsService {
     pending_pick: Option<PendingPick>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+    #[cfg(feature = "diagnostics-ws")]
+    ws_bridge: UiDiagnosticsWsBridge,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -2581,6 +2626,12 @@ impl UiDiagnosticsService {
             return;
         }
 
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            // Web runners do not have a stable filesystem surface for the legacy `ready.touch` file.
+            self.ready_written = true;
+            return;
+        }
+
         if let Some(parent) = self.cfg.ready_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -3121,8 +3172,14 @@ impl UiDiagnosticsService {
             return None;
         }
 
+        self.poll_ws_inbox();
+
         if let Some(label) = self.pending_force_dump_label.take() {
             return self.dump_bundle(Some(&label));
+        }
+
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return None;
         }
 
         let Some(stamp) = read_touch_stamp(&self.cfg.trigger_path) else {
@@ -3154,7 +3211,115 @@ impl UiDiagnosticsService {
         self.pending_force_dump_label = Some(sanitize_label(&label));
     }
 
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_is_configured(&self) -> bool {
+        self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()
+    }
+
+    #[cfg(not(feature = "diagnostics-ws"))]
+    fn ws_is_configured(&self) -> bool {
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn poll_ws_inbox(&mut self) {
+        if !self.ws_is_configured() {
+            return;
+        }
+
+        let mut msgs: Vec<DiagTransportMessageV1> = Vec::new();
+        self.ws_bridge.drain_inbox(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            &mut msgs,
+        );
+
+        for msg in msgs {
+            self.apply_ws_message(msg);
+        }
+    }
+
+    #[cfg(not(feature = "diagnostics-ws"))]
+    fn poll_ws_inbox(&mut self) {}
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+        if !self.ws_is_configured() {
+            return;
+        }
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: ty.into(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn apply_ws_message(&mut self, msg: DiagTransportMessageV1) {
+        match msg.r#type.as_str() {
+            "inspect.set" => {
+                let Ok(cfg) = serde_json::from_value::<UiInspectConfigV1>(msg.payload) else {
+                    return;
+                };
+                self.inspect_enabled = cfg.enabled;
+                self.inspect_consume_clicks = cfg.consume_clicks;
+                if !self.inspect_enabled {
+                    self.inspect_locked_windows.clear();
+                }
+            }
+            "pick.arm" => {
+                self.pending_pick = None;
+                self.pick_armed_run_id = Some(self.next_pick_run_id());
+            }
+            "bundle.dump" => {
+                let label = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload)
+                    .ok()
+                    .and_then(|v| v.label)
+                    .unwrap_or_else(|| "bundle".to_string());
+                self.request_force_dump(label);
+            }
+            "script.push" | "script.run" => {
+                let script_value = msg
+                    .payload
+                    .get("script")
+                    .cloned()
+                    .unwrap_or_else(|| msg.payload.clone());
+                let Some(script) = PendingScript::from_json_value(script_value) else {
+                    return;
+                };
+                let run_id = self.next_script_run_id();
+                self.pending_script = Some(script);
+                self.pending_script_run_id = Some(run_id);
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Queued,
+                    step_index: None,
+                    reason: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+            }
+            _ => {}
+        }
+    }
+
     fn poll_script_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
             if let Some(dir) = self.cfg.script_trigger_path.parent() {
                 let _ = std::fs::create_dir_all(dir);
@@ -3236,20 +3401,39 @@ impl UiDiagnosticsService {
         }
 
         let dir = self.cfg.out_dir.join(dir_name);
-        if std::fs::create_dir_all(&dir).is_err() {
-            return None;
-        }
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
 
-        if write_json(dir.join("bundle.json"), &bundle).is_err() {
-            return None;
+        if !cfg!(target_arch = "wasm32") {
+            if std::fs::create_dir_all(&dir).is_err() {
+                return None;
+            }
+            if write_json(dir.join("bundle.json"), &bundle).is_err() {
+                return None;
+            }
+            let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+            if self.cfg.screenshot_on_dump {
+                let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+            }
         }
-        let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
-        if self.cfg.screenshot_on_dump {
-            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
-        }
+
         self.last_dump_dir = Some(dir.clone());
+
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            let embed = self.cfg.devtools_embed_bundle || cfg!(target_arch = "wasm32");
+            let bundle_value = embed.then(|| serde_json::to_value(&bundle).ok()).flatten();
+            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                schema_version: 1,
+                exported_unix_ms: ts,
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                dir: display_path(&self.cfg.out_dir, &dir),
+                bundle: bundle_value,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send("bundle.dumped", payload);
+        }
+
         Some(dir)
     }
 
@@ -3271,23 +3455,46 @@ impl UiDiagnosticsService {
         id
     }
 
-    fn write_script_result(&self, result: UiScriptResultV1) {
+    fn write_script_result(&mut self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
         }
-        let _ = write_json(self.cfg.script_result_path.clone(), &result);
-        let _ = touch_file(&self.cfg.script_result_trigger_path);
+
+        if !cfg!(target_arch = "wasm32") {
+            let _ = write_json(self.cfg.script_result_path.clone(), &result);
+            let _ = touch_file(&self.cfg.script_result_trigger_path);
+        }
+
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
+            self.ws_send("script.result", payload);
+        }
     }
 
-    fn write_pick_result(&self, result: UiPickResultV1) {
+    fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
         }
-        let _ = write_json(self.cfg.pick_result_path.clone(), &result);
-        let _ = touch_file(&self.cfg.pick_result_trigger_path);
+
+        if !cfg!(target_arch = "wasm32") {
+            let _ = write_json(self.cfg.pick_result_path.clone(), &result);
+            let _ = touch_file(&self.cfg.pick_result_trigger_path);
+        }
+
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
+            self.ws_send("pick.result", payload);
+        }
     }
 
     fn poll_pick_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let modified =
             match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
                 Ok(modified) => modified,
@@ -3325,6 +3532,11 @@ impl UiDiagnosticsService {
     }
 
     fn poll_inspect_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let modified =
             match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
                 Ok(modified) => modified,
@@ -4645,6 +4857,24 @@ struct PendingScript {
 }
 
 impl PendingScript {
+    fn from_json_value(value: serde_json::Value) -> Option<Self> {
+        let schema_version: u32 = value
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        match schema_version {
+            1 => serde_json::from_value::<UiActionScriptV1>(value)
+                .ok()
+                .and_then(Self::from_v1),
+            2 => serde_json::from_value::<UiActionScriptV2>(value)
+                .ok()
+                .and_then(Self::from_v2),
+            _ => None,
+        }
+    }
+
     fn from_v1(script: UiActionScriptV1) -> Option<Self> {
         if script.schema_version != 1 {
             return None;
@@ -8357,6 +8587,14 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<ElementObservedModelsV1>,
     pub observed_globals: Vec<ElementObservedGlobalsV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observed_layout_queries: Vec<ElementObservedLayoutQueriesV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layout_query_regions: Vec<ElementLayoutQueryRegionV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<ElementEnvironmentSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observed_environment: Vec<ElementObservedEnvironmentV1>,
     #[serde(default)]
     pub view_cache_reuse_roots: Vec<u64>,
     #[serde(default)]
@@ -8413,6 +8651,61 @@ pub struct ElementObservedModelsV1 {
 pub struct ElementObservedGlobalsV1 {
     pub element: u64,
     pub globals: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedLayoutQueriesV1 {
+    pub element: u64,
+    pub deps_fingerprint: u64,
+    pub regions: Vec<ElementObservedLayoutQueryRegionV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedLayoutQueryRegionV1 {
+    pub region: u64,
+    pub invalidation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_name: Option<String>,
+    pub region_revision: u64,
+    pub region_changed_this_frame: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_committed_bounds: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementLayoutQueryRegionV1 {
+    pub region: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    pub revision: u64,
+    pub changed_this_frame: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub committed_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_bounds: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementEnvironmentSnapshotV1 {
+    pub viewport_bounds: RectV1,
+    pub scale_factor: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefers_reduced_motion: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentV1 {
+    pub element: u64,
+    pub deps_fingerprint: u64,
+    pub keys: Vec<ElementObservedEnvironmentKeyV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentKeyV1 {
+    pub key: String,
+    pub invalidation: String,
+    pub key_revision: u64,
+    pub key_changed_this_frame: bool,
 }
 
 impl ElementDiagnosticsSnapshotV1 {
@@ -8483,6 +8776,61 @@ impl ElementDiagnosticsSnapshotV1 {
                     globals: list
                         .into_iter()
                         .map(|(id, inv)| (id, invalidation_label(inv).to_string()))
+                        .collect(),
+                })
+                .collect(),
+            observed_layout_queries: snapshot
+                .observed_layout_queries
+                .into_iter()
+                .map(|entry| ElementObservedLayoutQueriesV1 {
+                    element: entry.element.0,
+                    deps_fingerprint: entry.deps_fingerprint,
+                    regions: entry
+                        .regions
+                        .into_iter()
+                        .map(|r| ElementObservedLayoutQueryRegionV1 {
+                            region: r.region.0,
+                            invalidation: invalidation_label(r.invalidation).to_string(),
+                            region_name: r.region_name.map(|name| name.to_string()),
+                            region_revision: r.region_revision,
+                            region_changed_this_frame: r.region_changed_this_frame,
+                            region_committed_bounds: r.region_committed_bounds.map(RectV1::from),
+                        })
+                        .collect(),
+                })
+                .collect(),
+            layout_query_regions: snapshot
+                .layout_query_regions
+                .into_iter()
+                .map(|r| ElementLayoutQueryRegionV1 {
+                    region: r.region.0,
+                    name: r.name.map(|name| name.to_string()),
+                    revision: r.revision,
+                    changed_this_frame: r.changed_this_frame,
+                    committed_bounds: r.committed_bounds.map(RectV1::from),
+                    current_bounds: r.current_bounds.map(RectV1::from),
+                })
+                .collect(),
+            environment: Some(ElementEnvironmentSnapshotV1 {
+                viewport_bounds: RectV1::from(snapshot.environment.viewport_bounds),
+                scale_factor: snapshot.environment.scale_factor,
+                prefers_reduced_motion: snapshot.environment.prefers_reduced_motion,
+            }),
+            observed_environment: snapshot
+                .observed_environment
+                .into_iter()
+                .map(|entry| ElementObservedEnvironmentV1 {
+                    element: entry.element.0,
+                    deps_fingerprint: entry.deps_fingerprint,
+                    keys: entry
+                        .keys
+                        .into_iter()
+                        .map(|k| ElementObservedEnvironmentKeyV1 {
+                            key: k.key.to_string(),
+                            invalidation: invalidation_label(k.invalidation).to_string(),
+                            key_revision: k.key_revision,
+                            key_changed_this_frame: k.key_changed_this_frame,
+                        })
                         .collect(),
                 })
                 .collect(),
@@ -11148,10 +11496,6 @@ mod tests {
 
     #[test]
     fn hit_test_snapshot_exposes_focus_barrier_root() {
-        let window = AppWindowId::default();
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
         let position = Point::new(Px(1.0), Px(2.0));
         let hit_test = UiDebugHitTest {
             hit: None,
@@ -11161,10 +11505,6 @@ mod tests {
 
         let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
             position,
-            &ui,
-            None,
-            window,
-            None,
             hit_test,
             Some(node_id(11)),
             &[],

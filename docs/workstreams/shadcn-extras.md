@@ -76,6 +76,71 @@ Optional:
 
 - If there is a web reference golden (rare for non-v4 blocks), add a targeted “web vs fret” gate.
 
+## Scheduling-heavy authoring notes (M3)
+
+When an extras block needs continuous motion or timer-driven updates, keep the scheduling policy in
+the component layer and use runner-owned time sources:
+
+- Prefer `fret_ui_kit::declarative::scheduling::set_continuous_frames(cx, animating)` for
+  continuously animating blocks. The helper ties the `ContinuousFrames` lease to element lifetime
+  so unmount drops the lease and stops RAF requests.
+- Derive animation progress from runner-owned clocks (`App::frame_id()` or tokened timers), not
+  wall-clock threads. This keeps behavior deterministic and diagnosable.
+- Avoid calling `fret_ui::elements::bounds_for_element` during declarative render. It can conflict
+  with runtime leases (global `ElementRuntime` lease) and panic. Prefer `cx.bounds` or accept an
+  explicit measured override where seamless looping depends on exact track width.
+
+Recommended minimum gates for scheduling-heavy extras:
+
+- Add a deterministic Rust test that asserts:
+  - the first frame emits `Effect::RequestAnimationFrame`, and
+  - a visible scene op changes across `FrameId` (e.g. `SceneOp::PushTransform.tx`).
+- Add a short perf note (or a `fretboard diag perf` gate) when the animation is expected to be
+  long-lived or scene-op heavy.
+
+### Perf notes (current M3 components)
+
+These notes are intentionally qualitative (cheap to maintain). If/when we see regressions, add a
+`fretboard diag perf` gate to pin the numbers.
+
+- `RelativeTime` (auto-updating):
+  - Uses continuous frames only when uncontrolled (component-owned clock). Controlled clocks must
+    not self-drive frames.
+  - Keep paint work stable across frames (time changes should not allocate large new strings per
+    frame).
+- `Marquee`:
+  - Uses continuous frames by design and should only update via a transform (avoid per-frame
+    layout changes).
+  - Do not measure element bounds during declarative render; use `cx.bounds` or accept
+    `cycle_width_px` overrides for seamless looping.
+
+## Component template (recommended baseline)
+
+Use this template to keep extras consistent and reviewable:
+
+1. File layout:
+   - Implementation: `ecosystem/fret-ui-shadcn/src/extras/<component>.rs`
+   - Module entry: `ecosystem/fret-ui-shadcn/src/extras/mod.rs`
+2. Public surface:
+   - Expose under `fret_ui_shadcn::extras::<component>::...`
+   - Re-export from `extras/mod.rs` for convenience
+   - Do not re-export from the crate root (`fret_ui_shadcn::*`)
+3. State (Radix-style controlled vs uncontrolled):
+   - Prefer `fret_ui_kit::declarative::controllable_state::use_controllable_model`
+   - Controlled = caller provides `Model<T>`
+   - Uncontrolled = element-local model initialized once from `default_*`
+4. Semantics + test hooks:
+   - Assign stable roles/labels where it improves automation and accessibility outcomes
+   - Add `test_id` for key subparts (root, triggers, close buttons, etc.) when stateful
+5. Gates (minimum bar):
+   - Snapshot: `ecosystem/fret-ui-shadcn/tests/snapshots.rs` + a new/updated
+     `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`
+   - Scripted diag (when needed): add a `tools/diag-scripts/*.json` script and gate it via the
+     appropriate suite (see `docs/ui-diagnostics-and-scripted-tests.md`)
+6. Attribution:
+   - Add a short rustdoc note with upstream inspiration + license, and record the source in the
+     `docs/workstreams/shadcn-extras-todo.md` “sources table” if/when created.
+
 ## Component selection criteria (what we add first)
 
 We prioritize components that are:
@@ -114,11 +179,11 @@ Inspired by `repo-ref/kibo` (MIT), adapted to Fret primitives:
 ### M2: Medium complexity (adds more interaction policy)
 
 - `AvatarStack` (stacked avatars; implement with clipping/overlap rather than web-only mask tricks)
-- `Snippet` / `CodeBlock` (if not already covered by existing ecosystems; coordinate with `fret-ui-ai`)
+- `Snippet` / `CodeBlock` (decision: owned outside extras; see “Ownership decision” below)
 
 ### M3: Scheduling/animation-heavy blocks (defer until authoring patterns are stable)
 
-- `RelativeTime` auto-updating modes (timers)
+- `RelativeTime` auto-updating modes (continuous frames today; switch to timers when available)
 - `Marquee` / `Ticker` style components (continuous frames lease + perf gates)
 
 ## Notes on upstream sources and licensing
@@ -130,3 +195,33 @@ We only port outcomes from permissive sources:
 - For each extras component, record its upstream inspiration in rustdoc (short) and in a small
   “sources table” in `docs/workstreams/shadcn-extras-todo.md`.
 
+## Ownership decision: `Snippet` / `CodeBlock` (not in extras)
+
+Decision:
+
+- `Snippet` / `CodeBlock` do **not** land under `fret_ui_shadcn::extras`.
+
+Rationale (keep surfaces aligned with layering):
+
+- We already have a dedicated ecosystem for code rendering:
+  - `ecosystem/fret-code-view` provides the core “code block” UI surface.
+  - `ecosystem/fret-markdown` renders fenced code blocks via `fret-code-view`.
+- The “Snippet / CodeBlock” product surface is usually policy-heavy:
+  expand/collapse, copy actions, header slots, language labels, attachments, inline diffs, and
+  interaction scripts. These policies are better owned by:
+  - `ecosystem/fret-ui-ai` for AI/chat-driven “message parts” (see `docs/workstreams/ai-elements-port.md`), and
+  - `ecosystem/fret-markdown` for document rendering policies.
+- Keeping the implementation in `fret-code-view` avoids duplicating engines and reduces the risk of
+  accidental runtime-contract creep (ADR 0066).
+
+What extras may do later (optional, and only as a thin recipe):
+
+- If we need a “shadcn-feeling wrapper” around `fret-code-view`, introduce a differently named block
+  (e.g. `CodeSnippetCard`) that composes `fret_code_view::CodeBlock` without inventing a second
+  `CodeBlock` type under `fret-ui-shadcn`.
+
+Regression gates (where they belong):
+
+- `fret-code-view`: keep unit/integration tests for wrapping/selection/scroll policies.
+- `fret-ui-ai`: gate expand/collapse and message-part behaviors via deterministic `fretboard diag`
+  scripts (e.g. the existing UI gallery scripts referenced in the AI Elements workstream).

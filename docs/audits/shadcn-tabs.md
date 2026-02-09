@@ -25,6 +25,9 @@ Base UI `Tabs.Root` behavior.
 - Pass: Supports controlled selection via `Model<Option<Arc<str>>>` and uncontrolled `default_value`.
 - Pass: Aligns with Base UI `onValueChange` intent via
   `Tabs::on_value_change(...)` and `TabsRoot::on_value_change(...)`.
+- Pass: Adds source-aware callback parity layer via
+  `Tabs::on_value_change_with_source(...)` and `TabsRoot::on_value_change_with_source(...)`
+  to expose change origin (`RovingActiveChange` / `PointerDown` / `Activate`).
 - Pass: Callback only emits when value actually changes (no duplicate emission on same selection).
 
 ### Keyboard & selection semantics
@@ -42,12 +45,18 @@ Base UI `Tabs.Root` behavior.
 
 ## Known gaps
 
-- Gap: Base UI `onValueChange` provides richer `eventDetails` (cancelation + activation metadata);
-  Fret currently exposes only the next value callback.
+- Gap: Base UI `onValueChange` supports cancelation (`eventDetails.isCanceled`), while Fret's
+  current callbacks are notification-only and do not support canceling a pending value write.
+- Gap: Base UI carries richer `activationDirection` details (`left/right/up/down/none`); Fret now
+  exposes coarse source categories and does not yet report directional metadata.
 
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_builder_sets_handler`
 - `cargo nextest run -p fret-ui-shadcn tabs_root_on_value_change_builder_sets_handler`
 - `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_fires_once_when_selection_changes`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_source_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn tabs_root_on_value_change_with_source_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_source_reports_pointer_down`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_with_source_reports_roving_active_change`
 - Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.

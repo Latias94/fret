@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, move_word_left_in_buffer,
+    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, InlinePreedit, move_word_left_in_buffer,
     move_word_right_in_buffer, select_word_range_in_buffer,
 };
 use fret_core::{
@@ -48,7 +48,7 @@ use a11y::{
 use geom::{
     RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
     caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
-    map_row_local_to_buffer_byte, preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
+    preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
 };
 
 const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
@@ -78,6 +78,7 @@ fn drag_autoscroll_delta_y(viewport_h: Px, row_h: Px, viewport_y: Px) -> Px {
     }
 }
 
+#[cfg(test)]
 fn display_row_for_pointer_y(bounds: Rect, row_h: Px, pointer_y: Px, rows: usize) -> Option<usize> {
     if rows == 0 || row_h.0 <= 0.0 {
         return None;
@@ -305,6 +306,8 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    allow_decorations_under_inline_preedit: bool,
+    compose_inline_preedit: bool,
     interaction: CodeEditorInteractionOptions,
     region_id: Option<fret_ui::GlobalElementId>,
     text_boundary_mode_override: Option<TextBoundaryMode>,
@@ -359,6 +362,7 @@ struct RowTextCacheEntry {
     text: Arc<str>,
     range: Range<usize>,
     fold_map: Option<geom::RowFoldMap>,
+    preedit_range: Option<Range<usize>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -372,11 +376,52 @@ struct BaselineMeasureCache {
 }
 
 impl CodeEditorState {
+    fn invalidate_row_caches(&mut self) {
+        self.row_text_cache_tick = 0;
+        self.row_text_cache.clear();
+        self.row_text_cache_queue.clear();
+        self.cache_stats.row_text_resets = self.cache_stats.row_text_resets.saturating_add(1);
+
+        self.row_geom_cache_tick = 0;
+        self.row_geom_cache.clear();
+        self.row_geom_cache_queue.clear();
+    }
+
     fn refresh_display_map(&mut self) {
-        // v1 contract: inline IME preedit is modeled as a paint-time injection. While preedit is
-        // active, we suppress fold placeholders and inlays to keep buffer↔display mapping stable.
-        self.display_map = if self.preedit.is_some() {
+        // ADR 0200 / ADR 0203:
+        //
+        // v1 baseline: inline IME preedit is modeled as a paint-time injection. This means we
+        // cannot allow wrap-driven row breaking to depend on the preedit string, so by default we
+        // suppress fold placeholders / inlays while preedit is active in wrapped mode.
+        //
+        // Staging: downstream consumers (and the UI Gallery harness) can opt into keeping
+        // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
+        // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
+        // composed DisplayMap (ADR 0203).
+        let suppress_decorations = !self.compose_inline_preedit
+            && self.preedit.is_some()
+            && self.display_wrap_cols.is_some()
+            && !self.allow_decorations_under_inline_preedit;
+
+        let preedit = self
+            .compose_inline_preedit
+            .then_some(())
+            .and_then(|_| self.preedit.as_ref())
+            .map(|p| InlinePreedit {
+                anchor: self.selection.caret().min(self.buffer.len_bytes()),
+                text: Arc::<str>::from(p.text.as_str()),
+            });
+
+        self.display_map = if suppress_decorations {
             DisplayMap::new(&self.buffer, self.display_wrap_cols)
+        } else if self.compose_inline_preedit {
+            DisplayMap::new_with_decorations_and_preedit(
+                &self.buffer,
+                self.display_wrap_cols,
+                &self.line_folds,
+                &self.line_inlays,
+                preedit,
+            )
         } else {
             DisplayMap::new_with_decorations(
                 &self.buffer,
@@ -393,6 +438,25 @@ impl CodeEditorState {
         }
         self.preedit = preedit;
         self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    fn set_allow_decorations_under_inline_preedit(&mut self, allowed: bool) {
+        if self.allow_decorations_under_inline_preedit == allowed {
+            return;
+        }
+        self.allow_decorations_under_inline_preedit = allowed;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    fn set_compose_inline_preedit(&mut self, enabled: bool) {
+        if self.compose_inline_preedit == enabled {
+            return;
+        }
+        self.compose_inline_preedit = enabled;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
     }
 
     fn set_interaction(&mut self, interaction: CodeEditorInteractionOptions) {
@@ -432,6 +496,8 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                allow_decorations_under_inline_preedit: false,
+                compose_inline_preedit: false,
                 interaction: CodeEditorInteractionOptions::default(),
                 region_id: None,
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
@@ -547,6 +613,24 @@ impl CodeEditorHandle {
 
     pub fn preedit_active(&self) -> bool {
         self.state.borrow().preedit.is_some()
+    }
+
+    pub fn allow_decorations_under_inline_preedit(&self) -> bool {
+        self.state.borrow().allow_decorations_under_inline_preedit
+    }
+
+    pub fn set_allow_decorations_under_inline_preedit(&self, allowed: bool) {
+        self.state
+            .borrow_mut()
+            .set_allow_decorations_under_inline_preedit(allowed);
+    }
+
+    pub fn compose_inline_preedit(&self) -> bool {
+        self.state.borrow().compose_inline_preedit
+    }
+
+    pub fn set_compose_inline_preedit(&self, enabled: bool) {
+        self.state.borrow_mut().set_compose_inline_preedit(enabled);
     }
 
     pub fn region_id(&self) -> Option<fret_ui::GlobalElementId> {
@@ -681,7 +765,7 @@ impl CodeEditorHandle {
             return None;
         }
         let row = st.display_map.line_first_display_row(line);
-        let (_, text, _) = paint::cached_row_text_with_range(&mut st, row, 64);
+        let (_, text, _, _) = paint::cached_row_text_with_range(&mut st, row, 64);
         Some(text.as_ref().to_string())
     }
 
@@ -1180,7 +1264,7 @@ impl CodeEditor {
                                     }
                                     did = input::redo(&mut st);
                                 }
-                                "text.select_all" => {
+                                "text.select_all" | "edit.select_all" => {
                                     if !st.interaction.selectable {
                                         return true;
                                     }
@@ -1193,14 +1277,14 @@ impl CodeEditor {
                                     st.undo_group = None;
                                     did = true;
                                 }
-                                "text.copy" => {
+                                "text.copy" | "edit.copy" => {
                                     if !st.interaction.selectable {
                                         return true;
                                     }
                                     input::copy_selection(host, &st);
                                     did = true;
                                 }
-                                "text.cut" => {
+                                "text.cut" | "edit.cut" => {
                                     if !st.interaction.editable {
                                         return true;
                                     }
@@ -1208,7 +1292,7 @@ impl CodeEditor {
                                         did = true;
                                     }
                                 }
-                                "text.paste" => {
+                                "text.paste" | "edit.paste" => {
                                     if !st.interaction.editable {
                                         return true;
                                     }
@@ -1262,6 +1346,31 @@ impl CodeEditor {
                             true
                         },
                     ),
+                );
+
+                let avail_state = editor_state.clone();
+                cx.command_on_command_availability_for(
+                    region_id,
+                    Arc::new(move |_host, acx, command| {
+                        if !acx.focus_in_subtree {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+
+                        let st = avail_state.borrow();
+                        if !st.interaction.enabled || !st.interaction.focusable {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+
+                        match command.as_str() {
+                            "text.select_all" | "edit.select_all" => {
+                                if !st.interaction.selectable || st.buffer.len_bytes() == 0 {
+                                    return fret_ui::CommandAvailability::Blocked;
+                                }
+                                fret_ui::CommandAvailability::Available
+                            }
+                            _ => fret_ui::CommandAvailability::NotHandled,
+                        }
+                    }),
                 );
 
                 let on_pointer_down_state = editor_state.clone();

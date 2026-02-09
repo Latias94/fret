@@ -1289,6 +1289,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-diag-export"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-diag",
+ "fret-diag-protocol",
+ "serde_json",
+]
+
+[[package]]
 name = "fret-diag-protocol"
 version = "0.1.0"
 dependencies = [
@@ -1864,7 +1874,10 @@ dependencies = [
  "fret-app",
  "fret-asset-cache",
  "fret-core",
+ "fret-executor",
  "fret-runtime",
+ "fret-ui-kit",
+ "image",
  "slotmap",
 ]
 
@@ -1893,12 +1906,14 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-ai",
+ "fret-ui-assets",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-undo",
  "fret-workspace",
+ "image",
  "pollster",
  "serde_json",
  "slotmap",

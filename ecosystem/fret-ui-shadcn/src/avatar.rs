@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{ImageId, Px};
+use fret_core::{ImageId, Px, ViewportFit};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, ImageProps,
@@ -169,6 +169,7 @@ impl AvatarImage {
                     vec![cx.image_props(ImageProps {
                         layout: image_layout,
                         image,
+                        fit: ViewportFit::Cover,
                         opacity,
                         uv: None,
                     })]
@@ -605,6 +606,44 @@ mod tests {
         assert!(
             image_bounds.size.width.0 > 1.0 && image_bounds.size.height.0 > 1.0,
             "expected image to have non-zero bounds, got {image_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn avatar_image_emits_cover_fit_scene_op() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(Some(ImageId::default()));
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            0,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, fret_core::SceneOp::Image { fit, .. } if *fit == ViewportFit::Cover)),
+            "expected AvatarImage to emit SceneOp::Image with ViewportFit::Cover"
         );
     }
 

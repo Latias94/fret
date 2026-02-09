@@ -898,6 +898,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         | ElementInstance::RenderTransform(_)
         | ElementInstance::FractionalRenderTransform(_)
         | ElementInstance::Semantics(_)
+        | ElementInstance::LayoutQueryRegion(_)
         | ElementInstance::ViewCache(_)
         | ElementInstance::FocusScope(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))

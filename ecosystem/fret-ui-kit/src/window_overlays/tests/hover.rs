@@ -33,6 +33,7 @@ fn hover_overlay_is_pointer_transparent_while_closing() {
             trigger,
             open,
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -111,6 +112,7 @@ fn hover_overlay_is_click_through_while_closing() {
             trigger: id,
             open,
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );

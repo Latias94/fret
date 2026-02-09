@@ -157,15 +157,15 @@ impl DropdownMenu {
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<MenuEntry>,
     ) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let is_open = cx
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let close_grace_frames =
-                Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme)));
-            let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
+            let close_grace_frames = Some({
+                let theme = Theme::global(&*cx.app);
+                ms_to_frames(dropdown_menu_tokens::close_duration_ms(theme))
+            });
+            let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -181,9 +181,15 @@ impl DropdownMenu {
                 };
                 let outer = overlay::outer_bounds_with_window_margin(cx.bounds, self.window_margin);
 
-                let menu_item_height = menu_tokens::list_item_height(&theme);
-                let divider_height = menu_tokens::divider_height(&theme);
-                let divider_margin = dropdown_menu_tokens::divider_margin_total(&theme);
+                let (menu_item_height, divider_height, divider_margin, collision_padding) = {
+                    let theme = Theme::global(&*cx.app);
+                    (
+                        menu_tokens::list_item_height(theme),
+                        menu_tokens::divider_height(theme),
+                        dropdown_menu_tokens::divider_margin_total(theme),
+                        dropdown_menu_tokens::collision_padding(theme),
+                    )
+                };
 
                 let mut menu_entries = entries(cx);
                 if self.close_on_select {
@@ -214,7 +220,7 @@ impl DropdownMenu {
                 let placement =
                     popper::PopperContentPlacement::new(direction, side, align, self.side_offset)
                         .with_align_offset(self.align_offset)
-                        .with_collision_padding(dropdown_menu_tokens::collision_padding(&theme));
+                        .with_collision_padding(collision_padding);
                 let layout =
                     popper::popper_content_layout_sized(outer, anchor, estimated, placement);
 

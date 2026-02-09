@@ -25,7 +25,7 @@ impl<H: UiHost> UiTree<H> {
                     if !bounds_tree_enabled
                         && cache.path.first().copied() == Some(root)
                         && let Some(hit) = {
-                            let started = self.debug_enabled.then(std::time::Instant::now);
+                            let started = self.debug_enabled.then(fret_core::time::Instant::now);
                             let hit = self.try_hit_test_along_cached_path(&cache.path, position);
                             if let Some(started) = started {
                                 self.debug_stats.hit_test_cached_path_time += started.elapsed();
@@ -214,7 +214,7 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         position: Point,
     ) -> Option<NodeId> {
-        let started = self.debug_enabled.then(std::time::Instant::now);
+        let started = self.debug_enabled.then(fret_core::time::Instant::now);
         let (query, query_stats) =
             self.hit_test_bounds_trees
                 .query(root, position, self.debug_enabled);
@@ -256,7 +256,7 @@ impl<H: UiHost> UiTree<H> {
 
         match query {
             super::bounds_tree::HitTestBoundsTreeQuery::Disabled => {
-                let started = self.debug_enabled.then(std::time::Instant::now);
+                let started = self.debug_enabled.then(fret_core::time::Instant::now);
                 let hit = self.hit_test(root, position);
                 if let Some(started) = started {
                     self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();
@@ -265,7 +265,7 @@ impl<H: UiHost> UiTree<H> {
             }
             super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
             super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
-                let started = self.debug_enabled.then(std::time::Instant::now);
+                let started = self.debug_enabled.then(fret_core::time::Instant::now);
                 let accepted = self.hit_test_node_self_only(candidate, position);
                 if let Some(started) = started {
                     self.debug_stats.hit_test_candidate_self_only_time += started.elapsed();
@@ -279,7 +279,7 @@ impl<H: UiHost> UiTree<H> {
                             .hit_test_bounds_tree_candidate_rejected
                             .saturating_add(1);
                     }
-                    let started = self.debug_enabled.then(std::time::Instant::now);
+                    let started = self.debug_enabled.then(fret_core::time::Instant::now);
                     let hit = self.hit_test(root, position);
                     if let Some(started) = started {
                         self.debug_stats.hit_test_fallback_traversal_time += started.elapsed();

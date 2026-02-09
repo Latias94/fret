@@ -133,7 +133,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> RouterQueryDemoState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     st.msg_router.clear();
 
     let snapshot_model = st.router.snapshot_model();

@@ -1,0 +1,811 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Button",
+      "label": "Close",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 672.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 32.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Button",
+      "label": "Upgrade",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 628.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 28.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 720.0,
+          "h": 48.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 16.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 688.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 16.0,
+          "y": 11.0
+        },
+        "size": {
+          "w": 26.0,
+          "h": 26.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 21.0,
+          "y": 16.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 628.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 28.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 641.0,
+          "y": 15.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 672.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 32.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 672.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 32.0,
+          "h": 32.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 679.0,
+          "y": 15.0
+        },
+        "size": {
+          "w": 18.0,
+          "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Text",
+      "label": "A new version is available.",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 50.0,
+          "y": 19.0
+        },
+        "size": {
+          "w": 570.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Text",
+      "label": "Upgrade",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 641.0,
+          "y": 19.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 720.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 720.0,
+          "h": 48.0
+        }
+      },
+      "background": {
+        "r": 0.047,
+        "g": 0.258,
+        "b": 1.0,
+        "a": 1.0
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 10.0,
+        "top_right": 10.0,
+        "bottom_right": 10.0,
+        "bottom_left": 10.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 14.0,
+          "y": 11.0
+        },
+        "size": {
+          "w": 30.0,
+          "h": 30.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.047
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 15.0,
+        "top_right": 15.0,
+        "bottom_right": 15.0,
+        "bottom_left": 15.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 15.0,
+          "y": 12.0
+        },
+        "size": {
+          "w": 28.0,
+          "h": 28.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.07
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 14.0,
+        "top_right": 14.0,
+        "bottom_right": 14.0,
+        "bottom_left": 14.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 16.0,
+          "y": 13.0
+        },
+        "size": {
+          "w": 26.0,
+          "h": 26.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.14
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 13.0,
+        "top_right": 13.0,
+        "bottom_right": 13.0,
+        "bottom_left": 13.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 16.0,
+          "y": 11.0
+        },
+        "size": {
+          "w": 26.0,
+          "h": 26.0
+        }
+      },
+      "background": {
+        "r": 0.018,
+        "g": 0.02,
+        "b": 0.027,
+        "a": 0.1
+      },
+      "border": {
+        "top": 1.0,
+        "right": 1.0,
+        "bottom": 1.0,
+        "left": 1.0
+      },
+      "border_color": {
+        "r": 0.018,
+        "g": 0.02,
+        "b": 0.027,
+        "a": 0.2
+      },
+      "corner_radii": {
+        "top_left": 13.0,
+        "top_right": 13.0,
+        "bottom_right": 13.0,
+        "bottom_left": 13.0
+      }
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 21.0,
+          "y": 16.0
+        },
+        "size": {
+          "w": 16.0,
+          "h": 16.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 50.0,
+        "y": 27.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 626.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 40.0,
+          "h": 32.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.017
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 627.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 38.0,
+          "h": 30.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.025
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 7.0,
+        "top_right": 7.0,
+        "bottom_right": 7.0,
+        "bottom_left": 7.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 628.0,
+          "y": 11.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 28.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.05
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 6.0,
+        "top_right": 6.0,
+        "bottom_right": 6.0,
+        "bottom_left": 6.0
+      }
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 628.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 28.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "border": {
+        "top": 1.0,
+        "right": 1.0,
+        "bottom": 1.0,
+        "left": 1.0
+      },
+      "border_color": {
+        "r": 0.042,
+        "g": 0.054,
+        "b": 0.074,
+        "a": 1.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 628.0,
+          "y": 10.0
+        },
+        "size": {
+          "w": 36.0,
+          "h": 28.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "Text",
+      "origin": {
+        "x": 641.0,
+        "y": 27.0
+      },
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      }
+    },
+    {
+      "kind": "PopClip"
+    },
+    {
+      "kind": "Quad",
+      "rect": {
+        "origin": {
+          "x": 672.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 32.0,
+          "h": 32.0
+        }
+      },
+      "background": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "border": {
+        "top": 0.0,
+        "right": 0.0,
+        "bottom": 0.0,
+        "left": 0.0
+      },
+      "border_color": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.0,
+        "a": 0.0
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 672.0,
+          "y": 8.0
+        },
+        "size": {
+          "w": 32.0,
+          "h": 32.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 8.0,
+        "top_right": 8.0,
+        "bottom_right": 8.0,
+        "bottom_left": 8.0
+      }
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 679.0,
+          "y": 15.0
+        },
+        "size": {
+          "w": 18.0,
+          "h": 18.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "PopClip"
+    }
+  ]
+}

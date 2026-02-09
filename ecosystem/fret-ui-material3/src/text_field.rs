@@ -374,16 +374,17 @@ impl TextField {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let variant = self.variant;
             let token_namespace = self.token_namespace;
-            let height = match token_namespace {
-                TextFieldTokenNamespace::TextField => {
-                    text_field_tokens::container_height(&theme, variant)
-                }
-                TextFieldTokenNamespace::Autocomplete => {
-                    autocomplete_tokens::text_field_container_height(&theme, variant)
+            let height = {
+                let theme = Theme::global(&*cx.app);
+                match token_namespace {
+                    TextFieldTokenNamespace::TextField => {
+                        text_field_tokens::container_height(theme, variant)
+                    }
+                    TextFieldTokenNamespace::Autocomplete => {
+                        autocomplete_tokens::text_field_container_height(theme, variant)
+                    }
                 }
             };
 
@@ -421,14 +422,15 @@ impl TextField {
             let field_id_out = self.field_id_out.clone();
 
             cx.hover_region(hover, move |cx, hovered| {
-                let theme = Theme::global(&*cx.app).clone();
-
                 let mut focused = false;
                 let mut input_id = GlobalElementId(0);
                 let mut states = WidgetStates::empty();
-                let mut input_bg = theme
-                    .color_by_key("md.sys.color.surface")
-                    .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
+                let mut input_bg = {
+                    let theme = Theme::global(&*cx.app);
+                    theme
+                        .color_by_key("md.sys.color.surface")
+                        .unwrap_or_else(|| theme.color_required("md.sys.color.surface"))
+                };
                 let mut outline_width_for_notch = Px(0.0);
                 vec![cx.flex(
                     FlexProps {
@@ -462,8 +464,9 @@ impl TextField {
 
                             let state_layer = (hovered && !disabled)
                                 .then(|| {
+                                    let theme = Theme::global(&*cx.app);
                                     text_field_tokens::hover_state_layer(
-                                        &theme,
+                                        theme,
                                         variant_for_children,
                                         error,
                                     )
@@ -481,34 +484,55 @@ impl TextField {
                                 focused = cx.is_focused_element(id);
                                 states = text_field_widget_states(cx, hovered, focused, disabled);
 
-                                let mut chrome = match token_namespace {
-                                    TextFieldTokenNamespace::TextField => {
-                                        text_field_tokens::text_input_style(
-                                            &theme,
-                                            variant_for_children,
-                                            focused,
-                                            hovered,
-                                            disabled,
-                                            error,
-                                        )
-                                    }
-                                    TextFieldTokenNamespace::Autocomplete => {
-                                        autocomplete_tokens::text_input_style(
-                                            &theme,
-                                            variant_for_children,
-                                            focused,
-                                            hovered,
-                                            disabled,
-                                            error,
-                                        )
-                                    }
+                                let (mut chrome, spatial, fast_effects, slow_effects) = {
+                                    let theme = Theme::global(&*cx.app);
+                                    let mut chrome = match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::text_input_style(
+                                                theme,
+                                                variant_for_children,
+                                                focused,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::text_input_style(
+                                                theme,
+                                                variant_for_children,
+                                                focused,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                            )
+                                        }
+                                    };
+                                    apply_text_field_input_overrides(
+                                        theme,
+                                        states,
+                                        &style_override,
+                                        &mut chrome,
+                                    );
+
+                                    let spatial = sys_spring_in_scope(
+                                        &*cx,
+                                        theme,
+                                        MotionSchemeKey::FastSpatial,
+                                    );
+                                    let fast_effects = sys_spring_in_scope(
+                                        &*cx,
+                                        theme,
+                                        MotionSchemeKey::FastEffects,
+                                    );
+                                    let slow_effects = sys_spring_in_scope(
+                                        &*cx,
+                                        theme,
+                                        MotionSchemeKey::SlowEffects,
+                                    );
+
+                                    (chrome, spatial, fast_effects, slow_effects)
                                 };
-                                apply_text_field_input_overrides(
-                                    &theme,
-                                    states,
-                                    &style_override,
-                                    &mut chrome,
-                                );
 
                                 let trailing_icon_hit_width = if trailing_icon.is_some() {
                                     Px(48.0)
@@ -536,12 +560,6 @@ impl TextField {
                                 };
 
                                 let now_frame = cx.frame_id.0;
-                                let spatial =
-                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastSpatial);
-                                let fast_effects =
-                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastEffects);
-                                let slow_effects =
-                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::SlowEffects);
 
                                 let target_border = chrome.border;
                                 let target_border_color = chrome.border_color;
@@ -707,6 +725,7 @@ impl TextField {
                                 props.text_style =
                                     crate::foundation::context::inherited_text_style(cx)
                                         .unwrap_or_else(|| {
+                                            let theme = Theme::global(&*cx.app);
                                             theme
                                                 .text_style_by_key("md.sys.typescale.body-large")
                                                 .unwrap_or(TextStyle::default())
@@ -736,55 +755,87 @@ impl TextField {
                                 cx.container(overlay, |_cx| Vec::new())
                             };
 
-                            let trailing_icon_el = trailing_icon.map(|icon| {
-                                let size = match token_namespace {
-                                    TextFieldTokenNamespace::TextField => {
-                                        text_field_tokens::trailing_icon_size(
-                                            &theme,
-                                            variant_for_children,
-                                        )
-                                    }
-                                    TextFieldTokenNamespace::Autocomplete => {
-                                        autocomplete_tokens::trailing_icon_size(
-                                            &theme,
-                                            variant_for_children,
-                                        )
-                                    }
-                                };
-                                let (color, opacity) = match token_namespace {
-                                    TextFieldTokenNamespace::TextField => {
-                                        text_field_tokens::trailing_icon_color(
-                                            &theme,
-                                            variant_for_children,
-                                            hovered,
-                                            disabled,
-                                            error,
-                                            focused,
-                                        )
-                                    }
-                                    TextFieldTokenNamespace::Autocomplete => {
-                                        autocomplete_tokens::trailing_icon_color(
-                                            &theme,
-                                            variant_for_children,
-                                            hovered,
-                                            disabled,
-                                            error,
-                                            focused,
-                                        )
-                                    }
-                                };
+                            let trailing_icon_el =
+                                trailing_icon.map(|icon| {
+                                    let (
+                                        size,
+                                        color,
+                                        opacity,
+                                        hover_opacity,
+                                        pressed_opacity,
+                                        config,
+                                    ) = {
+                                        let theme = Theme::global(&*cx.app);
+                                        let size = match token_namespace {
+                                            TextFieldTokenNamespace::TextField => {
+                                                text_field_tokens::trailing_icon_size(
+                                                    theme,
+                                                    variant_for_children,
+                                                )
+                                            }
+                                            TextFieldTokenNamespace::Autocomplete => {
+                                                autocomplete_tokens::trailing_icon_size(
+                                                    theme,
+                                                    variant_for_children,
+                                                )
+                                            }
+                                        };
+                                        let (color, opacity) = match token_namespace {
+                                            TextFieldTokenNamespace::TextField => {
+                                                text_field_tokens::trailing_icon_color(
+                                                    theme,
+                                                    variant_for_children,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                    focused,
+                                                )
+                                            }
+                                            TextFieldTokenNamespace::Autocomplete => {
+                                                autocomplete_tokens::trailing_icon_color(
+                                                    theme,
+                                                    variant_for_children,
+                                                    hovered,
+                                                    disabled,
+                                                    error,
+                                                    focused,
+                                                )
+                                            }
+                                        };
 
-                                let svg = svg_source_for_icon(cx, &icon);
-                                let mut icon_props = SvgIconProps::new(svg);
-                                icon_props.fit = SvgFit::Contain;
-                                icon_props.color = color;
-                                icon_props.opacity = opacity;
-                                icon_props.layout.size.width = Length::Px(size);
-                                icon_props.layout.size.height = Length::Px(size);
-                                let icon_el = cx.svg_icon_props(icon_props);
+                                        let hover_opacity = theme
+                                            .number_by_key("md.sys.state.hover.state-layer-opacity")
+                                            .unwrap_or(0.08);
+                                        let pressed_opacity = theme
+                                            .number_by_key(
+                                                "md.sys.state.pressed.state-layer-opacity",
+                                            )
+                                            .unwrap_or(0.1);
+                                        let config =
+                                            material_pressable_indication_config(theme, None);
 
-                                let icon_el =
-                                    if let Some(progress) = trailing_icon_rotation_progress {
+                                        (
+                                            size,
+                                            color,
+                                            opacity,
+                                            hover_opacity,
+                                            pressed_opacity,
+                                            config,
+                                        )
+                                    };
+
+                                    let svg = svg_source_for_icon(cx, &icon);
+                                    let mut icon_props = SvgIconProps::new(svg);
+                                    icon_props.fit = SvgFit::Contain;
+                                    icon_props.color = color;
+                                    icon_props.opacity = opacity;
+                                    icon_props.layout.size.width = Length::Px(size);
+                                    icon_props.layout.size.height = Length::Px(size);
+                                    let icon_el = cx.svg_icon_props(icon_props);
+
+                                    let icon_el = if let Some(progress) =
+                                        trailing_icon_rotation_progress
+                                    {
                                         let degrees = 180.0 * progress.clamp(0.0, 1.0);
                                         let mut layout = fret_ui::element::LayoutStyle::default();
                                         layout.size.width = Length::Px(size);
@@ -803,110 +854,107 @@ impl TextField {
                                         icon_el
                                     };
 
-                                let icon_test_id = trailing_icon_test_id.clone().or_else(|| {
-                                    test_id
-                                        .as_ref()
-                                        .map(|id| Arc::<str>::from(format!("{id}-trailing-icon")))
-                                });
+                                    let icon_test_id =
+                                        trailing_icon_test_id.clone().or_else(|| {
+                                            test_id.as_ref().map(|id| {
+                                                Arc::<str>::from(format!("{id}-trailing-icon"))
+                                            })
+                                        });
 
-                                let icon_a11y_label = trailing_icon_a11y_label.clone();
+                                    let icon_a11y_label = trailing_icon_a11y_label.clone();
 
-                                let input_id_for_focus = input_id;
-                                let handler = on_trailing_icon_pointer_down.clone();
-                                let enabled = !disabled;
-                                let hover_opacity = theme
-                                    .number_by_key("md.sys.state.hover.state-layer-opacity")
-                                    .unwrap_or(0.08);
-                                let pressed_opacity = theme
-                                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                                    .unwrap_or(0.1);
-                                let ripple_base_opacity = pressed_opacity;
-                                let config = material_pressable_indication_config(&theme, None);
-                                let corner_radii = Corners::all(Px(24.0));
-                                let state_layer_color = alpha_mul(color, opacity);
+                                    let input_id_for_focus = input_id;
+                                    let handler = on_trailing_icon_pointer_down.clone();
+                                    let enabled = !disabled;
+                                    let ripple_base_opacity = pressed_opacity;
+                                    let corner_radii = Corners::all(Px(24.0));
+                                    let state_layer_color = alpha_mul(color, opacity);
 
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.position = fret_ui::element::PositionStyle::Absolute;
-                                layout.inset.top = Some(Px(0.0));
-                                layout.inset.right = Some(Px(0.0));
-                                layout.inset.bottom = Some(Px(0.0));
-                                layout.size.width = Length::Px(Px(48.0));
-                                layout.size.height = Length::Fill;
+                                    let mut layout = fret_ui::element::LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.top = Some(Px(0.0));
+                                    layout.inset.right = Some(Px(0.0));
+                                    layout.inset.bottom = Some(Px(0.0));
+                                    layout.size.width = Length::Px(Px(48.0));
+                                    layout.size.height = Length::Fill;
 
-                                cx.pressable(
-                                    PressableProps {
-                                        layout,
-                                        enabled,
-                                        focusable: false,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: icon_a11y_label,
-                                            test_id: icon_test_id,
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout,
+                                            enabled,
+                                            focusable: false,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: icon_a11y_label,
+                                                test_id: icon_test_id,
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    move |cx, state| {
-                                        if enabled {
-                                            cx.pressable_on_pointer_down(Arc::new(
-                                                move |host, action_cx, down: PointerDownCx| {
-                                                    host.request_focus(input_id_for_focus);
-                                                    if let Some(h) = handler.clone() {
-                                                        return h(host, action_cx, down);
-                                                    }
-                                                    PressablePointerDownResult::Continue
-                                                },
-                                            ));
-                                        }
+                                        move |cx, state| {
+                                            if enabled {
+                                                cx.pressable_on_pointer_down(Arc::new(
+                                                    move |host, action_cx, down: PointerDownCx| {
+                                                        host.request_focus(input_id_for_focus);
+                                                        if let Some(h) = handler.clone() {
+                                                            return h(host, action_cx, down);
+                                                        }
+                                                        PressablePointerDownResult::Continue
+                                                    },
+                                                ));
+                                            }
 
-                                        let pressable_id = cx.root_id();
-                                        let now_frame = cx.frame_id.0;
+                                            let pressable_id = cx.root_id();
+                                            let now_frame = cx.frame_id.0;
 
-                                        let mut props = PointerRegionProps::default();
-                                        props.enabled = enabled;
-                                        props.layout.size.width = Length::Fill;
-                                        props.layout.size.height = Length::Fill;
+                                            let mut props = PointerRegionProps::default();
+                                            props.enabled = enabled;
+                                            props.layout.size.width = Length::Fill;
+                                            props.layout.size.height = Length::Fill;
 
-                                        vec![cx.pointer_region(props, move |cx| {
-                                            cx.pointer_region_on_pointer_down(Arc::new(
-                                                |_host, _cx, _down| false,
-                                            ));
+                                            vec![cx.pointer_region(props, move |cx| {
+                                                cx.pointer_region_on_pointer_down(Arc::new(
+                                                    |_host, _cx, _down| false,
+                                                ));
 
-                                            let pressed = enabled && state.pressed;
-                                            let hovered = enabled && state.hovered;
-                                            let state_layer_target = if pressed {
-                                                pressed_opacity
-                                            } else if hovered {
-                                                hover_opacity
-                                            } else {
-                                                0.0
-                                            };
+                                                let pressed = enabled && state.pressed;
+                                                let hovered = enabled && state.hovered;
+                                                let state_layer_target = if pressed {
+                                                    pressed_opacity
+                                                } else if hovered {
+                                                    hover_opacity
+                                                } else {
+                                                    0.0
+                                                };
 
-                                            let overlay = material_ink_layer_for_pressable(
-                                                cx,
-                                                pressable_id,
-                                                now_frame,
-                                                corner_radii,
-                                                RippleClip::Bounded,
-                                                state_layer_color,
-                                                pressed,
-                                                state_layer_target,
-                                                ripple_base_opacity,
-                                                config,
-                                                false,
-                                            );
+                                                let overlay = material_ink_layer_for_pressable(
+                                                    cx,
+                                                    pressable_id,
+                                                    now_frame,
+                                                    corner_radii,
+                                                    RippleClip::Bounded,
+                                                    state_layer_color,
+                                                    pressed,
+                                                    state_layer_target,
+                                                    ripple_base_opacity,
+                                                    config,
+                                                    false,
+                                                );
 
-                                            let mut row = FlexProps::default();
-                                            row.direction = Axis::Horizontal;
-                                            row.justify = MainAlign::Center;
-                                            row.align = CrossAlign::Center;
-                                            row.layout.size.width = Length::Fill;
-                                            row.layout.size.height = Length::Fill;
-                                            vec![overlay, cx.flex(row, move |_cx| vec![icon_el])]
-                                        })]
-                                    },
-                                )
-                            });
+                                                let mut row = FlexProps::default();
+                                                row.direction = Axis::Horizontal;
+                                                row.justify = MainAlign::Center;
+                                                row.align = CrossAlign::Center;
+                                                row.layout.size.width = Length::Fill;
+                                                row.layout.size.height = Length::Fill;
+                                                vec![
+                                                    overlay,
+                                                    cx.flex(row, move |_cx| vec![icon_el]),
+                                                ]
+                                            })]
+                                        },
+                                    )
+                                });
 
                             cx.container(container, move |cx| {
                                 if let Some(out) = field_id_out.as_ref() {
@@ -925,7 +973,6 @@ impl TextField {
                         if let Some(label) = label.as_ref() {
                             children.push(text_field_label(
                                 cx,
-                                &theme,
                                 variant_for_children,
                                 label.clone(),
                                 float_progress,
@@ -944,7 +991,6 @@ impl TextField {
                         if let Some(text) = supporting_text.as_ref() {
                             children.push(text_field_supporting_text(
                                 cx,
-                                &theme,
                                 variant_for_children,
                                 text.clone(),
                                 states,
@@ -966,7 +1012,6 @@ impl TextField {
 
 fn text_field_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: TextFieldVariant,
     text: Arc<str>,
     progress: f32,
@@ -980,8 +1025,20 @@ fn text_field_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
 ) -> AnyElement {
-    let style = floating_label::material_floating_label_text_style(theme, progress)
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = floating_label::material_floating_label_text_style(theme, progress)
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+
+        let color = resolve_override_slot_with(
+            style_override.label_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || text_field_tokens::label_color(theme, variant, hovered, disabled, error, focused),
+        );
+
+        (style, color)
+    };
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
 
@@ -1028,16 +1085,7 @@ fn text_field_label<H: UiHost>(
                     layout: fret_ui::element::LayoutStyle::default(),
                     text: text.clone(),
                     style,
-                    color: Some(resolve_override_slot_with(
-                        style_override.label_color.as_ref(),
-                        states,
-                        |color| color.resolve(theme),
-                        || {
-                            text_field_tokens::label_color(
-                                theme, variant, hovered, disabled, error, focused,
-                            )
-                        },
-                    )),
+                    color: Some(color),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })]
@@ -1048,7 +1096,6 @@ fn text_field_label<H: UiHost>(
 
 fn text_field_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: TextFieldVariant,
     text: Arc<str>,
     states: WidgetStates,
@@ -1058,15 +1105,10 @@ fn text_field_supporting_text<H: UiHost>(
     error: bool,
     focused: bool,
 ) -> AnyElement {
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
-    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
-
-    cx.text_props(TextProps {
-        layout,
-        text,
-        style: theme.text_style_by_key("md.sys.typescale.body-small"),
-        color: Some(resolve_override_slot_with(
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = theme.text_style_by_key("md.sys.typescale.body-small");
+        let color = resolve_override_slot_with(
             style_override.supporting_text_color.as_ref(),
             states,
             |color| color.resolve(theme),
@@ -1075,7 +1117,20 @@ fn text_field_supporting_text<H: UiHost>(
                     theme, variant, hovered, disabled, error, focused,
                 )
             },
-        )),
+        );
+
+        (style, color)
+    };
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
+
+    cx.text_props(TextProps {
+        layout,
+        text,
+        style,
+        color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })

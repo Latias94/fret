@@ -176,12 +176,12 @@ impl DevtoolsWsClient {
     pub fn send(&self, msg: DiagTransportMessageV1) {
         if let Ok(mut outbox) = self.state.outbox.lock() {
             let mut msg = msg;
-            if msg.session_id.is_none() && msg.r#type != "hello" {
-                if let Ok(default) = self.state.default_session_id.lock() {
-                    if let Some(s) = default.as_deref() {
-                        msg.session_id = Some(s.to_string());
-                    }
-                }
+            if msg.session_id.is_none()
+                && msg.r#type != "hello"
+                && let Ok(default) = self.state.default_session_id.lock()
+                && let Some(s) = default.as_deref()
+            {
+                msg.session_id = Some(s.to_string());
             }
             outbox.push_back(msg);
         }
@@ -234,12 +234,9 @@ impl DevtoolsWsClient {
 
                 {
                     use tungstenite::stream::MaybeTlsStream;
-                    match ws.get_mut() {
-                        MaybeTlsStream::Plain(stream) => {
-                            let _ = stream.set_read_timeout(Some(cfg.read_timeout));
-                            let _ = stream.set_write_timeout(Some(Duration::from_millis(50)));
-                        }
-                        _ => {}
+                    if let MaybeTlsStream::Plain(stream) = ws.get_mut() {
+                        let _ = stream.set_read_timeout(Some(cfg.read_timeout));
+                        let _ = stream.set_write_timeout(Some(Duration::from_millis(50)));
                     }
                 }
 

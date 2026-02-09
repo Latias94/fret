@@ -3,7 +3,7 @@ use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
-use std::time::Instant;
+use fret_core::time::Instant;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -134,6 +134,13 @@ impl ElementHostWidget {
                 );
             }
             ElementInstance::FocusScope(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
+            ElementInstance::LayoutQueryRegion(props) => {
                 paint_children_clipped_if(
                     cx,
                     matches!(props.layout.overflow, Overflow::Clip),
@@ -1293,6 +1300,7 @@ impl ElementHostWidget {
                         order: DrawOrder(0),
                         rect: cx.bounds,
                         image: props.image,
+                        fit: props.fit,
                         opacity,
                     });
                 }

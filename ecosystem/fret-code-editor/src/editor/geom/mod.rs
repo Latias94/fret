@@ -32,6 +32,8 @@ pub(super) struct RowGeom {
     /// Coordinate space: relative to the row text origin (y=0 at the top of the row text box).
     pub(super) caret_rect_top: Option<Px>,
     pub(super) caret_rect_height: Option<Px>,
+    /// Whether the measured text blob for this row includes an inline preedit insertion.
+    pub(super) has_preedit: bool,
     /// Mapping needed when the displayed row includes an injected preedit string.
     pub(super) preedit: Option<RowPreeditMapping>,
 }
@@ -214,32 +216,37 @@ pub(super) fn hit_test_index_from_caret_stops(stops: &[(usize, Px)], x: Px) -> u
     }
 }
 
-pub(super) fn map_row_local_to_buffer_byte(
+pub(super) fn map_row_display_local_to_buffer_byte(
     buf: &TextBuffer,
     geom: &RowGeom,
-    local: usize,
+    display_local: usize,
 ) -> usize {
     let row_start = geom.row_range.start.min(buf.len_bytes());
     let row_end = geom.row_range.end.min(buf.len_bytes()).max(row_start);
     let max_local = row_end.saturating_sub(row_start);
 
-    let mut local = local;
+    let mut local = display_local;
     if let Some(preedit) = geom.preedit {
-        let insert_at = preedit.insert_at.min(max_local);
+        // `insert_at` is expressed in display-local coordinates **before** the preedit injection.
+        // When mapping a display-local index back to the base buffer, we "remove" the injected
+        // preedit segment and snap positions inside the preedit to its anchor.
+        let insert_at = preedit.insert_at;
         let preedit_len = preedit.preedit_len;
         if local <= insert_at {
             local = local.min(insert_at);
-            return row_start.saturating_add(local).min(row_end);
+        } else {
+            let after_insert = insert_at.saturating_add(preedit_len);
+            if local >= after_insert {
+                local = local.saturating_sub(preedit_len);
+            } else {
+                // Inside the injected preedit: snap to the injection point in the base buffer.
+                local = insert_at;
+            }
         }
-        let after_insert = insert_at.saturating_add(preedit_len);
-        if local >= after_insert {
-            let base_local = local.saturating_sub(preedit_len);
-            return row_start
-                .saturating_add(base_local.min(max_local))
-                .min(row_end);
-        }
-        // Inside the injected preedit: snap to the injection point in the base buffer.
-        return row_start.saturating_add(insert_at).min(row_end);
+    }
+
+    if let Some(folds) = geom.fold_map.as_ref() {
+        local = folds.display_local_to_buffer_local(local);
     }
 
     row_start.saturating_add(local.min(max_local)).min(row_end)
@@ -253,17 +260,18 @@ pub(super) fn caret_for_pointer(
     cell_w: Px,
 ) -> usize {
     let local_x = Px(position.x.0 - bounds.origin.x.0);
+    let row_has_preedit = st.preedit.is_some()
+        && st
+            .display_map
+            .byte_to_display_point(&st.buffer, st.selection.caret().min(st.buffer.len_bytes()))
+            .row
+            == row;
     if let Some((geom, _)) = st.row_geom_cache.get(&row)
         && !geom.caret_stops.is_empty()
-        && geom.preedit.is_some() == st.preedit.is_some()
+        && geom.has_preedit == row_has_preedit
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, local_x);
-        let local = geom
-            .fold_map
-            .as_ref()
-            .map(|m| m.display_local_to_buffer_local(local))
-            .unwrap_or(local);
-        let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
+        let byte = map_row_display_local_to_buffer_byte(&st.buffer, geom, local);
         return st
             .buffer
             .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()));
@@ -298,6 +306,7 @@ pub(super) fn caret_rect_for_selection(
         .buffer
         .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
     let pt = st.display_map.byte_to_display_point(&st.buffer, caret);
+    let row_has_preedit = st.preedit.is_some();
     let offset = scroll_handle.offset();
     let row_y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
 
@@ -314,14 +323,15 @@ pub(super) fn caret_rect_for_selection(
 
         if !geom.caret_stops.is_empty()
             && caret >= geom.row_range.start
-            && geom.preedit.is_some() == st.preedit.is_some()
+            && geom.has_preedit == row_has_preedit
         {
             let mut local = caret.saturating_sub(geom.row_range.start);
             if let Some(folds) = geom.fold_map.as_ref() {
                 local = folds.buffer_local_to_display_local(local);
             }
             if let Some(preedit) = st.preedit.as_ref()
-                && geom.preedit.is_some()
+                && geom.has_preedit
+                && row_has_preedit
             {
                 local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
             }
@@ -371,9 +381,15 @@ pub(super) fn caret_x_for_buffer_byte_in_row(
     caret: usize,
 ) -> Option<Px> {
     let (geom, _) = st.row_geom_cache.get(&row)?;
+    let row_has_preedit = st.preedit.is_some()
+        && st
+            .display_map
+            .byte_to_display_point(&st.buffer, st.selection.caret().min(st.buffer.len_bytes()))
+            .row
+            == row;
     if geom.caret_stops.is_empty()
         || caret < geom.row_range.start
-        || geom.preedit.is_some() != st.preedit.is_some()
+        || geom.has_preedit != row_has_preedit
     {
         return None;
     }
@@ -383,7 +399,8 @@ pub(super) fn caret_x_for_buffer_byte_in_row(
         local = folds.buffer_local_to_display_local(local);
     }
     if let Some(preedit) = st.preedit.as_ref()
-        && geom.preedit.is_some()
+        && geom.has_preedit
+        && row_has_preedit
     {
         local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
     }
