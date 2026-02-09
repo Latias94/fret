@@ -3663,6 +3663,15 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
+                let (on_dismiss_request, on_close_auto_focus) =
+                    menu::root::menu_close_auto_focus_guard_hooks(
+                        cx,
+                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal),
+                        open.clone(),
+                        on_dismiss_request.clone(),
+                        on_close_auto_focus.clone(),
+                    );
+
                 let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
@@ -3675,8 +3684,8 @@ impl ContextMenu {
                         .pointer_content_focus(content_focus_id.get())
                         .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     on_open_auto_focus.clone(),
-                    on_close_auto_focus.clone(),
-                    on_dismiss_request.clone(),
+                    on_close_auto_focus,
+                    on_dismiss_request,
                     dismissible_on_pointer_move,
                     modal,
                 );
