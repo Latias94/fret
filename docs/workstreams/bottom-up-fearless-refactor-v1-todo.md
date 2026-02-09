@@ -129,6 +129,30 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card/fixtures.rs` (`web_vs_fret_hover_card_overlay_chrome_cases_match_web_fixtures`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card.rs`
+  - Evidence (fixture-driven slice, overlay chrome date-picker select-open listbox sizing):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/date_picker/fixtures.rs` (`web_vs_fret_date_picker_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/date_picker.rs` (keeps procedural “listbox paints above popover” test)
+  - Evidence (fixture-driven slice, overlay chrome button-group destructive menu item states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/button_group/fixtures.rs` (`web_vs_fret_button_group_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/button_group.rs`
+  - Evidence (fixture-driven slice, overlay chrome calendar panel sizing):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/calendar/fixtures.rs` (`web_vs_fret_calendar_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/calendar.rs`
+  - Evidence (fixture-driven slice, overlay chrome dialog chrome + surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dialog/fixtures.rs` (`web_vs_fret_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/dialog.rs`
+  - Evidence (fixture-driven slice, overlay chrome drawer surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_drawer_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/drawer/fixtures.rs` (`web_vs_fret_drawer_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/drawer.rs`
+  - Evidence (fixture-driven slice, overlay chrome alert-dialog chrome):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_alert_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog/fixtures.rs` (`web_vs_fret_alert_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog.rs`
   - Evidence (fixture-driven slice, context-menu demo overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu/fixtures.rs` (`web_vs_fret_context_menu_demo_cases_match_web_fixtures`)
@@ -719,3 +743,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_sheet_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_calendar_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_drawer_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_alert_dialog_cases_v1.json`
