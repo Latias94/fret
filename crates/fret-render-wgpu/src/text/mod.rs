@@ -34,14 +34,29 @@ fn released_blob_cache_entries() -> usize {
 fn unwrapped_layout_cache_entries() -> usize {
     static ENTRIES: OnceLock<usize> = OnceLock::new();
     *ENTRIES.get_or_init(|| {
-        // Default: off. Opt in to retain width-independent “unwrapped” shaping results and reuse
-        // them across wrap-width changes (reduces `Text::prepare` churn under resize jitter).
+        // Default: on for native builds (bounded). Retain width-independent “unwrapped” shaping
+        // results and reuse them across wrap-width changes (reduces `Text::prepare` churn under
+        // resize jitter; large win for editor resize probes).
         std::env::var("FRET_TEXT_UNWRAPPED_LAYOUT_CACHE_ENTRIES")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(0)
+            // Allow disabling via env var (`0`).
+            .unwrap_or(default_unwrapped_layout_cache_entries())
             .min(8192)
     })
+}
+
+fn default_unwrapped_layout_cache_entries() -> usize {
+    // Keep wasm builds conservative; native builds get a bounded default to improve interactive
+    // resize and editor-class text workloads.
+    #[cfg(target_arch = "wasm32")]
+    {
+        0
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        1024
+    }
 }
 
 fn unwrapped_layout_cache_max_text_len_bytes() -> usize {
