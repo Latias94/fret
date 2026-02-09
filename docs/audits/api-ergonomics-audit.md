@@ -25,7 +25,7 @@ Fret already has the core primitives required for a GPUI-style authoring experie
 
 The main ergonomics limitations today:
 
-- "vector-first authoring" friction (`Vec<AnyElement>` everywhere).
+- lingering "vector-first authoring" friction at some ecosystem boundaries (some APIs still prefer `Vec<AnyElement>`).
 - two competing authoring dialects (direct runtime props vs `UiBuilder` patch surface).
 - small, repeated boilerplate patterns that fragment across crates (`test_id`, common semantics stamping, etc.).
 
@@ -45,12 +45,23 @@ Symptoms:
 - Hard to stream/compose children with iterators.
 - Third-party crates often implement local helper traits/macros instead of reusing a shared pattern.
 
+Reality check (kernel):
+
+- `ElementContext` already accepts iterator-friendly children (`I: IntoIterator<Item = AnyElement>`) for
+  common primitives like `container`, `flex`, `stack`, `scroll`, etc.
+- Evidence: `crates/fret-ui/src/elements/cx.rs`
+
 Recommended direction:
 
 - Prefer iterator-friendly boundaries in constructors and setters:
   - `children: impl IntoIterator<Item = AnyElement>`
   - store `Vec<AnyElement>` internally, but accept iterators at the boundary.
 - Prefer `Elements` (owned wrapper) or `impl IntoIterator` for authoring-facing returns instead of exposing raw `Vec`.
+
+Practical scope:
+
+- Keep the kernel pattern as-is (it is already iterator-friendly).
+- Continue migrating ecosystem constructors/setters and examples that still require `Vec`.
 
 ### H2) View function signatures and `fn` pointer wiring
 
@@ -84,6 +95,23 @@ Recent improvement (small win):
 
 - `AnyElement::test_id(...)` exists as a single-call helper, keeping the mechanism in `fret-ui` and avoiding ecosystem dependency requirements.
 - Evidence: `crates/fret-ui/src/element.rs`
+
+### H4) Theme access friction (borrow checker vs authoring flow)
+
+Symptom:
+
+- app code frequently writes `Theme::global(&*cx.app).clone()` to avoid holding a `&Theme` borrow across
+  subsequent `cx` calls.
+
+Recommended pattern:
+
+- Prefer `ThemeSnapshot` to avoid cloning and to keep the borrow scoped:
+
+```rust
+let theme = Theme::global(&*cx.app).snapshot();
+```
+
+`ThemeSnapshot` is `Copy` and provides `color_required(...)` / `metric_required(...)` for common token reads.
 
 ## Comparisons (What to Learn, What to Avoid)
 
