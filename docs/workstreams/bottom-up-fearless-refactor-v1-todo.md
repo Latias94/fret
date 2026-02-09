@@ -529,12 +529,21 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: shrink Rust LOC and make overlay contracts reviewable and stable during refactors.
   - Gate: `cargo nextest run -p fret-ui-kit`
   - Early evidence (module split scaffolding):
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs`
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/tooltip.rs`
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/pointer_capture.rs`
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/viewport_capture.rs`
-     - `ecosystem/fret-ui-kit/src/window_overlays/tests/fixtures/tooltip_observers.json`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/mod.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/tooltip.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/pointer_capture.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/viewport_capture.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/fixtures/tooltip_observers.json`
+
+- [x] BU-FR-eco-045 Reduce “god test file” risk in `fret-docking` by splitting `dock/tests.rs` into focused submodules.
+  - Target: `ecosystem/fret-docking/src/dock/tests/mod.rs` (formerly `tests.rs`)
+  - Goal: keep the shared harness stable while making incremental test edits low-conflict.
+  - Gate: `cargo nextest run -p fret-docking`
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/tests/mod.rs`
+    - `ecosystem/fret-docking/src/dock/tests/drag.rs`
+    - `ecosystem/fret-docking/src/dock/tests/viewport.rs`
 
 - [ ] BU-FR-eco-044 L0 audit `fret-ui-shadcn`, and plan conversion of huge web-vs-fret conformance sources into data-driven harnesses.
   - Targets:
