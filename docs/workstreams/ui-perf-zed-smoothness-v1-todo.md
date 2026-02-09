@@ -20,6 +20,17 @@ Conventions:
 
 ## Current priorities (updated 2026-02-08)
 
+- [ ] Pause checkpoint (2026-02-10): consolidate and avoid new experiments unless a gate regresses.
+  - Summary + rollback switches: `docs/workstreams/ui-perf-zed-smoothness-v1.md` (“Checkpoint (2026-02-10)”).
+  - Evidence anchors:
+    - small-step max `dw` widening: perf log entry `2026-02-09 22:54:20` (commit `53aa6534a`)
+    - wrap-from-unwrapped allocation win: perf log entry `2026-02-09 22:12:02` (commit `7b9a98a8f`)
+    - non-landed experiment example: perf log entry `2026-02-10 00:18:40` (sticky small-step)
+  - Maintenance tasks (keep this workstream “ready to resume”):
+    - [ ] Re-run `ui-resize-probes` + `ui-code-editor-resize-probes` gates after any large merge/refactor and record the
+      no-code-change evidence in the perf log.
+    - [ ] If `ui-resize-probes` becomes flaky again, cut a new baseline via `tools/perf/diag_perf_baseline_select.sh`.
+
 - [ ] Keep the GPUI gap map current and milestone-linked:
   - Reference: `docs/workstreams/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
