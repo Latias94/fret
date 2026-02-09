@@ -35,11 +35,10 @@ Viewport breakpoints (`md:`) are not sufficient once docking/panels become the d
 
 - A minimal runtime contract (mechanism) that is stable and portable (native + wasm).
 - A small typed policy surface in `fret-ui-kit` that avoids oscillation (hysteresis).
-- Migration of at least one "known offender" recipe (Field responsive orientation) to the container
-  query mechanism, plus a regression gate.
+- Migration of at least two "known offender" recipes to the container query mechanism (forms +
+  navigation), plus regression gates.
 
 ## Tracking
 
 - Milestones: `docs/workstreams/container-queries-v1-milestones.md`
 - TODO list: `docs/workstreams/container-queries-v1-todo.md`
-

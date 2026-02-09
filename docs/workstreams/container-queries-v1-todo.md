@@ -23,29 +23,36 @@ ADR anchor:
 
 ## Runtime mechanism (`crates/fret-ui`)
 
-- [ ] Define a query region wrapper element kind (pass-through layout; records committed bounds).
-- [ ] Expose a frame-lagged query API (read committed bounds by stable ID).
-- [ ] Dependency tracking: record which view roots observed which regions.
-- [ ] Invalidation: bounds change invalidates dependents (epsilon + coalescing).
-- [ ] Add diagnostics hooks (inspector snapshot / debug logging).
+- [x] Define a query region wrapper element kind (pass-through layout; records committed bounds).
+- [x] Expose a frame-lagged query API (read committed bounds by stable ID).
+- [x] Dependency tracking: record which view roots observed which regions.
+- [x] Invalidation: bounds change invalidates dependents (coalescing OK; avoid same-frame recursion).
+- [ ] Add diagnostics hooks (inspector snapshot / debug logging) beyond best-effort naming.
 - [ ] Add unit tests for:
-  - [ ] frame-lagged semantics (no same-frame recursion),
-  - [ ] invalidation on bounds change,
-  - [ ] jitter threshold.
+  - [x] frame-lagged semantics (no same-frame recursion),
+  - [x] invalidation on bounds change,
+  - [ ] jitter threshold / epsilon handling.
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
-- [ ] Add `ContainerQuery` helper types:
-  - [ ] `width_at_least(threshold, hysteresis_px)`,
-  - [ ] `breakpoint_md_like()` (optional convenience).
-- [ ] Add unit tests for hysteresis / non-oscillation.
+- [x] Add container query helper surface:
+  - [x] query region wrappers (mechanism-friendly; paint/input transparent),
+  - [x] breakpoint selection with hysteresis,
+  - [x] optional Tailwind-compatible breakpoint tokens.
+- [x] Add unit tests for hysteresis / non-oscillation.
 
 ## Recipe migrations (`ecosystem/fret-ui-shadcn`)
 
-- [ ] Migrate `Field(orientation="responsive")` away from viewport-width breakpoint.
+- [x] Migrate `Field(orientation="responsive")` away from viewport-width breakpoint.
   - Evidence: `ecosystem/fret-ui-shadcn/src/field.rs` no longer hard-codes `>=768px` for the
     container-query approximation path.
-- [ ] Pick a second shadcn recipe that currently keys off viewport width but should key off panel
-  width (candidate: `NavigationMenu`), and migrate it with a regression gate.
+- [x] Migrate a second shadcn recipe that currently keys off viewport width but should key off panel
+  width (`NavigationMenu`), and gate it with an automated test.
 - [ ] Add a regression gate for the migrated behavior in a resizable panel (docking harness or a
   focused unit test).
+
+## Remaining approximations (audit list)
+
+- [ ] `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`: responsive `sm`-like behavior should follow the
+  dialog's container width (not the viewport) once a stable query region is available for that
+  surface.

@@ -14,6 +14,11 @@ ADR anchor:
 
 - `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
 
+## Status (as of 2026-02-09)
+
+- M0–M4 are implemented on `main` (mechanism + kit helpers + initial shadcn migrations).
+- M5 is the next validation milestone (docking/panel reality check).
+
 ## M0 — Contract locked (mechanism + policy split)
 
 Definition of done:
