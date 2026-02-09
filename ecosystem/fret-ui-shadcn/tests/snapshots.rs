@@ -614,3 +614,35 @@ fn snapshot_extras_rating_default() {
         ]
     });
 }
+
+#[test]
+fn snapshot_extras_avatar_stack_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_avatar_stack_default", bounds, |cx| {
+        let a =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("A").into_element(cx)],
+            );
+        let b =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("B").into_element(cx)],
+            );
+        let c =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("C").into_element(cx)],
+            );
+        let d =
+            fret_ui_shadcn::Avatar::new(
+                [fret_ui_shadcn::AvatarFallback::new("D").into_element(cx)],
+            );
+
+        vec![
+            fret_ui_shadcn::extras::AvatarStack::new([a, b, c, d])
+                .size_px(Px(40.0))
+                .into_element(cx),
+        ]
+    });
+}
