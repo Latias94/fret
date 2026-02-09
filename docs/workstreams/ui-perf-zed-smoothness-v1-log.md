@@ -8533,3 +8533,13 @@ Attribution (attempt-3 worst bundle):
 - `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=8327us`.
 - `app_snapshot.code_editor.torture.paint_perf`: `us_total=125us`, `us_syntax_spans=0us`.
 - `app_snapshot.code_editor.torture.cache_stats`: `syntax_resets=2`, `row_rich_hits=152610`, `row_rich_misses=837`.
+
+## 2026-02-09 13:27:36 (commit `4847d4f13`)
+
+Change:
+- Add a regression test to ensure `CodeEditorHandle::set_language(...)` remains idempotent for the same value.
+
+Commands:
+```bash
+cargo test -p fret-code-editor --features syntax-rust
+```
