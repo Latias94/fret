@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "dropdown-menu-demo.light.surface_colors", "web_name": "dropdown-menu-demo", "theme": "light", "recipe": "demo_surface_colors" },
+    { "id": "dropdown-menu-demo.dark.surface_colors", "web_name": "dropdown-menu-demo", "theme": "dark", "recipe": "demo_surface_colors" },
+
+    { "id": "dropdown-menu-demo.light.panel_size", "web_name": "dropdown-menu-demo", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "dropdown-menu-demo.dark.panel_size", "web_name": "dropdown-menu-demo", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "dropdown-menu-demo.vp1440x240.light.panel_size", "web_name": "dropdown-menu-demo.vp1440x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "dropdown-menu-demo.vp1440x240.dark.panel_size", "web_name": "dropdown-menu-demo.vp1440x240", "theme": "dark", "recipe": "demo_panel_size" },
+    { "id": "dropdown-menu-demo.vp375x240.light.panel_size", "web_name": "dropdown-menu-demo.vp375x240", "theme": "light", "recipe": "demo_panel_size" },
+    { "id": "dropdown-menu-demo.vp375x240.dark.panel_size", "web_name": "dropdown-menu-demo.vp375x240", "theme": "dark", "recipe": "demo_panel_size" },
+
+    { "id": "dropdown-menu-demo.light.shadow_insets", "web_name": "dropdown-menu-demo", "theme": "light", "recipe": "demo_shadow_insets" },
+    { "id": "dropdown-menu-demo.dark.shadow_insets", "web_name": "dropdown-menu-demo", "theme": "dark", "recipe": "demo_shadow_insets" },
+
+    { "id": "dropdown-menu-demo.highlight-first.light.highlighted_item_chrome", "web_name": "dropdown-menu-demo.highlight-first", "theme": "light", "recipe": "highlighted_item_chrome" },
+    { "id": "dropdown-menu-demo.highlight-first.dark.highlighted_item_chrome", "web_name": "dropdown-menu-demo.highlight-first", "theme": "dark", "recipe": "highlighted_item_chrome" },
+    { "id": "dropdown-menu-demo.highlight-first.vp375x240.light.highlighted_item_chrome", "web_name": "dropdown-menu-demo.highlight-first-vp375x240", "theme": "light", "recipe": "highlighted_item_chrome" },
+    { "id": "dropdown-menu-demo.highlight-first.vp375x240.dark.highlighted_item_chrome", "web_name": "dropdown-menu-demo.highlight-first-vp375x240", "theme": "dark", "recipe": "highlighted_item_chrome" },
+
+    { "id": "dropdown-menu-demo.focus-first.light.focused_item_chrome", "web_name": "dropdown-menu-demo.focus-first", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "dropdown-menu-demo.focus-first.dark.focused_item_chrome", "web_name": "dropdown-menu-demo.focus-first", "theme": "dark", "recipe": "focused_item_chrome" },
+    { "id": "dropdown-menu-demo.focus-first.vp375x240.light.focused_item_chrome", "web_name": "dropdown-menu-demo.focus-first-vp375x240", "theme": "light", "recipe": "focused_item_chrome" },
+    { "id": "dropdown-menu-demo.focus-first.vp375x240.dark.focused_item_chrome", "web_name": "dropdown-menu-demo.focus-first-vp375x240", "theme": "dark", "recipe": "focused_item_chrome" },
+
+    { "id": "dropdown-menu-demo.submenu.light.surface_colors", "web_name": "dropdown-menu-demo.submenu", "theme": "light", "recipe": "submenu_surface_colors" },
+    { "id": "dropdown-menu-demo.submenu.dark.surface_colors", "web_name": "dropdown-menu-demo.submenu", "theme": "dark", "recipe": "submenu_surface_colors" },
+
+    { "id": "dropdown-menu-demo.submenu-kbd.light.shadow_insets", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "light", "recipe": "submenu_shadow_insets" },
+    { "id": "dropdown-menu-demo.submenu-kbd.dark.shadow_insets", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "dark", "recipe": "submenu_shadow_insets" },
+
+    { "id": "dropdown-menu-demo.submenu-kbd.light.panel_size", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "light", "recipe": "submenu_panel_size" },
+    { "id": "dropdown-menu-demo.submenu-kbd.dark.panel_size", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "dark", "recipe": "submenu_panel_size" },
+    { "id": "dropdown-menu-demo.submenu-kbd.vp1440x240.light.panel_size", "web_name": "dropdown-menu-demo.submenu-kbd-vp1440x240", "theme": "light", "recipe": "submenu_panel_size" },
+    { "id": "dropdown-menu-demo.submenu-kbd.vp1440x240.dark.panel_size", "web_name": "dropdown-menu-demo.submenu-kbd-vp1440x240", "theme": "dark", "recipe": "submenu_panel_size" },
+
+    { "id": "dropdown-menu-demo.submenu-kbd.light.subtrigger_open_chrome", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "light", "recipe": "subtrigger_open_chrome" },
+    { "id": "dropdown-menu-demo.submenu-kbd.dark.subtrigger_open_chrome", "web_name": "dropdown-menu-demo.submenu-kbd", "theme": "dark", "recipe": "subtrigger_open_chrome" },
+
+    { "id": "dropdown-menu-demo.submenu-kbd.vp1440x240.light.surface_colors", "web_name": "dropdown-menu-demo.submenu-kbd-vp1440x240", "theme": "light", "recipe": "submenu_surface_colors_kbd" },
+    { "id": "dropdown-menu-demo.submenu-kbd.vp1440x240.dark.surface_colors", "web_name": "dropdown-menu-demo.submenu-kbd-vp1440x240", "theme": "dark", "recipe": "submenu_surface_colors_kbd" },
+
+    { "id": "dropdown-menu-demo.panel_chrome", "web_name": "dropdown-menu-demo", "recipe": "panel_chrome" }
+  ]
+}
+
