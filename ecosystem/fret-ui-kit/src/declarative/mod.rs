@@ -6,6 +6,7 @@ pub mod canvas_surface;
 pub mod chrome;
 pub mod collapsible_motion;
 pub mod collection_semantics;
+pub mod container_queries;
 pub mod controllable_state;
 pub mod dismissible;
 pub mod file_tree;
@@ -38,6 +39,10 @@ pub mod visually_hidden;
 pub mod windowed_rows_surface;
 
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
+pub use container_queries::{
+    ContainerQueryHysteresis, container_breakpoints, container_query_region,
+    container_query_region_with_id,
+};
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 pub use semantics::AnyElementSemanticsExt;
