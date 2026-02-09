@@ -134,3 +134,15 @@ This workstream should stay evidence-linked:
   - Skill: `.agents/skills/fret-perf-attribution/SKILL.md`
   - Rationale: keep `fret-perf-workflow` focused on gates/baselines while providing a deeper “tail latency”
     playbook for CPU vs GPU triage and external profilers.
+- Streamlined the “P0 resize jank” loop across diag/perf skills:
+  - Skills:
+    - `.agents/skills/fret-diag-workflow/SKILL.md`
+    - `.agents/skills/fret-perf-workflow/SKILL.md`
+  - Change: add copy/paste “resize fast path” + document how to append gate attempts into the perf log.
+  - Evidence: commit `ea13d4015`.
+- Stabilized a flaky steady-suite navigation script (so perf gating does not fail due to `wait_until_timeout`):
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json`
+    - `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json`
+  - Change: add a short settle delay after scrolling/search navigation and extend the page-mount timeout.
+  - Evidence: commit `0d168fc5e`.
