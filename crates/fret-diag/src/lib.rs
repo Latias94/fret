@@ -52,11 +52,13 @@ use stats::{
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
     check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
     check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
     check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
     check_bundle_for_ui_gallery_code_editor_torture_marker_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
@@ -193,12 +195,16 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped: bool =
         false;
+    let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: bool =
+        false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_inlays_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: bool = false;
     let mut check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: bool =
+        false;
+    let mut check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: bool = false;
     let mut check_ui_gallery_code_editor_word_boundary: bool = false;
@@ -829,6 +835,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     true;
                 i += 1;
             }
+            "--check-ui-gallery-code-editor-torture-folds-placeholder-present-under-inline-preedit-with-decorations" =>
+            {
+                check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
+                    true;
+                i += 1;
+            }
             "--check-ui-gallery-code-editor-torture-folds-placeholder-present" => {
                 check_ui_gallery_code_editor_torture_folds_placeholder_present = true;
                 i += 1;
@@ -849,6 +861,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-ui-gallery-code-editor-torture-inlays-present-under-inline-preedit-unwrapped" =>
             {
                 check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-inlays-present-under-inline-preedit-with-decorations" =>
+            {
+                check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
                     true;
                 i += 1;
             }
@@ -1899,11 +1917,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
                         check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection,
@@ -2110,11 +2130,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_code_editor_torture_inlays_present,
                         check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary,
                         check_ui_gallery_code_editor_a11y_selection,
@@ -2462,11 +2484,13 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+                        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
                         || check_ui_gallery_code_editor_torture_inlays_present
                         || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+                        || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
                         || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                         || check_ui_gallery_code_editor_word_boundary
                         || check_ui_gallery_code_editor_a11y_selection
@@ -2550,11 +2574,13 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+                            check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
                             check_ui_gallery_code_editor_torture_inlays_present,
                             check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+                            check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
                             check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                             check_ui_gallery_code_editor_word_boundary,
                             check_ui_gallery_code_editor_a11y_selection,
@@ -3801,8 +3827,14 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_torture_geom_fallbacks_low
                     || check_ui_gallery_code_editor_torture_read_only_blocks_edits
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_inlays_present
+                    || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
                     || check_ui_gallery_code_editor_word_boundary
                     || check_ui_gallery_code_editor_a11y_selection
                     || check_ui_gallery_code_editor_a11y_composition
@@ -3872,7 +3904,9 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
                     || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
+                    || ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
                     || ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
@@ -4147,6 +4181,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
+                    let suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
+                        ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_present =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_present;
@@ -4162,6 +4199,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped =
                         ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_gate(&src)
                             && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
+                    let suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
+                        ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
                     let suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap =
                         ui_gallery_script_requires_code_editor_torture_inlays_present_under_soft_wrap_gate(&src)
                             && !check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
@@ -4301,6 +4341,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+                            || suite_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -4311,6 +4353,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
                             || suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+                            || suite_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
                         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
                             || suite_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
                         check_ui_gallery_code_editor_word_boundary
@@ -7673,7 +7717,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 48] {
+fn ui_gallery_suite_scripts() -> [&'static str; 50] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -7717,16 +7761,18 @@ fn ui_gallery_suite_scripts() -> [&'static str; 48] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 38] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 40] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -7752,9 +7798,11 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 38] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
@@ -8262,6 +8310,19 @@ fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_unde
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_code_editor_torture_inlays_present_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -8293,6 +8354,19 @@ fn ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_pr
     matches!(
         name,
         "ui-gallery-code-editor-torture-inlays-inline-preedit-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json"
     )
 }
 
@@ -8771,11 +8845,13 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped: bool,
+    check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_torture_inlays_present: bool,
     check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped: bool,
+    check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations: bool,
     check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: bool,
     check_ui_gallery_code_editor_word_boundary: bool,
     check_ui_gallery_code_editor_a11y_selection: bool,
@@ -9058,6 +9134,13 @@ fn apply_post_run_checks(
             warmup_frames,
         )?;
     }
+    if check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+    {
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
     if check_ui_gallery_code_editor_torture_folds_placeholder_present {
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present(
             bundle_path,
@@ -9081,6 +9164,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped {
         check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations {
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations(
             bundle_path,
             warmup_frames,
         )?;
@@ -9898,7 +9987,9 @@ mod tests {
         check_bundle_for_ui_gallery_code_editor_a11y_selection_json,
         check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json,
         check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json,
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json,
         check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json,
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_json,
         check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json,
         check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_json,
@@ -14859,6 +14950,95 @@ mod tests {
     }
 
     #[test]
+    fn ui_gallery_code_editor_folds_inline_preedit_with_decorations_gate_passes_when_placeholder_present()
+     {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "folds": { "line0_placeholder_present": true }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir(
+            "ui_gallery_code_editor_folds_inline_preedit_with_decorations_gate_passes_when_present",
+        );
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_folds_inline_preedit_with_decorations_gate_fails_when_placeholder_absent()
+     {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "folds_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "folds": { "line0_placeholder_present": false }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir(
+            "ui_gallery_code_editor_folds_inline_preedit_with_decorations_gate_fails_when_absent",
+        );
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("gate failed"));
+    }
+
+    #[test]
     fn ui_gallery_code_editor_inlays_inline_preedit_unwrapped_gate_passes_when_inlay_present() {
         let bundle = json!({
             "schema_version": 1,
@@ -14933,6 +15113,95 @@ mod tests {
         let _ = std::fs::create_dir_all(&out_dir);
         let bundle_path = out_dir.join("bundle.json");
         let err = check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_inlays_inline_preedit_with_decorations_gate_passes_when_inlay_present()
+     {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "inlays": { "line0_inlay_present": true }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir(
+            "ui_gallery_code_editor_inlays_inline_preedit_with_decorations_gate_passes_when_present",
+        );
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_inlays_inline_preedit_with_decorations_gate_fails_when_inlay_absent()
+    {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "code_editor_torture",
+                                "code_editor": {
+                                    "soft_wrap_cols": 80,
+                                    "inlays_fixture": true,
+                                    "torture": {
+                                        "preedit_active": true,
+                                        "allow_decorations_under_inline_preedit": true,
+                                        "inlays": { "line0_inlay_present": false }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir(
+            "ui_gallery_code_editor_inlays_inline_preedit_with_decorations_gate_fails_when_absent",
+        );
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_json(
             &bundle,
             &bundle_path,
             0,
