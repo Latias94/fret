@@ -638,7 +638,11 @@ impl CodeEditorHandle {
         #[cfg(feature = "syntax")]
         {
             let mut st = self.state.borrow_mut();
-            st.language = language.map(Into::into);
+            let next: Option<Arc<str>> = language.map(Into::into);
+            if st.language == next {
+                return;
+            }
+            st.language = next;
             st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
             st.syntax_row_cache_language = None;
             st.syntax_row_cache_tick = 0;
