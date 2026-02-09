@@ -180,6 +180,9 @@ Baseline fact (quick reference):
    - Fret stopgap (default-on for jitter-class interactive resize):
      - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
      - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
+     - Small-step detection is symmetric (back-and-forth drags keep the same policy/caches enabled).
+       - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
+       - Evidence: perf log entry `2026-02-09 16:37:00` (jitter probe p95 total improves by ~0.3ms).
    - Fret experiment knob (still default-off, broader scope): `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX`.
    - Latest evidence: see the perf log entries dated `2026-02-08` for `ui-resize-probes` gate stability before/after
      the small-step default bucketing change.

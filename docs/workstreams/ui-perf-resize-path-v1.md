@@ -59,6 +59,29 @@ Interactive resize is a *stress multiplier*:
 - Many widgets request viewport roots (scroll content, lists, docking viewports), which increases solve count.
 - Text wrap widths churn under small-step jitter, which amplifies measure/shaping costs.
 
+### Do we relayout during live drag?
+
+Yes — and so does GPUI/Zed.
+
+During a live resize drag, the window bounds are changing, so Fret will typically:
+
+- rebuild the layout-engine request/build view of the tree,
+- solve layout roots (window root + any active viewport roots),
+- run paint (often dominated by text prep under width jitter).
+
+The goal is not to “avoid all layout while resizing” (that usually implies visual lag), but to make live-resize
+frames *predictable*:
+
+- amortize text work under width jitter (wrap/shaping reuse),
+- keep layout request/build overhead bounded (data structure + traversal discipline),
+- keep viewport-root solves bounded (count + solve cost),
+- ensure the “small-step” path remains stable when the user drags back-and-forth (avoid toggling policies).
+
+Recent evidence:
+- Commit `0de40863f` makes small-step interactive resize detection symmetric; this keeps the same bucketing/caching
+  policy enabled on back-and-forth drags and improves the `ui-resize-probes` p95 total by ~0.3ms on the jitter probe.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry `2026-02-09 16:37:00`.
+
 To feel “Zed smooth”, we need:
 
 1) stable per-frame work (low tail variance), and
@@ -167,3 +190,18 @@ Deliverable:
 - ADR update/new ADR + alignment entry.
 
 This prevents “fearless refactors” from silently breaking UX expectations.
+
+### M4.4.d GPU resize budget and churn gates
+
+Goal:
+- Ensure “CPU good” isn’t hiding “GPU bad” under resize (120Hz requires both).
+
+Probe:
+- Reuse `ui-resize-probes`, but log renderer churn signals alongside CPU totals:
+  - `top_renderer_encode_scene_us`, draw-call counts, bind-group switches,
+  - text atlas upload/eviction signals (if present in bundles),
+  - intermediate pool lifecycle signals (alloc/reuse/evict).
+
+Notes:
+- This is an observability milestone first: we should be able to explain a GPU hitch by pointing to a bundle that
+  shows upload/eviction churn, not just “time got worse”.
