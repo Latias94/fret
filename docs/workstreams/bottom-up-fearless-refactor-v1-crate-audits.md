@@ -33,8 +33,8 @@ Template for per-crate notes:
 | `fret-platform-web` | L0 | `docs/workstreams/crate-audits/fret-platform-web.l0.md` |
 | `fret-runner-winit` | L0 | `docs/workstreams/crate-audits/fret-runner-winit.l0.md` |
 | `fret-runner-web` | L0 | `docs/workstreams/crate-audits/fret-runner-web.l0.md` |
-| `fret-launch` | Not started | |
-| `fret` | Not started | |
+| `fret-launch` | L0 | `docs/workstreams/crate-audits/fret-launch.l0.md` |
+| `fret` | L0 | `docs/workstreams/crate-audits/fret.l0.md` |
 
 ## `ecosystem/` (policy + components + tools)
 
