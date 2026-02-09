@@ -20,6 +20,8 @@ If your goal is to **explain a hitch** (tail latency) and choose the next profil
 2. Create or edit a script in `tools/diag-scripts/`.
    - Use stable `test_id` targets instead of pixel coordinates.
    - Common steps: `click`, `wait_until`, `capture_bundle`, `capture_screenshot`.
+   - If the target moves/animates during navigation, prefer `click_stable` (schema v2) to avoid “stale click” flake.
+     - Example: click only after the target’s center stays within `eps_px` for `stable_frames`.
 3. Ensure diagnostics are enabled in the running app.
    - Minimum: `FRET_DIAG=1`
    - If the script uses `capture_screenshot`: also enable `FRET_DIAG_SCREENSHOTS=1`.
@@ -76,3 +78,5 @@ cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 30
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
+- When a selector target is known to jitter (virtualized lists, animated overlays, resize/relayout), use `click_stable`
+  rather than retrying `click` with arbitrary sleeps.

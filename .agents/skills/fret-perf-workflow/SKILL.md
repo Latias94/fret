@@ -164,15 +164,10 @@ Note:
 - If a change touches text/renderer caches, always re-run at least one resize probe and one steady suite check.
 - Prefer a small number of well-maintained gates over lots of flaky scripts.
 - If your working tree is “dirty” (unrelated refactors, conflict resolution, or experiments in progress), run perf
-  gates from a **detached worktree** at the exact commit you want to measure so the results remain reversible and
+  gates from a **clean checkout** at the exact commit you want to measure so the results remain reversible and
   commit-addressable.
-  - Example:
-    ```bash
-    git worktree add --detach ../fret-perf-lab <commit>
-    cd ../fret-perf-lab
-    cargo build -p fret-ui-gallery --release
-    tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3
-    ```
+  - Recommended: use a temporary clean clone (or a detached HEAD checkout) rather than measuring with unresolved
+    conflicts / unrelated diffs present.
 - When A/B testing env knobs that are read via `OnceLock`/static initialization, ensure the target process is
   restarted between A/B runs (a single `--reuse-launch` session cannot see changed env values).
 
