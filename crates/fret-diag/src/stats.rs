@@ -15303,6 +15303,164 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_
     Ok(())
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let mut examined_snapshots = 0u64;
+    let mut ui_gallery_snapshots = 0u64;
+    let mut matching_snapshots = 0u64;
+    let mut last_observed = None::<serde_json::Value>;
+    let mut placeholder_present_observed = false;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    for w in windows {
+        let window_id = w.get("window_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "code_editor_torture" {
+                continue;
+            }
+
+            let soft_wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if soft_wrap_cols.is_some() {
+                continue;
+            }
+
+            let folds_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !folds_fixture {
+                continue;
+            }
+
+            let preedit_active = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !preedit_active {
+                continue;
+            }
+
+            matching_snapshots = matching_snapshots.saturating_add(1);
+
+            let present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("folds"))
+                .and_then(|v| v.get("line0_placeholder_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            placeholder_present_observed |= present;
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "selected_page": selected_page,
+                "soft_wrap_cols": soft_wrap_cols,
+                "folds_fixture": folds_fixture,
+                "preedit_active": preedit_active,
+                "folds_line0_placeholder_present": present,
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(
+        "check.ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped.json",
+    );
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "matching_snapshots": matching_snapshots,
+        "placeholder_present_observed": placeholder_present_observed,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor folds-under-inline-preedit-unwrapped gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matching_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor folds-under-inline-preedit-unwrapped gate requires soft_wrap_cols == null and folds_fixture=true and torture.preedit_active=true after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if placeholder_present_observed {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor folds-under-inline-preedit-unwrapped gate failed (expected fold placeholder to be observed at least once while inline preedit is active)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present(
     bundle_path: &Path,
     warmup_frames: u64,
@@ -15719,6 +15877,164 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_unde
     }
 
     Ok(())
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let mut examined_snapshots = 0u64;
+    let mut ui_gallery_snapshots = 0u64;
+    let mut matching_snapshots = 0u64;
+    let mut last_observed = None::<serde_json::Value>;
+    let mut inlay_present_observed = false;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    for w in windows {
+        let window_id = w.get("window_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "code_editor_torture" {
+                continue;
+            }
+
+            let soft_wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if soft_wrap_cols.is_some() {
+                continue;
+            }
+
+            let inlays_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("inlays_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !inlays_fixture {
+                continue;
+            }
+
+            let preedit_active = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !preedit_active {
+                continue;
+            }
+
+            matching_snapshots = matching_snapshots.saturating_add(1);
+
+            let present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("inlays"))
+                .and_then(|v| v.get("line0_inlay_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            inlay_present_observed |= present;
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "selected_page": selected_page,
+                "soft_wrap_cols": soft_wrap_cols,
+                "inlays_fixture": inlays_fixture,
+                "preedit_active": preedit_active,
+                "inlays_line0_present": present,
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(
+        "check.ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped.json",
+    );
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "matching_snapshots": matching_snapshots,
+        "inlay_present_observed": inlay_present_observed,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor inlays-under-inline-preedit-unwrapped gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if matching_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor inlays-under-inline-preedit-unwrapped gate requires soft_wrap_cols == null and inlays_fixture=true and torture.preedit_active=true after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if inlay_present_observed {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor inlays-under-inline-preedit-unwrapped gate failed (expected inlay text to be observed at least once while inline preedit is active)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
 }
 
 pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(
