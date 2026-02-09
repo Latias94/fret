@@ -16,8 +16,7 @@ ADR anchor:
 
 ## Status (as of 2026-02-09)
 
-- M0–M4 are implemented on `main` (mechanism + kit helpers + initial shadcn migrations).
-- M5 is the next validation milestone (docking/panel reality check).
+- M0–M5 are implemented on `main` (mechanism + kit helpers + initial shadcn migrations + docking gate).
 
 ## M0 — Contract locked (mechanism + policy split)
 
@@ -110,6 +109,9 @@ Evidence:
   stable outcome across DPIs.
   - Script: `tools/diag-scripts/container-queries-docking-panel-resize.json`
   - Demo: `cargo run -p fret-demo --bin container_queries_docking_demo --release`
+  - Recommended gate run (prebuild + launch the exe to avoid Windows file-lock rebuild issues):
+    - `cargo build -p fret-demo --bin container_queries_docking_demo --release`
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/container-queries-docking-panel-resize.json --dir target/fret-diag/container-queries-docking --warmup-frames 5 --check-pixels-changed cq-dock-demo-mode --timeout-ms 600000 --launch -- .\\target\\release\\container_queries_docking_demo.exe`
 
 ## M6 — Ecosystem adoption sweep (incremental, not "big bang")
 
