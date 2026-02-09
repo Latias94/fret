@@ -22,14 +22,14 @@ ADR anchor:
 
 ## Runtime mechanism (`crates/fret-ui`)
 
-- [ ] Define a per-window committed environment snapshot storage surface.
-- [ ] Expose a typed query API that records dependencies during declarative rendering.
-- [ ] Dependency tracking: record which view roots observed which environment keys.
-- [ ] Invalidation: environment changes invalidate dependents (coalescing OK).
+- [x] Define a per-window committed environment snapshot storage surface.
+- [x] Expose a typed query API that records dependencies during declarative rendering.
+- [x] Dependency tracking: record which view roots observed which environment keys.
+- [x] Invalidation: environment changes invalidate dependents (coalescing OK).
 - [ ] Add diagnostics hooks (inspector snapshot / debug logging).
 - [ ] Add unit tests for:
   - [ ] invalidation on viewport bounds change,
-  - [ ] view-cache key participation via deps fingerprint,
+  - [x] view-cache key participation via deps fingerprint,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
@@ -45,4 +45,3 @@ ADR anchor:
 - [ ] Migrate `Combobox(responsive)` to use environment query helpers instead of `cx.bounds` magic
   numbers for the mobile shell decision (Drawer vs Popover).
 - [ ] Add a regression gate (test or `fretboard diag` script) for the migration.
-
