@@ -7,6 +7,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
 use crate::avatar::Avatar as ShadcnAvatar;
+use crate::avatar::AvatarFallback as ShadcnAvatarFallback;
 use crate::test_id::attach_test_id;
 
 /// Input item for [`AvatarStack`].
@@ -40,6 +41,7 @@ pub struct AvatarStack {
     items: Vec<AvatarStackItem>,
     size: Px,
     overlap: Space,
+    max_visible: Option<usize>,
     test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -55,6 +57,7 @@ impl AvatarStack {
             items: items.into_iter().map(Into::into).collect(),
             size: Px(40.0),
             overlap: Space::N1,
+            max_visible: None,
             test_id: None,
             a11y_label: None,
             layout: LayoutRefinement::default(),
@@ -79,6 +82,15 @@ impl AvatarStack {
     /// Negative overlap between adjacent avatars.
     pub fn overlap(mut self, overlap: Space) -> Self {
         self.overlap = overlap;
+        self
+    }
+
+    /// Maximum number of visible items in the stack.
+    ///
+    /// If the stack overflows, the last visible item becomes a `+N` overflow indicator (so the
+    /// overflow indicator counts toward `max_visible`).
+    pub fn max_visible(mut self, max_visible: usize) -> Self {
+        self.max_visible = Some(max_visible);
         self
     }
 
@@ -117,7 +129,20 @@ impl AvatarStack {
                 .flex_shrink_0()
                 .overflow_hidden();
 
-            let items = self.items;
+            let mut items = self.items;
+            if let Some(max_visible) = self.max_visible {
+                let max_visible = max_visible.max(1);
+                if items.len() > max_visible {
+                    let visible = max_visible.saturating_sub(1);
+                    let overflow_count = items.len().saturating_sub(visible);
+                    items.truncate(visible);
+                    let overflow = ShadcnAvatar::new([ShadcnAvatarFallback::new(format!(
+                        "+{overflow_count}"
+                    ))
+                    .into_element(cx)]);
+                    items.push(AvatarStackItem::Avatar(overflow));
+                }
+            }
 
             let mut out = Vec::with_capacity(items.len());
             for (idx, item) in items.into_iter().enumerate() {
