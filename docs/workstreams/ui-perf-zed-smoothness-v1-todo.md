@@ -115,6 +115,9 @@ Conventions:
     - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`).
   - [x] Add a short guidelines note describing the contract and common pitfalls.
     - Deliverable: `docs/workstreams/ui-perf-setter-idempotency-v1.md` (commit `420845878`).
+  - [x] Extend the audit to retained text-input surfaces where render-time state re-application is likely.
+    - Evidence: `perf(fret-ui): make TextArea::set_text idempotent` (commit `fcd1ada2d`) + perf log entry
+      `2026-02-09 17:00:00`.
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
