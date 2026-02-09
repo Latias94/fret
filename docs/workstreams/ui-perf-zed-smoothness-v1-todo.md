@@ -24,6 +24,10 @@ Conventions:
   - Reference: `docs/workstreams/ui-perf-gpui-gap-v1.md`
   - When a gap is materially improved, add a perf log entry + mark the corresponding milestone tasks here.
 
+- [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
+  - Workstream: `docs/workstreams/perf-devtools-skills-v1.md`
+  - Deliverable (initial): expand `fret-perf-workflow` attribution recipes + add a single “worked example”.
+
 - [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
   bucketed/deferred/cached during live resize, and what must remain exact).
   - Candidates: text wrap width bucketing, measure/shaping caching, released blob retention, and any LOD/deferral.

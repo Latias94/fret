@@ -103,6 +103,7 @@ GPUI is a strong reference for “Zed feel”, but it is not a universal rendere
 What is most transferable for Fret:
 
 - explicit frame-to-frame reuse contracts (cached views + `notify` semantics),
+- side-effect free view updates (render-time setters must be idempotent; no per-frame cache resets),
 - aggressive per-frame scratch / arena allocation discipline,
 - a deliberate text layout cache model (double-buffered reuse, visible-window aware),
 - scene replay primitives that make caching explicit and cheap.
@@ -119,6 +120,9 @@ For effect/renderer architecture, it is often more productive to cross-check aga
 
 To close the gap responsibly, treat perf as a contract and work from the “lowest primitives” upward:
 
+0) **Eliminate per-frame side effects in declarative render loops** (the “idempotent setters” footgun class).
+   - Heuristic: if `handle.set_*` is called from render, it must be a no-op for identical values.
+   - Reference: `docs/workstreams/ui-perf-setter-idempotency-v1.md`.
 1) **Pick a single hot-path probe** (pointer move, wheel, resize, scroll) and gate it.
    - Pointer move gate: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
    - Gate flags: `fretboard diag perf --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us/--max-pointer-move-global-changes`
