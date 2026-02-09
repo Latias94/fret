@@ -123,6 +123,23 @@ fn clamp_column_width<TData>(col: &ColumnDef<TData>, props: &TableViewProps, wid
     Px(width.clamp(min_w, max_w))
 }
 
+fn with_table_view_column_constraints<TData>(
+    mut col: ColumnDef<TData>,
+    props: &TableViewProps,
+) -> ColumnDef<TData> {
+    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
+    col.min_size = min_w;
+    col.max_size = col.max_size.max(min_w);
+    if !col.columns.is_empty() {
+        col.columns = col
+            .columns
+            .into_iter()
+            .map(|c| with_table_view_column_constraints(c, props))
+            .collect();
+    }
+    col
+}
+
 fn resolve_column_width<TData>(
     col: &ColumnDef<TData>,
     state: &TableState,
@@ -1607,19 +1624,51 @@ where
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
     let sorting = state_value.sorting.clone();
 
-    let ordered_columns = order_columns(columns.as_ref(), &state_value.column_order);
+    let empty: &[TData] = &[];
+    let mut sizing_state = state_value.clone();
+    if !props.enable_column_grouping {
+        sizing_state.grouping.clear();
+    }
+
+    let sizing_columns: Vec<ColumnDef<TData>> = columns
+        .iter()
+        .cloned()
+        .map(|c| with_table_view_column_constraints(c, &props))
+        .collect();
+
+    let mut sizing_options = TableOptions::default();
+    sizing_options.grouped_column_mode = props.grouped_column_mode;
+
+    let sizing_table = Table::builder(empty)
+        .columns(sizing_columns)
+        .state(sizing_state)
+        .options(sizing_options)
+        .build();
+    let core_snapshot = sizing_table.core_model_snapshot();
+
+    let columns: Arc<[ColumnDef<TData>]> = Arc::from(sizing_table.columns().to_vec());
+
     let visible_columns: Arc<[ColumnDef<TData>]> = Arc::from(
-        ordered_columns
-            .into_iter()
-            .filter(|col| is_column_visible(&state_value.column_visibility, &col.id))
-            .cloned()
+        core_snapshot
+            .leaf_columns
+            .visible
+            .iter()
+            .filter_map(|id| sizing_table.column(id.as_ref()).cloned())
             .collect::<Vec<_>>(),
     );
 
     let col_widths: Arc<[Px]> = Arc::from(
         visible_columns
             .iter()
-            .map(|col| resolve_column_width(col, &state_value, &props))
+            .map(|col| {
+                let w = core_snapshot
+                    .leaf_column_sizing
+                    .size
+                    .get(&col.id)
+                    .copied()
+                    .unwrap_or(col.size);
+                Px(w)
+            })
             .collect::<Vec<_>>(),
     );
 
@@ -1629,21 +1678,30 @@ where
         visible_column_index_by_id.insert(col.id.clone(), idx);
     }
 
-    let visible_refs: Vec<&ColumnDef<TData>> = visible_columns.iter().collect();
-    let (left_cols, center_cols, right_cols) =
-        split_pinned_columns(visible_refs.as_slice(), &state_value.column_pinning);
-
-    let to_indices = |cols: Vec<&ColumnDef<TData>>| -> Arc<[usize]> {
-        Arc::from(
-            cols.into_iter()
-                .filter_map(|col| visible_column_index_by_id.get(&col.id).copied())
-                .collect::<Vec<_>>(),
-        )
-    };
-
-    let left_col_indices = to_indices(left_cols);
-    let center_col_indices = to_indices(center_cols);
-    let right_col_indices = to_indices(right_cols);
+    let left_col_indices: Arc<[usize]> = Arc::from(
+        core_snapshot
+            .leaf_columns
+            .left_visible
+            .iter()
+            .filter_map(|id| visible_column_index_by_id.get(id).copied())
+            .collect::<Vec<_>>(),
+    );
+    let center_col_indices: Arc<[usize]> = Arc::from(
+        core_snapshot
+            .leaf_columns
+            .center_visible
+            .iter()
+            .filter_map(|id| visible_column_index_by_id.get(id).copied())
+            .collect::<Vec<_>>(),
+    );
+    let right_col_indices: Arc<[usize]> = Arc::from(
+        core_snapshot
+            .leaf_columns
+            .right_visible
+            .iter()
+            .filter_map(|id| visible_column_index_by_id.get(id).copied())
+            .collect::<Vec<_>>(),
+    );
 
     let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 

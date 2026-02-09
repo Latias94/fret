@@ -305,6 +305,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
+    - Consumer evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
+      consumes `Table::core_model_snapshot().leaf_column_sizing` for column widths + pinned visible splits.
   - Update (parity-gated): flat-column inventories (`table.getAllFlatColumns/getVisibleFlatColumns`)
     are fixture-asserted so consumers can rely on TanStack’s pre-order DFS flattening semantics.
     - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
