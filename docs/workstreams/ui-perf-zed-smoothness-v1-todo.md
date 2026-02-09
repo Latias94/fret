@@ -133,6 +133,11 @@ Conventions:
       - the window width delta is small (jitter-class, not stress-class).
     - Keep the old knob for global experiments:
       - `FRET_UI_TEXT_WRAP_WIDTH_BUCKET_PX` (still default-off; applies across all interactive resize frames).
+  - [x] Treat interactive-resize “small-step” detection as symmetric so back-and-forth drags keep the same
+    bucketing/caching policies enabled.
+    - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
+    - Evidence: perf log entry `2026-02-09 16:37:00` (both resize probe gates PASS; `ui-resize-probes` p95 total down
+      ~0.3ms on the worst jitter probe).
   - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
     - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
     - Evidence: perf log entry `2026-02-08` (editor resize gate delta).

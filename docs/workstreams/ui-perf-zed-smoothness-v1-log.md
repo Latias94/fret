@@ -8787,3 +8787,50 @@ Finding (drag-jitter probe; selected attempt):
   - `e9ea4522a`: mean/p95/max = `1962/2116/2136us`
   - `58db05d7c`: mean/p95/max = `2173/2302/2346us`
   - Prior bundle reference: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/attempt-1/1770619927269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 16:37:00 (commit `0de40863f`)
+
+Change:
+- Treat interactive-resize “small-step” detection as **symmetric** (back-and-forth resizes keep the same policy/caches
+  enabled).
+
+Suites:
+- `ui-resize-probes` gate (attempts=1): PASS (passes=1/1; required=1).
+- `ui-code-editor-resize-probes` gate (attempts=1): PASS (passes=1/1; required=1).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 0de40863f
+cargo build -p fret-ui-gallery --release
+./tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes
+./tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626170/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626237/summary.json`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 16619 | 16775 | 16775 | 9194 | 2149 | 7657 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16038 | 16233 | 16233 | 9216 | 2194 | 6972 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 15162 | 15613 | 15613 | 2284 | 334 | 13904 |
+
+Worst overall:
+- `ui-resize-probes`:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+  - top_total_time_us: `16775`
+  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626170/attempt-1/1770626188635-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `ui-code-editor-resize-probes`:
+  - script: `tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json`
+  - top_total_time_us: `15613`
+  - bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/fret-diag-resize-probes-gate-1770626237/attempt-1/1770626249820-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- Compared to the prior dense-tables stable run (`e9ea4522a`, attempt-1, same probes):
+  - `ui-resize-probes` improved: `drag-jitter` p95 total `-312us` (17087 → 16775), `stress` p95 total `-275us`
+    (16508 → 16233), largely driven by `paint_time_us` reductions.
+  - `ui-code-editor-resize-probes` is effectively flat/noisy: `drag-jitter` p95 total `+69us` (15544 → 15613) while
+    `layout_engine_solve_time_us` p95 improved slightly (-6us).
