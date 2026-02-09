@@ -80,26 +80,25 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Close the non-option capability inventory (`HTP-cap-010`) so consumers don't drift (`HTP-base-004` is done).
-- Step 2: Close remaining “observable internal” obligations that can affect user-visible behavior:
-  auto-reset queue coalescing semantics and global faceting surfaces.
-- Step 3: Keep expanding core snapshot introspection only when new UI consumers require it
-  (strict schema versioning; avoid consumer-side recompute drift).
-- Step 4: Add follow-up memo/perf guardrails only when new pipelines (e.g. grouped rebuild-each-frame) need them.
+- Step 1: Keep all TanStack v8 fixture parity gates green (headless + UI diag scripts).
+- Step 2: Treat upstream bumps as first-class work:
+  re-extract fixtures, fix deltas, and update the “version stamp” docs.
+- Step 3: Expand `CoreModelSnapshot` inventories only when a new consumer would otherwise re-compute and drift
+  (strict schema versioning; fixture-gate every new field).
+- Step 4: Add memo/perf guardrails only when a new pipeline (or a new consumer) materially changes rebuild behavior.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
 P0 (core behavior parity, highest user-visible risk):
 
-- Cleared for current grouping scope: `HTP-grp-010` + `HTP-grp-030` are fixture-gated.
-- Remaining (still Partial in matrix): sorting edge-case coverage, pagination auto-reset trigger breadth,
-  and `columnSizingInfo` inventory + cross-feature interactions.
+- Cleared: all current `tanstack_v8_*` fixture gates pass for the baseline upstream stamp.
+- Note: “misaligned columns / inconsistent row widths” is addressed by making UI consumers read
+  `CoreModelSnapshot.leaf_column_sizing` + pinned visible inventories (no UI-side recompute).
 
 P1 (capability breadth parity):
 
-- Cleared: `HTP-id-014/015`, `HTP-filt-090/100`, `HTP-state-020` are fixture-gated.
-- Remaining: auto-reset queue coalescing semantics (cross-feature) and global faceting instance surfaces
-  (so consumers are not blocked when they rely on upstream surfaces).
+- Cleared: auto-reset queue coalescing semantics and global faceting surfaces are now fixture-gated.
+- Remaining: none known for the current upstream baseline; new gaps should land as new HTP IDs + gates.
 
 P2 (engineering guardrails for sustained parity):
 
@@ -330,6 +329,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 - [ ] HTP-core-041 Expand core snapshot inventories as new consumers require them (strict schema versioning).
   - Goal: keep UI consumers from re-implementing traversal/sizing/policy logic and drifting.
   - Rule: every schema expansion must bump `schema_version` and be fixture-gated.
+  - Current “must-have” consumer inventories are already in the snapshot (and parity-gated):
+    - leaf column sizing: `getSize/getStart/getAfter` + total sizes (pin-family splits),
+    - pinned visible leaf splits: left/center/right,
+    - header sizing (group headers): `getSize/getStart`,
+    - column capabilities (pin/resize/hide/visibility),
+    - stable header groups + cell inventories keyed by TanStack `RowId`.
+  - Process:
+    1) add new fields to the snapshot schema (bump `schema_version`),
+    2) update the fixture extractor to emit the new inventories,
+    3) add/extend a parity gate that asserts the new field matches upstream,
+    4) update `docs/workstreams/headless-table-tanstack-parity-capability.md` evidence anchors.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
   - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
   - Fret mapping: snapshot-friendly header lists + footer groups as reversed header groups.

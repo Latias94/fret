@@ -23,6 +23,17 @@ Last updated: 2026-02-09
 
 ---
 
+## Current status (capability, not API-shape)
+
+- All major feature outcomes for the baseline upstream stamp are fixture-gated under
+  `ecosystem/fret-ui-headless/tests/tanstack_v8_*` and (where relevant) UI-level diag scripts under
+  `tools/diag-scripts/ui-gallery-*-table-*.json`.
+- Items marked **Partial** in this document are typically **API-shape differences** (TanStack mutates instance objects;
+  Fret rebuilds a pure `Table` from `TableState` + `TableOptions`) or “edge-case breadth” that can be promoted to
+  **Aligned** by adding a focused fixture + gate when a consumer needs it.
+- Snapshot-first rule: when a capability is “UI query heavy” (widths/starts, pin-family splits), prefer adding it to
+  `CoreModelSnapshot` so UI consumers do not drift. Track new snapshot inventories under `HTP-core-041`.
+
 ## Core instance surface (Table/Row/Column/Header/Cell)
 
 This section turns the upstream “core” public instance surfaces into an explicit capability
