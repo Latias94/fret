@@ -200,6 +200,13 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
 
       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
+Web runner note:
+
+- `diag perf` uses the filesystem-trigger transport, so for web runner workflows you typically:
+  1) run the script via `apps/fret-devtools` (or any devtools-ws-capable driver) to export bundles under `.fret/diag/exports/`, then
+  2) compute a baseline from those bundle paths:
+     - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
+
 3. Inspect the slowest snapshots in the resulting bundle:
 
    - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`

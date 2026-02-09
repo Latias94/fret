@@ -108,6 +108,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
   - WASM: TODO (record a baseline once the web perf workflow is stable for this suite).
   - Note: `--perf-baseline-seed` / `--perf-baseline-seed-preset` are currently rejected by `fret-diag` (even though `fretboard help` mentions them), so this baseline uses the default seeding behavior.
+  - WASM progress:
+    - Web build compiles: `cargo build -p fret-ui-gallery-web --target wasm32-unknown-unknown`
+      - Evidence: `crates/fret-platform-web/src/wasm/ime.rs` (visibility fixes for `WebImeBridge` / debug state; `Effect::OpenUrl { url, .. }` pattern)
+    - Baseline workflow (web runner): run the script via `apps/fret-devtools` (or any workflow that produces exported bundles under `.fret/diag/exports/`), then generate a baseline from bundle paths:
+      - `cargo run -p fretboard -- diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/<exported_unix_ms> --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
 
 - [ ] IMG-video-510 Decide the next capability-gated step for “external texture import”.
   - Must not leak backend handles into `fret-ui`.
