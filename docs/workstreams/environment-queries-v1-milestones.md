@@ -56,6 +56,7 @@ Definition of done:
 - `ecosystem/fret-ui-kit` exposes typed helpers for:
   - viewport/device breakpoints (tokens + optional hysteresis),
   - pointer capability gates (hover vs touch-first),
+  - safe-area insets (future mobile),
   - reduced-motion defaults (if provided by the runner/app).
 
 Evidence:

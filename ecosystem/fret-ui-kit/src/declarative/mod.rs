@@ -24,6 +24,8 @@ pub mod pixelate;
 pub mod pointer_queries;
 pub mod prelude;
 pub mod presence;
+pub mod reduced_motion_queries;
+pub mod safe_area_queries;
 pub mod scheduling;
 pub mod scroll;
 pub mod scroll_area_visibility;
@@ -51,6 +53,8 @@ pub use model_watch::ModelWatchExt;
 pub use pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };
+pub use reduced_motion_queries::prefers_reduced_motion;
+pub use safe_area_queries::{safe_area_insets, safe_area_insets_or_zero};
 pub use semantics::AnyElementSemanticsExt;
 pub use viewport_queries::tailwind as viewport_tailwind;
 pub use viewport_queries::{

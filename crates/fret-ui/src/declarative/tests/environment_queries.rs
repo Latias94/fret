@@ -177,3 +177,90 @@ fn environment_viewport_width_change_invalidates_view_cache_subtree() {
         "expected view-cache subtree without environment dependencies to reuse"
     );
 }
+
+#[test]
+fn environment_safe_area_insets_change_invalidates_view_cache_subtree() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let renders_env = Arc::new(AtomicUsize::new(0));
+    let renders_plain = Arc::new(AtomicUsize::new(0));
+
+    let mut root: Option<NodeId> = None;
+
+    for frame in 0..4 {
+        let insets = match frame {
+            0 | 1 => None,
+            2 | 3 => Some(fret_core::Edges::all(Px(12.0))),
+            _ => unreachable!(),
+        };
+
+        app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |rt, _| {
+            rt.set_window_safe_area_insets(window, insets);
+        });
+
+        let renders_env = renders_env.clone();
+        let renders_plain = renders_plain.clone();
+
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "environment-query-safe-area-view-cache",
+            move |cx| {
+                let cached_env =
+                    cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+                        renders_env.fetch_add(1, Ordering::SeqCst);
+                        let _ = cx.environment_safe_area_insets(Invalidation::Layout);
+                        vec![cx.text("env")]
+                    });
+
+                let cached_plain = cx.view_cache(
+                    crate::element::ViewCacheProps {
+                        cache_key: 1,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        renders_plain.fetch_add(1, Ordering::SeqCst);
+                        vec![cx.text("plain")]
+                    },
+                );
+
+                vec![cached_env, cached_plain]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders_env.load(Ordering::SeqCst),
+        2,
+        "expected safe-area insets change to force a view-cache rerender"
+    );
+    assert_eq!(
+        renders_plain.load(Ordering::SeqCst),
+        1,
+        "expected view-cache subtree without environment dependencies to reuse"
+    );
+}

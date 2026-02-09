@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, NodeId, PointerType, Rect};
+use fret_core::{AppWindowId, Edges, NodeId, PointerType, Rect};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -24,6 +24,7 @@ pub(crate) enum EnvironmentQueryKey {
     ScaleFactor,
     PrefersReducedMotion,
     PrimaryPointerType,
+    SafeAreaInsets,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -101,6 +102,7 @@ pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub scale_factor: f32,
     pub prefers_reduced_motion: Option<bool>,
     pub primary_pointer_type: PointerType,
+    pub safe_area_insets: Option<Edges>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -168,6 +170,11 @@ impl ElementRuntime {
     ) {
         self.for_window_mut(window)
             .record_committed_primary_pointer_type(pointer_type);
+    }
+
+    pub fn set_window_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.for_window_mut(window)
+            .record_committed_safe_area_insets(insets);
     }
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
@@ -279,6 +286,7 @@ pub struct WindowElementState {
     committed_scale_factor: f32,
     committed_prefers_reduced_motion: Option<bool>,
     committed_primary_pointer_type: Option<PointerType>,
+    committed_safe_area_insets: Option<Edges>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -640,6 +648,7 @@ impl WindowElementState {
             EnvironmentQueryKey::ScaleFactor => 1u8,
             EnvironmentQueryKey::PrefersReducedMotion => 2u8,
             EnvironmentQueryKey::PrimaryPointerType => 3u8,
+            EnvironmentQueryKey::SafeAreaInsets => 4u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1221,6 +1230,10 @@ impl WindowElementState {
             .unwrap_or(PointerType::Unknown)
     }
 
+    pub(crate) fn committed_safe_area_insets(&self) -> Option<Edges> {
+        self.committed_safe_area_insets
+    }
+
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
         if self.committed_prefers_reduced_motion == value {
             return;
@@ -1245,6 +1258,19 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::PrimaryPointerType);
+    }
+
+    pub(crate) fn record_committed_safe_area_insets(&mut self, insets: Option<Edges>) {
+        if self.committed_safe_area_insets == insets {
+            return;
+        }
+        self.committed_safe_area_insets = insets;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::SafeAreaInsets)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::SafeAreaInsets);
     }
 
     pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
@@ -1307,6 +1333,7 @@ impl WindowElementState {
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
+            EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
         };
 
         let bounds_for = |element: Option<GlobalElementId>| {
@@ -1435,6 +1462,7 @@ impl WindowElementState {
             scale_factor: self.committed_scale_factor,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
             primary_pointer_type: self.committed_primary_pointer_type(),
+            safe_area_insets: self.committed_safe_area_insets,
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1854,6 +1882,52 @@ mod tests {
             state
                 .environment_revisions
                 .get(&EnvironmentQueryKey::PrimaryPointerType)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn safe_area_insets_is_none_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_safe_area_insets(), None);
+    }
+
+    #[test]
+    fn safe_area_insets_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_safe_area_insets(Some(Edges::all(fret_core::Px(4.0))));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::SafeAreaInsets)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::SafeAreaInsets)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_safe_area_insets(Some(Edges::all(fret_core::Px(4.0))));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::SafeAreaInsets)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_safe_area_insets(None);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::SafeAreaInsets)
                 .copied()
                 .unwrap(),
             first_revision + 1
