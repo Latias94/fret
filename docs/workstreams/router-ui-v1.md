@@ -129,6 +129,17 @@ Desktop apps may also want lightweight context menu descriptors (policy stays ap
 
 - `RouterLink::default_context_menu_items()` -> `[copy link, open in new window]`
 
+## Link semantics conformance (v1 follow-up)
+
+The initial `RouterLink` helpers focus on navigation/prefetch wiring. To be accessibility-correct,
+router links should also behave like links (not buttons):
+
+- semantics role: `SemanticsRole::Link`
+- `href` exposure for automation/diagnostics: `SemanticsNode.value = href`
+- keyboard activation: Enter-only (no Space activation by default)
+
+Contract: ADR 1180 (`docs/adr/1180-link-semantics-and-href-activation-v1.md`).
+
 ### 4) Command integration
 
 Provide recommended commands (not forced):

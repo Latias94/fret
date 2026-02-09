@@ -1,6 +1,6 @@
 # Router UI v1 (Desktop Adoption) (Tracking)
 
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 This file tracks concrete work for:
 
@@ -72,3 +72,15 @@ Status legend:
 - `[x]` Register recommended router commands (optional):
   - `router.back`
   - `router.forward`
+
+## Phase 5 - Link semantics conformance (ADR 1180)
+
+- `[x]` Define the minimal v1 Link semantics contract (ADR 1180).
+- `[x]` Add a `Pressable` configuration seam for activation key policy (Link = Enter-only).
+- `[x]` Update `fret-router-ui` link helpers to:
+  - stamp `SemanticsRole::Link`
+  - stamp `SemanticsNode.value = href` via `SemanticsDecoration.value(href)`
+  - use Link activation key policy
+- `[x]` Add unit tests covering:
+  - Link activation ignores Space
+  - Link activation works for Enter/NumpadEnter
