@@ -410,6 +410,12 @@ Schema v2 keeps the same `steps` array shape, but adds higher-level intent steps
 (selectors + window-bounds predicates), and can internally perform multi-frame behavior (wait/retry loops) without forcing
 authors to hand-write brittle `wait_frames` chains.
 
+Multi-window note:
+
+- Scripts may optionally set a top-level `window` policy:
+  - `"any"` (default): attach to the first window that observes the script trigger.
+  - `"focused"`: attach to the first focused window that observes the script trigger (useful for docking/multi-window repros).
+
 Supported intent steps (v2):
 
 - `ensure_visible` (wait until visible/within window bounds)

@@ -649,6 +649,18 @@ impl UiDiagnosticsService {
         if !self.active_scripts.contains_key(&window)
             && let Some(script) = self.pending_script.clone()
         {
+            let focused = app
+                .global::<fret_core::WindowMetricsService>()
+                .and_then(|svc| svc.focused(window))
+                .unwrap_or(false);
+            let should_attach = match script.window {
+                UiScriptWindowTargetV1::Any => true,
+                UiScriptWindowTargetV1::Focused => focused,
+            };
+            if !should_attach {
+                return UiScriptFrameOutput::default();
+            }
+
             let run_id = self.pending_script_run_id.take().unwrap_or(0);
             self.pending_script = None;
             self.active_scripts.insert(
@@ -3800,7 +3812,19 @@ fn canvas_cache_stats_for_window(app: &App, window: u64) -> Vec<UiCanvasCacheEnt
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV1 {
     pub schema_version: u32,
+    #[serde(default)]
+    pub window: UiScriptWindowTargetV1,
     pub steps: Vec<UiActionStepV1>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiScriptWindowTargetV1 {
+    /// Run the script for the first window that observes the script trigger.
+    #[default]
+    Any,
+    /// Run the script for the first focused window that observes the script trigger.
+    Focused,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3864,6 +3888,8 @@ pub enum UiActionStepV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiActionScriptV2 {
     pub schema_version: u32,
+    #[serde(default)]
+    pub window: UiScriptWindowTargetV1,
     pub steps: Vec<UiActionStepV2>,
 }
 
@@ -4416,6 +4442,7 @@ struct ActiveScript {
 
 #[derive(Debug, Clone)]
 struct PendingScript {
+    window: UiScriptWindowTargetV1,
     steps: Vec<UiActionStepV2>,
 }
 
@@ -4425,6 +4452,7 @@ impl PendingScript {
             return None;
         }
         Some(Self {
+            window: script.window,
             steps: script.steps.into_iter().map(UiActionStepV2::from).collect(),
         })
     }
@@ -4434,6 +4462,7 @@ impl PendingScript {
             return None;
         }
         Some(Self {
+            window: script.window,
             steps: script.steps,
         })
     }
@@ -4995,6 +5024,8 @@ pub struct UiDockingInteractionSnapshotV1 {
     #[serde(default)]
     pub dock_drag: Option<UiDockDragDiagnosticsV1>,
     #[serde(default)]
+    pub dock_drop_resolve: Option<UiDockDropResolveDiagnosticsV1>,
+    #[serde(default)]
     pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
 }
 
@@ -5004,9 +5035,171 @@ impl UiDockingInteractionSnapshotV1 {
             dock_drag: snapshot
                 .dock_drag
                 .map(UiDockDragDiagnosticsV1::from_snapshot),
+            dock_drop_resolve: snapshot
+                .dock_drop_resolve
+                .as_ref()
+                .map(UiDockDropResolveDiagnosticsV1::from_snapshot),
             viewport_capture: snapshot
                 .viewport_capture
                 .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropResolveSourceV1 {
+    InvertDocking,
+    OutsideWindow,
+    FloatZone,
+    LayoutBoundsMiss,
+    LatchedPreviousHover,
+    TabBar,
+    FloatingTitleBar,
+    OuterHintRect,
+    InnerHintRect,
+    None,
+}
+
+impl UiDockDropResolveSourceV1 {
+    fn from_source(source: fret_runtime::DockDropResolveSource) -> Self {
+        match source {
+            fret_runtime::DockDropResolveSource::InvertDocking => Self::InvertDocking,
+            fret_runtime::DockDropResolveSource::OutsideWindow => Self::OutsideWindow,
+            fret_runtime::DockDropResolveSource::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropResolveSource::LayoutBoundsMiss => Self::LayoutBoundsMiss,
+            fret_runtime::DockDropResolveSource::LatchedPreviousHover => Self::LatchedPreviousHover,
+            fret_runtime::DockDropResolveSource::TabBar => Self::TabBar,
+            fret_runtime::DockDropResolveSource::FloatingTitleBar => Self::FloatingTitleBar,
+            fret_runtime::DockDropResolveSource::OuterHintRect => Self::OuterHintRect,
+            fret_runtime::DockDropResolveSource::InnerHintRect => Self::InnerHintRect,
+            fret_runtime::DockDropResolveSource::None => Self::None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockDropCandidateRectKindV1 {
+    WindowBounds,
+    DockBounds,
+    FloatZone,
+    LayoutBounds,
+    RootRect,
+    LeafTabsRect,
+    TabBarRect,
+    InnerHintRect,
+    OuterHintRect,
+}
+
+impl UiDockDropCandidateRectKindV1 {
+    fn from_kind(kind: fret_runtime::DockDropCandidateRectKind) -> Self {
+        match kind {
+            fret_runtime::DockDropCandidateRectKind::WindowBounds => Self::WindowBounds,
+            fret_runtime::DockDropCandidateRectKind::DockBounds => Self::DockBounds,
+            fret_runtime::DockDropCandidateRectKind::FloatZone => Self::FloatZone,
+            fret_runtime::DockDropCandidateRectKind::LayoutBounds => Self::LayoutBounds,
+            fret_runtime::DockDropCandidateRectKind::RootRect => Self::RootRect,
+            fret_runtime::DockDropCandidateRectKind::LeafTabsRect => Self::LeafTabsRect,
+            fret_runtime::DockDropCandidateRectKind::TabBarRect => Self::TabBarRect,
+            fret_runtime::DockDropCandidateRectKind::InnerHintRect => Self::InnerHintRect,
+            fret_runtime::DockDropCandidateRectKind::OuterHintRect => Self::OuterHintRect,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDropZoneV1 {
+    Center,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+impl UiDropZoneV1 {
+    fn from_zone(zone: fret_core::DropZone) -> Self {
+        match zone {
+            fret_core::DropZone::Center => Self::Center,
+            fret_core::DropZone::Left => Self::Left,
+            fret_core::DropZone::Right => Self::Right,
+            fret_core::DropZone::Top => Self::Top,
+            fret_core::DropZone::Bottom => Self::Bottom,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDropCandidateRectDiagnosticsV1 {
+    pub kind: UiDockDropCandidateRectKindV1,
+    #[serde(default)]
+    pub zone: Option<UiDropZoneV1>,
+    pub rect: RectV1,
+}
+
+impl UiDockDropCandidateRectDiagnosticsV1 {
+    fn from_diagnostics(diagnostics: fret_runtime::DockDropCandidateRectDiagnostics) -> Self {
+        Self {
+            kind: UiDockDropCandidateRectKindV1::from_kind(diagnostics.kind),
+            zone: diagnostics.zone.map(UiDropZoneV1::from_zone),
+            rect: RectV1::from(diagnostics.rect),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDropTargetDiagnosticsV1 {
+    pub layout_root: u64,
+    pub tabs: u64,
+    pub zone: UiDropZoneV1,
+    #[serde(default)]
+    pub insert_index: Option<usize>,
+    pub outer: bool,
+}
+
+impl UiDockDropTargetDiagnosticsV1 {
+    fn from_target(target: fret_runtime::DockDropTargetDiagnostics) -> Self {
+        Self {
+            layout_root: target.layout_root.data().as_ffi(),
+            tabs: target.tabs.data().as_ffi(),
+            zone: UiDropZoneV1::from_zone(target.zone),
+            insert_index: target.insert_index,
+            outer: target.outer,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockDropResolveDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub position: PointV1,
+    pub window_bounds: RectV1,
+    pub dock_bounds: RectV1,
+    pub source: UiDockDropResolveSourceV1,
+    #[serde(default)]
+    pub resolved: Option<UiDockDropTargetDiagnosticsV1>,
+    #[serde(default)]
+    pub candidates: Vec<UiDockDropCandidateRectDiagnosticsV1>,
+}
+
+impl UiDockDropResolveDiagnosticsV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockDropResolveDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            position: PointV1::from(snapshot.position),
+            window_bounds: RectV1::from(snapshot.window_bounds),
+            dock_bounds: RectV1::from(snapshot.dock_bounds),
+            source: UiDockDropResolveSourceV1::from_source(snapshot.source),
+            resolved: snapshot
+                .resolved
+                .map(UiDockDropTargetDiagnosticsV1::from_target),
+            candidates: snapshot
+                .candidates
+                .iter()
+                .copied()
+                .map(UiDockDropCandidateRectDiagnosticsV1::from_diagnostics)
+                .collect(),
         }
     }
 }
@@ -10100,8 +10293,8 @@ fn sanitize_label(label: &str) -> String {
 mod tests {
     use super::*;
     use fret_core::{
-        AppWindowId, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode, SemanticsRole,
-        SemanticsRoot, SemanticsSnapshot, Size,
+        AppWindowId, DockNodeId, DropZone, PointerId, Px, Rect, SemanticsActions, SemanticsFlags,
+        SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
     };
     use slotmap::KeyData;
 
@@ -10169,6 +10362,10 @@ mod tests {
         NodeId::from(KeyData::from_ffi(id))
     }
 
+    fn dock_node_id(id: u64) -> DockNodeId {
+        DockNodeId::from(KeyData::from_ffi(id))
+    }
+
     fn window_id(id: u64) -> AppWindowId {
         AppWindowId::from(KeyData::from_ffi(id))
     }
@@ -10233,7 +10430,10 @@ mod tests {
         svc.cfg.pick_trigger_path = dir.join("pick.touch");
         svc.cfg.inspect_trigger_path = dir.join("inspect.touch");
         svc.cfg.inspect_path = dir.join("inspect.json");
-        svc.pending_script = Some(PendingScript { steps: Vec::new() });
+        svc.pending_script = Some(PendingScript {
+            window: UiScriptWindowTargetV1::Any,
+            steps: Vec::new(),
+        });
 
         assert!(
             !svc.wants_inspection_active(AppWindowId::default()),
@@ -10299,6 +10499,54 @@ mod tests {
             ),
             "expected press_shortcut step"
         );
+    }
+
+    #[test]
+    fn docking_interaction_snapshot_includes_dock_drop_resolve() {
+        let diagnostics = fret_runtime::DockingInteractionDiagnostics {
+            dock_drag: None,
+            dock_drop_resolve: Some(fret_runtime::DockDropResolveDiagnostics {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(12.0), Px(34.0)),
+                window_bounds: rect(0.0, 0.0, 800.0, 600.0),
+                dock_bounds: rect(16.0, 16.0, 768.0, 568.0),
+                source: fret_runtime::DockDropResolveSource::TabBar,
+                resolved: Some(fret_runtime::DockDropTargetDiagnostics {
+                    layout_root: dock_node_id(101),
+                    tabs: dock_node_id(202),
+                    zone: DropZone::Center,
+                    insert_index: Some(2),
+                    outer: false,
+                }),
+                candidates: vec![fret_runtime::DockDropCandidateRectDiagnostics {
+                    kind: fret_runtime::DockDropCandidateRectKind::TabBarRect,
+                    zone: Some(DropZone::Center),
+                    rect: rect(24.0, 24.0, 200.0, 40.0),
+                }],
+            }),
+            viewport_capture: None,
+        };
+
+        let snapshot = UiDockingInteractionSnapshotV1::from_snapshot(&diagnostics);
+        let resolve = snapshot
+            .dock_drop_resolve
+            .as_ref()
+            .expect("dock_drop_resolve must be present");
+        assert_eq!(resolve.source, UiDockDropResolveSourceV1::TabBar);
+        assert!(
+            !resolve.candidates.is_empty(),
+            "expected at least one candidate rect"
+        );
+
+        let json = serde_json::to_string(&snapshot).expect("serialize snapshot");
+        assert!(
+            json.contains("dock_drop_resolve"),
+            "expected dock_drop_resolve to serialize"
+        );
+
+        let roundtrip: UiDockingInteractionSnapshotV1 =
+            serde_json::from_str(&json).expect("deserialize snapshot");
+        assert!(roundtrip.dock_drop_resolve.is_some());
     }
 
     #[test]
