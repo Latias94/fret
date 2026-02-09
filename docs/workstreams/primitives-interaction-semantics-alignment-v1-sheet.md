@@ -28,6 +28,9 @@ Key implementation anchors (motion + open-change semantics):
   - `ecosystem/fret-ui-shadcn/src/sheet.rs` (`SheetSide`, `with_sheet_side_provider`)
 - Dialog mechanism surface used by Sheet:
   - `ecosystem/fret-ui-shadcn/src/sheet.rs` (`use fret_ui_kit::primitives::dialog as radix_dialog`)
+- Reason-aware close auto-focus guard + default-close dismissal wrapper (Dialog substrate):
+  - `ecosystem/fret-ui-kit/src/primitives/dialog.rs` (`DialogCloseAutoFocusGuardPolicy`, `dialog_close_auto_focus_guard_hooks`)
+  - `ecosystem/fret-ui-shadcn/src/sheet.rs` (wires guard hooks into `modal_dialog_request_with_options_and_dismiss_handler`)
 
 Related tests/gates:
 

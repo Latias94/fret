@@ -316,9 +316,17 @@ impl Sheet {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_dialog::dialog_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        self.on_dismiss_request.clone(),
+                        self.on_close_auto_focus.clone(),
+                    );
 
-                let open = self.open;
+                let open = self.open.clone();
                 let open_for_children = open.clone();
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
@@ -327,7 +335,7 @@ impl Sheet {
                     .dismiss_on_overlay_press(overlay_closable)
                     .initial_focus(None)
                     .on_open_auto_focus(self.on_open_auto_focus.clone())
-                    .on_close_auto_focus(self.on_close_auto_focus.clone());
+                    .on_close_auto_focus(on_close_auto_focus);
 
                 let size_override = self.size_override;
                 let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
@@ -1628,6 +1636,63 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_escape_closes_by_default_when_handler_allows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+        });
+
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let _ = render_sheet_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(handler.clone()),
+            true,
+            SheetSide::Right,
+            content_id.clone(),
+            Rc::new(Cell::new(None)),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            *reason_cell.lock().expect("reason lock"),
+            Some(DismissReason::Escape)
+        );
     }
 
     #[test]
