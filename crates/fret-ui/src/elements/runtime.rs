@@ -47,6 +47,8 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
     pub observed_layout_queries: Vec<ElementObservedLayoutQueriesDiagnosticsSnapshot>,
     pub layout_query_regions: Vec<LayoutQueryRegionDiagnosticsSnapshot>,
+    pub environment: EnvironmentQueryDiagnosticsSnapshot,
+    pub observed_environment: Vec<ElementObservedEnvironmentDiagnosticsSnapshot>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
@@ -89,6 +91,31 @@ pub struct ObservedLayoutQueryRegionDiagnosticsSnapshot {
     pub region_changed_this_frame: bool,
     pub region_name: Option<StdArc<str>>,
     pub region_committed_bounds: Option<Rect>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct EnvironmentQueryDiagnosticsSnapshot {
+    pub viewport_bounds: Rect,
+    pub scale_factor: f32,
+    pub prefers_reduced_motion: Option<bool>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ElementObservedEnvironmentDiagnosticsSnapshot {
+    pub element: GlobalElementId,
+    pub deps_fingerprint: u64,
+    pub keys: Vec<ObservedEnvironmentKeyDiagnosticsSnapshot>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ObservedEnvironmentKeyDiagnosticsSnapshot {
+    pub key: StdArc<str>,
+    pub invalidation: Invalidation,
+    pub key_revision: u64,
+    pub key_changed_this_frame: bool,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -1237,6 +1264,19 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let invalidation_sort_key = |inv: Invalidation| match inv {
+            Invalidation::Layout => 0u8,
+            Invalidation::Paint => 1u8,
+            Invalidation::HitTest => 2u8,
+            Invalidation::HitTestOnly => 3u8,
+        };
+
+        let env_key_label = |key: EnvironmentQueryKey| match key {
+            EnvironmentQueryKey::ViewportSize => "viewport_size",
+            EnvironmentQueryKey::ScaleFactor => "scale_factor",
+            EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+        };
+
         let bounds_for = |element: Option<GlobalElementId>| {
             element.and_then(|id| {
                 self.prev_bounds
@@ -1327,6 +1367,42 @@ impl WindowElementState {
                 })
                 .collect();
         observed_layout_queries.sort_by_key(|e| e.element.0);
+
+        let mut observed_environment: Vec<ElementObservedEnvironmentDiagnosticsSnapshot> = self
+            .observed_environment_next
+            .iter()
+            .map(|(element, list)| {
+                let deps_fingerprint = self.environment_deps_fingerprint_from_list(Some(list));
+                let mut keys: Vec<ObservedEnvironmentKeyDiagnosticsSnapshot> = list
+                    .iter()
+                    .map(|(key, inv)| ObservedEnvironmentKeyDiagnosticsSnapshot {
+                        key: StdArc::<str>::from(env_key_label(*key)),
+                        invalidation: *inv,
+                        key_revision: self.environment_revision(*key),
+                        key_changed_this_frame: self.environment_changed_this_frame.contains(key),
+                    })
+                    .collect();
+                keys.sort_by(|a, b| {
+                    a.key.as_ref().cmp(b.key.as_ref()).then_with(|| {
+                        invalidation_sort_key(a.invalidation)
+                            .cmp(&invalidation_sort_key(b.invalidation))
+                    })
+                });
+
+                ElementObservedEnvironmentDiagnosticsSnapshot {
+                    element: *element,
+                    deps_fingerprint,
+                    keys,
+                }
+            })
+            .collect();
+        observed_environment.sort_by_key(|e| e.element.0);
+
+        let environment = EnvironmentQueryDiagnosticsSnapshot {
+            viewport_bounds: self.committed_viewport_bounds,
+            scale_factor: self.committed_scale_factor,
+            prefers_reduced_motion: self.committed_prefers_reduced_motion,
+        };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
             self.view_cache_reuse_roots.iter().copied().collect();
@@ -1447,6 +1523,8 @@ impl WindowElementState {
                 .collect(),
             observed_layout_queries,
             layout_query_regions,
+            environment,
+            observed_environment,
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,

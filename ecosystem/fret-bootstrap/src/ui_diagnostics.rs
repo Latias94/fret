@@ -7822,6 +7822,10 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub observed_layout_queries: Vec<ElementObservedLayoutQueriesV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layout_query_regions: Vec<ElementLayoutQueryRegionV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<ElementEnvironmentSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub observed_environment: Vec<ElementObservedEnvironmentV1>,
     #[serde(default)]
     pub view_cache_reuse_roots: Vec<u64>,
     #[serde(default)]
@@ -7910,6 +7914,29 @@ pub struct ElementLayoutQueryRegionV1 {
     pub committed_bounds: Option<RectV1>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_bounds: Option<RectV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementEnvironmentSnapshotV1 {
+    pub viewport_bounds: RectV1,
+    pub scale_factor: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefers_reduced_motion: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentV1 {
+    pub element: u64,
+    pub deps_fingerprint: u64,
+    pub keys: Vec<ElementObservedEnvironmentKeyV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementObservedEnvironmentKeyV1 {
+    pub key: String,
+    pub invalidation: String,
+    pub key_revision: u64,
+    pub key_changed_this_frame: bool,
 }
 
 impl ElementDiagnosticsSnapshotV1 {
@@ -8013,6 +8040,29 @@ impl ElementDiagnosticsSnapshotV1 {
                     changed_this_frame: r.changed_this_frame,
                     committed_bounds: r.committed_bounds.map(RectV1::from),
                     current_bounds: r.current_bounds.map(RectV1::from),
+                })
+                .collect(),
+            environment: Some(ElementEnvironmentSnapshotV1 {
+                viewport_bounds: RectV1::from(snapshot.environment.viewport_bounds),
+                scale_factor: snapshot.environment.scale_factor,
+                prefers_reduced_motion: snapshot.environment.prefers_reduced_motion,
+            }),
+            observed_environment: snapshot
+                .observed_environment
+                .into_iter()
+                .map(|entry| ElementObservedEnvironmentV1 {
+                    element: entry.element.0,
+                    deps_fingerprint: entry.deps_fingerprint,
+                    keys: entry
+                        .keys
+                        .into_iter()
+                        .map(|k| ElementObservedEnvironmentKeyV1 {
+                            key: k.key.to_string(),
+                            invalidation: invalidation_label(k.invalidation).to_string(),
+                            key_revision: k.key_revision,
+                            key_changed_this_frame: k.key_changed_this_frame,
+                        })
+                        .collect(),
                 })
                 .collect(),
             view_cache_reuse_roots: snapshot

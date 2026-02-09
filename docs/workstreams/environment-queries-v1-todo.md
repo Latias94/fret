@@ -26,7 +26,7 @@ ADR anchor:
 - [x] Expose a typed query API that records dependencies during declarative rendering.
 - [x] Dependency tracking: record which view roots observed which environment keys.
 - [x] Invalidation: environment changes invalidate dependents (coalescing OK).
-- [ ] Add diagnostics hooks (inspector snapshot / debug logging).
+- [x] Add diagnostics hooks (inspector snapshot / debug logging).
 - [ ] Add unit tests for:
   - [ ] invalidation on viewport bounds change,
   - [x] view-cache key participation via deps fingerprint,
