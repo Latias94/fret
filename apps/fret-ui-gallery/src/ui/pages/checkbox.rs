@@ -160,8 +160,7 @@ pub(super) fn preview_checkbox(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let demo_checked = cx
         .get_model_copied(&model, Invalidation::Layout)
@@ -195,17 +194,17 @@ pub(super) fn preview_checkbox(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =

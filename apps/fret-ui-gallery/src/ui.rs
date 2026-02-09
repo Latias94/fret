@@ -15,6 +15,7 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -6676,7 +6677,7 @@ fn preview_windowed_rows_surface_interactive_torture(
 }
 
 fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let outline_fg = ColorRef::Color(theme.color_required("foreground"));
     let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));

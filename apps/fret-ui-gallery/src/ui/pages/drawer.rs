@@ -117,8 +117,6 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -141,17 +139,17 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(780.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -224,7 +222,6 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let scrollable_content = {
         let trigger_open = scroll_open.clone();
         let close_open = scroll_open.clone();
-        let theme_for_scrollable_content = theme.clone();
 
         let drawer = shadcn::Drawer::new(scroll_open.clone())
             .side(shadcn::DrawerSide::Right)
@@ -258,14 +255,16 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        cx.container(
-                            decl_style::container_props(
-                                &theme_for_scrollable_content,
-                                ChromeRefinement::default().px(Space::N4),
-                                LayoutRefinement::default().w_full(),
-                            ),
-                            move |_cx| [scroller],
-                        ),
+                        {
+                            let props = cx.with_theme(|theme| {
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default().px(Space::N4),
+                                    LayoutRefinement::default().w_full(),
+                                )
+                            });
+                            cx.container(props, move |_cx| [scroller])
+                        },
                         shadcn::DrawerFooter::new([
                             shadcn::Button::new("Submit").into_element(cx),
                             shadcn::Button::new("Cancel")

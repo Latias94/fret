@@ -1,8 +1,6 @@
 use super::super::*;
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -25,17 +23,17 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -66,13 +64,20 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             },
         );
 
+        let (muted_bg, border) = cx.with_theme(|theme| {
+            (
+                theme.color_required("muted"),
+                theme.color_required("border"),
+            )
+        });
+
         shadcn::AspectRatio::new(ratio, content)
             .refine_style(
                 ChromeRefinement::default()
                     .rounded(Radius::Lg)
                     .border_1()
-                    .bg(ColorRef::Color(theme.color_required("muted")))
-                    .border_color(ColorRef::Color(theme.color_required("border"))),
+                    .bg(ColorRef::Color(muted_bg))
+                    .border_color(ColorRef::Color(border)),
             )
             .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
             .into_element(cx)
