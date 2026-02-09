@@ -32,12 +32,13 @@ pub struct LayoutEngineMeasureHotspot {
 
 pub struct TaffyLayoutEngine {
     tree: TaffyTree<NodeContext>,
-    node_to_layout: HashMap<NodeId, LayoutId>,
+    node_to_layout: SecondaryMap<NodeId, LayoutId>,
     layout_to_node: HashMap<LayoutId, NodeId>,
-    styles: HashMap<NodeId, taffy::Style>,
-    children: HashMap<NodeId, Vec<NodeId>>,
-    parent: HashMap<NodeId, NodeId>,
-    seen: HashSet<NodeId>,
+    styles: SecondaryMap<NodeId, taffy::Style>,
+    children: SecondaryMap<NodeId, Vec<NodeId>>,
+    parent: SecondaryMap<NodeId, NodeId>,
+    seen_generation: u64,
+    seen_stamp: SecondaryMap<NodeId, u64>,
     solve_generation: u64,
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
@@ -88,12 +89,13 @@ impl Default for TaffyLayoutEngine {
         tree.enable_rounding();
         Self {
             tree,
-            node_to_layout: HashMap::new(),
+            node_to_layout: SecondaryMap::new(),
             layout_to_node: HashMap::new(),
-            styles: HashMap::new(),
-            children: HashMap::new(),
-            parent: HashMap::new(),
-            seen: HashSet::new(),
+            styles: SecondaryMap::new(),
+            children: SecondaryMap::new(),
+            parent: SecondaryMap::new(),
+            seen_generation: 1,
+            seen_stamp: SecondaryMap::new(),
             solve_generation: 0,
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
@@ -113,8 +115,12 @@ impl Default for TaffyLayoutEngine {
 }
 
 impl TaffyLayoutEngine {
+    fn saw_this_frame(&self, node: NodeId) -> bool {
+        self.seen_stamp.get(node).copied() == Some(self.seen_generation)
+    }
+
     fn invalidate_solved_ancestors(&mut self, mut node: NodeId) {
-        while let Some(parent) = self.parent.get(&node).copied() {
+        while let Some(parent) = self.parent.get(node).copied() {
             self.node_solved_stamp.remove(parent);
             self.root_solve_stamp.remove(parent);
             node = parent;
@@ -124,7 +130,12 @@ impl TaffyLayoutEngine {
     pub fn begin_frame(&mut self, frame_id: FrameId) {
         if self.frame_id != Some(frame_id) {
             self.frame_id = Some(frame_id);
-            self.seen.clear();
+            self.seen_generation = self.seen_generation.wrapping_add(1);
+            if self.seen_generation == 0 {
+                // Keep `seen_generation` non-zero to simplify "not seen this frame" checks.
+                self.seen_generation = 1;
+                self.seen_stamp.clear();
+            }
             self.solve_generation = 0;
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
@@ -140,39 +151,41 @@ impl TaffyLayoutEngine {
     pub fn end_frame(&mut self) {
         let stale: Vec<NodeId> = self
             .node_to_layout
-            .keys()
-            .copied()
-            .filter(|node| !self.seen.contains(node))
+            .iter()
+            .filter_map(|(node, _)| {
+                let seen = self.seen_stamp.get(node).copied() == Some(self.seen_generation);
+                (!seen).then_some(node)
+            })
             .collect();
 
         for node in stale {
-            let Some(layout_id) = self.node_to_layout.remove(&node) else {
+            let Some(layout_id) = self.node_to_layout.remove(node) else {
                 continue;
             };
             self.layout_to_node.remove(&layout_id);
-            self.styles.remove(&node);
-            if let Some(children) = self.children.remove(&node) {
+            self.styles.remove(node);
+            self.seen_stamp.remove(node);
+            if let Some(children) = self.children.remove(node) {
                 for child in children {
-                    if self.parent.get(&child) == Some(&node) {
-                        self.parent.remove(&child);
+                    if self.parent.get(child) == Some(&node) {
+                        self.parent.remove(child);
                     }
                 }
             }
-            self.parent.remove(&node);
+            self.parent.remove(node);
             self.node_solved_stamp.remove(node);
             self.root_solve_stamp.remove(node);
             let _ = self.tree.remove(layout_id.0);
         }
-        self.seen.clear();
     }
 
     pub fn layout_id_for_node(&self, node: NodeId) -> Option<LayoutId> {
-        self.node_to_layout.get(&node).copied()
+        self.node_to_layout.get(node).copied()
     }
 
     pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) {
-        if self.node_to_layout.contains_key(&node) {
-            self.seen.insert(node);
+        if self.node_to_layout.contains_key(node) {
+            self.seen_stamp.insert(node, self.seen_generation);
         }
     }
 
@@ -232,12 +245,12 @@ impl TaffyLayoutEngine {
         {
             return None;
         }
-        if !self.seen.contains(&parent) || !self.seen.contains(&child) {
+        if !self.saw_this_frame(parent) || !self.saw_this_frame(child) {
             return None;
         }
         if !self
             .children
-            .get(&parent)
+            .get(parent)
             .is_some_and(|children| children.contains(&child))
         {
             return None;
@@ -252,7 +265,7 @@ impl TaffyLayoutEngine {
         available: LayoutSize<AvailableSpace>,
         scale_factor: f32,
     ) -> bool {
-        if !self.seen.contains(&root) {
+        if !self.saw_this_frame(root) {
             return false;
         }
         let Some(frame_id) = self.frame_id else {
@@ -306,8 +319,8 @@ impl TaffyLayoutEngine {
     }
 
     pub fn request_layout_node(&mut self, node: NodeId) -> LayoutId {
-        self.seen.insert(node);
-        if let Some(id) = self.node_to_layout.get(&node).copied() {
+        self.seen_stamp.insert(node, self.seen_generation);
+        if let Some(id) = self.node_to_layout.get(node).copied() {
             return id;
         }
 
@@ -348,7 +361,7 @@ impl TaffyLayoutEngine {
 
     pub fn set_style(&mut self, node: NodeId, style: taffy::Style) {
         let id = self.request_layout_node(node).0;
-        if self.styles.get(&node) == Some(&style) {
+        if self.styles.get(node) == Some(&style) {
             return;
         }
         self.node_solved_stamp.remove(node);
@@ -363,11 +376,7 @@ impl TaffyLayoutEngine {
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
         let parent = self.request_layout_node(node).0;
 
-        let prev_children = self
-            .children
-            .get(&node)
-            .map(|v| v.as_slice())
-            .unwrap_or(&[]);
+        let prev_children = self.children.get(node).map(|v| v.as_slice()).unwrap_or(&[]);
         if prev_children == children {
             return;
         }
@@ -375,10 +384,10 @@ impl TaffyLayoutEngine {
         self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
 
-        if let Some(prev_children) = self.children.get(&node) {
+        if let Some(prev_children) = self.children.get(node) {
             for &child in prev_children.iter() {
-                if self.parent.get(&child) == Some(&node) {
-                    self.parent.remove(&child);
+                if self.parent.get(child) == Some(&node) {
+                    self.parent.remove(child);
                 }
             }
         }
@@ -681,7 +690,7 @@ impl TaffyLayoutEngine {
                 .layout_id_for_node(node)
                 .map(|id| engine.layout_rect(id))
                 .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
-            let abs = if let Some(parent) = engine.parent.get(&node).copied() {
+            let abs = if let Some(parent) = engine.parent.get(node).copied() {
                 let parent_abs = abs_rect_for_node(engine, parent, abs_cache);
                 Rect::new(
                     Point::new(
@@ -708,7 +717,7 @@ impl TaffyLayoutEngine {
                 continue;
             }
 
-            let children = self.children.get(&node).cloned().unwrap_or_default();
+            let children = self.children.get(node).cloned().unwrap_or_default();
             for &child in children.iter().rev() {
                 stack.push(child);
             }
@@ -726,7 +735,7 @@ impl TaffyLayoutEngine {
 
             let style_dbg = self
                 .styles
-                .get(&node)
+                .get(node)
                 .map(|s| format!("{s:?}"))
                 .unwrap_or_else(|| "<missing>".to_string());
 
@@ -736,7 +745,7 @@ impl TaffyLayoutEngine {
                 "node": format!("{node:?}"),
                 "label": label_dbg,
                 "measured": measured,
-                "parent": self.parent.get(&node).map(|p| format!("{p:?}")),
+                "parent": self.parent.get(node).map(|p| format!("{p:?}")),
                 "children": children.iter().map(|c| format!("{c:?}")).collect::<Vec<_>>(),
                 "layout_id": layout_id.map(|id| format!("{:?}", id.0)).unwrap_or_else(|| "<missing>".to_string()),
                 "local_rect": {
@@ -799,7 +808,7 @@ impl TaffyLayoutEngine {
                     solve_generation: self.solve_generation,
                 },
             );
-            if let Some(children) = self.children.get(&node) {
+            if let Some(children) = self.children.get(node) {
                 stack.extend(children.iter().copied());
             }
         }
