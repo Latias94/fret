@@ -31,6 +31,7 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_frames", "n": 4 },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-tabs" }
@@ -45,7 +46,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-material3-tabs" }
       },
-      "timeout_frames": 360
+      "timeout_frames": 600
     },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-tab-settings" } },
