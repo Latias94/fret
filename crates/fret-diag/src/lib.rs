@@ -7349,7 +7349,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 45] {
+fn ui_gallery_suite_scripts() -> [&'static str; 46] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -7378,6 +7378,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 45] {
         "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json",
@@ -7399,7 +7400,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 45] {
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 35] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 36] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -7410,6 +7411,7 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 35] {
         "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json",
@@ -7674,6 +7676,7 @@ fn ui_gallery_script_requires_markdown_editor_source_word_boundary_gate(script: 
         name,
         "ui-gallery-markdown-editor-source-word-boundary-baseline.json"
             | "ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json"
+            | "ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json"
     )
 }
 
@@ -7800,6 +7803,7 @@ fn ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(script:
     matches!(
         name,
         "ui-gallery-markdown-editor-source-inlays-baseline.json"
+            | "ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json"
     )
 }
 
