@@ -2148,27 +2148,29 @@ impl<H: UiHost> UiTree<H> {
                         element = Some(record.element);
                         element_kind = Some(record.instance.kind_name());
                     }
-                    let top_children = self
-                        .debug_take_top_measure_children(h.node, 3)
-                        .into_iter()
-                        .map(|(child, r)| {
-                            let mut child_element: Option<GlobalElementId> = None;
-                            let mut child_kind: Option<&'static str> = None;
-                            if let Some(record) =
-                                crate::declarative::frame::element_record_for_node(app, window, child)
-                            {
-                                child_element = Some(record.element);
-                                child_kind = Some(record.instance.kind_name());
-                            }
-                            super::UiDebugLayoutEngineMeasureChildHotspot {
-                                child,
-                                measure_time: r.total_time,
-                                calls: r.calls,
-                                element: child_element,
-                                element_kind: child_kind,
-                            }
-                        })
-                        .collect();
+                    let top_children =
+                        self.debug_take_top_measure_children(h.node, 3)
+                            .into_iter()
+                            .map(|(child, r)| {
+                                let mut child_element: Option<GlobalElementId> = None;
+                                let mut child_kind: Option<&'static str> = None;
+                                if let Some(record) =
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, child,
+                                    )
+                                {
+                                    child_element = Some(record.element);
+                                    child_kind = Some(record.instance.kind_name());
+                                }
+                                super::UiDebugLayoutEngineMeasureChildHotspot {
+                                    child,
+                                    measure_time: r.total_time,
+                                    calls: r.calls,
+                                    element: child_element,
+                                    element_kind: child_kind,
+                                }
+                            })
+                            .collect();
                     super::UiDebugLayoutEngineMeasureHotspot {
                         node: h.node,
                         measure_time: h.total_time,
@@ -2316,7 +2318,9 @@ impl<H: UiHost> UiTree<H> {
                                 let mut child_element: Option<GlobalElementId> = None;
                                 let mut child_kind: Option<&'static str> = None;
                                 if let Some(record) =
-                                    crate::declarative::frame::element_record_for_node(app, window, child)
+                                    crate::declarative::frame::element_record_for_node(
+                                        app, window, child,
+                                    )
                                 {
                                     child_element = Some(record.element);
                                     child_kind = Some(record.instance.kind_name());
