@@ -68,6 +68,32 @@ Conventions:
     previous children vec in `TaffyLayoutEngine::set_children`).
     - Implementation: commit `10e30dac1`.
     - Evidence: perf log entry `2026-02-09 09:10:11` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+- [ ] **P0.5 Code editor resize drag smoothness**: close the remaining 2–3× gap to the editor resize threshold
+  (currently ~37–46ms worst frames vs `16308us` target).
+  - Evidence snapshot: perf log entry `2026-02-09 10:51:48` (commit `c1af5d1f7`) + follow-up experiments
+    `a78a5fc76`, `f9c2b10d6`, `92ff5182a`, `9fe6fe352`.
+  - Current attribution: paint-dominant; the top hotspot is the code editor’s Canvas paint path (`scene_ops_delta=581`).
+  - [x] Cache per-row rich syntax materialization (`AttributedText`) to reduce per-frame span merge churn.
+    - Implementation: `perf(fret-code-editor): cache syntax rich text` (commit `26ad57906`) + build fix (commit `a78a5fc76`).
+    - Evidence: perf log entry `2026-02-09 11:31:52` (commit `a78a5fc76`) showing a ~5ms reduction in Canvas time in the best attempt
+      but still far above threshold.
+  - [ ] Add code-editor-Canvas internal attribution (no more “Canvas is 30ms”).
+    - Goal: split the Canvas hotspot into 5–10 phases (row text fetch, syntax spans, rich materialize, text draw calls,
+      selection geometry, scene op push cost) so we can pick the correct lever.
+    - Deliverable: new fields in `diag perf --json` / `diag stats` output (or a dedicated `diag` command) that surface these phase timings.
+  - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
+    - Candidate directions:
+      - record per-row display lists (ops) and replay with a transform/translation,
+      - reduce quads/text ops count (batching or fewer per-row background ops),
+      - avoid per-frame allocations in the hot loop (scratch vec reuse, pre-sized buffers).
+  - [ ] Re-evaluate text blob cache behavior for editor rows under resize jitter.
+    - Confirm whether the hitch is dominated by fingerprint comparison, text prepare, atlas upload, or pure CPU list building.
+    - If dominated by fingerprint compare, consider pointer-fast-pathing for more content variants (and/or richer cache keys).
+  - [ ] Add a smaller, editor-only perf suite to reduce noise while iterating.
+    - Goal: a probe that opens only the code editor torture view (or a minimal demo) and runs the same resize jitter steps.
+    - Deliverable: `tools/diag-scripts/*` + a `ui-code-editor-*` perf baseline/policy if needed.
+  - [ ] GPU side validation (only after CPU attribution is clear).
+    - Run RenderDoc/Tracy captures for the worst bundle and confirm whether the hitch is CPU-bound (scene build/text) or GPU-bound (uploads/compositing).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
