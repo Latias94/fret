@@ -599,3 +599,18 @@ fn snapshot_extras_relative_time_default() {
         ]
     });
 }
+
+#[test]
+fn snapshot_extras_rating_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_rating_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Rating::uncontrolled(3)
+                .count(5)
+                .into_element(cx),
+        ]
+    });
+}
