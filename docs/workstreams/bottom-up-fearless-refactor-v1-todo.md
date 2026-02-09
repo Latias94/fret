@@ -39,6 +39,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
   - Evidence (module split):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/chart.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
