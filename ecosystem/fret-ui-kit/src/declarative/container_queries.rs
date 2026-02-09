@@ -227,12 +227,8 @@ pub fn container_width_at_least<H: UiHost>(
                 st.initialized = true;
             }
 
-            st.active = container_width_at_least_apply_hysteresis(
-                width,
-                threshold,
-                hysteresis,
-                st.active,
-            );
+            st.active =
+                container_width_at_least_apply_hysteresis(width, threshold, hysteresis, st.active);
             st.active
         })
     })
@@ -259,19 +255,44 @@ mod tests {
         assert_eq!(active_index, 1);
 
         // Approach MD but do not cross until width >= MD + up.
-        active_index = container_breakpoints_apply_hysteresis(Px(770.0), breakpoints, hysteresis, active_index);
+        active_index = container_breakpoints_apply_hysteresis(
+            Px(770.0),
+            breakpoints,
+            hysteresis,
+            active_index,
+        );
         assert_eq!(active_index, 1);
-        active_index = container_breakpoints_apply_hysteresis(Px(776.0), breakpoints, hysteresis, active_index);
+        active_index = container_breakpoints_apply_hysteresis(
+            Px(776.0),
+            breakpoints,
+            hysteresis,
+            active_index,
+        );
         assert_eq!(active_index, 2);
 
         // Approach back below MD but do not drop until width < MD - down.
-        active_index = container_breakpoints_apply_hysteresis(Px(762.0), breakpoints, hysteresis, active_index);
+        active_index = container_breakpoints_apply_hysteresis(
+            Px(762.0),
+            breakpoints,
+            hysteresis,
+            active_index,
+        );
         assert_eq!(active_index, 2);
-        active_index = container_breakpoints_apply_hysteresis(Px(759.0), breakpoints, hysteresis, active_index);
+        active_index = container_breakpoints_apply_hysteresis(
+            Px(759.0),
+            breakpoints,
+            hysteresis,
+            active_index,
+        );
         assert_eq!(active_index, 1);
 
         // Jump up multiple breakpoints in one update.
-        active_index = container_breakpoints_apply_hysteresis(Px(2000.0), breakpoints, hysteresis, active_index);
+        active_index = container_breakpoints_apply_hysteresis(
+            Px(2000.0),
+            breakpoints,
+            hysteresis,
+            active_index,
+        );
         assert_eq!(active_index, 3);
     }
 
@@ -284,15 +305,19 @@ mod tests {
         assert!(!active);
 
         // Do not cross until width >= threshold + up.
-        active = container_width_at_least_apply_hysteresis(Px(770.0), threshold, hysteresis, active);
+        active =
+            container_width_at_least_apply_hysteresis(Px(770.0), threshold, hysteresis, active);
         assert!(!active);
-        active = container_width_at_least_apply_hysteresis(Px(776.0), threshold, hysteresis, active);
+        active =
+            container_width_at_least_apply_hysteresis(Px(776.0), threshold, hysteresis, active);
         assert!(active);
 
         // Do not drop until width < threshold - down.
-        active = container_width_at_least_apply_hysteresis(Px(762.0), threshold, hysteresis, active);
+        active =
+            container_width_at_least_apply_hysteresis(Px(762.0), threshold, hysteresis, active);
         assert!(active);
-        active = container_width_at_least_apply_hysteresis(Px(759.0), threshold, hysteresis, active);
+        active =
+            container_width_at_least_apply_hysteresis(Px(759.0), threshold, hysteresis, active);
         assert!(!active);
     }
 }
