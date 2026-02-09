@@ -24,7 +24,8 @@ use gates::{
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path,
-    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_cross_window_max,
+    check_bundle_for_dock_drag_min, check_bundle_for_dock_drop_resolve_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
     check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
@@ -196,6 +197,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
+    let mut check_dock_drag_cross_window_max: Option<u64> = None;
+    let mut check_dock_drop_resolve_min: Option<u64> = None;
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
@@ -1006,6 +1009,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
                 i += 1;
             }
+            "--check-dock-drag-cross-window-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-dock-drag-cross-window-max".to_string());
+                };
+                check_dock_drag_cross_window_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-dock-drag-cross-window-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-dock-drop-resolve-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-dock-drop-resolve-min".to_string());
+                };
+                check_dock_drop_resolve_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-dock-drop-resolve-min".to_string()
+                    })?);
+                i += 1;
+            }
             "--check-viewport-capture-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1630,6 +1654,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
+                    || check_dock_drag_cross_window_max.is_some()
+                    || check_dock_drop_resolve_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
@@ -1695,6 +1721,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
                         check_dock_drag_min,
+                        check_dock_drag_cross_window_max,
+                        check_dock_drop_resolve_min,
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_attach_detach_max,
@@ -2006,6 +2034,8 @@ See: `docs/tracy.md`.\n";
                         || check_overlay_synthesis_min.is_some()
                         || check_viewport_input_min.is_some()
                         || check_dock_drag_min.is_some()
+                        || check_dock_drag_cross_window_max.is_some()
+                        || check_dock_drop_resolve_min.is_some()
                         || check_viewport_capture_min.is_some()
                         || check_retained_vlist_reconcile_no_notify_min.is_some()
                         || check_retained_vlist_attach_detach_max.is_some()
@@ -2069,6 +2099,8 @@ See: `docs/tracy.md`.\n";
                             check_overlay_synthesis_min,
                             check_viewport_input_min,
                             check_dock_drag_min,
+                            check_dock_drag_cross_window_max,
+                            check_dock_drop_resolve_min,
                             check_viewport_capture_min,
                             check_retained_vlist_reconcile_no_notify_min,
                             check_retained_vlist_attach_detach_max,
@@ -3384,6 +3416,8 @@ See: `docs/tracy.md`.\n";
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
+                        check_dock_drag_cross_window_max,
+                        check_dock_drop_resolve_min,
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script
                             .or(suite_retained_vlist_reconcile_no_notify_min),
@@ -5306,6 +5340,18 @@ See: `docs/tracy.md`.\n";
             {
                 check_bundle_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
             }
+            if let Some(max_allowed) = check_dock_drag_cross_window_max {
+                check_bundle_for_dock_drag_cross_window_max(
+                    bundle_path.as_path(),
+                    max_allowed,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(min) = check_dock_drop_resolve_min
+                && min > 0
+            {
+                check_bundle_for_dock_drop_resolve_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
             if let Some(min) = check_viewport_capture_min
                 && min > 0
             {
@@ -6983,6 +7029,8 @@ fn apply_post_run_checks(
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
     check_dock_drag_min: Option<u64>,
+    check_dock_drag_cross_window_max: Option<u64>,
+    check_dock_drop_resolve_min: Option<u64>,
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
@@ -7184,6 +7232,14 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_dock_drag_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(max_allowed) = check_dock_drag_cross_window_max {
+        check_bundle_for_dock_drag_cross_window_max(bundle_path, max_allowed, warmup_frames)?;
+    }
+    if let Some(min) = check_dock_drop_resolve_min
+        && min > 0
+    {
+        check_bundle_for_dock_drop_resolve_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_viewport_capture_min
         && min > 0
@@ -8260,7 +8316,8 @@ mod tests {
     use super::*;
     use crate::diag::compare::compare_bundles_json;
     use crate::diag::stats::{
-        bundle_stats_from_json_with_options, check_bundle_for_dock_drag_min_json,
+        bundle_stats_from_json_with_options, check_bundle_for_dock_drag_cross_window_max_json,
+        check_bundle_for_dock_drag_min_json, check_bundle_for_dock_drop_resolve_min_json,
         check_bundle_for_gc_sweep_liveness, check_bundle_for_overlay_synthesis_min_json,
         check_bundle_for_retained_vlist_attach_detach_max_json,
         check_bundle_for_retained_vlist_keep_alive_budget_json,
@@ -9612,6 +9669,66 @@ mod tests {
 
         check_bundle_for_dock_drag_min_json(&bundle, Path::new("bundle.json"), 1, 0)
             .expect("expected dock_drag>=1");
+    }
+
+    #[test]
+    fn check_bundle_for_dock_drag_cross_window_max_limits_cross_window_hover_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "docking_interaction": {
+                                    "dock_drag": { "pointer_id": 0, "source_window": 1, "current_window": 2, "dragging": true, "cross_window_hover": true },
+                                    "viewport_capture": null
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err = check_bundle_for_dock_drag_cross_window_max_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            0,
+        )
+        .expect_err("expected cross_window_hover>0 to fail when max=0");
+        assert!(err.contains("cross_window_hover=true"));
+        assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_dock_drop_resolve_min_counts_active_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "docking_interaction": {
+                                    "dock_drag": null,
+                                    "dock_drop_resolve": { "pointer_id": 0, "position": { "x": 1.0, "y": 2.0 }, "window_bounds": { "x": 0.0, "y": 0.0, "w": 10.0, "h": 10.0 }, "dock_bounds": { "x": 0.0, "y": 0.0, "w": 10.0, "h": 10.0 }, "source": "none", "resolved": null, "candidates": [] },
+                                    "viewport_capture": null
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_dock_drop_resolve_min_json(&bundle, Path::new("bundle.json"), 1, 0)
+            .expect("expected dock_drop_resolve>=1");
     }
 
     #[test]
