@@ -218,6 +218,9 @@ Execution plan:
   resolve worst bundles without rerunning).
 - [x] Fix `tools/perf/diag_resize_probes_gate.sh` to record non-zero attempt exit codes correctly (for trustworthy
   gate summaries and downstream triage).
+- [x] Fix `fret-perf-workflow` gate triage helper:
+  - robust JSON payload extraction (skip leading logs without awk regex pitfalls),
+  - support absolute gate out-dirs (worktrees) by resolving attempt paths relative to the summary out-dir.
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:

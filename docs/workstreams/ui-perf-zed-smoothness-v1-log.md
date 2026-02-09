@@ -8265,3 +8265,55 @@ Notes:
   frames above the v3 baseline threshold. The dominant levers remain:
   - reduce layout plumbing overhead (`layout_request/build` + solve count), and
   - reduce paint/text prepare churn (it is still paint-dominant on `drag-jitter`).
+
+## 2026-02-09 10:51:48 (commit `c1af5d1f7`)
+
+Change:
+- No runtime perf change intended. Rerun the P0 resize gates from a detached worktree at `c1af5d1f7` to:
+  - verify the updated perf-gate triage workflow (JSON payload preserved on failures), and
+  - record a fresh, commit-addressable snapshot of resize gate stability.
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=4/5; required=3).
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+git worktree add --detach ../fret-perf-lab-c1af5d1f7 c1af5d1f7
+cd ../fret-perf-lab-c1af5d1f7
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227
+```
+
+Artifacts:
+- `ui-resize-probes`: `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/summary.json`
+- `ui-code-editor-resize-probes`: `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/summary.json`
+
+Results (us; selected attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16120 | 16304 | 16304 | 9618 | 2109 | 6816 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 16522 | 17065 | 17065 | 9889 | 2173 | 7844 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 36512 | 41379 | 41379 | 2647 | 396 | 38679 |
+
+Tail failures (worst bundles resolved via `fret-perf-workflow` gate triage helper):
+
+- `ui-resize-probes` attempt-2 drag-jitter threshold failure:
+  - `top_total_time_us=19523` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770604637202-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+- `ui-code-editor-resize-probes` (all attempts failed; paint-dominant):
+  - attempt-1 worst: `top_total_time_us=41576` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-1/1770604939155-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - attempt-2 worst: `top_total_time_us=41326` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-2/1770605012001-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+  - attempt-3 worst: `top_total_time_us=41379` (threshold `16308`)
+    - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.c1af5d1f7.20260209-103227/attempt-3/1770605182675-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- This run’s `ui-code-editor-resize-probes` failure is not a subtle tail flake: it is a large, repeatable `paint`
+  spike (~38ms p95 paint in the selected attempt). Next step is to attribute whether this is:
+  - `Text::prepare` churn (blob reuse / atlas churn), or
+  - non-text renderer churn (uploads, intermediate pool allocations/evictions), or
+  - an unintended “cold cache” effect from the detached run protocol.
