@@ -370,8 +370,11 @@ Markdown Editor v0”).
 - [x] Add a soft-wrap a11y composition regression (same invariants with wrap=80 enabled).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`.
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap`).
-- [ ] Deferred: Web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
-  - Decision: keep as a manual harness until it can be stabilized.
+- [x] Add a web IME bridge attach baseline (ADR 0195) (best-effort; non-flaky baseline only).
+  - Script: `tools/diag-scripts/ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_web_ime_bridge_enabled`).
+  - Flag: `--check-ui-gallery-web-ime-bridge-enabled`.
+  - Notes: the broader IME enable/focus workflow can still be flaky on some browsers; keep the harness for manual triage.
 
 ### M10.4 — Diag suite / definition-of-done
 

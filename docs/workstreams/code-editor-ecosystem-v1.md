@@ -311,6 +311,9 @@ Diagnostics gates (baseline set; add more as needed):
 
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-soft-wrap-baseline.json`
+- Web/WASM attach smoke (ADR 0195):
+  - `tools/diag-scripts/ui-gallery-web-markdown-editor-source-ime-bridge-attach-baseline.json` (run via DevTools WS transport)
+  - Gate: `--check-ui-gallery-web-ime-bridge-enabled`
 
 #### M10.4 — Diag gates as the definition-of-done
 
