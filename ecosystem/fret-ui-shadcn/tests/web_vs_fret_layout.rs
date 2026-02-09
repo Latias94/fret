@@ -1352,6 +1352,63 @@ fn run_fret_root(
         .expect("expected semantics snapshot")
 }
 
+fn run_fret_root_frames(
+    bounds: Rect,
+    frames: usize,
+    mut render: impl FnMut(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> fret_core::SemanticsSnapshot {
+    assert!(frames > 0, "frames must be > 0");
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let mut root: Option<NodeId> = None;
+    let mut snapshot: Option<fret_core::SemanticsSnapshot> = None;
+
+    for frame in 0..frames {
+        let root_node = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "web-vs-fret-layout",
+            |cx| render(cx),
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        snapshot = ui.semantics_snapshot().cloned();
+
+        // Runner-owned clocks are normally advanced by the platform event loop. In tests we
+        // advance them explicitly so frame-lagged layout queries (ADR 1170) can settle.
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        let next_tick = fret_runtime::TickId(app.tick_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        app.set_tick_id(next_tick);
+    }
+
+    snapshot.expect("expected semantics snapshot")
+}
+
 fn run_fret_root_with_services(
     bounds: Rect,
     services: &mut dyn fret_core::UiServices,
@@ -25817,7 +25874,7 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
-    let snap = run_fret_root(bounds, |cx| {
+    let snap = run_fret_root_frames(bounds, 2, |cx| {
         let theme = Theme::global(&*cx.app).clone();
         let content_layout =
             decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());

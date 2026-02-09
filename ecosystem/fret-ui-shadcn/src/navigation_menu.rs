@@ -11,12 +11,12 @@ use fret_runtime::{
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, Elements, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
-    VisualTransformProps,
+    AnyElement, ContainerProps, Elements, FlexProps, LayoutQueryRegionProps, LayoutStyle, Length,
+    MainAlign, PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle,
+    StackProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -590,6 +590,12 @@ pub struct NavigationMenu {
     disabled: bool,
     viewport: bool,
     indicator: bool,
+    /// Optional override for which query region drives responsive variants (ADR 1170).
+    ///
+    /// When unset, the component uses its own internal region wrapper. When set, the caller must
+    /// ensure the id refers to a `LayoutQueryRegion`, otherwise changes will not participate in
+    /// invalidation.
+    query_region: Option<GlobalElementId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: NavigationMenuStyle,
@@ -626,6 +632,7 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
@@ -643,6 +650,7 @@ impl NavigationMenu {
             disabled: false,
             viewport: true,
             indicator: false,
+            query_region: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
@@ -664,6 +672,15 @@ impl NavigationMenu {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Overrides which query region drives responsive variants (ADR 1170).
+    ///
+    /// This is primarily intended for editor-grade layouts where the navigation menu lives inside
+    /// a resizable panel/dock split and should adapt to the local container width.
+    pub fn container_query_region(mut self, region: GlobalElementId) -> Self {
+        self.query_region = Some(region);
         self
     }
 
@@ -771,6 +788,7 @@ impl NavigationMenu {
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
         let indicator_enabled = self.indicator;
+        let query_region_override = self.query_region;
         let chrome = self.chrome;
         let layout = self.layout;
         let style = self.style;
@@ -844,7 +862,21 @@ impl NavigationMenu {
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
-        cx.container(root_props, move |cx| {
+        let region_props = LayoutQueryRegionProps {
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().min_w_0(),
+            ),
+            name: None,
+        };
+
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.navigation_menu",
+            region_props,
+            move |cx, region_id| {
+                let region_id_for_queries = query_region_override.unwrap_or(region_id);
+                vec![cx.container(root_props, move |cx| {
             let root_id = cx.root_id();
             let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
                 .config(cfg)
@@ -992,7 +1024,14 @@ impl NavigationMenu {
                 &values,
             );
 
-            let md_breakpoint = cx.bounds.size.width >= Px(768.0);
+            let md_breakpoint = fret_ui_kit::declarative::container_breakpoints(
+                cx,
+                region_id_for_queries,
+                Invalidation::Layout,
+                false,
+                &[(fret_ui_kit::declarative::container_queries::tailwind::MD, true)],
+                fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+            );
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -1854,7 +1893,9 @@ impl NavigationMenu {
             }
 
             vec![list]
-        })
+        })]
+            },
+        )
     }
 }
 
@@ -2062,8 +2103,7 @@ mod tests {
         let changed = navigation_menu_value_change_event(&mut state, None);
         assert_eq!(changed, None);
 
-        let changed =
-            navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
         assert_eq!(
             changed
                 .as_ref()
@@ -2071,12 +2111,10 @@ mod tests {
             Some("components")
         );
 
-        let changed =
-            navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
         assert_eq!(changed, None);
 
-        let changed =
-            navigation_menu_value_change_event(&mut state, Some(Arc::from("docs")));
+        let changed = navigation_menu_value_change_event(&mut state, Some(Arc::from("docs")));
         assert_eq!(
             changed
                 .as_ref()
@@ -2804,55 +2842,80 @@ mod tests {
             );
             let mut services = FakeServices::default();
 
-            let render_frame = |ui: &mut UiTree<App>,
-                                app: &mut App,
-                                services: &mut FakeServices| {
-                bump_frame(app);
-                OverlayController::begin_frame(app, window);
-                let model_for_render = model.clone();
-                let root = fret_ui::declarative::render_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    "navigation-menu-dir",
-                    move |cx| {
-                        direction_prim::with_direction_provider(cx, dir, |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    padding: Edges {
-                                        top: Px(100.0),
-                                        right: Px(0.0),
-                                        bottom: Px(0.0),
-                                        left: Px(500.0),
+            let render_frame =
+                |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+                    bump_frame(app);
+                    OverlayController::begin_frame(app, window);
+                    let model_for_render = model.clone();
+                    let root = fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "navigation-menu-dir",
+                        move |cx| {
+                            direction_prim::with_direction_provider(cx, dir, |cx| {
+                                let theme = Theme::global(&*cx.app).clone();
+                                let region_props = LayoutQueryRegionProps {
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().w_full().min_w_0(),
+                                    ),
+                                    name: None,
+                                };
+
+                                vec![cx.layout_query_region_with_id(
+                                    region_props,
+                                    move |cx, region_id| {
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle {
+                                                    size: SizeStyle {
+                                                        width: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                padding: Edges {
+                                                    top: Px(100.0),
+                                                    right: Px(0.0),
+                                                    bottom: Px(0.0),
+                                                    left: Px(500.0),
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                let items = vec![
+                                                    NavigationMenuItem::new(
+                                                        "alpha",
+                                                        "Alpha",
+                                                        vec![cx.text("A")],
+                                                    ),
+                                                    NavigationMenuItem::new(
+                                                        "beta",
+                                                        "Beta",
+                                                        vec![cx.text("B")],
+                                                    ),
+                                                ];
+                                                vec![
+                                                    NavigationMenu::new(model_for_render.clone())
+                                                        .container_query_region(region_id)
+                                                        .items(items)
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        )]
                                     },
-                                    ..Default::default()
-                                },
-                                move |cx| {
-                                    let items = vec![
-                                        NavigationMenuItem::new(
-                                            "alpha",
-                                            "Alpha",
-                                            vec![cx.text("A")],
-                                        ),
-                                        NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
-                                    ];
-                                    vec![
-                                        NavigationMenu::new(model_for_render.clone())
-                                            .items(items)
-                                            .into_element(cx),
-                                    ]
-                                },
-                            )]
-                        })
-                    },
-                );
-                ui.set_root(root);
-                OverlayController::render(ui, app, services, window, bounds);
-                ui.request_semantics_snapshot();
-                ui.layout_all(app, services, bounds, 1.0);
-            };
+                                )]
+                            })
+                        },
+                    );
+                    ui.set_root(root);
+                    OverlayController::render(ui, app, services, window, bounds);
+                    ui.request_semantics_snapshot();
+                    ui.layout_all(app, services, bounds, 1.0);
+                };
 
             // Three frames:
             // - frame 1 establishes trigger/root bounds,
