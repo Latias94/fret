@@ -8606,3 +8606,30 @@ Artifacts:
 Notes:
 - attempt-1 failed due to `top_layout_engine_solve_time_us=3581us` exceeding the baseline threshold `3060us` in
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`, but the gate passed via majority.
+
+## 2026-02-09 17:00:00 (commit `fcd1ada2d`)
+
+Change:
+- Make `TextArea::set_text(...)` idempotent for identical text (avoid resetting selection/IME state if render re-applies
+  the same value).
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout fcd1ada2d
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/summary.json`
+
+Notes:
+- attempt-3 failed due to `drag-jitter` thresholds exceeded:
+  - `top_total_time_us=20292us` (threshold `19128us`)
+  - `top_layout_time_us=12704us` (threshold `12264us`)
+  - `top_layout_engine_solve_time_us=3561us` (threshold `2816us`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/attempt-3/1770618416688-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
