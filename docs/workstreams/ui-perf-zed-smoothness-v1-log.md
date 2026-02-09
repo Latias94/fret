@@ -8633,3 +8633,52 @@ Notes:
   - `top_layout_time_us=12704us` (threshold `12264us`)
   - `top_layout_engine_solve_time_us=3561us` (threshold `2816us`)
   - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.fcd1ada2d.20260209-1700/attempt-3/1770618416688-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 18:05:00 (commit `498147790`)
+
+Change:
+- Improve resize attribution: record layout-engine solves triggered by barrier roots (scroll/virtualization/etc) and keep
+  a bounded “top solves” list in bundles.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 498147790
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.498147790.20260209-1805
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.498147790.20260209-1805/summary.json`
+
+Finding (attempt-2 failing drag-jitter worst frame):
+- `top_total_time_us=20715us` exceeded threshold `19128us` in `ui-gallery-window-resize-drag-jitter-steady`.
+- Attribution now shows a heavy barrier root solve:
+  - `root=4294968378` `solve_us=1876` `measure_calls=960` `measure_cache_hits=0`
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.498147790.20260209-1805/attempt-2/1770619359780-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+## 2026-02-09 19:15:00 (commit `58db05d7c`)
+
+Change:
+- Enable a small, per-text “prepared blob by wrap width” LRU during **small-step** interactive resize (default 2 entries),
+  to reduce `Text::prepare` churn when dragging back-and-forth across wrap-width buckets.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 58db05d7c
+cargo build -p fret-ui-gallery --release
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.58db05d7c.20260209-1930
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/summary.json`
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.58db05d7c.20260209-1930/summary.json`
