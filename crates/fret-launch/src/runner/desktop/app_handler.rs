@@ -800,21 +800,38 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     // Keep delivering size/scale events for consistency with the existing runner
                     // behavior, but apply them once per frame so interactive resizes don't spam
                     // surface reconfigures and relayouts.
-                    let (mapped, scale_factor) = {
+                    let (logical_width, logical_height, scale_factor, should_deliver_resized) = {
                         let Some(state) = self.windows.get_mut(app_window) else {
                             return;
                         };
-                        let mut mapped = Vec::new();
-                        state.platform.handle_window_event(
-                            state.window.scale_factor(),
-                            &WindowEvent::SurfaceResized(size),
-                            &mut mapped,
-                        );
-                        (mapped, state.window.scale_factor() as f32)
+                        let scale_factor = state.window.scale_factor() as f32;
+                        let logical: winit::dpi::LogicalSize<f32> =
+                            size.to_logical(state.window.scale_factor());
+                        let logical_width = quantize_logical_px(logical.width);
+                        let logical_height = quantize_logical_px(logical.height);
+                        let bits = (logical_width.to_bits(), logical_height.to_bits());
+                        let should_deliver_resized = state
+                            .last_delivered_window_resized
+                            .is_none_or(|prev| prev != bits);
+                        if should_deliver_resized {
+                            state.last_delivered_window_resized = Some(bits);
+                        }
+                        (
+                            logical_width,
+                            logical_height,
+                            scale_factor,
+                            should_deliver_resized,
+                        )
                     };
 
-                    for evt in mapped {
-                        self.deliver_window_event_now(app_window, &evt);
+                    if should_deliver_resized {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::WindowResized {
+                                width: Px(logical_width),
+                                height: Px(logical_height),
+                            },
+                        );
                     }
                     let should_deliver_scale_factor = self
                         .app
