@@ -18,6 +18,10 @@ Baseline: Radix Popover outcomes (dismiss semantics and focus behavior; click-th
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/popover.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/popover.rs`
 
+Key implementation anchors (dismiss reasons → close auto-focus outcomes):
+
+- `ecosystem/fret-ui-kit/src/primitives/popover.rs` (`popover_close_auto_focus_guard_hooks`)
+
 Related tests/gates:
 
 - `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`

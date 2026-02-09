@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::action::{DismissReason, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{AnyElement, Elements, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -36,6 +36,145 @@ pub enum PopoverVariant {
     #[default]
     NonModal,
     Modal,
+}
+
+/// Policy for suppressing close auto-focus based on how a popover overlay was dismissed.
+///
+/// This is primarily intended to prevent "focus stealing" in **non-modal** click-through popovers:
+/// the outside press may legitimately interact with underlay UI, and restoring focus back to the
+/// trigger would fight that.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PopoverCloseAutoFocusGuardPolicy {
+    /// Prevent close auto-focus when dismissed via an outside press.
+    pub prevent_on_outside_press: bool,
+    /// Prevent close auto-focus when dismissed due to focus moving outside the dismissible layer.
+    pub prevent_on_focus_outside: bool,
+}
+
+impl PopoverCloseAutoFocusGuardPolicy {
+    /// Default policy for Radix-style popovers.
+    ///
+    /// - Modal popovers are not click-through, so outside presses generally should not suppress
+    ///   focus restoration.
+    /// - Non-modal popovers are click-through unless `consume_outside_pointer_events=true`, so
+    ///   outside presses should suppress close auto-focus to avoid stealing focus back to the
+    ///   trigger.
+    pub fn for_variant(variant: PopoverVariant, consume_outside_pointer_events: bool) -> Self {
+        let click_through = variant == PopoverVariant::NonModal && !consume_outside_pointer_events;
+        Self {
+            prevent_on_outside_press: click_through,
+            prevent_on_focus_outside: true,
+        }
+    }
+
+    /// Always prevent close auto-focus.
+    pub fn prevent_always() -> Self {
+        Self {
+            prevent_on_outside_press: true,
+            prevent_on_focus_outside: true,
+        }
+    }
+}
+
+/// Wrap `on_dismiss_request` to preserve default close behavior and install a close auto-focus
+/// guard that persists across frames.
+///
+/// Notes:
+/// - The returned dismiss handler applies Radix-like defaults: it closes the overlay unless the
+///   request is prevented.
+/// - The returned close hook runs the caller hook (if any) and then applies the guard policy
+///   unless the caller prevented default.
+pub fn popover_close_auto_focus_guard_hooks<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    policy: PopoverCloseAutoFocusGuardPolicy,
+    open: Model<bool>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
+) -> (Option<OnDismissRequest>, Option<OnCloseAutoFocus>) {
+    #[derive(Default)]
+    struct PopoverCloseAutoFocusGuardState {
+        dismiss_reason: Option<Model<Option<DismissReason>>>,
+    }
+
+    let dismiss_reason = cx
+        .with_state(PopoverCloseAutoFocusGuardState::default, |st| {
+            st.dismiss_reason.clone()
+        })
+        .unwrap_or_else(|| {
+            let model = cx.app.models_mut().insert(None);
+            cx.with_state(PopoverCloseAutoFocusGuardState::default, |st| {
+                st.dismiss_reason = Some(model.clone());
+            });
+            model
+        });
+
+    // Clear stale reasons when the overlay is open again (new session).
+    let open_now = cx.app.models().get_copied(&open).unwrap_or(false);
+    if open_now {
+        let _ = cx.app.models_mut().update(&dismiss_reason, |v| *v = None);
+    }
+
+    let dismiss_handler: OnDismissRequest = {
+        let open_for_default_close = open.clone();
+        let dismiss_reason_for_hook = dismiss_reason.clone();
+        Arc::new(move |host, cx, req| {
+            if let Some(user) = on_dismiss_request.as_ref() {
+                user(host, cx, req);
+            }
+
+            if !req.default_prevented() {
+                let should_store = match req.reason {
+                    DismissReason::OutsidePress { .. } => policy.prevent_on_outside_press,
+                    DismissReason::FocusOutside => policy.prevent_on_focus_outside,
+                    _ => false,
+                };
+                let _ = host.models_mut().update(&dismiss_reason_for_hook, |v| {
+                    *v = should_store.then_some(req.reason);
+                });
+                let _ = host
+                    .models_mut()
+                    .update(&open_for_default_close, |v| *v = false);
+            } else {
+                let _ = host
+                    .models_mut()
+                    .update(&dismiss_reason_for_hook, |v| *v = None);
+            }
+        })
+    };
+
+    let on_close_auto_focus: Option<OnCloseAutoFocus> = {
+        let dismiss_reason_for_close = dismiss_reason.clone();
+        let user = on_close_auto_focus.clone();
+        Some(Arc::new(move |host, cx, req| {
+            if let Some(user) = user.as_ref() {
+                user(host, cx, req);
+            }
+
+            let reason = host
+                .models_mut()
+                .read(&dismiss_reason_for_close, |v| *v)
+                .ok()
+                .flatten();
+            let _ = host
+                .models_mut()
+                .update(&dismiss_reason_for_close, |v| *v = None);
+
+            if req.default_prevented() {
+                return;
+            }
+
+            let should_prevent = match reason {
+                Some(DismissReason::OutsidePress { .. }) => policy.prevent_on_outside_press,
+                Some(DismissReason::FocusOutside) => policy.prevent_on_focus_outside,
+                _ => false,
+            };
+            if should_prevent {
+                req.prevent_default();
+            }
+        }))
+    };
+
+    (Some(dismiss_handler), on_close_auto_focus)
 }
 
 #[derive(Clone)]
@@ -509,9 +648,14 @@ mod tests {
 
     use fret_app::App;
     use fret_core::Event;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, PathCommand, Point, Rect, Size, SvgId, SvgService,
+    };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Px, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
+    use fret_core::{
+        PointerEvent, PointerId, PointerType, Px, TextBlobId, TextConstraints, TextInput,
+        TextMetrics, TextService,
+    };
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{
@@ -772,6 +916,237 @@ mod tests {
                 popover_modal_layer_elements::<App>(cx, open.clone(), [], content).into_vec();
             assert_eq!(children.len(), 2);
         });
+    }
+
+    #[test]
+    fn popover_click_through_outside_press_closes_without_restoring_focus_to_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>> =
+            std::rc::Rc::new(std::cell::Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: Model<bool>,
+            trigger_id_out: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>>,
+        ) -> fret_core::NodeId {
+            OverlayController::begin_frame(app, window);
+
+            let trigger_id_out_for_root = trigger_id_out.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "popover-click-through-base",
+                move |cx| {
+                    let trigger_id_out = trigger_id_out_for_root.clone();
+                    vec![cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Relative;
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(120.0));
+                                        layout.inset.top = Some(Px(60.0));
+                                        layout.size.width = Length::Px(Px(60.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: false,
+                                    ..Default::default()
+                                },
+                                |_cx, _st| Vec::new(),
+                            );
+
+                            let trigger = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(0.0));
+                                        layout.inset.top = Some(Px(0.0));
+                                        layout.size.width = Length::Px(Px(80.0));
+                                        layout.size.height = Length::Px(Px(32.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |_cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    Vec::new()
+                                },
+                            );
+
+                            vec![underlay, trigger]
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+
+            if app.models().get_copied(&open).unwrap_or(false) {
+                let trigger = trigger_id_out.get().expect("trigger id");
+                fret_ui::elements::with_element_cx(
+                    app,
+                    window,
+                    bounds,
+                    "popover-click-through",
+                    |cx| {
+                        let policy = PopoverCloseAutoFocusGuardPolicy::for_variant(
+                            PopoverVariant::NonModal,
+                            false,
+                        );
+                        let (on_dismiss_request, on_close_auto_focus) =
+                            popover_close_auto_focus_guard_hooks(
+                                cx,
+                                policy,
+                                open.clone(),
+                                None,
+                                None,
+                            );
+
+                        let mut options = PopoverOptions::default();
+                        options.on_close_auto_focus = on_close_auto_focus;
+
+                        let content: AnyElement = cx.pressable(
+                            PressableProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        top: Some(Px(80.0)),
+                                        left: Some(Px(160.0)),
+                                        right: None,
+                                        bottom: None,
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(Px(20.0)),
+                                        height: Length::Px(Px(20.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            |_cx, _st| Vec::new(),
+                        );
+
+                        let req = popover_request_with_dismiss_handler(
+                            GlobalElementId(0xabc),
+                            trigger,
+                            open.clone(),
+                            OverlayPresence::instant(true),
+                            options,
+                            on_dismiss_request,
+                            vec![content],
+                        );
+                        OverlayController::request(cx, req);
+                    },
+                );
+            }
+
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 0: closed, establish trigger node.
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            open.clone(),
+            trigger_id_out.clone(),
+        );
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger_node));
+
+        // Open and render the overlay.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            open.clone(),
+            trigger_id_out.clone(),
+        );
+
+        // Outside press on an unfocusable underlay region: close, but do not restore focus to the trigger.
+        let underlay_pos = Point::new(Px(130.0), Px(70.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            open.clone(),
+            trigger_id_out,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert!(
+            ui.focus().is_none(),
+            "expected focus to clear (and not restore to the trigger) when dismissing via outside press on an unfocusable underlay"
+        );
     }
 
     #[test]

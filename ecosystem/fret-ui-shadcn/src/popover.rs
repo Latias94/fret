@@ -1045,6 +1045,20 @@ impl Popover {
                     options = options.initial_focus(initial_focus);
                 }
 
+                let policy = radix_popover::PopoverCloseAutoFocusGuardPolicy::for_variant(
+                    options.variant,
+                    options.consume_outside_pointer_events,
+                );
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_popover::popover_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        on_dismiss_request_for_request,
+                        options.on_close_auto_focus.clone(),
+                    );
+                options.on_close_auto_focus = on_close_auto_focus;
+
                 let mut request = radix_popover::popover_request_with_anchor_and_dismiss_handler(
                     trigger_id,
                     trigger_id,
