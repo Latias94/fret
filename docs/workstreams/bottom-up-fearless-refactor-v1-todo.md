@@ -224,6 +224,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, input geometry):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_input_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs` (`web_vs_fret_layout_input_geometry_matches_web_fixtures`)
+  - Evidence (fixture-driven slice, scroll-area geometry + hover):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_scroll_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs` (`web_vs_fret_layout_scroll_geometry_matches_web_fixtures`)
   - Evidence (fixture-driven slice, switch + radio-group layout):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_switch_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_radio_group_cases_v1.json`
