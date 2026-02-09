@@ -2953,7 +2953,7 @@ where
                 }
             }
 
-            let (group_aggs_u64, group_aggs_text, group_aggs_any) =
+            let (group_aggs_u64, group_aggs_text, _group_aggs_any) =
                 compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
             let group_aggs_any = table.grouped_aggregations_any().clone();
 
