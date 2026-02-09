@@ -65,6 +65,40 @@ pub struct ChartLinkRouter {
 }
 
 impl ChartLinkRouter {
+    pub fn with_explicit_axis_map(mut self, map: BTreeMap<AxisId, LinkAxisKey>) -> Self {
+        self.apply_explicit_axis_map(map);
+        self
+    }
+
+    fn apply_explicit_axis_map(&mut self, map: BTreeMap<AxisId, LinkAxisKey>) {
+        let mut explicit_key_to_axis: BTreeMap<LinkAxisKey, Option<AxisId>> = BTreeMap::new();
+
+        for (axis, key) in map {
+            self.axis_to_key.insert(axis, key);
+
+            match explicit_key_to_axis.get(&key).copied().flatten() {
+                None => {
+                    explicit_key_to_axis.insert(key, Some(axis));
+                }
+                Some(existing) if existing == axis => {}
+                Some(_) => {
+                    explicit_key_to_axis.insert(key, None);
+                }
+            }
+        }
+
+        for (key, axis) in explicit_key_to_axis {
+            match axis {
+                Some(axis) => {
+                    self.key_to_axis.insert(key, axis);
+                }
+                None => {
+                    self.key_to_axis.remove(&key);
+                }
+            }
+        }
+    }
+
     pub fn from_spec(spec: &ChartSpec) -> Self {
         let mut axis_kind_by_id: BTreeMap<AxisId, AxisKind> = BTreeMap::new();
         for axis in &spec.axes {
@@ -409,5 +443,146 @@ impl LinkedChartGroup {
         }
 
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use delinea::spec::{
+        AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+    };
+
+    fn spec_with_ambiguous_x_key() -> (ChartSpec, LinkAxisKey, AxisId, AxisId) {
+        let chart_id = delinea::ids::ChartId::new(1);
+        let dataset = DatasetId::new(1);
+        let grid = delinea::ids::GridId::new(1);
+        let x1 = AxisId::new(1);
+        let x2 = AxisId::new(2);
+        let y = AxisId::new(3);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+
+        let key = LinkAxisKey {
+            kind: AxisKind::X,
+            dataset,
+            field: x_field,
+        };
+
+        let spec = ChartSpec {
+            id: chart_id,
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
+            grids: vec![GridSpec { id: grid }],
+            axes: vec![
+                AxisSpec {
+                    id: x1,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                AxisSpec {
+                    id: x2,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                AxisSpec {
+                    id: y,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: None,
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: delinea::ids::SeriesId::new(1),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis: x1,
+                    y_axis: y,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+                SeriesSpec {
+                    id: delinea::ids::SeriesId::new(2),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis: x2,
+                    y_axis: y,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+            ],
+        };
+
+        (spec, key, x1, x2)
+    }
+
+    #[test]
+    fn explicit_axis_map_can_restore_unique_reverse_mapping() {
+        let (spec, key, x1, _x2) = spec_with_ambiguous_x_key();
+        let router = ChartLinkRouter::from_spec(&spec);
+        assert_eq!(router.axis_for_key(key), None);
+
+        let mut explicit = BTreeMap::new();
+        explicit.insert(x1, key);
+        let router = ChartLinkRouter::from_spec(&spec).with_explicit_axis_map(explicit);
+        assert_eq!(router.axis_for_key(key), Some(x1));
+    }
+
+    #[test]
+    fn duplicate_explicit_key_assignment_disables_reverse_mapping() {
+        let (spec, key, x1, x2) = spec_with_ambiguous_x_key();
+        let mut explicit = BTreeMap::new();
+        explicit.insert(x1, key);
+        explicit.insert(x2, key);
+
+        let router = ChartLinkRouter::from_spec(&spec).with_explicit_axis_map(explicit);
+        assert_eq!(router.axis_for_key(key), None);
     }
 }

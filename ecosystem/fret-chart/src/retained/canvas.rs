@@ -210,6 +210,7 @@ pub struct ChartCanvas {
     visual_map_piece_anchor: Option<(delinea::VisualMapId, u32)>,
     axis_extent_cache: BTreeMap<delinea::AxisId, AxisExtentCacheEntry>,
     link_router_cache: Option<(delinea::Revision, ChartLinkRouter)>,
+    explicit_link_axis_map: BTreeMap<delinea::AxisId, LinkAxisKey>,
     linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
     linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
     linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
@@ -394,6 +395,7 @@ impl ChartCanvas {
             visual_map_piece_anchor: None,
             axis_extent_cache: BTreeMap::default(),
             link_router_cache: None,
+            explicit_link_axis_map: BTreeMap::default(),
             linked_brush_model: None,
             linked_axis_pointer_model: None,
             linked_domain_windows_model: None,
@@ -506,6 +508,12 @@ impl ChartCanvas {
         self
     }
 
+    pub fn link_axis_map(mut self, map: BTreeMap<delinea::AxisId, LinkAxisKey>) -> Self {
+        self.explicit_link_axis_map = map;
+        self.link_router_cache = None;
+        self
+    }
+
     pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
         self.output_model = Some(output);
         self
@@ -519,7 +527,21 @@ impl ChartCanvas {
             .map(|(rev, _router)| *rev != spec_rev)
             .unwrap_or(true);
         if needs_rebuild {
-            let router = self.with_engine(|engine| ChartLinkRouter::from_model(engine.model()));
+            let router = self.with_engine(|engine| {
+                let mut router = ChartLinkRouter::from_model(engine.model());
+                if !self.explicit_link_axis_map.is_empty() {
+                    let mut explicit = BTreeMap::new();
+                    for (axis, key) in &self.explicit_link_axis_map {
+                        if engine.model().axes.contains_key(axis) {
+                            explicit.insert(*axis, *key);
+                        }
+                    }
+                    if !explicit.is_empty() {
+                        router = router.with_explicit_axis_map(explicit);
+                    }
+                }
+                router
+            });
             self.link_router_cache = Some((spec_rev, router));
         }
         &self
