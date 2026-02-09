@@ -66,7 +66,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .hide_indicator(hide_indicator)
             .test_id_prefix(test_id)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let legend = |cx: &mut ElementContext<'_, App>,
@@ -84,7 +84,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             .wrap(wrap)
             .hide_icon(hide_icon)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let demo_content = stack::vstack(
@@ -281,8 +281,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-chart-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-chart-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

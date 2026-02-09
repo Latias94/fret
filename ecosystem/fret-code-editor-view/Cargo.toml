@@ -12,5 +12,4 @@ documentation.workspace = true
 [dependencies]
 fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-unicode-ident.workspace = true
-unicode-segmentation.workspace = true
+fret-text-nav = { path = "../../crates/fret-text-nav" }

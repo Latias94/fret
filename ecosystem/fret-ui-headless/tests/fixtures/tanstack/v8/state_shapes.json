@@ -109,6 +109,22 @@
             "5"
           ]
         },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
         "paginated": {
           "root": [
             "1",
@@ -140,7 +156,33 @@
             "4",
             "5"
           ]
-        }
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
       }
     },
     {
@@ -212,6 +254,22 @@
             "5"
           ]
         },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
         "paginated": {
           "root": [
             "1",
@@ -243,7 +301,33 @@
             "4",
             "5"
           ]
-        }
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
       }
     },
     {
@@ -312,6 +396,22 @@
             "5"
           ]
         },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
         "paginated": {
           "root": [
             "1",
@@ -343,7 +443,33 @@
             "4",
             "5"
           ]
-        }
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": true,
+        "is_some_rows_expanded": true,
+        "can_some_rows_expand": false
       }
     },
     {
@@ -415,6 +541,22 @@
             "5"
           ]
         },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
         "paginated": {
           "root": [
             "1",
@@ -446,7 +588,33 @@
             "4",
             "5"
           ]
-        }
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": true,
+        "can_some_rows_expand": false
       }
     },
     {
@@ -523,6 +691,22 @@
             "5"
           ]
         },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
         "paginated": {
           "root": [
             "1",
@@ -554,7 +738,33 @@
             "4",
             "5"
           ]
-        }
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
       }
     },
     {
@@ -602,6 +812,10 @@
           "root": [],
           "flat": []
         },
+        "expanded": {
+          "root": [],
+          "flat": []
+        },
         "paginated": {
           "root": [],
           "flat": []
@@ -609,7 +823,31 @@
         "row_model": {
           "root": [],
           "flat": []
-        }
+        },
+        "page_count": 0,
+        "row_count": 0,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
       }
     }
   ]

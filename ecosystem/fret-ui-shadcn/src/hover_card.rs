@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Px, Size};
+use fret_core::{Point, PointerType, Px, Rect, Size};
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, PointerDownCx, PointerUpCx, UiPointerActionHost};
+use fret_ui::action::{
+    ActionCx, PointerCancelCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, HoverRegionProps, Length, Overflow, PointerRegionProps,
 };
@@ -11,6 +13,7 @@ use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::{scheduling, style as decl_style};
+use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
@@ -29,9 +32,74 @@ use crate::overlay_motion;
 const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+const HOVER_CARD_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 // A short lease prevents hover-driven close from firing immediately after pointer interactions
 // (e.g. click/drag), while still allowing the card to close promptly once the interaction ends.
-const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = 2;
+const HOVER_CARD_INTERACTION_LEASE_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct HoverCardOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn hover_card_open_change_events(
+    state: &mut HoverCardOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
+#[derive(Default)]
+struct HoverCardLastPointerModelState {
+    model: Option<Model<Option<Point>>>,
+}
+
+fn hover_card_last_pointer_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hover_card_id: fret_ui::elements::GlobalElementId,
+) -> Model<Option<Point>> {
+    let existing = cx.with_state_for(
+        hover_card_id,
+        HoverCardLastPointerModelState::default,
+        |st| st.model.clone(),
+    );
+    if let Some(model) = existing {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(None::<Point>);
+        cx.with_state_for(
+            hover_card_id,
+            HoverCardLastPointerModelState::default,
+            |st| {
+                st.model = Some(model.clone());
+            },
+        );
+        model
+    }
+}
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
     fn visit(node: &AnyElement, best: &mut Option<Size>) {
@@ -90,9 +158,11 @@ pub enum HoverCardSide {
     Left,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct HoverCardSharedState {
     overlay_hovered: bool,
+    anchor_bounds: Option<Rect>,
+    floating_bounds: Option<Rect>,
 }
 
 /// shadcn/ui `HoverCard` root (v4).
@@ -119,6 +189,8 @@ pub struct HoverCard {
     close_delay_frames: u32,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for HoverCard {
@@ -135,6 +207,11 @@ impl std::fmt::Debug for HoverCard {
             .field("close_delay_frames", &self.close_delay_frames)
             .field("layout", &self.layout)
             .field("anchor_override", &self.anchor_override)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -157,6 +234,8 @@ impl HoverCard {
             close_delay_frames: HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES,
             layout: LayoutRefinement::default(),
             anchor_override: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -250,6 +329,21 @@ impl HoverCard {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -307,6 +401,7 @@ impl HoverCard {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hover_card_id = cx.root_id();
             let open = open.clone();
+            let last_pointer = hover_card_last_pointer_model(cx, hover_card_id);
             let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
             if uncontrolled_default_open {
                 #[derive(Default)]
@@ -392,26 +487,82 @@ impl HoverCard {
                 pointer_down_on_content_now = false;
             }
 
-            let overlay_hovered =
+            let (overlay_hovered, anchor_bounds, floating_bounds) =
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
-                    st.overlay_hovered
+                    (st.overlay_hovered, st.anchor_bounds, st.floating_bounds)
                 });
             let focused = cx.is_focused_element(trigger_id);
             let keyboard_focused =
                 focused && fret_ui::input_modality::is_keyboard(&mut *cx.app, Some(cx.window));
+
+            let pointer_in_corridor = cx
+                .watch_model(&last_pointer)
+                .layout()
+                .copied()
+                .unwrap_or(None)
+                .zip(anchor_bounds)
+                .zip(floating_bounds)
+                .is_some_and(|((pointer, anchor), floating)| {
+                    safe_hover::safe_hover_contains(
+                        pointer,
+                        anchor,
+                        floating,
+                        HOVER_CARD_SAFE_CORRIDOR_BUFFER,
+                    )
+                });
+
             let hovered =
-                radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused);
+                radix_hover_card::hover_card_hovered(hovered, overlay_hovered, keyboard_focused)
+                    || pointer_in_corridor;
 
             let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
             let overlay_root_id = fret_ui::elements::global_root(cx.window, &overlay_root_name);
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
+
+            #[derive(Default)]
+            struct HoverCardSelectionPointerState {
+                saw_selection_while_pointer_down: bool,
+            }
+
+            let clear_stale_pointer_down_after_selection = cx.with_state_for(
+                hover_card_id,
+                HoverCardSelectionPointerState::default,
+                |st| {
+                    if pointer_down_on_content_now && has_text_selection {
+                        st.saw_selection_while_pointer_down = true;
+                        return false;
+                    }
+
+                    if pointer_down_on_content_now
+                        && !has_text_selection
+                        && st.saw_selection_while_pointer_down
+                    {
+                        st.saw_selection_while_pointer_down = false;
+                        return true;
+                    }
+
+                    if !pointer_down_on_content_now {
+                        st.saw_selection_while_pointer_down = false;
+                    }
+
+                    false
+                },
+            );
+
+            if clear_stale_pointer_down_after_selection {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&pointer_down_on_content, |v| *v = false);
+                pointer_down_on_content_now = false;
+            }
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = radix_hover_card::hover_card_update_interaction(
                 cx,
                 open_now,
                 hovered,
-                pointer_down_on_content_now && !has_text_selection,
+                pointer_down_on_content_now,
                 has_text_selection,
                 cfg,
             );
@@ -443,6 +594,19 @@ impl HoverCard {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(HoverCardOpenChangeCallbackState::default, |state| {
+                    hover_card_open_change_events(state, opening, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let opacity = motion.opacity;
             let scale = motion.scale;
             let overlay_presence = OverlayPresence {
@@ -456,20 +620,23 @@ impl HoverCard {
             let out = vec![trigger];
             if debug_trace {
                 eprintln!(
-                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={} pointer_down={} lease={} has_text_selection={}",
+                    "hover_card trace frame_id={} open_now={} update_open={} present={} hovered={} overlay_hovered={} pointer_down_on_content={} interaction_lease={} has_text_selection={}",
                     cx.frame_id.0,
                     open_now,
                     update.open,
                     motion.present,
                     hovered,
+                    overlay_hovered,
                     pointer_down_on_content_now,
                     interaction_lease_now,
-                    has_text_selection
+                    has_text_selection,
                 );
             }
             if !motion.present {
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered = false;
+                    st.anchor_bounds = None;
+                    st.floating_bounds = None;
                 });
                 if pointer_down_on_content_now {
                     let _ = cx
@@ -489,6 +656,8 @@ impl HoverCard {
                 let Some(anchor) = anchor else {
                     cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                         st.overlay_hovered = false;
+                        st.anchor_bounds = None;
+                        st.floating_bounds = None;
                     });
                     return Vec::new();
                 };
@@ -530,6 +699,10 @@ impl HoverCard {
                     .with_shift_cross_axis(true)
                     .with_arrow(arrow_options, arrow_protrusion),
                 );
+                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                    st.anchor_bounds = Some(anchor);
+                    st.floating_bounds = Some(layout.rect);
+                });
 
                 let placed = layout.rect;
                 let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
@@ -622,24 +795,53 @@ impl HoverCard {
 
                                 let pointer_down_model_for_move =
                                     pointer_down_on_content_model.clone();
-                                let interaction_lease_model_for_move =
-                                    interaction_lease_model.clone();
+                                let interaction_lease_model_for_move = interaction_lease_model.clone();
                                 cx.pointer_region_on_pointer_move(Arc::new(
-                                    move |host: &mut dyn UiPointerActionHost, cx: ActionCx, mv| {
-                                        if mv.buttons.left || mv.buttons.right || mv.buttons.middle
-                                        {
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          mv: PointerMoveCx| {
+                                        if mv.buttons.left || mv.buttons.right || mv.buttons.middle {
                                             return false;
                                         }
 
-                                        // If a descendant captures pointer, this region may miss
-                                        // the `PointerUp` hook. Use a no-buttons move as a
-                                        // conservative “interaction ended” signal.
+                                        let is_down = host
+                                            .models_mut()
+                                            .read(&pointer_down_model_for_move, |v| *v)
+                                            .ok()
+                                            .unwrap_or(false);
+                                        if is_down {
+                                            // If a descendant captures pointer, this region may miss
+                                            // the `PointerUp` hook. Use a no-buttons move as a
+                                            // conservative “interaction ended” signal.
+                                            host.release_pointer_capture();
+                                            let _ = host
+                                                .models_mut()
+                                                .update(&pointer_down_model_for_move, |v| *v = false);
+                                            let _ = host.models_mut().update(
+                                                &interaction_lease_model_for_move,
+                                                |v| {
+                                                    *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
+                                                },
+                                            );
+                                            host.request_redraw(cx.window);
+                                        }
+                                        false
+                                    },
+                                ));
+
+                                let pointer_down_model_for_cancel =
+                                    pointer_down_on_content_model.clone();
+                                let interaction_lease_model_for_cancel = interaction_lease_model.clone();
+                                cx.pointer_region_on_pointer_cancel(Arc::new(
+                                    move |host: &mut dyn UiPointerActionHost,
+                                          cx: ActionCx,
+                                          _cancel: PointerCancelCx| {
                                         host.release_pointer_capture();
                                         let _ = host
                                             .models_mut()
-                                            .update(&pointer_down_model_for_move, |v| *v = false);
+                                            .update(&pointer_down_model_for_cancel, |v| *v = false);
                                         let _ = host.models_mut().update(
-                                            &interaction_lease_model_for_move,
+                                            &interaction_lease_model_for_cancel,
                                             |v| {
                                                 *v = HOVER_CARD_INTERACTION_LEASE_FRAMES;
                                             },
@@ -688,6 +890,17 @@ impl HoverCard {
                 overlay_presence,
                 overlay_children,
             );
+            let mut request = request;
+            let last_pointer_for_move = last_pointer.clone();
+            request.dismissible_on_pointer_move = Some(Arc::new(move |host, _acx, mv| {
+                if mv.pointer_type == PointerType::Touch {
+                    return false;
+                }
+                let _ = host
+                    .models_mut()
+                    .update(&last_pointer_for_move, |v| *v = Some(mv.position));
+                false
+            }));
             radix_hover_card::request_hover_card(cx, request);
 
             out
@@ -798,6 +1011,34 @@ mod tests {
     use fret_ui::tree::UiTree;
     use fret_ui_kit::prelude::ActionHooksExt;
     use fret_ui_kit::{OverlayController, ui};
+
+    #[test]
+    fn hover_card_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = HoverCardOpenChangeCallbackState::default();
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn hover_card_open_change_events_complete_without_animation() {
+        let mut state = HoverCardOpenChangeCallbackState::default();
+
+        let _ = hover_card_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = hover_card_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -1760,6 +2001,19 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
             }),
         );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: select_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 2,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
         let (anchor, caret) = fret_ui::elements::with_element_state(
             &mut app,
             window,
@@ -2356,5 +2610,176 @@ mod tests {
             arbitration.pointer_occlusion,
             fret_ui::tree::PointerOcclusion::None
         );
+    }
+
+    #[test]
+    fn hover_card_keeps_open_while_pointer_moves_through_safe_corridor() {
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_probe_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "hover-card-safe-corridor",
+                    |cx| {
+                        let trigger_id = trigger_id.clone();
+                        let content_probe_id = content_probe_id.clone();
+
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st, id| {
+                                trigger_id.set(Some(id));
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let content = cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Panel,
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    HoverCardContent::new(vec![
+                                        ui::raw_text(cx, "card").into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        );
+                        content_probe_id.set(Some(content.id));
+
+                        vec![
+                            HoverCard::new(trigger, content)
+                                .open(Some(open.clone()))
+                                .open_delay_frames(0)
+                                .close_delay_frames(0)
+                                .side(HoverCardSide::Bottom)
+                                .side_offset(Px(8.0))
+                                .window_margin(Px(0.0))
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+            };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center(trigger_bounds),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let content_probe_element = content_probe_id.get().expect("content probe element id");
+        let content_probe_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_probe_element)
+                .expect("content probe node");
+        let content_probe_bounds = ui
+            .debug_node_bounds(content_probe_node)
+            .expect("content probe bounds");
+
+        let transit_point = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 + 2.0),
+        );
+        assert!(
+            !trigger_bounds.contains(transit_point),
+            "transit point should be outside trigger bounds"
+        );
+        assert!(
+            !content_probe_bounds.contains(transit_point),
+            "transit point should be outside floating content bounds"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: transit_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(760.0), Px(560.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 4);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render_frame(&mut ui, &mut app, &mut services, 5);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(app.models().get_copied(&open), Some(false));
     }
 }

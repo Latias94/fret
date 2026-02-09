@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Core contracts, IDs, geometry, events, and shared data types for the Fret framework."
 
 [dependencies]
 slotmap.workspace = true

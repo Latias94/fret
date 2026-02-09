@@ -9,6 +9,7 @@ use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 
 #[derive(Default)]
 struct TransitionDriverState {
+    initialized: bool,
     last_app_tick: u64,
     last_frame_tick: u64,
     tick: u64,
@@ -32,6 +33,7 @@ pub fn drive_transition<H: UiHost>(
             ticks,
             ticks,
             crate::headless::easing::smoothstep,
+            true,
         )
     })
 }
@@ -51,6 +53,7 @@ pub fn drive_transition_with_durations<H: UiHost>(
             open_ticks,
             close_ticks,
             crate::headless::easing::smoothstep,
+            true,
         )
     })
 }
@@ -61,6 +64,7 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
     open_ticks: u64,
     close_ticks: u64,
     ease: fn(f32) -> f32,
+    animate_on_mount: bool,
 ) -> TransitionOutput {
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
@@ -70,6 +74,34 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
             st.configured_open_ticks = open_ticks;
             st.configured_close_ticks = close_ticks;
             st.timeline.set_durations(open_ticks, close_ticks);
+        }
+
+        if !st.initialized {
+            st.initialized = true;
+            st.last_app_tick = app_tick;
+            st.last_frame_tick = frame_tick;
+
+            if !animate_on_mount {
+                if open {
+                    for _ in 0..=open_ticks.max(1) {
+                        st.tick = st.tick.saturating_add(1);
+                        let seeded = st.timeline.update_with_easing(true, st.tick, ease);
+                        if !seeded.animating {
+                            break;
+                        }
+                    }
+                } else {
+                    let _ = st.timeline.update_with_easing(false, st.tick, ease);
+                }
+
+                let settled = TransitionOutput {
+                    present: open,
+                    linear: if open { 1.0 } else { 0.0 },
+                    progress: if open { 1.0 } else { 0.0 },
+                    animating: false,
+                };
+                return (settled, false, false);
+            }
         }
 
         if st.last_frame_tick != frame_tick {
@@ -118,8 +150,40 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
 ) -> TransitionOutput {
     let loc = Location::caller();
     cx.keyed((loc.file(), loc.line(), loc.column()), |cx| {
-        drive_transition_with_durations_and_easing_impl(cx, open, open_ticks, close_ticks, ease)
+        drive_transition_with_durations_and_easing_impl(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            ease,
+            true,
+        )
     })
+}
+
+#[track_caller]
+pub fn drive_transition_with_durations_and_easing_with_mount_behavior<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+    animate_on_mount: bool,
+) -> TransitionOutput {
+    let loc = Location::caller();
+    cx.keyed(
+        (loc.file(), loc.line(), loc.column(), "mount_behavior"),
+        |cx| {
+            drive_transition_with_durations_and_easing_impl(
+                cx,
+                open,
+                open_ticks,
+                close_ticks,
+                ease,
+                animate_on_mount,
+            )
+        },
+    )
 }
 
 #[track_caller]
@@ -244,5 +308,43 @@ mod tests {
         assert!(!b.present);
         assert!(!b.animating);
         assert_eq!(b.progress, 0.0);
+    }
+
+    #[test]
+    fn transition_can_snap_to_target_on_mount_then_animate_on_toggle() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let open = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t2", |cx| {
+            drive_transition_with_durations_and_easing_with_mount_behavior(
+                cx,
+                true,
+                6,
+                6,
+                crate::headless::easing::smoothstep,
+                false,
+            )
+        });
+        assert!(open.present);
+        assert!(!open.animating);
+        assert_eq!(open.progress, 1.0);
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        let close = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t2", |cx| {
+            drive_transition_with_durations_and_easing_with_mount_behavior(
+                cx,
+                false,
+                6,
+                6,
+                crate::headless::easing::smoothstep,
+                false,
+            )
+        });
+        assert!(!close.present);
+        assert!(!close.animating);
+        assert_eq!(close.progress, 0.0);
     }
 }

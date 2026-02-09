@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Internationalization primitives and locale services for Fret."
 
 [dependencies]
 unic-langid.workspace = true

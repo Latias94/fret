@@ -424,7 +424,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-input-group-rtl"));
+        .test_id("ui-gallery-input-group-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };

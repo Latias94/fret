@@ -318,6 +318,7 @@ pub struct HoverOverlayRequest {
     pub trigger: GlobalElementId,
     pub open: Model<bool>,
     pub present: bool,
+    pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
 }
 
@@ -330,6 +331,7 @@ impl std::fmt::Debug for HoverOverlayRequest {
             .field("trigger", &self.trigger)
             .field("open", &"<model>")
             .field("present", &self.present)
+            .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())
             .finish()
     }

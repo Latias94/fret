@@ -51,6 +51,8 @@ fn when_expr_identifier_contract_covers_builtin_identifiers() {
         "focus.is_text_input",
         "edit.can_undo",
         "edit.can_redo",
+        "router.can_back",
+        "router.can_forward",
     ];
     for ident in bool_idents {
         WhenExpr::parse(ident)

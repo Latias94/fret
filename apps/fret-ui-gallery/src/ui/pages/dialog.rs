@@ -256,12 +256,10 @@ pub(super) fn preview_dialog(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-dialog-demo-content"),
-                    )
+                    .test_id("ui-gallery-dialog-demo-content")
                 },
             )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dialog-demo"));
+            .test_id("ui-gallery-dialog-demo");
 
         section_card(cx, "Demo", content)
     };
@@ -303,15 +301,10 @@ pub(super) fn preview_dialog(
                     ])
                     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-dialog-custom-close-content"),
-                    )
+                    .test_id("ui-gallery-dialog-custom-close-content")
                 },
             )
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-dialog-custom-close"),
-            );
+            .test_id("ui-gallery-dialog-custom-close");
 
         section_card(cx, "Custom Close Button", content)
     };
@@ -340,10 +333,10 @@ pub(super) fn preview_dialog(
                     .into_element(cx),
                 ])
                 .into_element(cx)
-                .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dialog-no-close-content"))
+                .test_id("ui-gallery-dialog-no-close-content")
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dialog-no-close"));
+        .test_id("ui-gallery-dialog-no-close");
 
         section_card(cx, "No Close Button", content)
     };
@@ -395,15 +388,10 @@ pub(super) fn preview_dialog(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-dialog-sticky-footer-content"),
-                    )
+                    .test_id("ui-gallery-dialog-sticky-footer-content")
                 },
             )
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-dialog-sticky-footer"),
-            );
+            .test_id("ui-gallery-dialog-sticky-footer");
 
         section_card(cx, "Sticky Footer", content)
     };
@@ -447,15 +435,10 @@ pub(super) fn preview_dialog(
                         scroll_body,
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-dialog-scrollable-content"),
-                    )
+                    .test_id("ui-gallery-dialog-scrollable-content")
                 },
             )
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-dialog-scrollable"),
-            );
+            .test_id("ui-gallery-dialog-scrollable");
 
         section_card(cx, "Scrollable Content", content)
     };
@@ -504,14 +487,12 @@ pub(super) fn preview_dialog(
                             .into_element(cx),
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-dialog-rtl-content"),
-                        )
+                        .test_id("ui-gallery-dialog-rtl-content")
                     },
                 )
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dialog-rtl"));
+        .test_id("ui-gallery-dialog-rtl");
 
         section_card(cx, "RTL", content)
     };
@@ -539,8 +520,7 @@ pub(super) fn preview_dialog(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-dialog-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-dialog-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::mpsc;
 
 use fret_app::App;
+use fret_diag::artifacts;
 
 use crate::{State, is_abs_path, now_unix_ms, push_log, repo_root_from_script_paths};
 
@@ -82,10 +83,6 @@ pub(crate) fn start_pack_last_bundle(app: &mut App, st: &mut State) -> Result<()
     Ok(())
 }
 
-fn diag_exports_root(repo_root: &PathBuf) -> PathBuf {
-    repo_root.join(".fret").join("diag").join("exports")
-}
-
 fn ensure_bundle_dir_materialized(
     app: &mut App,
     st: &mut State,
@@ -124,29 +121,34 @@ fn ensure_bundle_dir_materialized(
         return Err("no in-memory bundle payload to materialize yet".to_string());
     };
 
-    let ts = app
+    let exported_unix_ms = app
         .models()
         .read(&st.last_bundle_dump_exported_unix_ms, |v| *v)
         .ok()
         .flatten()
         .unwrap_or_else(now_unix_ms);
 
-    let exports_root = diag_exports_root(repo_root);
-    std::fs::create_dir_all(&exports_root).map_err(|e| e.to_string())?;
-    let export_dir = exports_root.join(ts.to_string());
-    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
-
-    std::fs::write(export_dir.join("bundle.json"), bundle_json.as_bytes())
-        .map_err(|e| e.to_string())?;
+    let mat = artifacts::materialize_bundle_json_to_exports(
+        repo_root,
+        exported_unix_ms,
+        bundle_json.as_ref(),
+    )?;
 
     let _ = app.models_mut().update(&st.target_out_dir, |v| {
-        *v = Some(Arc::<str>::from(exports_root.to_string_lossy().to_string()));
+        *v = Some(Arc::<str>::from(
+            mat.exports_root.to_string_lossy().to_string(),
+        ));
     });
     let _ = app.models_mut().update(&st.last_bundle_dir_abs, |v| {
-        *v = Some(Arc::<str>::from(export_dir.to_string_lossy().to_string()));
+        *v = Some(Arc::<str>::from(
+            mat.export_dir.to_string_lossy().to_string(),
+        ));
     });
 
-    Ok((exports_root.to_string_lossy().to_string(), export_dir))
+    Ok((
+        mat.exports_root.to_string_lossy().to_string(),
+        mat.export_dir,
+    ))
 }
 
 pub(crate) fn new_pack_channel() -> (mpsc::Sender<PackJobResult>, mpsc::Receiver<PackJobResult>) {

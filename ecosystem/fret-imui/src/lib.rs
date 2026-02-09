@@ -54,7 +54,7 @@ pub fn imui_vstack<'a, H: UiHost>(
     props.layout.size.height = Length::Fill;
 
     let element = cx.column(props, |cx| imui(cx, f));
-    vec![element].into()
+    element.into()
 }
 
 pub fn imui_build<'a, H: UiHost>(

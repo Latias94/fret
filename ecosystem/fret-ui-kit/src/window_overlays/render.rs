@@ -295,6 +295,11 @@ pub fn render<H: UiHost + 'static>(
                 }
                 let mut req = req.clone();
                 req.present = true;
+                req.on_pointer_move = overlays
+                    .cached_hover_overlay_pointer_move_handlers
+                    .get(&(*w, *id))
+                    .cloned()
+                    .flatten();
                 hover_overlays.push(req);
             }
 
@@ -1122,6 +1127,7 @@ pub fn render<H: UiHost + 'static>(
         // to avoid blocking underlay interactions while they animate out.
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let interactive = req.interactive && open_now;
+        let on_pointer_move = req.on_pointer_move.clone();
         let root = fret_ui::declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -1129,7 +1135,12 @@ pub fn render<H: UiHost + 'static>(
             window,
             bounds,
             &req.root_name,
-            |_cx| req.children,
+            move |cx| {
+                if let Some(on_pointer_move) = on_pointer_move {
+                    cx.dismissible_on_pointer_move(on_pointer_move);
+                }
+                req.children
+            },
         );
 
         let key = (window, req.id);
@@ -1152,6 +1163,10 @@ pub fn render<H: UiHost + 'static>(
             }
             let present = !capture_conflicts_with_layer(arbitration, entry.layer);
             apply_hover_layer(ui, entry.layer, present, interactive && present);
+            ui.set_layer_wants_pointer_move_events(
+                entry.layer,
+                present && interactive && req.on_pointer_move.is_some(),
+            );
         });
     }
 

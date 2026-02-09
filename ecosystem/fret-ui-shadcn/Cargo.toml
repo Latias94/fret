@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Shadcn/ui-inspired component set and recipes for Fret."
 
 [features]
 default = []
@@ -18,19 +19,19 @@ state = ["state-selector", "state-query"]
 web-goldens = []
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-app = { path = "../../crates/fret-app", optional = true }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui" }
-fret-ui-headless = { path = "../fret-ui-headless" }
-fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
-fret-icons = { path = "../fret-icons" }
-fret-query = { path = "../fret-query", optional = true }
-fret-selector = { path = "../fret-selector", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
+fret-ui-headless = { version = "0.1.0", path = "../fret-ui-headless" }
+fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["icons"] }
+fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-query = { version = "0.1.0", path = "../fret-query", optional = true }
+fret-selector = { version = "0.1.0", path = "../fret-selector", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 time.workspace = true
 
 [dev-dependencies]
-fret-app = { path = "../../crates/fret-app" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
 slotmap.workspace = true

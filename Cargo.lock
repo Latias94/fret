@@ -1163,8 +1163,7 @@ version = "0.1.0"
 dependencies = [
  "fret-code-editor-buffer",
  "fret-runtime",
- "unicode-ident",
- "unicode-segmentation",
+ "fret-text-nav",
 ]
 
 [[package]]
@@ -1246,6 +1245,7 @@ name = "fret-devtools-mcp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "fret-diag",
  "fret-diag-protocol",
  "fret-diag-ws",
@@ -1269,6 +1269,8 @@ dependencies = [
 name = "fret-diag"
 version = "0.1.0"
 dependencies = [
+ "fret-diag-protocol",
+ "fret-diag-ws",
  "image",
  "serde_json",
  "sysinfo",
@@ -1470,6 +1472,7 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "fret-launch",
+ "fret-router-ui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1792,11 +1795,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-text-nav"
+version = "0.1.0"
+dependencies = [
+ "fret-runtime",
+ "unicode-ident",
+ "unicode-segmentation",
+]
+
+[[package]]
 name = "fret-ui"
 version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-runtime",
+ "fret-text-nav",
  "serde",
  "serde_json",
  "slotmap",

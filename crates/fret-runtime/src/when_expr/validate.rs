@@ -36,6 +36,7 @@ pub(super) fn ident_kind(name: &str) -> Result<WhenValueKind, WhenExprValidation
     match name {
         "ui.has_modal" | "focus.is_text_input" => return Ok(WhenValueKind::Bool),
         "edit.can_undo" | "edit.can_redo" => return Ok(WhenValueKind::Bool),
+        "router.can_back" | "router.can_forward" => return Ok(WhenValueKind::Bool),
         "platform" => return Ok(WhenValueKind::Str),
         _ => {}
     }

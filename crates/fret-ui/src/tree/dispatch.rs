@@ -1098,6 +1098,8 @@ impl<H: UiHost> UiTree<H> {
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
@@ -1117,6 +1119,8 @@ impl<H: UiHost> UiTree<H> {
             {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
             }
 
             let window_arbitration = self.window_input_arbitration_snapshot();
@@ -2883,6 +2887,8 @@ impl<H: UiHost> UiTree<H> {
                 text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
                 edit_can_undo: true,
                 edit_can_redo: true,
+                router_can_back: false,
+                router_can_forward: false,
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
             if let Some(mode) = app
@@ -2901,6 +2907,8 @@ impl<H: UiHost> UiTree<H> {
             {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
+                input_ctx.router_can_back = availability.router_can_back;
+                input_ctx.router_can_forward = availability.router_can_forward;
             }
 
             let window_arbitration = self.window_input_arbitration_snapshot();

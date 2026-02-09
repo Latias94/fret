@@ -258,6 +258,12 @@ where
         cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
         cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
     }
+
+    #[cfg(feature = "router")]
+    {
+        cmds.router_back = Some(CommandId::new(fret_router_ui::ROUTER_COMMAND_BACK));
+        cmds.router_forward = Some(CommandId::new(fret_router_ui::ROUTER_COMMAND_FORWARD));
+    }
     let menu_bar = crate::workspace::menu::workspace_default_menu_bar(cmds);
 
     workspace_shell_model(cx, Some(&menu_bar), window, tab_title, render_pane_content)

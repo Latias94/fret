@@ -1,0 +1,196 @@
+[workspace]
+release = false
+publish = false
+release_always = false
+changelog_update = false
+dependencies_update = false
+git_release_enable = false
+git_tag_enable = true
+semver_check = false
+
+[[package]]
+name = "fret"
+release = true
+publish = true
+version_group = "fret-0-1"
+git_release_enable = true
+
+[[package]]
+name = "fret-a11y-accesskit"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-app"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-authoring"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-canvas"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-core"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-dnd"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-executor"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-fonts"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-i18n"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-icons"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-launch"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-platform"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-platform-native"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-platform-web"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-query"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-render"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-render-core"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-render-wgpu"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-runner-web"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-runner-winit"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-runtime"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-selector"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-node"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-router"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-app"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-headless"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-kit"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-ui-shadcn"
+release = true
+publish = true
+version_group = "fret-0-1"
+
+[[package]]
+name = "fret-viewport-tooling"
+release = true
+publish = true
+version_group = "fret-0-1"

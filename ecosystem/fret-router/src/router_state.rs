@@ -66,6 +66,12 @@ pub trait HistoryAdapter {
     fn current(&self) -> &RouteLocation;
     fn refresh(&mut self) {}
     fn navigate(&mut self, action: NavigationAction, target: Option<RouteLocation>) -> bool;
+    fn can_navigate(&self, action: NavigationAction) -> bool {
+        match action {
+            NavigationAction::Push | NavigationAction::Replace => true,
+            NavigationAction::Back | NavigationAction::Forward => false,
+        }
+    }
     fn peek(&mut self, _action: NavigationAction) -> Option<RouteLocation> {
         None
     }
@@ -78,6 +84,14 @@ impl HistoryAdapter for MemoryHistory {
 
     fn navigate(&mut self, action: NavigationAction, target: Option<RouteLocation>) -> bool {
         MemoryHistory::navigate(self, action, target)
+    }
+
+    fn can_navigate(&self, action: NavigationAction) -> bool {
+        match action {
+            NavigationAction::Back => self.can_back(),
+            NavigationAction::Forward => self.can_forward(),
+            NavigationAction::Push | NavigationAction::Replace => true,
+        }
     }
 
     fn peek(&mut self, action: NavigationAction) -> Option<RouteLocation> {

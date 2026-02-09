@@ -13,6 +13,7 @@ For coverage status (what is gated vs only has goldens), see:
 - `docs/audits/shadcn-new-york-v4-coverage.md`
 - Chart-specific audit: `docs/audits/shadcn-chart.md`
 - Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
+- Sidebar component-surface + Base UI semantics audit: `docs/audits/shadcn-sidebar.md`
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
@@ -35,6 +36,9 @@ These areas have multiple geometry + overlay placement/chrome gates and tend to 
   max-height behavior, and menu row height as a styling outcome).
 - **Sidebar blocks**: sidebar menu-button heights (including the “collapsed overrides size” rule), and a dialog
   portal placement gate for `sidebar-13` (`*.open.json`).
+- Status note (2026-02-08): the Sidebar bullet above describes existing high-signal gates only.
+  Full Sidebar component-surface parity and Base UI contract alignment are tracked in
+  `docs/audits/shadcn-sidebar.md`.
 - **Calendar (single-month variants)**: day grid geometry + ARIA label strings; outside-days + week number
   behaviors that are easy to drift when refactoring.
 - **Typography**: breadth gates for `typography-*` pages (geometry + recorded text style inputs; inline-code padding tolerates sub-pixel rounding).

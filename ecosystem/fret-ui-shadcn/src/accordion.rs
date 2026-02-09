@@ -52,6 +52,32 @@ fn trigger_gap(theme: &Theme) -> Px {
 
 pub use fret_ui_kit::primitives::accordion::{AccordionKind, AccordionOrientation};
 
+type OnValueChange = Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct AccordionValueChangeCallbackState {
+    initialized: bool,
+    last_value: Vec<Arc<str>>,
+}
+
+fn accordion_value_change_event(
+    state: &mut AccordionValueChangeCallbackState,
+    next: &[Arc<str>],
+) -> Option<Vec<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = next.to_vec();
+        return None;
+    }
+
+    if state.last_value == next {
+        return None;
+    }
+
+    state.last_value = next.to_vec();
+    Some(next.to_vec())
+}
+
 /// A Radix-shaped, shadcn-skinned accordion surface (`AccordionRoot` / `AccordionItem` /
 /// `AccordionTrigger` / `AccordionContent`).
 ///
@@ -417,6 +443,7 @@ pub mod composable {
         loop_navigation: bool,
         orientation: AccordionOrientation,
         dir: Option<LayoutDirection>,
+        on_value_change: Option<OnValueChange>,
     }
 
     impl std::fmt::Debug for AccordionRoot {
@@ -431,6 +458,7 @@ pub mod composable {
                 .field("disabled", &self.disabled)
                 .field("layout", &self.layout)
                 .field("loop_navigation", &self.loop_navigation)
+                .field("on_value_change", &self.on_value_change.is_some())
                 .finish()
         }
     }
@@ -449,6 +477,7 @@ pub mod composable {
                 loop_navigation: true,
                 orientation: AccordionOrientation::default(),
                 dir: None,
+                on_value_change: None,
             }
         }
 
@@ -466,6 +495,7 @@ pub mod composable {
                 loop_navigation: true,
                 orientation: AccordionOrientation::default(),
                 dir: None,
+                on_value_change: None,
             }
         }
 
@@ -481,6 +511,7 @@ pub mod composable {
                 loop_navigation: true,
                 orientation: AccordionOrientation::default(),
                 dir: None,
+                on_value_change: None,
             }
         }
 
@@ -502,6 +533,7 @@ pub mod composable {
                 loop_navigation: true,
                 orientation: AccordionOrientation::default(),
                 dir: None,
+                on_value_change: None,
             }
         }
 
@@ -544,6 +576,12 @@ pub mod composable {
             self
         }
 
+        /// Called when expanded values change (Base UI `onValueChange`).
+        pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+            self.on_value_change = on_value_change;
+            self
+        }
+
         pub fn item(mut self, item: AccordionItem) -> Self {
             self.items.push(item);
             self
@@ -570,6 +608,7 @@ pub mod composable {
                 let loop_navigation = self.loop_navigation;
                 let orientation = self.orientation;
                 let dir = self.dir;
+                let on_value_change = self.on_value_change;
 
                 let root = match &model {
                     AccordionModel::Single {
@@ -597,6 +636,20 @@ pub mod composable {
                 .dir(dir);
 
                 let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
+                if let Some(on_value_change) = on_value_change.as_ref() {
+                    let next = values
+                        .iter()
+                        .filter(|value| root.is_item_open(cx, value.as_ref()))
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    let changed = cx
+                        .with_state(AccordionValueChangeCallbackState::default, |state| {
+                            accordion_value_change_event(state, &next)
+                        });
+                    if let Some(next) = changed {
+                        on_value_change(next);
+                    }
+                }
                 let disabled_flags: Vec<bool> =
                     items.iter().map(|i| group_disabled || i.disabled).collect();
 
@@ -1115,6 +1168,7 @@ pub struct Accordion {
     loop_navigation: bool,
     orientation: AccordionOrientation,
     dir: Option<LayoutDirection>,
+    on_value_change: Option<OnValueChange>,
 }
 
 impl std::fmt::Debug for Accordion {
@@ -1131,6 +1185,7 @@ impl std::fmt::Debug for Accordion {
             .field("loop_navigation", &self.loop_navigation)
             .field("orientation", &self.orientation)
             .field("dir", &self.dir)
+            .field("on_value_change", &self.on_value_change.is_some())
             .finish()
     }
 }
@@ -1149,6 +1204,7 @@ impl Accordion {
             loop_navigation: true,
             orientation: AccordionOrientation::default(),
             dir: None,
+            on_value_change: None,
         }
     }
 
@@ -1166,6 +1222,7 @@ impl Accordion {
             loop_navigation: true,
             orientation: AccordionOrientation::default(),
             dir: None,
+            on_value_change: None,
         }
     }
 
@@ -1181,6 +1238,7 @@ impl Accordion {
             loop_navigation: true,
             orientation: AccordionOrientation::default(),
             dir: None,
+            on_value_change: None,
         }
     }
 
@@ -1202,6 +1260,7 @@ impl Accordion {
             loop_navigation: true,
             orientation: AccordionOrientation::default(),
             dir: None,
+            on_value_change: None,
         }
     }
 
@@ -1244,6 +1303,12 @@ impl Accordion {
         self
     }
 
+    /// Called when expanded values change (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     pub fn item(mut self, item: AccordionItem) -> Self {
         self.items.push(item);
         self
@@ -1270,6 +1335,7 @@ impl Accordion {
             let loop_navigation = self.loop_navigation;
             let orientation = self.orientation;
             let dir = self.dir;
+            let on_value_change = self.on_value_change;
 
             let root = match &model {
                 AccordionModel::Single {
@@ -1295,6 +1361,19 @@ impl Accordion {
             .dir(dir);
 
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
+            if let Some(on_value_change) = on_value_change.as_ref() {
+                let next = values
+                    .iter()
+                    .filter(|value| root.is_item_open(cx, value.as_ref()))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                let changed = cx.with_state(AccordionValueChangeCallbackState::default, |state| {
+                    accordion_value_change_event(state, &next)
+                });
+                if let Some(next) = changed {
+                    on_value_change(next);
+                }
+            }
             let disabled_flags: Vec<bool> =
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
@@ -1520,6 +1599,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::Mutex;
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
@@ -2373,5 +2453,120 @@ mod tests {
                 .any(|id| snap.nodes.iter().any(|n| n.id == *id)),
             "expected trigger controls relationship to resolve when content is mounted"
         );
+    }
+
+    #[test]
+    fn accordion_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+
+        let accordion = Accordion::single(open).on_value_change(Some(Arc::new(|_value| {})));
+        assert!(accordion.on_value_change.is_some());
+    }
+
+    #[test]
+    fn accordion_root_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+
+        let accordion = composable_accordion::AccordionRoot::single(open)
+            .on_value_change(Some(Arc::new(|_value| {})));
+        assert!(accordion.on_value_change.is_some());
+    }
+
+    #[test]
+    fn accordion_on_value_change_fires_once_when_selection_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let changed_values: Arc<Mutex<Vec<Vec<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
+        let changed_values_for_handler = changed_values.clone();
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                vec![
+                    Accordion::single(open.clone())
+                        .on_value_change(Some(Arc::new(move |value| {
+                            changed_values_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push(value);
+                        })))
+                        .items([item_1, item_2])
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&open).flatten();
+        assert_eq!(selected.as_deref(), Some("item-2"));
+
+        let values = changed_values.lock().unwrap_or_else(|e| e.into_inner());
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0].len(), 1);
+        assert_eq!(values[0][0].as_ref(), "item-2");
     }
 }

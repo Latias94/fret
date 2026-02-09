@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Async query state management for Fret applications."
 
 [features]
 default = []
@@ -16,12 +17,12 @@ tokio = ["fret-executor/tokio"]
 wasm = ["fret-executor/wasm"]
 
 [dependencies]
-fret-core = { path = "../../crates/fret-core" }
-fret-executor = { path = "../fret-executor" }
-fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
+fret-executor = { version = "0.1.0", path = "../fret-executor" }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 tracing.workspace = true
 
 [dev-dependencies]
-fret-app = { path = "../../crates/fret-app" }
+fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
 pollster.workspace = true

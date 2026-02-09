@@ -34,6 +34,8 @@ fn eval_ident_bool_opt(ctx: &InputContext, name: &str) -> Option<bool> {
         "focus.is_text_input" => Some(ctx.focus_is_text_input),
         "edit.can_undo" => Some(ctx.edit_can_undo),
         "edit.can_redo" => Some(ctx.edit_can_redo),
+        "router.can_back" => Some(ctx.router_can_back),
+        "router.can_forward" => Some(ctx.router_can_forward),
         _ => {
             let key = name.strip_prefix("cap.").unwrap_or(name);
             ctx.caps.bool_key(key)
