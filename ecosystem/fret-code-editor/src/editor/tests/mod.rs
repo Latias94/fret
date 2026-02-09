@@ -966,8 +966,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
         st.preedit = None;
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(composition, None);
     assert_eq!(value.as_str(), "hello 😀 world");
     assert_eq!(
@@ -1006,8 +1006,8 @@ fn a11y_window_includes_preedit_and_reports_composition_range() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "heabllo");
     assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
     assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
@@ -1028,8 +1028,8 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
         });
     }
 
-    let st = handle.state.borrow();
-    let (value, _selection, composition) = a11y_composed_text_window(&st);
+    let mut st = handle.state.borrow_mut();
+    let (value, _selection, composition) = a11y_composed_text_window(&mut st, 1024);
     assert_eq!(value.as_str(), "ABhello");
     assert_eq!(composition, Some((0, 2)));
 
@@ -1055,6 +1055,43 @@ fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
     let clamped_end =
         map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
     assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_window_includes_decorations_when_composed() {
+    let handle = CodeEditorHandle::new("abcdef");
+    handle.set_soft_wrap_cols(Some(4));
+    handle.set_allow_decorations_under_inline_preedit(true);
+    handle.set_compose_inline_preedit(true);
+
+    handle.set_line_folds(
+        0,
+        vec![FoldSpan {
+            range: 1..3,
+            placeholder: Arc::<str>::from("…"),
+        }],
+    );
+    handle.set_line_inlays(
+        0,
+        vec![InlaySpan {
+            byte: 1,
+            text: Arc::<str>::from("<inlay>"),
+        }],
+    );
+
+    handle.set_caret(1);
+    handle.set_preedit_debug("XY", Some((1, 1)));
+
+    let mut st = handle.state.borrow_mut();
+    let (value, selection, composition) = a11y_composed_text_window(&mut st, 1024);
+    assert!(value.contains("<inlay>"));
+    assert!(value.contains("…"));
+    assert!(value.contains("XY"));
+    assert_eq!(composition, Some((1, 3)));
+    assert_eq!(selection, Some((2, 2)));
+
+    let (mapped_anchor, mapped_focus) = map_a11y_offsets_to_buffer_composed(&mut st, 1024, 2, 2);
+    assert_eq!((mapped_anchor, mapped_focus), (1, 1));
 }
 
 #[test]

@@ -16735,6 +16735,289 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_inlays_present_und
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for baseline snapshot (folds+inlays A)
+    // 1: waiting for folds to toggle to B (folds != A)
+    // 2: waiting for inlays to toggle to B (inlays != A)
+    // 3: waiting for both to return to A
+    // 4: success
+    let mut state: u8 = 0;
+
+    let mut baseline_folds: Option<bool> = None;
+    let mut baseline_inlays: Option<bool> = None;
+    let mut baseline_rev: u64 = 0;
+    let mut baseline_len: u64 = 0;
+    let mut baseline_anchor: u64 = 0;
+    let mut baseline_caret: u64 = 0;
+
+    let mut toggled_folds: Option<bool> = None;
+    let mut toggled_inlays: Option<bool> = None;
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "code_editor_torture" {
+                continue;
+            }
+
+            let soft_wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if soft_wrap_cols.is_none() {
+                continue;
+            }
+
+            let code_editor = app_snapshot.and_then(|v| v.get("code_editor"));
+            let folds_fixture = code_editor
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let inlays_fixture = code_editor
+                .and_then(|v| v.get("inlays_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let torture = code_editor.and_then(|v| v.get("torture"));
+            let preedit_active = torture
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !preedit_active {
+                continue;
+            }
+            let allow_decorations_under_inline_preedit = torture
+                .and_then(|v| v.get("allow_decorations_under_inline_preedit"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !allow_decorations_under_inline_preedit {
+                continue;
+            }
+            let compose_inline_preedit = torture
+                .and_then(|v| v.get("compose_inline_preedit"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !compose_inline_preedit {
+                continue;
+            }
+
+            let rev = torture
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = torture
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let anchor = torture
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("anchor"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = torture
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            match state {
+                0 => {
+                    baseline_folds = Some(folds_fixture);
+                    baseline_inlays = Some(inlays_fixture);
+                    baseline_rev = rev;
+                    baseline_len = len;
+                    baseline_anchor = anchor;
+                    baseline_caret = caret;
+                    state = 1;
+                }
+                1 | 2 | 3 => {
+                    if rev != baseline_rev
+                        || len != baseline_len
+                        || anchor != baseline_anchor
+                        || caret != baseline_caret
+                    {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "state": state,
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                                "anchor": baseline_anchor,
+                                "caret": baseline_caret,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "anchor": anchor,
+                                "caret": caret,
+                            },
+                            "fixtures": {
+                                "folds_fixture": folds_fixture,
+                                "inlays_fixture": inlays_fixture,
+                            },
+                        }));
+                        state = 4;
+                        break;
+                    }
+
+                    if toggled_folds.is_none() && baseline_folds.is_some_and(|b| folds_fixture != b)
+                    {
+                        toggled_folds = Some(folds_fixture);
+                    }
+                    if toggled_inlays.is_none()
+                        && baseline_inlays.is_some_and(|b| inlays_fixture != b)
+                    {
+                        toggled_inlays = Some(inlays_fixture);
+                    }
+
+                    if toggled_folds.is_some() && toggled_inlays.is_some() {
+                        state = 3;
+                    } else if toggled_folds.is_some() || toggled_inlays.is_some() {
+                        state = 2;
+                    }
+
+                    if state == 3
+                        && baseline_folds.is_some_and(|b| folds_fixture == b)
+                        && baseline_inlays.is_some_and(|b| inlays_fixture == b)
+                    {
+                        state = 4;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "soft_wrap_cols": soft_wrap_cols,
+                "folds_fixture": folds_fixture,
+                "inlays_fixture": inlays_fixture,
+                "preedit_active": preedit_active,
+                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                "compose_inline_preedit": compose_inline_preedit,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "anchor": anchor,
+                "caret": caret,
+                "state": state,
+            }));
+        }
+        if state == 4 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join(
+        "check.ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed.json",
+    );
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "baseline": {
+            "folds_fixture": baseline_folds,
+            "inlays_fixture": baseline_inlays,
+            "buffer_revision": baseline_rev,
+            "text_len_bytes": baseline_len,
+            "anchor": baseline_anchor,
+            "caret": baseline_caret,
+        },
+        "toggled": {
+            "folds_fixture": toggled_folds,
+            "inlays_fixture": toggled_inlays,
+        },
+        "violation": violation,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor composed decorations toggle gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 && violation.is_none() && toggled_folds.is_some() && toggled_inlays.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor composed decorations toggle gate failed (expected: folds_fixture and inlays_fixture both toggle at least once while compose_inline_preedit=true, then return without changing buffer_revision/text_len_bytes/anchor/caret)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(
     bundle_path: &Path,
     warmup_frames: u64,

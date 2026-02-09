@@ -115,6 +115,13 @@
     },
     { "type": "wait_frames", "n": 8 },
     {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "home" },
+    { "type": "wait_frames", "n": 2 },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
@@ -135,6 +142,26 @@
       "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-folds-set-off" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-inlays-set-off" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-folds-set-on" }
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-inlays-set-on" }
+    },
+    { "type": "wait_frames", "n": 6 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline"
