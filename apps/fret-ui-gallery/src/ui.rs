@@ -11274,13 +11274,16 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.on-tertiary-container"),
-            );
-            let hover_container = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.tertiary-container"),
-            );
+            let (hover_icon, hover_container) = cx.with_theme(|theme| {
+                (
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.on-tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.tertiary-container"),
+                    ),
+                )
+            });
             let hover_style = material3::IconButtonStyle::default()
                 .container_background(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11339,15 +11342,17 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N3).items_center(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_container = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.tertiary-container"),
-            );
-            let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.on-tertiary-container"),
-            );
-            let hover_outline =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
+                (
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.on-tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary")),
+                )
+            });
             let hover_style = material3::CheckboxStyle::default()
                 .container_background(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11376,13 +11381,16 @@ fn preview_material3_gallery(
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch Override")
                     .style({
-                        let theme = fret_ui::Theme::global(&*cx.app).clone();
-                        let hover_track = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary-container"),
-                        );
-                        let hover_handle = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.on-tertiary-container"),
-                        );
+                        let (hover_track, hover_handle) = cx.with_theme(|theme| {
+                            (
+                                fret_ui_shadcn::ColorRef::Color(
+                                    theme.color_required("md.sys.color.tertiary-container"),
+                                ),
+                                fret_ui_shadcn::ColorRef::Color(
+                                    theme.color_required("md.sys.color.on-tertiary-container"),
+                                ),
+                            )
+                        });
                         material3::SwitchStyle::default()
                             .track_color(
                                 fret_ui_kit::WidgetStateProperty::new(None)
@@ -11406,23 +11414,19 @@ fn preview_material3_gallery(
                                 .disabled(true),
                         ];
 
-                        let theme = fret_ui::Theme::global(&*cx.app).clone();
-                        let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary"),
-                        );
-                        let hover_state_layer = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary"),
-                        );
-                        let hover_style = material3::RadioStyle::default()
-                            .icon_color(
-                                fret_ui_kit::WidgetStateProperty::new(None)
-                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                        let hover_color = cx.with_theme(|theme| {
+                            fret_ui_shadcn::ColorRef::Color(
+                                theme.color_required("md.sys.color.tertiary"),
                             )
+                        });
+                        let hover_style = material3::RadioStyle::default()
+                            .icon_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                                fret_ui_kit::WidgetStates::HOVERED,
+                                Some(hover_color.clone()),
+                            ))
                             .state_layer_color(
-                                fret_ui_kit::WidgetStateProperty::new(None).when(
-                                    fret_ui_kit::WidgetStates::HOVERED,
-                                    Some(hover_state_layer),
-                                ),
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_color)),
                             );
 
                         vec![
@@ -11465,9 +11469,9 @@ fn preview_material3_gallery(
         cx,
         stack::VStackProps::default().gap(Space::N1).items_start(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover = cx.with_theme(|theme| {
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+            });
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11509,23 +11513,19 @@ fn preview_material3_gallery(
                 material3::TabItem::new("settings", "Settings"),
             ];
 
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_label =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
-            let hover_state_layer =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
-            let indicator =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_color = cx.with_theme(|theme| {
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+            });
             let hover_style = material3::TabsStyle::default()
-                .label_color(
-                    fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_label)),
-                )
-                .state_layer_color(
-                    fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_state_layer)),
-                )
-                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(indicator)));
+                .label_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                    fret_ui_kit::WidgetStates::HOVERED,
+                    Some(hover_color.clone()),
+                ))
+                .state_layer_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                    fret_ui_kit::WidgetStates::HOVERED,
+                    Some(hover_color.clone()),
+                ))
+                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(hover_color)));
 
             vec![
                 cx.text("Tabs"),
@@ -12247,10 +12247,11 @@ fn preview_material3_touch_targets(
 ) -> Vec<AnyElement> {
     use fret_icons::ids;
 
-    let theme = Theme::global(&*cx.app).clone();
-    let min = theme
-        .metric_by_key("md.sys.layout.minimum-touch-target.size")
-        .unwrap_or(Px(48.0));
+    let min = cx.with_theme(|theme| {
+        theme
+            .metric_by_key("md.sys.layout.minimum-touch-target.size")
+            .unwrap_or(Px(48.0))
+    });
 
     let target_overlay = |cx: &mut ElementContext<'_, App>,
                           label: &'static str,
@@ -12373,30 +12374,40 @@ fn preview_material3_touch_targets(
     };
 
     let checkbox_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.checkbox.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.checkbox.state-layer.size")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
     let radio_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.radio-button.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.radio-button.state-layer.size")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
     let switch_chrome = {
-        let width = theme
-            .metric_by_key("md.comp.switch.track.width")
-            .unwrap_or(Px(52.0));
-        let height = theme
-            .metric_by_key("md.comp.switch.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let (width, height) = cx.with_theme(|theme| {
+            (
+                theme
+                    .metric_by_key("md.comp.switch.track.width")
+                    .unwrap_or(Px(52.0)),
+                theme
+                    .metric_by_key("md.comp.switch.state-layer.size")
+                    .unwrap_or(Px(40.0)),
+            )
+        });
         Size::new(width, height)
     };
     let icon_button_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.icon-button.small.container.height")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.icon-button.small.container.height")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
 
@@ -12927,15 +12938,12 @@ fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     use fret_core::{Corners, Px};
     use fret_ui::element::{AnyElement, ContainerProps, Length};
 
-    let theme = Theme::global(&*cx.app).clone();
-    let theme_for_anchor = theme.clone();
-
-    let anchor = move |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
+    let anchor = |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
         let mut props = ContainerProps::default();
         props.layout.size.width = Length::Px(size);
         props.layout.size.height = Length::Px(size);
         props.background =
-            Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
+            Some(cx.with_theme(|theme| theme.color_required("md.sys.color.surface-container-low")));
         props.corner_radii = Corners::all(Px(8.0));
         cx.container(props, |_cx| Vec::<AnyElement>::new())
             .test_id(test_id)
@@ -13589,8 +13597,6 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .get_model_copied(&typeahead_delay_ms, Invalidation::Layout)
         .unwrap_or(200);
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let items: Arc<[material3::SelectItem]> = vec![
         material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
         material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
@@ -13607,9 +13613,13 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select")
         .into_element(cx);
 
-    let primary = theme.color_required("md.sys.color.primary");
-    let primary_container = theme.color_required("md.sys.color.primary-container");
-    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+    let (primary, primary_container, secondary_container) = cx.with_theme(|theme| {
+        (
+            theme.color_required("md.sys.color.primary"),
+            theme.color_required("md.sys.color.primary-container"),
+            theme.color_required("md.sys.color.secondary-container"),
+        )
+    });
 
     let override_style = material3::SelectStyle::default()
         .container_background(
@@ -13763,6 +13773,16 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select-transformed")
         .into_element(cx);
 
+    let (probe_bg, probe_border) = cx.with_theme(|theme| {
+        let bg = theme
+            .color_by_key("md.sys.color.surface-container")
+            .or_else(|| theme.color_by_key("md.sys.color.surface"))
+            .unwrap_or(fret_core::Color::TRANSPARENT);
+        let border = theme
+            .color_by_key("md.sys.color.outline-variant")
+            .unwrap_or(fret_core::Color::TRANSPARENT);
+        (bg, border)
+    });
     let transformed_probe = cx.container(
         fret_ui::element::ContainerProps {
             layout: {
@@ -13772,21 +13792,9 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 l.overflow = fret_ui::element::Overflow::Clip;
                 l
             },
-            background: Some(
-                theme
-                    .color_by_key("md.sys.color.surface-container")
-                    .unwrap_or_else(|| {
-                        theme
-                            .color_by_key("md.sys.color.surface")
-                            .unwrap_or(fret_core::Color::TRANSPARENT)
-                    }),
-            ),
+            background: Some(probe_bg),
             border: fret_core::Edges::all(Px(1.0)),
-            border_color: Some(
-                theme
-                    .color_by_key("md.sys.color.outline-variant")
-                    .unwrap_or(fret_core::Color::TRANSPARENT),
-            ),
+            border_color: Some(probe_border),
             corner_radii: fret_core::Corners::all(Px(12.0)),
             padding: fret_core::Edges::all(Px(12.0)),
             ..Default::default()
@@ -15588,8 +15596,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let image = {
-        let theme = Theme::global(&*cx.app).clone();
-        let cover_bg = theme.color_required("muted");
+        let cover_bg = cx.with_theme(|theme| theme.color_required("muted"));
 
         let cover = shadcn::AspectRatio::new(
             16.0 / 9.0,
@@ -15651,7 +15658,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
         stack::vstack(
@@ -15893,8 +15900,6 @@ fn preview_avatar(
 }
 
 fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -15917,17 +15922,17 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full(),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let round = |cx: &mut ElementContext<'_, App>, size: f32| {
@@ -16212,8 +16217,6 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -16236,14 +16239,14 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -16305,17 +16308,21 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     .map(|artist| {
                         shadcn::Card::new(vec![
                             shadcn::CardContent::new(vec![
-                                cx.container(
-                                    decl_style::container_props(
-                                        &theme,
-                                        ChromeRefinement::default()
-                                            .rounded(Radius::Md)
-                                            .border_1()
-                                            .bg(ColorRef::Color(theme.color_required("muted"))),
-                                        LayoutRefinement::default().w_px(Px(140.0)).h_px(Px(180.0)),
-                                    ),
-                                    |_cx| Vec::new(),
-                                ),
+                                {
+                                    let photo_props = cx.with_theme(|theme| {
+                                        decl_style::container_props(
+                                            theme,
+                                            ChromeRefinement::default()
+                                                .rounded(Radius::Md)
+                                                .border_1()
+                                                .bg(ColorRef::Color(theme.color_required("muted"))),
+                                            LayoutRefinement::default()
+                                                .w_px(Px(140.0))
+                                                .h_px(Px(180.0)),
+                                        )
+                                    });
+                                    cx.container(photo_props, |_cx| Vec::new())
+                                },
                                 shadcn::typography::muted(cx, format!("Photo by {artist}")),
                             ])
                             .into_element(cx),
@@ -19308,7 +19315,7 @@ fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
     _value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let primary = cx.with_theme(|theme| theme.color_required("primary"));
     let line_style = shadcn::tabs::TabsStyle::default()
         .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(
             ColorRef::Color(CoreColor::TRANSPARENT),
@@ -19317,7 +19324,7 @@ fn preview_tabs(
             fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(CoreColor::TRANSPARENT)))
                 .when(
                     fret_ui_kit::WidgetStates::SELECTED,
-                    Some(ColorRef::Color(theme.color_required("primary"))),
+                    Some(ColorRef::Color(primary)),
                 ),
         );
 
@@ -19343,17 +19350,17 @@ fn preview_tabs(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let card_panel = |cx: &mut ElementContext<'_, App>,
@@ -19653,8 +19660,6 @@ fn preview_accordion(
 ) -> Vec<AnyElement> {
     let _ = value;
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(512.0)))
@@ -19845,14 +19850,14 @@ fn preview_accordion(
             ])
             .into_element(cx);
 
-        let wrapper = cx.container(
+        let wrapper_props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Lg),
                 max_w_lg.clone(),
-            ),
-            move |_cx| vec![accordion],
-        );
+            )
+        });
+        let wrapper = cx.container(wrapper_props, move |_cx| vec![accordion]);
 
         let body = centered(cx, wrapper);
         section(cx, "Borders", body)
@@ -19984,7 +19989,6 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
     let invoice_w = fret_core::Px(128.0);
     let status_w = fret_core::Px(120.0);
     let method_w = fret_core::Px(180.0);
@@ -20022,17 +20026,17 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let align_end = |cx: &mut ElementContext<'_, App>, child: AnyElement| {
@@ -21586,14 +21590,17 @@ fn preview_overlay(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
                 |cx| {
-                    let theme = Theme::global(&*cx.app).clone();
-                    let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+                    let gap = cx.with_theme(|theme| {
+                        fret_ui_kit::MetricRef::space(Space::N2).resolve(theme)
+                    });
 
                     let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
-                        let layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        );
+                        let layout = cx.with_theme(|theme| {
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0(),
+                            )
+                        });
                         cx.flex(
                             fret_ui::element::FlexProps {
                                 layout,
@@ -21609,10 +21616,12 @@ fn preview_overlay(
                     };
 
                     let row_end = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
-                        let layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        );
+                        let layout = cx.with_theme(|theme| {
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0(),
+                            )
+                        });
                         cx.flex(
                             fret_ui::element::FlexProps {
                                 layout,
