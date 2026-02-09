@@ -710,13 +710,23 @@ Evidence anchors:
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
   - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
   - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
-- [ ] Fold regions + placeholders without breaking caret/selection.
-- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+- [~] Fold regions + placeholders without breaking caret/selection.
+  - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
+  - Remaining: unify with inline IME preedit under a single composed mapping surface (ADR 0203).
+- [~] Inlays (injected display fragments) without mutating the underlying buffer.
+  - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
+  - Remaining: unify with inline IME preedit under a single composed mapping surface (ADR 0203).
+- [ ] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
+  - Promote inline preedit from paint-time string injection to a view-layer display fragment source.
+  - Make paint, hit-testing, caret/selection mapping, and semantics export consume the same composed mapping.
+  - Definition-of-done: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
 
 ### 9) Retained host / composable rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+  - Default path: keep the code editor paint-driven (stable tree) unless we need row-level composability.
+  - If adopted: prioritize fixed/known-height first; variable-height row measurement is deferred.
 
 ---
 

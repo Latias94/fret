@@ -291,15 +291,56 @@ Evidence anchors:
   - [x] Decision (v2): keep v1 behavior — suppress inlays while inline preedit is active.
     - Rationale: composing inlays with preedit requires fragment-based DisplayMap composition (unified buffer↔display↔a11y mapping).
     - Revisit once preedit is modeled as an injected display fragment (and the mapping surface can compose multiple fragment sources deterministically).
-  - [ ] Follow-up (v2+): define a fragment-based DisplayMap composition model so fold/inlay/preedit can compose under a single mapping surface.
-    - Proposed: `docs/adr/0203-code-editor-display-fragments-and-displaymap-composition-v1.md`.
+  ### M8.4 — Display fragments composition (v2+) (ADR 0203)
+
+  This follow-up is the v2+ unlock for “editor-grade display mapping”: fold placeholders, inlays,
+  and inline IME preedit must coexist under one deterministic mapping surface (buffer↔display↔a11y).
+
+  - [ ] Promote inline IME preedit to a view-layer fragment source (stop paint-time string splicing).
+    - Target: `ecosystem/fret-code-editor-view` (`DisplayMap` / `DisplayRowFragment`).
+    - Composition order (normative; ADR 0203): folds → inlays → preedit.
+  - [ ] Extend view-layer mapping helpers so positions “inside” a fragment clamp to its `maps_to` anchor.
+    - Applies to: caret mapping, hit-testing mapping, selection normalization, and a11y range conversion.
+  - [ ] Provide a view-owned way to materialize the composed display text for a windowed export range.
+    - Used by: paint row text, a11y `TextField.value`, and debug snapshots.
+    - Must remain bounded: produce windowed slices only (ADR 0190), not full-document strings.
+  - [ ] Update the editor surface to consume the composed DisplayMap for:
+    - paint row text (no preedit injection in `fret-code-editor`),
+    - caret/selection/hit-test mapping (single source of truth),
+    - a11y export (`value` + `text_selection` + `text_composition`, ADR 0071).
+  - [ ] Add a dedicated UI Gallery baseline + gate for “soft wrap + folds + inlays + preedit” coexistence.
+    - Script (new): `tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json`.
+    - Gate (new): assert at least one snapshot with:
+      - `soft_wrap_cols != null`,
+      - `folds_fixture=true`, `inlays_fixture=true`,
+      - `torture.preedit_active=true`,
+      - fold placeholder observed and inlay observed while preedit is active,
+      - plus a minimal mapping sanity check (e.g. caret does not jump when toggling the fixtures).
+  - [ ] Keep the current v1 behavior + staging opt-ins gated until the composed preedit path is proven stable.
+    - v1 suppress gates: `*-soft-wrap-inline-preedit-baseline.json` (folds/inlays absent).
+    - staging opt-ins: `*-with-decorations-baseline.json` (folds/inlays present) (ADR 0203 staging).
 
 ---
 
 ## M9 — Retained Host / Composable Rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
-- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+  - Default decision (recommended): keep the code editor paint-driven (stable tree).
+  - “Yes” only if we need row-level composability that cannot be expressed as paint-only decorations.
+- [ ] Define the decision rubric (write it down here so it’s auditable):
+  - Need per-row interactive widgets (e.g. breakpoint toggles, per-row buttons) that must participate in layout/hit-test/semantics.
+  - Need rich gutters that are not feasible as a canvas overlay (variable-sized widgets, focusable controls).
+  - Need inline non-text widgets embedded in the flow (beyond “display fragments” text injection).
+- [ ] If “yes”: adopt the retained host direction (ADR 0192) for the relevant surface(s).
+  - Use fixed/known-height first; defer measured variable-height until required.
+  - Add a minimal spike surface (e.g. gutter with a focusable widget) and prove:
+    - window boundary changes do not force parent cache-root rerenders,
+    - attach/detach/reuse behavior is explainable in diagnostics bundles.
+  - Add or reuse fretboard gates:
+    - retained reconcile on cache-hit frames,
+    - attach/detach bounds,
+    - keep-alive reuse behavior (if enabled),
+    - stale-paint protection during scroll.
 
 ---
 
