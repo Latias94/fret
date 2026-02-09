@@ -107,6 +107,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_date_picker_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/date_picker/fixtures.rs` (`web_vs_fret_date_picker_cases_match_web_fixtures`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/date_picker.rs` (keeps procedural “select listbox internal scroll” test)
+  - Evidence (fixture-driven slice, dropdown-menu checkboxes overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_checkboxes_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_checkboxes/fixtures.rs` (`web_vs_fret_dropdown_menu_checkboxes_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_checkboxes.rs`
+  - Evidence (fixture-driven slice, dropdown-menu radio-group overlay placement + metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_radio_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group/fixtures.rs` (`web_vs_fret_dropdown_menu_radio_group_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group.rs`
   - Evidence (fixture-driven slice, misc overlays overlay placement + chrome insets):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs` (`web_vs_fret_misc_overlays_cases_match_web_fixtures`)
@@ -626,4 +634,6 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_misc_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_calendar_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_date_picker_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_checkboxes_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_radio_group_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
