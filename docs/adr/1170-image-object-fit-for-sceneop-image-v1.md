@@ -152,8 +152,10 @@ Rationale:
 
 - Consider a shared `ObjectFit` type used by both viewports and images (instead of duplicating
   enums), if we want to expose CSS-aligned naming (`Fill/Contain/Cover`).
-- Consider an optional image metadata query seam (`ImageService`) to support aspect-ratio-driven
-  layouts in ecosystem components without app side channels.
+- Prefer a policy-owned intrinsic metadata seam (e.g. an app-global `ImageMetadataStore` in
+  `fret-ui-kit`) for aspect-ratio-driven recipes without expanding `UiServices`.
+- Consider a `UiServices` capability only if we later need a mechanism-layer portable query
+  contract that cannot be satisfied by app-owned policy layers.
 - Consider an extended fit surface (v2) with alignment/anchor points (`Center`, `Top`, `TopLeft`,
   etc.) and optional sampling policy (`Nearest` vs `Linear`), but keep v1 minimal to avoid baking
   component policy into the core draw contract.

@@ -99,11 +99,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M5 — Video fast paths (capability-gated)
 
-- [ ] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
+- [~] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
   - References: ADR 0123/0124/0126.
   - Desktop (Windows-local):
     - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
     - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
+    - `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`
     - Command:
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
   - WASM: TODO (record a baseline once the web perf workflow is stable for this suite).
@@ -113,6 +114,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       - Evidence: `crates/fret-platform-web/src/wasm/ime.rs` (visibility fixes for `WebImeBridge` / debug state; `Effect::OpenUrl { url, .. }` pattern)
     - Baseline workflow (web runner): run the script via `apps/fret-devtools` (or any workflow that produces exported bundles under `.fret/diag/exports/`), then generate a baseline from bundle paths:
       - `cargo run -p fretboard -- diag perf-baseline-from-bundles tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json .fret/diag/exports/<exported_unix_ms> --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
+  - Evidence anchors (desktop):
+    - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
+    - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
+    - `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`
 
 - [ ] IMG-video-510 Decide the next capability-gated step for “external texture import”.
   - Must not leak backend handles into `fret-ui`.

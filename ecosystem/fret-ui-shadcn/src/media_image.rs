@@ -2,9 +2,11 @@ use fret_core::{ImageId, ViewportFit};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ImageProps, LayoutStyle, Length, Overflow, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::global_watch::GlobalWatchExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::primitives::aspect_ratio::AspectRatio;
+use fret_ui_kit::{ChromeRefinement, ImageMetadataStore, LayoutRefinement, Space};
 
 use crate::Skeleton;
 
@@ -18,6 +20,7 @@ pub struct MediaImage {
     fit: ViewportFit,
     opacity: f32,
     loading: bool,
+    intrinsic_aspect_ratio_from_metadata: bool,
     loading_slot: Option<AnyElement>,
     fallback_slot: Option<AnyElement>,
     chrome: ChromeRefinement,
@@ -48,6 +51,7 @@ impl MediaImage {
             fit: ViewportFit::Cover,
             opacity: 1.0,
             loading: false,
+            intrinsic_aspect_ratio_from_metadata: false,
             loading_slot: None,
             fallback_slot: None,
             chrome: ChromeRefinement::default(),
@@ -89,6 +93,16 @@ impl MediaImage {
         self
     }
 
+    /// When enabled and metadata is available, wraps the image in an `AspectRatio` container
+    /// derived from the app-owned `ImageMetadataStore` global.
+    ///
+    /// This is intentionally opt-in: intrinsic metadata must not implicitly affect layout
+    /// (ADR 0126).
+    pub fn intrinsic_aspect_ratio_from_metadata(mut self, enabled: bool) -> Self {
+        self.intrinsic_aspect_ratio_from_metadata = enabled;
+        self
+    }
+
     pub fn loading_slot(mut self, slot: AnyElement) -> Self {
         self.loading_slot = Some(slot);
         self
@@ -113,13 +127,22 @@ impl MediaImage {
         let theme = Theme::global(&*cx.app).clone();
         let image = self.source.resolve(cx);
 
-        let base_layout = LayoutRefinement::default().relative().size_full();
-        let mut wrapper = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default().merge(self.chrome),
-            base_layout.merge(self.layout),
-        );
-        wrapper.layout.overflow = Overflow::Clip;
+        let chrome = ChromeRefinement::default().merge(self.chrome);
+        let layout = self.layout;
+
+        let intrinsic_ratio =
+            if self.intrinsic_aspect_ratio_from_metadata && layout.aspect_ratio.is_none() {
+                image
+                    .and_then(|image| {
+                        cx.watch_global::<ImageMetadataStore>()
+                            .layout()
+                            .map(|store| store.aspect_ratio(image))
+                            .flatten()
+                    })
+                    .filter(|ratio| ratio.is_finite() && *ratio > 0.0)
+            } else {
+                None
+            };
 
         let content_host = decl_style::container_props(
             &theme,
@@ -136,44 +159,100 @@ impl MediaImage {
         let loading_slot = self.loading_slot;
         let fallback_slot = self.fallback_slot;
 
-        cx.container(wrapper, move |cx| {
-            vec![cx.container(content_host, move |cx| {
-                if let Some(image) = image {
-                    let mut image_layout = LayoutStyle::default();
-                    image_layout.size = SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    };
-                    vec![cx.image_props(ImageProps {
-                        layout: image_layout,
-                        image,
-                        fit,
-                        opacity,
-                        uv: None,
+        if let Some(ratio) = intrinsic_ratio {
+            let inner = {
+                let base_layout = LayoutRefinement::default().relative().size_full();
+                let inner =
+                    decl_style::container_props(&theme, ChromeRefinement::default(), base_layout);
+                cx.container(inner, move |cx| {
+                    vec![cx.container(content_host, move |cx| {
+                        if let Some(image) = image {
+                            let mut image_layout = LayoutStyle::default();
+                            image_layout.size = SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            };
+                            vec![cx.image_props(ImageProps {
+                                layout: image_layout,
+                                image,
+                                fit,
+                                opacity,
+                                uv: None,
+                            })]
+                        } else if loading {
+                            if let Some(slot) = loading_slot {
+                                vec![slot]
+                            } else {
+                                vec![
+                                    Skeleton::new()
+                                        .refine_layout(
+                                            LayoutRefinement::default()
+                                                .absolute()
+                                                .inset(Space::N0)
+                                                .size_full(),
+                                        )
+                                        .into_element(cx),
+                                ]
+                            }
+                        } else if let Some(slot) = fallback_slot {
+                            vec![slot]
+                        } else {
+                            Vec::new()
+                        }
                     })]
-                } else if loading {
-                    if let Some(slot) = loading_slot {
+                })
+            };
+
+            AspectRatio::new(ratio, inner)
+                .refine_style(chrome)
+                .refine_layout(layout)
+                .into_element(cx)
+        } else {
+            let base_layout = LayoutRefinement::default().relative().size_full();
+            let mut wrapper =
+                decl_style::container_props(&theme, chrome, base_layout.merge(layout));
+            wrapper.layout.overflow = Overflow::Clip;
+
+            cx.container(wrapper, move |cx| {
+                vec![cx.container(content_host, move |cx| {
+                    if let Some(image) = image {
+                        let mut image_layout = LayoutStyle::default();
+                        image_layout.size = SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        };
+                        vec![cx.image_props(ImageProps {
+                            layout: image_layout,
+                            image,
+                            fit,
+                            opacity,
+                            uv: None,
+                        })]
+                    } else if loading {
+                        if let Some(slot) = loading_slot {
+                            vec![slot]
+                        } else {
+                            vec![
+                                Skeleton::new()
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .absolute()
+                                            .inset(Space::N0)
+                                            .size_full(),
+                                    )
+                                    .into_element(cx),
+                            ]
+                        }
+                    } else if let Some(slot) = fallback_slot {
                         vec![slot]
                     } else {
-                        vec![
-                            Skeleton::new()
-                                .refine_layout(
-                                    LayoutRefinement::default()
-                                        .absolute()
-                                        .inset(Space::N0)
-                                        .size_full(),
-                                )
-                                .into_element(cx),
-                        ]
+                        Vec::new()
                     }
-                } else if let Some(slot) = fallback_slot {
-                    vec![slot]
-                } else {
-                    Vec::new()
-                }
-            })]
-        })
+                })]
+            })
+        }
     }
 }
 
@@ -186,7 +265,9 @@ mod tests {
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, Scene, SceneOp, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
+    use fret_ui::element::ElementKind;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::with_image_metadata_store_mut;
 
     #[derive(Default)]
     struct FakeServices;
@@ -271,6 +352,54 @@ mod tests {
             scene.ops().iter().any(|op| matches!(op, SceneOp::Image { image, fit, .. } if *image == img && *fit == ViewportFit::Contain)),
             "expected SceneOp::Image with fit=Contain"
         );
+    }
+
+    #[test]
+    fn media_image_can_use_intrinsic_aspect_ratio_from_metadata() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let img = ImageId::default();
+        with_image_metadata_store_mut(&mut app, |store| {
+            store.set_intrinsic_size_px(img, (1920, 1080));
+        });
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = MediaImage::new(img)
+                .intrinsic_aspect_ratio_from_metadata(true)
+                .into_element(cx);
+            let ElementKind::Container(props) = &el.kind else {
+                panic!("expected a container element");
+            };
+            assert_eq!(props.layout.aspect_ratio, Some(1920.0 / 1080.0));
+        });
+    }
+
+    #[test]
+    fn media_image_does_not_invent_aspect_ratio_when_metadata_missing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let img = ImageId::default();
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = MediaImage::new(img)
+                .intrinsic_aspect_ratio_from_metadata(true)
+                .into_element(cx);
+            let ElementKind::Container(props) = &el.kind else {
+                panic!("expected a container element");
+            };
+            assert_eq!(props.layout.aspect_ratio, None);
+        });
     }
 
     #[test]
