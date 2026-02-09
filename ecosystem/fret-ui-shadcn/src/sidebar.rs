@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
+    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -335,11 +335,7 @@ impl SidebarContext {
         self.set_open_with(host, |_| open);
     }
 
-    pub fn set_open_mobile_with<H: UiHost>(
-        &self,
-        host: &mut H,
-        update: impl Fn(bool) -> bool,
-    ) {
+    pub fn set_open_mobile_with<H: UiHost>(&self, host: &mut H, update: impl Fn(bool) -> bool) {
         let _ = host.models_mut().update(&self.open_mobile, |v| {
             *v = update(*v);
         });
@@ -594,10 +590,7 @@ impl SidebarProvider {
         self
     }
 
-    pub fn on_open_mobile_change(
-        mut self,
-        on_open_mobile_change: Option<OnOpenChange>,
-    ) -> Self {
+    pub fn on_open_mobile_change(mut self, on_open_mobile_change: Option<OnOpenChange>) -> Self {
         self.on_open_mobile_change = on_open_mobile_change;
         self
     }
@@ -637,8 +630,8 @@ impl SidebarProvider {
             .copied()
             .unwrap_or(false);
 
-        let (open_changed, open_mobile_changed) =
-            cx.with_state(SidebarProviderOpenChangeCallbackState::default, |state| {
+        let (open_changed, open_mobile_changed) = cx
+            .with_state(SidebarProviderOpenChangeCallbackState::default, |state| {
                 sidebar_provider_open_change_events(state, open_now, open_mobile_now)
             });
         if let (Some(open), Some(handler)) = (open_changed, self.on_open_change.as_ref()) {
@@ -1138,6 +1131,14 @@ impl SidebarRail {
         let mut rail = Button::new("Toggle Sidebar")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::IconSm)
+            .on_hover_change(Arc::new(move |host, acx, hovered| {
+                if hovered {
+                    host.push_effect(Effect::CursorSetIcon {
+                        window: acx.window,
+                        icon: CursorIcon::ColResize,
+                    });
+                }
+            }))
             .disabled(self.disabled)
             .refine_style(
                 ChromeRefinement::default()
@@ -4769,6 +4770,78 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_rail_hover_sets_col_resize_cursor_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-rail-hover-cursor",
+            |cx| {
+                SidebarProvider::new().with(cx, |cx| {
+                    vec![SidebarRail::new().test_id("sidebar-rail").into_element(cx)]
+                })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let rail = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-rail"))
+            .expect("expected sidebar rail semantics node");
+
+        let center = Point::new(
+            Px(rail.bounds.origin.x.0 + rail.bounds.size.width.0 * 0.5),
+            Px(rail.bounds.origin.y.0 + rail.bounds.size.height.0 * 0.5),
+        );
+
+        let _ = app.flush_effects();
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::CursorSetIcon { window: w, icon }
+                        if *w == window && *icon == CursorIcon::ColResize
+                )
+            }),
+            "expected sidebar rail hover to request col-resize cursor icon"
+        );
+    }
+
+    #[test]
     fn sidebar_rail_tracks_side_and_offcanvas_position_matrix() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -6186,10 +6259,7 @@ mod tests {
                         .open(Some(open_model.clone()))
                         .open_mobile(Some(open_mobile_model.clone()))
                         .on_open_change(Some(Arc::new(move |open| {
-                            open_events
-                                .lock()
-                                .expect("open events lock")
-                                .push(open);
+                            open_events.lock().expect("open events lock").push(open);
                         })))
                         .on_open_mobile_change(Some(Arc::new(move |open_mobile| {
                             open_mobile_events
@@ -6206,10 +6276,7 @@ mod tests {
 
         render_frame(&mut ui, &mut app, &mut services);
         assert!(
-            open_events
-                .lock()
-                .expect("open events lock")
-                .is_empty(),
+            open_events.lock().expect("open events lock").is_empty(),
             "expected initial render to not emit open callback"
         );
         assert!(

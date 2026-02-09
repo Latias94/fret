@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::CommandId;
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -300,6 +300,7 @@ pub struct Button {
     children: Vec<AnyElement>,
     command: Option<CommandId>,
     on_activate: Option<OnActivate>,
+    on_hover_change: Option<OnHoverChange>,
     toggle_model: Option<fret_runtime::Model<bool>>,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -328,6 +329,7 @@ impl std::fmt::Debug for Button {
             .field("children_len", &self.children.len())
             .field("command", &self.command)
             .field("on_activate", &self.on_activate.is_some())
+            .field("on_hover_change", &self.on_hover_change.is_some())
             .field("toggle_model", &self.toggle_model.is_some())
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id)
@@ -351,6 +353,7 @@ impl Button {
             children: Vec::new(),
             command: None,
             on_activate: None,
+            on_hover_change: None,
             toggle_model: None,
             disabled: false,
             test_id: None,
@@ -377,6 +380,11 @@ impl Button {
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn on_hover_change(mut self, on_hover_change: OnHoverChange) -> Self {
+        self.on_hover_change = Some(on_hover_change);
         self
     }
 
@@ -518,6 +526,7 @@ impl Button {
 
             let command = self.command;
             let on_activate = self.on_activate;
+            let on_hover_change = self.on_hover_change;
             let toggle_model = self.toggle_model;
             let a11y_label = self.label.clone();
             let disabled_explicit = self.disabled;
@@ -547,6 +556,9 @@ impl Button {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
+                }
+                if let Some(on_hover_change) = on_hover_change.clone() {
+                    cx.pressable_on_hover_change(on_hover_change);
                 }
                 if let Some(model) = toggle_model {
                     cx.pressable_toggle_bool(&model);
