@@ -131,6 +131,7 @@ fn ident_kind(name: &str) -> Result<WhenValueKind, WhenExprValidationError> {
     match name {
         "ui.has_modal" | "focus.is_text_input" => return Ok(WhenValueKind::Bool),
         "edit.can_undo" | "edit.can_redo" => return Ok(WhenValueKind::Bool),
+        "router.can_back" | "router.can_forward" => return Ok(WhenValueKind::Bool),
         "platform" => return Ok(WhenValueKind::Str),
         _ => {}
     }
@@ -178,6 +179,8 @@ fn eval_ident_bool_opt(ctx: &InputContext, name: &str) -> Option<bool> {
         "focus.is_text_input" => Some(ctx.focus_is_text_input),
         "edit.can_undo" => Some(ctx.edit_can_undo),
         "edit.can_redo" => Some(ctx.edit_can_redo),
+        "router.can_back" => Some(ctx.router_can_back),
+        "router.can_forward" => Some(ctx.router_can_forward),
         _ => {
             let key = name.strip_prefix("cap.").unwrap_or(name);
             ctx.caps.bool_key(key)

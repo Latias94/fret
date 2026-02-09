@@ -1,13 +1,18 @@
 # shadcn/ui v4 Audit - Context Menu
 
-This audit compares Fret's shadcn-aligned `ContextMenu` against the upstream shadcn/ui v4 docs and
-examples in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `ContextMenu` against upstream shadcn/ui v4 (`new-york-v4`)
+and Base UI context-menu behavior contracts.
 
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx`
-- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/context-menu.tsx`
-- Reference example: `repo-ref/ui/apps/v4/registry/bases/radix/examples/context-menu-example.tsx`
+- Reference implementation (`new-york-v4`):
+  `repo-ref/ui/apps/v4/registry/new-york-v4/ui/context-menu.tsx`
+- Reference example (`new-york-v4`):
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/context-menu-demo.tsx`
+- Base UI source (trigger/root):
+  - `repo-ref/base-ui/packages/react/src/context-menu/root/ContextMenuRoot.tsx`
+  - `repo-ref/base-ui/packages/react/src/context-menu/trigger/ContextMenuTrigger.tsx`
 
 Key upstream behaviors/surfaces:
 
@@ -29,8 +34,9 @@ Key upstream behaviors/surfaces:
 
 - Pass: Opens on right click.
 - Pass: (macOS) ctrl + left click opens.
-- Pass: Shift+F10 opens (fallback keyboard path).
-- Note: There is no dedicated `ContextMenu` key in `fret_core::KeyCode` yet.
+- Pass: Shift+F10 opens (keyboard path).
+- Pass: `ContextMenu` key opens (keyboard path).
+- Pass: root-level disabled gate now blocks pointer + keyboard open paths (`ContextMenu::disabled`).
 
 ### Placement
 
@@ -45,6 +51,10 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
+- Pass: Controlled/uncontrolled open state parity is available via
+  `ContextMenu::new_controllable(cx, open, default_open)` (Base UI / Radix `open` + `defaultOpen`).
+- Pass: Open lifecycle callbacks are available via `ContextMenu::on_open_change` and
+  `ContextMenu::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 - Pass: `ContextMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
@@ -82,7 +92,13 @@ _None tracked at this time._
 ## Validation
 
 - Contract test: `context_menu_items_have_collection_position_metadata_excluding_separators`
+- Contract test: `context_menu_new_controllable_uses_controlled_model_when_provided`
+- Contract test: `context_menu_new_controllable_applies_default_open`
+- Contract test: `context_menu_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `context_menu_open_change_events_complete_without_animation`
 - Interaction test: `context_menu_opens_on_shift_f10`
+- Interaction test: `context_menu_opens_on_context_menu_key`
+- Interaction test: `context_menu_disabled_blocks_pointer_and_keyboard_open`
 - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Submenu openSteps parity (web-vs-fret): `context-menu-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
   while `context-menu-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.

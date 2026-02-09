@@ -23,8 +23,7 @@ use fret_router::{
 };
 use fret_runtime::{
     DefaultKeybinding, KeyChord, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
-    PlatformFilter, WindowCommandAvailability, WindowCommandAvailabilityService,
-    WindowCommandEnabledService,
+    PlatformFilter, WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -789,13 +788,7 @@ impl UiGalleryDriver {
         }
 
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
-            svc.set_snapshot(
-                window,
-                WindowCommandAvailability {
-                    edit_can_undo,
-                    edit_can_redo,
-                },
-            );
+            svc.set_edit_availability(window, edit_can_undo, edit_can_redo);
         });
     }
 

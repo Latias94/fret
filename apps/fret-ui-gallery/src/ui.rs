@@ -7,6 +7,7 @@ use fret_core::{
     FontWeight, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
     TextStyle, TextWrap,
 };
+use fret_kit::prelude::AnyElementSemanticsExt;
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
@@ -98,7 +99,7 @@ pub(crate) fn sidebar_view(
             .a11y_label("Search components")
             .placeholder("Search (id / tag)")
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-search"))
+            .test_id("ui-gallery-nav-search")
     };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
@@ -189,7 +190,7 @@ pub(crate) fn sidebar_view(
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
-        nav_scroll.attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-scroll"))
+        nav_scroll.test_id("ui-gallery-nav-scroll")
     };
 
     let container = cx.container(
@@ -548,8 +549,7 @@ pub(crate) fn content_view(
         })
     };
 
-    let content = content_inner
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-content-scroll"));
+    let content = content_inner.test_id("ui-gallery-content-scroll");
 
     cx.named("ui_gallery.content_view_root", |cx| {
         cx.container(
@@ -562,7 +562,7 @@ pub(crate) fn content_view(
             ),
             |_cx| [content],
         )
-        .attach_semantics(SemanticsDecoration::default().test_id(page_test_id))
+        .test_id(page_test_id)
     })
 }
 
@@ -720,6 +720,7 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -1838,9 +1839,9 @@ fn preview_virtual_list_torture(
                             vec![row_label]
                         }
                     });
-                    container.attach_semantics(SemanticsDecoration::default().test_id(
-                        Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label")),
-                    ))
+                    container.test_id(Arc::<str>::from(format!(
+                        "ui-gallery-virtual-list-row-{index}-label"
+                    )))
                 });
 
                 cx.virtual_list_keyed_retained_with_layout(
@@ -1896,9 +1897,9 @@ fn preview_virtual_list_torture(
                                 vec![row_label]
                             }
                         });
-                        container.attach_semantics(SemanticsDecoration::default().test_id(
-                            Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label")),
-                        ))
+                        container.test_id(Arc::<str>::from(format!(
+                            "ui-gallery-virtual-list-row-{index}-label"
+                        )))
                     },
                 )
             }
@@ -7223,7 +7224,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-demo"));
+        .test_id("ui-gallery-switch-demo");
         let body = centered(cx, row);
         section(cx, "Demo", body)
     };
@@ -7246,7 +7247,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
         .orientation(shadcn::FieldOrientation::Horizontal)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-description"));
+        .test_id("ui-gallery-switch-description");
 
         let body = centered(cx, field);
         section(cx, "Description", body)
@@ -7306,7 +7307,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
                 .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
             |_cx| vec![share, notifications],
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-choice-card"));
+        .test_id("ui-gallery-switch-choice-card");
 
         let body = centered(cx, group);
         section(cx, "Choice Card", body)
@@ -7324,7 +7325,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
         .orientation(shadcn::FieldOrientation::Horizontal)
         .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-disabled"));
+        .test_id("ui-gallery-switch-disabled");
 
         let body = centered(cx, row);
         section(cx, "Disabled", body)
@@ -7355,7 +7356,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
         .orientation(shadcn::FieldOrientation::Horizontal)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-invalid"));
+        .test_id("ui-gallery-switch-invalid");
 
         let body = centered(cx, field);
         section(cx, "Invalid", body)
@@ -7390,7 +7391,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
                 .layout(LayoutRefinement::default().w_full().max_w(Px(160.0))),
             |_cx| vec![small, default],
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-size"));
+        .test_id("ui-gallery-switch-size");
 
         let body = centered(cx, group);
         section(cx, "Size", body)
@@ -7420,7 +7421,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-switch-rtl"));
+        .test_id("ui-gallery-switch-rtl");
 
         let body = centered(cx, rtl_field);
         section(cx, "RTL", body)
@@ -7557,7 +7558,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
             .min_height(Px(96.0))
             .refine_layout(area_layout.clone())
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-demo"));
+            .test_id("ui-gallery-textarea-demo");
 
         let body = centered(cx, area);
         section(cx, "Demo", body)
@@ -7575,7 +7576,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-field"));
+        .test_id("ui-gallery-textarea-field");
 
         let body = centered(cx, field);
         section(cx, "Field", body)
@@ -7593,7 +7594,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-disabled"));
+        .test_id("ui-gallery-textarea-disabled");
 
         let body = centered(cx, field);
         section(cx, "Disabled", body)
@@ -7614,7 +7615,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-invalid"));
+        .test_id("ui-gallery-textarea-invalid");
 
         let body = centered(cx, field);
         section(cx, "Invalid", body)
@@ -7637,7 +7638,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-button"));
+        .test_id("ui-gallery-textarea-button");
 
         let body = centered(cx, group);
         section(cx, "Button", body)
@@ -7662,7 +7663,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-textarea-rtl"));
+        .test_id("ui-gallery-textarea-rtl");
 
         let rtl_shell = shell(cx, rtl_field);
         let body = centered(cx, rtl_shell);
@@ -8032,7 +8033,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         .variant(shadcn::ItemVariant::Muted)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-demo"));
+        .test_id("ui-gallery-spinner-demo");
         let body = centered(cx, item);
         section(cx, "Demo", body)
     };
@@ -8050,7 +8051,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-custom"));
+        .test_id("ui-gallery-spinner-custom");
         let body = centered(cx, row);
         section(cx, "Customization", body)
     };
@@ -8076,7 +8077,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-size"));
+        .test_id("ui-gallery-spinner-size");
         let body = centered(cx, row);
         section(cx, "Size", body)
     };
@@ -8107,7 +8108,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-button"));
+        .test_id("ui-gallery-spinner-button");
         let body = centered(cx, group);
         section(cx, "Button", body)
     };
@@ -8139,7 +8140,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-badge"));
+        .test_id("ui-gallery-spinner-badge");
         let body = centered(cx, row);
         section(cx, "Badge", body)
     };
@@ -8190,7 +8191,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             LayoutRefinement::default().w_full().max_w(Px(480.0)),
             group,
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-input-group"));
+        .test_id("ui-gallery-spinner-input-group");
 
         let body = centered(cx, card);
         section(cx, "Input Group", body)
@@ -8217,7 +8218,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-empty"));
+        .test_id("ui-gallery-spinner-empty");
 
         let body = centered(cx, card);
         section(cx, "Empty", body)
@@ -8242,7 +8243,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-rtl"));
+        .test_id("ui-gallery-spinner-rtl");
 
         let centered_body = centered(cx, body);
         section(cx, "RTL", centered_body)
@@ -13099,7 +13100,7 @@ fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
         props.corner_radii = Corners::all(Px(8.0));
         cx.container(props, |_cx| Vec::<AnyElement>::new())
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let row = stack::hstack(
@@ -17339,14 +17340,14 @@ fn preview_data_table_legacy(
                     _ => cx.text("?"),
                 };
 
-                cell.attach_semantics(SemanticsDecoration::default().test_id(Arc::<str>::from(
-                    format!("ui-gallery-data-table-cell-{}-{}", row.id, col_id),
+                cell.test_id(Arc::<str>::from(format!(
+                    "ui-gallery-data-table-cell-{}-{}",
+                    row.id, col_id
                 )))
             },
         );
 
-    let table = table
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-data-table-root"));
+    let table = table.test_id("ui-gallery-data-table-root");
 
     vec![
         cx.text("Click header to sort; click row to toggle selection."),
@@ -18493,6 +18494,124 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
     ]
 }
 
+fn preview_ai_file_tree_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::ActionCx;
+    use fret_ui::element::SemanticsProps;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct FileTreeModels {
+        expanded: Option<Model<HashSet<Arc<str>>>>,
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let expanded = cx.with_state(FileTreeModels::default, |st| st.expanded.clone());
+    let expanded = match expanded {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
+            cx.with_state(FileTreeModels::default, |st| {
+                st.expanded = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected = cx.with_state(FileTreeModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(FileTreeModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
+
+    let tree = ui_ai::FileTree::new([
+        ui_ai::FileTreeFolder::new("src", "src")
+            .test_id("ui-ai-file-tree-folder-src")
+            .children([
+                ui_ai::FileTreeFile::new("src/lib.rs", "lib.rs")
+                    .test_id("ui-ai-file-tree-file-lib")
+                    .into(),
+                ui_ai::FileTreeFile::new("src/main.rs", "main.rs")
+                    .test_id("ui-ai-file-tree-file-main")
+                    .into(),
+            ])
+            .into(),
+        ui_ai::FileTreeFile::new("Cargo.toml", "Cargo.toml")
+            .test_id("ui-ai-file-tree-file-cargo-toml")
+            .into(),
+        ui_ai::FileTreeFolder::new("tests", "tests")
+            .test_id("ui-ai-file-tree-folder-tests")
+            .child(
+                ui_ai::FileTreeFile::new("tests/file_tree.rs", "file_tree.rs")
+                    .test_id("ui-ai-file-tree-file-tests-file-tree"),
+            )
+            .into(),
+    ])
+    .expanded_paths(expanded.clone())
+    .selected_path(selected_value.clone())
+    .on_select(Arc::new({
+        let selected = selected.clone();
+        move |host, _action_cx: ActionCx, path| {
+            let _ = host.models_mut().update(&selected, |v| *v = Some(path));
+        }
+    }))
+    .test_id_root("ui-ai-file-tree-root")
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let selected_label_text = selected_value
+        .as_deref()
+        .map(|s| format!("Selected: {s}"))
+        .unwrap_or_else(|| "Selected: <none>".to_string());
+
+    let selected_label = cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Text,
+            test_id: Some(Arc::<str>::from("ui-ai-file-tree-selected-label")),
+            ..Default::default()
+        },
+        move |cx| vec![cx.text(selected_label_text)],
+    );
+
+    let selected_marker = (selected_value.as_deref() == Some("src/lib.rs")).then(|| {
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Generic,
+                test_id: Some(Arc::<str>::from("ui-ai-file-tree-selected-marker")),
+                ..Default::default()
+            },
+            move |_cx| vec![],
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| {
+            vec![
+                cx.text("FileTree (AI Elements)"),
+                tree,
+                selected_label,
+                selected_marker.unwrap_or_else(|| cx.text("")),
+            ]
+        },
+    )]
+}
+
 fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
     let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
         .ok()
@@ -19075,7 +19194,7 @@ fn preview_tabs(
                 ),
             ])
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-demo"));
+            .test_id("ui-gallery-tabs-demo");
 
         let demo_shell = shell(cx, tabs);
         let body = centered(cx, demo_shell);
@@ -19093,7 +19212,7 @@ fn preview_tabs(
                 shadcn::TabsItem::new("reports", "Reports", Vec::<AnyElement>::new()),
             ])
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-line"));
+            .test_id("ui-gallery-tabs-line");
 
         let group = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
             vec![
@@ -19145,7 +19264,7 @@ fn preview_tabs(
                 ),
             ])
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-vertical"));
+            .test_id("ui-gallery-tabs-vertical");
 
         let vertical_shell = shell(cx, tabs);
         let body = centered(cx, vertical_shell);
@@ -19179,7 +19298,7 @@ fn preview_tabs(
                 .disabled(true),
             ])
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-disabled"));
+            .test_id("ui-gallery-tabs-disabled");
 
         let disabled_shell = shell(cx, tabs);
         let body = centered(cx, disabled_shell);
@@ -19235,7 +19354,7 @@ fn preview_tabs(
                 .trigger_child(code_trigger),
             ])
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-icons"));
+            .test_id("ui-gallery-tabs-icons");
 
         let icons_shell = shell(cx, tabs);
         let body = centered(cx, icons_shell);
@@ -19284,7 +19403,7 @@ fn preview_tabs(
                     .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-tabs-rtl"));
+        .test_id("ui-gallery-tabs-rtl");
 
         let rtl_shell = shell(cx, tabs);
         let body = centered(cx, rtl_shell);
@@ -19795,7 +19914,7 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             shadcn::Table::new(children)
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx)
-                .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+                .test_id(test_id)
         };
 
     let demo = {
@@ -19886,7 +20005,7 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-table-actions"));
+        .test_id("ui-gallery-table-actions");
 
         let table_shell = shell(cx, table);
         let body = centered(cx, table_shell);
@@ -20756,7 +20875,7 @@ fn preview_toast(
     ])
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toast-deprecated"));
+    .test_id("ui-gallery-toast-deprecated");
 
     let centered_card = centered(cx, deprecated_card);
 

@@ -62,6 +62,8 @@ pub struct InputContext {
     pub text_boundary_mode: TextBoundaryMode,
     pub edit_can_undo: bool,
     pub edit_can_redo: bool,
+    pub router_can_back: bool,
+    pub router_can_forward: bool,
     pub dispatch_phase: InputDispatchPhase,
 }
 
@@ -86,6 +88,8 @@ impl Default for InputContext {
             text_boundary_mode: TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
+            router_can_back: false,
+            router_can_forward: false,
             dispatch_phase: InputDispatchPhase::Bubble,
         }
     }

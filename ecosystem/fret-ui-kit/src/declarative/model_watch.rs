@@ -77,11 +77,46 @@ impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedModel<'cx, 'm, 'a, H, T> {
         self.cx.get_model_copied(self.model, self.invalidation)
     }
 
+    pub fn copied_or(self, default: T) -> T
+    where
+        T: Copy,
+    {
+        self.copied().unwrap_or(default)
+    }
+
+    pub fn copied_or_default(self) -> T
+    where
+        T: Copy + Default,
+    {
+        self.copied().unwrap_or_default()
+    }
+
     pub fn cloned(self) -> Option<T>
     where
         T: Clone,
     {
         self.cx.get_model_cloned(self.model, self.invalidation)
+    }
+
+    pub fn cloned_or(self, default: T) -> T
+    where
+        T: Clone,
+    {
+        self.cloned().unwrap_or(default)
+    }
+
+    pub fn cloned_or_else(self, f: impl FnOnce() -> T) -> T
+    where
+        T: Clone,
+    {
+        self.cloned().unwrap_or_else(f)
+    }
+
+    pub fn cloned_or_default(self) -> T
+    where
+        T: Clone + Default,
+    {
+        self.cloned().unwrap_or_default()
     }
 
     pub fn read_ref<R>(self, f: impl FnOnce(&T) -> R) -> Result<R, ModelUpdateError> {

@@ -8,10 +8,11 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Native desktop platform integration for Fret."
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-platform = { path = "../fret-platform" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-platform = { version = "0.1.0", path = "../fret-platform" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 arboard.workspace = true

@@ -6,10 +6,14 @@ use std::time::{Duration, Instant};
 
 use zip::write::FileOptions;
 
+pub mod api;
+pub mod artifacts;
 mod cli;
 mod compare;
+pub mod devtools;
 mod gates;
 mod stats;
+pub mod transport;
 mod util;
 
 use compare::{

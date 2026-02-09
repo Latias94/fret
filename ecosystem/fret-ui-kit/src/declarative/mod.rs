@@ -25,6 +25,7 @@ pub mod presence;
 pub mod scheduling;
 pub mod scroll;
 pub mod scroll_area_visibility;
+pub mod semantics;
 pub mod slider;
 pub mod stack;
 pub mod style;
@@ -39,6 +40,7 @@ pub mod windowed_rows_surface;
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
+pub use semantics::AnyElementSemanticsExt;
 
 #[cfg(test)]
 mod padding_semantics_tests;

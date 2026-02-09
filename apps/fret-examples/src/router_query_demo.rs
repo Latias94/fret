@@ -9,8 +9,12 @@ use fret_router::{
     RouteSearchTable, RouteTree, Router, RouterUpdateWithPrefetchIntents, SearchMap,
     SearchValidationMode, prefetch_intent_query_key, route_query_key,
 };
-use fret_router_ui::{RouterLink, RouterUiStore, router_link, router_outlet};
+use fret_router_ui::{
+    RouterLeafStatus, RouterLink, RouterOutlet, RouterUiStore, router_link_to_with_test_id,
+    router_outlet,
+};
 use fret_ui::Invalidation;
+use fret_ui::element::SemanticsDecoration;
 
 const ROUTER_QUERY_DEMO_NAV_NS: &str = "fret-examples.router_query_demo.nav_index.v1";
 const ROUTER_QUERY_DEMO_PAGE_NS: &str = "fret-examples.router_query_demo.page_content.v1";
@@ -49,6 +53,8 @@ pub fn run() -> anyhow::Result<()> {
     })?
     .with_main_window("router_query_demo", (680.0, 420.0))
     .init_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+        fret_app::install_command_default_keybindings_into_keymap(app);
         shadcn::shadcn_themes::apply_shadcn_new_york_v4(
             app,
             shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -174,19 +180,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     let nav_state = cx
         .watch_model(nav_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
     let page_state = cx
         .watch_model(page_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
 
     let prefetch_log = cx
         .watch_model(&st.prefetch_log)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
 
     let status_badge = |cx: &mut ElementContext<'_, App>, status: QueryStatus| {
         let label = match status {
@@ -246,27 +249,45 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
             shadcn::Button::new("/")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateRoot))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/"),
+                ),
             shadcn::Button::new("/settings")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateSettings))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/settings"),
+                ),
             shadcn::Button::new("/users/42")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateUser))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-/users-42"),
+                ),
             shadcn::Button::new("Back")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Back))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-back"),
+                ),
             shadcn::Button::new("Forward")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Forward))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-forward"),
+                ),
             shadcn::Button::new("Clear log")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::ClearLog))
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("router-query-demo-btn-clear-log"),
+                ),
         ]
     })
     .gap(Space::N2)
@@ -274,9 +295,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .into_element(cx);
 
     let header_lines = ui::v_flex(cx, |cx| {
-        let settings_link = st
-            .router
-            .link_to_location(NavigationAction::Push, RouteLocation::parse("/settings"));
+        let hover_intents = cx
+            .get_model_cloned(&st.router.intents_model(), Invalidation::Layout)
+            .expect("router intents model should be readable");
+        let nav_state_for_status = nav_state.clone();
+        let page_state_for_status = page_state.clone();
         [
             ui::h_flex(cx, |cx| {
                 [
@@ -299,13 +322,32 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
                     router_outlet(cx, &snapshot_model, |cx, snap| {
-                        let label = match snap.leaf_route().copied() {
-                            Some(RouteId::Root) => "Root",
-                            Some(RouteId::Settings) => "Settings",
-                            Some(RouteId::User) => "User",
-                            None => "<none>",
-                        };
-                        shadcn::Badge::new(label).into_element(cx)
+                        match snap.leaf_route().copied() {
+                            Some(RouteId::Root) => shadcn::Badge::new("Root")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-root"),
+                                ),
+                            Some(RouteId::Settings) => shadcn::Badge::new("Settings")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-settings"),
+                                ),
+                            Some(RouteId::User) => shadcn::Badge::new("User")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-user"),
+                                ),
+                            None => shadcn::Badge::new("<none>")
+                                .into_element(cx)
+                                .attach_semantics(
+                                    SemanticsDecoration::default()
+                                        .test_id("router-query-demo-leaf-none"),
+                                ),
+                        }
                     }),
                 ]
             })
@@ -314,8 +356,114 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
             .into_element(cx),
             {
                 let label = ui::raw_text(cx, "router_link: /settings").into_element(cx);
-                router_link(cx, &st.router, settings_link, [label])
+                router_link_to_with_test_id(
+                    cx,
+                    &st.router,
+                    NavigationAction::Push,
+                    &RouteId::Settings,
+                    &[],
+                    SearchMap::new(),
+                    None,
+                    "router-query-demo-link-settings",
+                    [label],
+                )
+                .expect("settings link should build")
             },
+            {
+                let (test_id, label) = if hover_intents.is_empty() {
+                    (
+                        "router-query-demo-hover-intents-empty",
+                        "hover intents: <empty>",
+                    )
+                } else {
+                    (
+                        "router-query-demo-hover-intents-nonempty",
+                        "hover intents: <nonempty>",
+                    )
+                };
+                ui::raw_text(cx, label).into_element(cx).test_id(test_id)
+            },
+            RouterOutlet::new(snapshot_model.clone())
+                .test_id("router-query-demo-outlet-status")
+                .into_element_by_leaf_with_status(
+                    cx,
+                    move |_app, _snap, route| {
+                        let state = match route {
+                            RouteId::Root => &nav_state_for_status,
+                            RouteId::Settings | RouteId::User => &page_state_for_status,
+                        };
+                        match state.status {
+                            QueryStatus::Idle | QueryStatus::Success => RouterLeafStatus::Ready,
+                            QueryStatus::Loading => RouterLeafStatus::Pending,
+                            QueryStatus::Error => RouterLeafStatus::Error {
+                                message: state
+                                    .error
+                                    .as_ref()
+                                    .map(|e| Arc::from(format!("{e}")))
+                                    .unwrap_or_else(|| Arc::from("<unknown error>")),
+                            },
+                        }
+                    },
+                    |cx, route, _snap| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Ready (Root)",
+                            RouteId::Settings => "Outlet: Ready (Settings)",
+                            RouteId::User => "Outlet: Ready (User)",
+                        };
+                        shadcn::Badge::new(label)
+                            .variant(shadcn::BadgeVariant::Default)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-ready"),
+                            )
+                    },
+                    |cx, route, _snap| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Pending (Root)",
+                            RouteId::Settings => "Outlet: Pending (Settings)",
+                            RouteId::User => "Outlet: Pending (User)",
+                        };
+                        shadcn::Badge::new(label)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-pending"),
+                            )
+                    },
+                    |cx, route, _snap, msg| {
+                        let label = match route {
+                            RouteId::Root => "Outlet: Error (Root)",
+                            RouteId::Settings => "Outlet: Error (Settings)",
+                            RouteId::User => "Outlet: Error (User)",
+                        };
+                        ui::h_flex(cx, |cx| {
+                            [
+                                shadcn::Badge::new(label)
+                                    .variant(shadcn::BadgeVariant::Destructive)
+                                    .into_element(cx),
+                                ui::raw_text(cx, msg).into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx)
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .test_id("router-query-demo-outlet-status-error"),
+                        )
+                    },
+                    |cx, _snap| {
+                        shadcn::Badge::new("Outlet: NotFound")
+                            .variant(shadcn::BadgeVariant::Destructive)
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("router-query-demo-outlet-status-not-found"),
+                            )
+                    },
+                ),
         ]
     })
     .gap(Space::N1)
@@ -372,7 +520,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn on_command(
@@ -383,6 +531,11 @@ fn on_command(
     st: &mut RouterQueryDemoState,
     cmd: &CommandId,
 ) {
+    if let Ok(true) = st.router.handle_router_command(app, cmd) {
+        app.request_redraw(window);
+        return;
+    }
+
     let Some(msg) = st.msg_router.try_take(cmd) else {
         return;
     };

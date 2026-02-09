@@ -79,7 +79,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ]
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-demo"));
+    .test_id("ui-gallery-typography-demo");
     let demo = section_card(cx, "Demo", demo_story);
 
     let h1_sample = shadcn::typography::h1(cx, "The Joke Tax Chronicles");
@@ -139,7 +139,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     ])
     .refine_layout(LayoutRefinement::default().w_full())
     .into_element(cx)
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-table"));
+    .test_id("ui-gallery-typography-table");
     let table = section_card(cx, "table", table_example);
 
     let list_example = shadcn::typography::list(
@@ -150,7 +150,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             Arc::<str>::from("Taxes should be fair."),
         ],
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-list"));
+    .test_id("ui-gallery-typography-list");
     let list = section_card(cx, "list", list_example);
 
     let inline_code_sample = shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery");
@@ -192,7 +192,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             )
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-typography-rtl"));
+    .test_id("ui-gallery-typography-rtl");
     let rtl = section_card(cx, "RTL", rtl_story);
 
     let preview_hint = shadcn::typography::muted(

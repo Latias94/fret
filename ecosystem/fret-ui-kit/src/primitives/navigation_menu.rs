@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{Effect, Model, TimerToken};
-use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
@@ -534,6 +534,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     presence: OverlayPresence,
     selected_value: Option<&str>,
     args: NavigationMenuViewportOverlayRequestArgs,
+    on_pointer_move: Option<OnDismissiblePointerMove>,
     render: impl FnOnce(
         &mut ElementContext<'_, H>,
         NavigationMenuViewportOverlayLayout,
@@ -652,6 +653,7 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         overlay_children,
     );
     request.root_name = Some(overlay_root_name);
+    request.dismissible_on_pointer_move = on_pointer_move;
     request.dismissible_on_dismiss_request = Some(Arc::new({
         let open_model = open_model_for_dismiss;
         move |host, _cx, _reason| {

@@ -109,7 +109,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .on_click(CMD_APP_OPEN)
             .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let item_row_icon = |cx: &mut ElementContext<'_, App>,
@@ -346,7 +346,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-item-group"));
+        .test_id("ui-gallery-item-group");
         section_card(cx, "Group", content)
     };
 
@@ -381,7 +381,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-item-header"));
+        .test_id("ui-gallery-item-header");
         section_card(cx, "Header", content)
     };
 
@@ -419,7 +419,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         .on_click(CMD_APP_OPEN)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-item-dropdown"));
+        .test_id("ui-gallery-item-dropdown");
         section_card(cx, "Dropdown", content)
     };
 
@@ -449,7 +449,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 )
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-item-rtl"));
+        .test_id("ui-gallery-item-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -480,8 +480,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-item-component"));
+    let component_panel = shell(cx, component_panel_body).test_id("ui-gallery-item-component");
 
     let code_panel_body = stack::vstack(
         cx,

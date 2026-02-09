@@ -36,12 +36,16 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Fret exposes a `Popover` recipe with a `Model<bool>` open state.
 - Pass: Trigger/content composition matches the shadcn mental model: trigger element + portal-like
   content element.
+- Pass: `PopoverTrigger` now toggles `open` by default (shadcn/Radix trigger-like behavior), and
+  supports opt-out via `PopoverTrigger::auto_toggle(false)` for controlled/manual flows.
 - Pass: Upstream exports `PopoverAnchor`; Fret provides `PopoverAnchor` and supports custom anchor
   wiring via `Popover::anchor_element(...)`.
   (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
   which covers common sizing recipes like "content width follows trigger".)
 - Pass: Anchor overrides are treated as dismissable branches, so interacting with the anchor does
   not trigger outside-press dismissal.
+- Pass: Detached trigger wiring is available via `Popover::trigger_element(...)` (Base UI-like
+  trigger association when the logical trigger is outside the local composition closure).
 
 ### Placement & collision
 
@@ -66,9 +70,32 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Focus behavior
 
-- Pass: Default behavior preserves trigger focus (close to Radix default focus restore behavior).
-- Pass: Optional "focus inside on open" is supported via `Popover::auto_focus(true)`.
+- Pass: Default auto-focus policy now follows trigger contract:
+  - `PopoverTrigger` composition defaults to focus-inside-on-open.
+  - Manual/custom trigger wiring preserves previous behavior unless overridden.
+- Pass: Optional "focus inside on open" is supported via `Popover::auto_focus(true)` and can be
+  disabled via `Popover::auto_focus(false)`.
 - Pass: Explicit focus target is supported via `Popover::initial_focus(...)`.
+- Pass: A trap-focus-only mode is available via `Popover::modal_trap_focus(true)` (focus trap
+  without installing a modal barrier; outside pointer interactions remain enabled).
+- Pass: Base UI modal enum parity is exposed via `Popover::modal_mode(PopoverModalMode::...)`
+  (`NonModal | Modal | TrapFocus`) in addition to boolean/trap convenience methods.
+
+### Base UI parity extensions
+
+- Pass: Hover-open policy (`openOnHover`) is available via `Popover::open_on_hover(true)` with
+  delay controls:
+  - `Popover::hover_open_delay_frames(...)`
+  - `Popover::hover_close_delay_frames(...)`
+- Pass: Open lifecycle callbacks are available via `Popover::on_open_change` and
+  `Popover::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
+- Pass: `forceMount` naming parity is exposed via `Popover::force_mount(...)` as an alias of
+  `Popover::keep_mounted(...)`.
+- Pass: Advanced placement knobs are exposed:
+  - `Popover::collision_padding(...)`
+  - `Popover::collision_boundary(...)`
+  - `Popover::sticky(...)`
+  - `Popover::shift_cross_axis(...)` (default aligned to `false`).
 
 ### Visual parity (new-york)
 
@@ -85,6 +112,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
+- Contract test: `popover_modal_mode_alias_sets_expected_mode`
+- Contract test: `popover_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `popover_open_change_events_complete_without_animation`
 - Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
   popover panel tracks the trigger after wheel-driven scroll updates (validated in
   `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via

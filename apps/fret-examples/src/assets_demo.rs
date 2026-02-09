@@ -245,7 +245,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn render_image_panel(

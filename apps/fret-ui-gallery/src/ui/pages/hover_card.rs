@@ -79,7 +79,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             .open_delay_frames(10)
             .close_delay_frames(100)
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-hover-card-demo"));
+            .test_id("ui-gallery-hover-card-demo");
         section_card(cx, "Demo", hover)
     };
 
@@ -93,9 +93,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(0)
         .close_delay_frames(0)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-delay-instant"),
-        );
+        .test_id("ui-gallery-hover-card-delay-instant");
 
         let delayed = shadcn::HoverCard::new(
             shadcn::Button::new("Delayed")
@@ -106,9 +104,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(16)
         .close_delay_frames(12)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-delay-delayed"),
-        );
+        .test_id("ui-gallery-hover-card-delay-delayed");
 
         let content = stack::hstack(
             cx,
@@ -131,9 +127,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(8)
         .close_delay_frames(8)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-pos-top-start"),
-        );
+        .test_id("ui-gallery-hover-card-pos-top-start");
 
         let right_end = shadcn::HoverCard::new(
             shadcn::Button::new("Right / End")
@@ -146,9 +140,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(8)
         .close_delay_frames(8)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-pos-right-end"),
-        );
+        .test_id("ui-gallery-hover-card-pos-right-end");
 
         let content = stack::hstack(
             cx,
@@ -168,9 +160,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             .open_delay_frames(10)
             .close_delay_frames(10)
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-hover-card-basic"),
-            );
+            .test_id("ui-gallery-hover-card-basic");
         section_card(cx, "Basic", hover)
     };
 
@@ -185,9 +175,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(10)
         .close_delay_frames(10)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-side-left"),
-        );
+        .test_id("ui-gallery-hover-card-side-left");
 
         let top = shadcn::HoverCard::new(
             shadcn::Button::new("top")
@@ -199,7 +187,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(10)
         .close_delay_frames(10)
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-hover-card-side-top"));
+        .test_id("ui-gallery-hover-card-side-top");
 
         let bottom = shadcn::HoverCard::new(
             shadcn::Button::new("bottom")
@@ -211,9 +199,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(10)
         .close_delay_frames(10)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-side-bottom"),
-        );
+        .test_id("ui-gallery-hover-card-side-bottom");
 
         let right = shadcn::HoverCard::new(
             shadcn::Button::new("right")
@@ -225,9 +211,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         .open_delay_frames(10)
         .close_delay_frames(10)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hover-card-side-right"),
-        );
+        .test_id("ui-gallery-hover-card-side-right");
 
         let content = stack::hstack(
             cx,
@@ -255,7 +239,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .into_element(cx)
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-hover-card-rtl"));
+        .test_id("ui-gallery-hover-card-rtl");
 
         section_card(cx, "RTL", rtl_content)
     };
@@ -281,9 +265,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-hover-card-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-hover-card-component");
 
     let code_panel_body = stack::vstack(
         cx,

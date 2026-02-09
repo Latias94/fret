@@ -900,21 +900,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -2034,21 +2040,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -2690,21 +2714,24 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": "top",
-            "5": "bottom"
+            "5": "bottom",
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
@@ -3346,21 +3373,24 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": "top",
-            "5": "bottom"
+            "5": "bottom",
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
@@ -4236,21 +4266,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -5208,21 +5244,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -6705,21 +6747,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -7885,21 +7945,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -9064,21 +9142,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -10241,21 +10337,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -11430,21 +11544,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -12620,21 +12752,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -14822,21 +14972,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:1": true,
+            "role:2": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:1": null,
+            "role:2": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:1": -1,
+            "role:2": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -15414,21 +15570,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:2": true,
+            "role:1": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:2": null,
+            "role:1": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:2": -1,
+            "role:1": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -16006,21 +16168,27 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:2": true,
+            "role:1": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:2": null,
+            "role:1": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:2": -1,
+            "role:1": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
@@ -17061,21 +17229,39 @@
             "2": true,
             "3": true,
             "4": true,
-            "5": true
+            "5": true,
+            "role:2": true,
+            "role:2>team:20": true,
+            "role:2>team:10": true,
+            "role:1": true,
+            "role:1>team:10": true,
+            "role:1>team:20": true
           },
           "pin_position": {
             "1": null,
             "2": null,
             "3": null,
             "4": null,
-            "5": null
+            "5": null,
+            "role:2": null,
+            "role:2>team:20": null,
+            "role:2>team:10": null,
+            "role:1": null,
+            "role:1>team:10": null,
+            "role:1>team:20": null
           },
           "pinned_index": {
             "1": -1,
             "2": -1,
             "3": -1,
             "4": -1,
-            "5": -1
+            "5": -1,
+            "role:2": -1,
+            "role:2>team:20": -1,
+            "role:2>team:10": -1,
+            "role:1": -1,
+            "role:1>team:10": -1,
+            "role:1>team:20": -1
           },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,

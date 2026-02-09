@@ -181,7 +181,6 @@ struct TodoItem {
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
-    router: MessageRouter<Msg>,
     next_id: u64,
 }
 
@@ -217,14 +216,37 @@ struct TodoDerivedDeps {
     done_revs: Vec<u64>,
 }
 
+struct TodoProgram;
+
+impl MvuProgram for TodoProgram {
+    type State = TodoState;
+    type Message = Msg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+        init_window(app, window)
+    }
+
+    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+        update(app, state, message);
+    }
+
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        state: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
+        view(cx, state, msg)
+    }
+}
+
 fn main() -> anyhow::Result<()> {
-    fret_kit::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
+    fret_kit::mvu::app::<TodoProgram>("todo")?
         .with_main_window("todo", (560.0, 520.0))
         .run()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
+fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     let done_1 = app.models_mut().insert(false);
     let done_2 = app.models_mut().insert(true);
     let todos = app.models_mut().insert(vec![
@@ -240,29 +262,28 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
         },
     ]);
 
-    let prefix = format!("todo.{window:?}.");
     TodoState {
         todos,
         draft: app.models_mut().insert(String::new()),
-        router: MessageRouter::new(prefix),
         next_id: 3,
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut TodoState,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
     let todos = cx
         .watch_model(&st.todos)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
     let draft_value = cx
         .watch_model(&st.draft)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
 
     let theme = Theme::global(&*cx.app).clone();
-    st.router.clear();
 
     let (done_count, total_count) = cx.use_selector(
         |cx| {
@@ -319,8 +340,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let tip_state = cx
         .watch_model(tip_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(|| QueryState::<TipData>::default());
+        .cloned_or_else(QueryState::<TipData>::default);
 
     let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
         QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
@@ -367,9 +387,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
-    let add_cmd = st.router.cmd(Msg::Add);
-    let clear_done_cmd = st.router.cmd(Msg::ClearDone);
-    let refresh_tip_cmd = st.router.cmd(Msg::RefreshTip);
+    let add_cmd = msg.cmd(Msg::Add);
+    let clear_done_cmd = msg.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = msg.cmd(Msg::RefreshTip);
 __ADD_BTN_DEF__
 
     let input = shadcn::Input::new(st.draft.clone())
@@ -385,7 +405,7 @@ __ADD_BTN_DEF__
 
     let rows = ui::v_flex_build(cx, |cx, out| {
         for t in &todos {
-            let remove_cmd = st.router.cmd(Msg::Remove(t.id));
+            let remove_cmd = msg.cmd(Msg::Remove(t.id));
             out.push(cx.keyed(t.id, |cx| todo_row(cx, &theme, t, remove_cmd.clone())));
         }
     })
@@ -432,7 +452,7 @@ __ADD_BTN_DEF__
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn todo_row(
@@ -444,8 +464,7 @@ fn todo_row(
     let done = cx
         .watch_model(&item.done)
         .layout()
-        .copied()
-        .unwrap_or(false);
+        .copied_or_default();
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
 __REMOVE_BTN_DEF__
@@ -485,18 +504,7 @@ __REMOVE_BTN_DEF__
         .into_element(cx)
 }
 
-fn on_command(
-    app: &mut App,
-    _services: &mut dyn UiServices,
-    window: AppWindowId,
-    _ui: &mut UiTree<App>,
-    state: &mut TodoState,
-    cmd: &CommandId,
-) {
-    let Some(msg) = state.router.try_take(cmd) else {
-        return;
-    };
-
+fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
     match msg {
         Msg::Add => {
             let draft = app
@@ -524,7 +532,6 @@ fn on_command(
             let _ = app.models_mut().update(&state.draft, |s| {
                 s.clear();
             });
-            app.request_redraw(window);
         }
         Msg::ClearDone => {
             let snapshot = app
@@ -544,19 +551,16 @@ fn on_command(
             let _ = app.models_mut().update(&state.todos, |todos| {
                 *todos = keep;
             });
-            app.request_redraw(window);
         }
         Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
             });
-            app.request_redraw(window);
         }
         Msg::Remove(id) => {
             let _ = app.models_mut().update(&state.todos, |todos| {
                 todos.retain(|t| t.id != id);
             });
-            app.request_redraw(window);
         }
     }
 }
@@ -592,7 +596,7 @@ fn main() -> anyhow::Result<()> {{
 fn init_window(_app: &mut App, _window: AppWindowId) {{}}
 
 fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> ViewElements {{
-    vec![ui::v_flex(cx, |cx| {{
+    ui::v_flex(cx, |cx| {{
         [
             shadcn::Label::new("Hello, world!").into_element(cx),
             shadcn::Button::new("Click me")
@@ -605,7 +609,7 @@ __PALETTE_BUTTON__
     .gap(Space::N4)
     .items_center()
     .justify_center()
-    .into_element(cx)]
+    .into_element(cx)
     .into()
 }}
 

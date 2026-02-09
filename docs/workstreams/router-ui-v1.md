@@ -74,6 +74,7 @@ Provide a UI primitive that renders based on the current match chain:
   - takes a `RouterUiStore` snapshot model
   - chooses an element subtree based on the leaf match (or a nested segment)
   - supports a `NotFound` fallback
+  - optional: app-owned `pending/error` composition via a status resolver
 
 Goal: authoring code can stay declarative and match-driven rather than stringly.
 
@@ -82,6 +83,15 @@ As an initial step, `fret-router-ui` can also expose a lightweight helper:
 - `router_outlet(cx, &Model<RouterUiSnapshot<R>>, |cx, snap| -> AnyElement { ... })`
   - reads the snapshot model with deterministic invalidation
   - delegates match-driven rendering to the caller
+  - optional diagnostics sugar: `router_outlet_with_test_id(...)`
+
+Snapshot helpers include:
+
+- `RouterUiSnapshot::match_depth()` / `match_at(i)` / `route_at(i)`
+
+Outlet composition helpers include:
+
+- `RouterLeafStatus` and `RouterOutlet::into_element_by_leaf_with_status(...)`
 
 ### 3) Link-style navigation helpers (desktop)
 
@@ -112,6 +122,12 @@ Then `fret-router-ui` can wire this into a convenience helper:
 
 - `RouterUiStore::prefetch_link_on_hover_change(link)` -> `OnHoverChange` (updates the intents model)
 - `router_link(cx, &store, link, children)` -> `AnyElement` (pressable wrapper; no shadcn dependency)
+  - diagnostics sugar: `router_link_with_test_id(...)`
+  - route-based sugar: `router_link_to(...)` / `router_link_to_with_test_id(...)`
+
+Desktop apps may also want lightweight context menu descriptors (policy stays app-owned):
+
+- `RouterLink::default_context_menu_items()` -> `[copy link, open in new window]`
 
 ### 4) Command integration
 
@@ -121,6 +137,30 @@ Provide recommended commands (not forced):
 - per-window enablement gating based on `HistoryAdapter` capabilities
 
 Apps can map these to their own command IDs and menus.
+
+Implemented helpers (optional):
+
+- `register_router_commands(&mut CommandRegistry)` registers `router.back` and `router.forward`.
+- `RouterUiStore::handle_router_command(...)` performs navigation via the store and updates snapshot/intents models.
+
+Default keybindings (recommended):
+
+- macOS: `Cmd+[` / `Cmd+]`
+- Windows/Linux: `Alt+Left` / `Alt+Right`
+
+Golden path: enable the `fret-kit` `router` feature to register router commands early enough for
+`with_default_config_files()` to install the default keybindings before applying layered
+`.fret/keymap.json` overrides.
+
+If you register router commands later (after config layering), call
+`fret_app::install_command_default_keybindings_into_keymap(app)` again to ensure the defaults are
+added to the baseline keymap (the installer is idempotent per command id).
+
+Menu bar integration:
+
+- `fret-workspace::menu::workspace_default_menu_bar(...)` accepts optional router command IDs.
+- `fret-kit`'s `workspace_shell_model_default_menu(...)` wires these automatically when the
+  `router` feature is enabled.
 
 ## Evidence anchors (when implemented)
 

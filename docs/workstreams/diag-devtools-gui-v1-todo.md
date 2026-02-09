@@ -55,19 +55,20 @@ Conventions:
   - [x] Scripts (browse `tools/diag-scripts` + open editor).
   - [x] Semantics tree (virtualized via `VirtualList`; keep selection visible; selected-node inspector).
   - [x] WS message tail (basic event log).
-- [ ] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
-  - [ ] auto-refresh latest bundle,
-  - [ ] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.
+- [x] Add a “watch” loop for `FRET_DIAG_DIR` updates (native transport):
+  - [x] auto-refresh latest bundle,
+  - [x] auto-refresh `pick.result.json`, `script.result.json`, screenshot results.
 
 ### M3: Script Studio (authoring UX)
 
-- [ ] Schema-aware script editor:
+- [x] Schema-aware script editor:
   - [x] validate schema version (v1/v2) on push/run,
-  - [ ] step palette (v1 steps + v2 intent steps),
-  - [ ] structured editor for selector/predicate.
-- [ ] Pick-to-fill UX:
+  - [x] step palette (v1 steps + v2 intent steps),
+  - [x] structured editor for selector/predicate.
+- [x] Pick-to-fill UX:
   - [x] select a JSON pointer (e.g. `/steps/3/target`) and apply pick result into the editor (equivalent of `diag pick-apply`).
-- [ ] Script library ergonomics:
+  - [x] discover pointer candidates from the current script (faster pointer targeting).
+- [x] Script library ergonomics:
   - [x] fork/copy a script into `.fret/diag/scripts/` (avoid editing workspace scripts by default),
   - [x] “Run this script” can produce a shareable zip (Run & Pack / Pack last bundle).
 
@@ -92,11 +93,11 @@ Conventions:
 
 ### M5: Artifacts for web runner
 
-- [ ] Define an artifact store abstraction for diagnostics outputs:
-  - [ ] native: filesystem (existing),
-  - [ ] web: in-memory store + “download zip” export.
+- [x] Define an artifact store abstraction for diagnostics outputs:
+  - [x] native: filesystem (existing),
+  - [x] web: in-memory export helpers (zip bytes + materialize to exports dir).
 - [x] Allow DevTools to pack web runner dumps by materializing `bundle.dumped.bundle` into `.fret/diag/exports/`.
-- [ ] Ensure the offline bundle viewer can open zips produced by web runs (same structure as `diag pack`).
+- [x] Ensure the offline bundle viewer can open zips produced by web runs (same structure as `diag pack`).
 
 ### M6: Quality gates + “real-time inspect” polish
 
@@ -106,8 +107,9 @@ Conventions:
   - [ ] perf thresholds,
   - [ ] resource footprint thresholds.
 - [ ] Live inspect payloads (keep minimal):
-  - [ ] hovered node summary + bounds,
-  - [ ] focus node summary,
+  - [x] hover events (`inspect.hover`) with node id + selector JSON + bounds,
+  - [x] focus events (`inspect.focus`) with summary + path (best-effort),
+  - [ ] hovered node bounds + viewport overlay hooks,
   - [ ] overlay barrier root id + blocking roots summary.
 - [ ] Add at least one “dogfood” demo workflow:
   - [ ] open UI gallery, pick a button, generate a script, run it, pack zip, open viewer.
@@ -118,23 +120,27 @@ Conventions:
 ### M7: MCP server adapter (AI-friendly tooling API)
 
 - [x] Add `apps/fret-devtools-mcp` using `rmcp` (stdio transport first).
-- [ ] Expose a minimal tool set (names TBD):
+- [x] Expose a minimal tool set (names TBD):
   - [x] `fret_diag_sessions_list` (list sessions),
   - [x] `fret_diag_sessions_select` (select a session),
-  - [ ] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
+  - [x] `fret_diag_connect` (choose transport: filesystem vs WS; optional),
   - [x] `fret_diag_inspect_set` (on/off/toggle + consume_clicks),
   - [x] `fret_diag_pick` (arm + wait + return selector JSON),
-  - [ ] `fret_diag_run` (run script/suite/repro/perf with options; return summary + evidence paths),
+  - [x] `fret_diag_scripts_list` (list `tools/diag-scripts` and `.fret/diag/scripts`),
+  - [x] `fret_diag_run_script_file` (run a script by file name or relative path),
+  - [x] `fret_diag_run` (run multiple scripts with list/glob; returns structured summary),
   - [x] `fret_diag_run_script_json` (minimal: run a v1/v2 script JSON and wait for pass/fail),
   - [x] `fret_diag_pack_last_bundle` (dump + pack into zip),
+  - [x] `fret_diag_pack_last_bundle_zip_bytes` (dump + pack bundle.json zip bytes as base64),
   - [x] `fret_diag_bundle_dump_latest` (best-effort latest bundle.dumped payload),
-  - [ ] `fret_diag_compare`.
-- [ ] (Optional) Expose key artifacts as resources:
-  - [ ] latest `bundle.json`,
-  - [ ] `repro.summary.json`,
-  - [ ] packed zip bytes (or a download handle).
+  - [x] `fret_diag_compare`.
+- [x] (Optional) Expose key artifacts as resources:
+  - [x] latest `bundle.json`,
+  - [x] `repro.summary.json` (when present on disk),
+  - [x] `bundle.zip` (generated on read; same layout as `diag pack`).
+- [x] Support resource subscriptions + notifications for artifact updates.
 - [ ] Add an end-to-end AI scenario doc:
-  - [ ] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
+  - [x] “Pick selector → patch script → run → pack → open viewer” driven via MCP tools.
 
 ## Cross-cutting hygiene
 

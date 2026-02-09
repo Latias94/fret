@@ -17,7 +17,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{KeyCode, Point, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, Elements, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
@@ -138,6 +138,41 @@ struct TooltipTriggerHoverEdgeState {
     was_hovered: bool,
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct TooltipOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn tooltip_open_change_events(
+    state: &mut TooltipOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TooltipAlign {
     Start,
@@ -155,6 +190,51 @@ pub enum TooltipSide {
     Left,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TooltipTrackCursorAxis {
+    #[default]
+    None,
+    X,
+    Y,
+    Both,
+}
+
+impl TooltipTrackCursorAxis {
+    fn enabled(self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+fn tooltip_anchor_with_cursor_axis(
+    trigger_anchor: Rect,
+    cursor: Option<Point>,
+    axis: TooltipTrackCursorAxis,
+) -> Rect {
+    let Some(cursor) = cursor else {
+        return trigger_anchor;
+    };
+    if !axis.enabled() {
+        return trigger_anchor;
+    }
+
+    let trigger_center = Point::new(
+        Px(trigger_anchor.origin.x.0 + trigger_anchor.size.width.0 * 0.5),
+        Px(trigger_anchor.origin.y.0 + trigger_anchor.size.height.0 * 0.5),
+    );
+
+    let center = match axis {
+        TooltipTrackCursorAxis::None => return trigger_anchor,
+        TooltipTrackCursorAxis::X => Point::new(cursor.x, trigger_center.y),
+        TooltipTrackCursorAxis::Y => Point::new(trigger_center.x, cursor.y),
+        TooltipTrackCursorAxis::Both => cursor,
+    };
+
+    Rect::new(
+        Point::new(Px(center.x.0 - 0.5), Px(center.y.0 - 0.5)),
+        Size::new(Px(1.0), Px(1.0)),
+    )
+}
+
 /// shadcn/ui `TooltipProvider` (v4).
 ///
 /// In Radix/shadcn this is a context provider used to share open-delay behavior across tooltip
@@ -163,6 +243,7 @@ pub enum TooltipSide {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TooltipProvider {
     delay_duration_frames: u32,
+    close_delay_duration_frames: u32,
     skip_delay_duration_frames: u32,
     disable_hoverable_content: bool,
 }
@@ -177,12 +258,42 @@ impl TooltipProvider {
         self
     }
 
+    /// Base UI-compatible close delay (`closeDelay`), in ticks/frames.
+    pub fn close_delay_duration_frames(mut self, frames: u32) -> Self {
+        self.close_delay_duration_frames = frames;
+        self
+    }
+
+    /// Base UI-compatible alias (`delay`), in milliseconds.
+    pub fn delay_duration_ms(mut self, millis: u64) -> Self {
+        self.delay_duration_frames = millis as u32;
+        self
+    }
+
+    /// Base UI-compatible close delay (`closeDelay`), in milliseconds.
+    pub fn close_delay_duration_ms(mut self, millis: u64) -> Self {
+        self.close_delay_duration_frames = millis as u32;
+        self
+    }
+
     pub fn skip_delay_duration_frames(mut self, frames: u32) -> Self {
         self.skip_delay_duration_frames = frames;
         self
     }
 
+    /// Base UI-compatible alias (`skipDelayDuration`), in milliseconds.
+    pub fn skip_delay_duration_ms(mut self, millis: u64) -> Self {
+        self.skip_delay_duration_frames = millis as u32;
+        self
+    }
+
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content = disable;
+        self
+    }
+
+    /// Base UI-compatible alias (`disableHoverablePopup`).
+    pub fn disable_hoverable_popup(mut self, disable: bool) -> Self {
         self.disable_hoverable_content = disable;
         self
     }
@@ -212,6 +323,7 @@ impl TooltipProvider {
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
             )
+            .close_delay_duration_ticks(self.close_delay_duration_frames as u64)
             .disable_hoverable_content(self.disable_hoverable_content),
             |cx| f(cx).into_iter().collect::<Elements>(),
         )
@@ -227,7 +339,7 @@ impl TooltipProvider {
 ///
 /// Note: This uses a per-window overlay root, so it is not clipped by ancestors with
 /// `overflow: Clip`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Tooltip {
     trigger: AnyElement,
     content: AnyElement,
@@ -244,8 +356,50 @@ pub struct Tooltip {
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
+    track_cursor_axis: TooltipTrackCursorAxis,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
+}
+
+impl std::fmt::Debug for Tooltip {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Tooltip")
+            .field("trigger", &"<trigger>")
+            .field("content", &"<content>")
+            .field("align", &self.align)
+            .field("side", &self.side)
+            .field("side_offset", &self.side_offset)
+            .field("window_margin_override", &self.window_margin_override)
+            .field("arrow", &self.arrow)
+            .field("arrow_test_id", &self.arrow_test_id)
+            .field("panel_test_id", &self.panel_test_id)
+            .field("arrow_size_override", &self.arrow_size_override)
+            .field("arrow_padding_override", &self.arrow_padding_override)
+            .field("hide_when_detached", &self.hide_when_detached)
+            .field(
+                "open_delay_frames_override",
+                &self.open_delay_frames_override,
+            )
+            .field(
+                "close_delay_frames_override",
+                &self.close_delay_frames_override,
+            )
+            .field(
+                "disable_hoverable_content_override",
+                &self.disable_hoverable_content_override,
+            )
+            .field("track_cursor_axis", &self.track_cursor_axis)
+            .field("layout", &self.layout)
+            .field("anchor_override", &self.anchor_override)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
+            .finish()
+    }
 }
 
 impl Tooltip {
@@ -266,8 +420,11 @@ impl Tooltip {
             open_delay_frames_override: None,
             close_delay_frames_override: None,
             disable_hoverable_content_override: None,
+            track_cursor_axis: TooltipTrackCursorAxis::None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -291,8 +448,20 @@ impl Tooltip {
         self
     }
 
+    /// Base UI-compatible alias (`delay`), in milliseconds.
+    pub fn open_delay_ms(mut self, millis: u64) -> Self {
+        self.open_delay_frames_override = Some(millis as u32);
+        self
+    }
+
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames_override = Some(frames);
+        self
+    }
+
+    /// Base UI-compatible alias (`closeDelay`), in milliseconds.
+    pub fn close_delay_ms(mut self, millis: u64) -> Self {
+        self.close_delay_frames_override = Some(millis as u32);
         self
     }
 
@@ -301,6 +470,22 @@ impl Tooltip {
     /// Default: inherited from `TooltipProvider`.
     pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
         self.disable_hoverable_content_override = Some(disable);
+        self
+    }
+
+    /// Base UI-compatible alias (`disableHoverablePopup`).
+    pub fn disable_hoverable_popup(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content_override = Some(disable);
+        self
+    }
+
+    /// Base UI-compatible cursor tracking policy (`trackCursorAxis`).
+    ///
+    /// - `None`: anchor to trigger bounds (default).
+    /// - `X` / `Y`: track cursor on one axis and keep trigger center on the other axis.
+    /// - `Both`: anchor to cursor point on both axes.
+    pub fn track_cursor_axis(mut self, axis: TooltipTrackCursorAxis) -> Self {
+        self.track_cursor_axis = axis;
         self
     }
 
@@ -369,6 +554,21 @@ impl Tooltip {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -406,6 +606,9 @@ impl Tooltip {
         let open_delay_frames_override = self.open_delay_frames_override;
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
+        let track_cursor_axis = self.track_cursor_axis;
+        let on_open_change = self.on_open_change;
+        let on_open_change_complete = self.on_open_change_complete;
 
         let base_trigger = self.trigger;
         let content = self.content;
@@ -511,11 +714,24 @@ impl Tooltip {
             let disable_hoverable_content = disable_hoverable_content_override
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
+            let last_pointer_for_trigger = last_pointer.clone();
+            let last_pointer_for_overlay = last_pointer.clone();
+            let last_pointer_for_request = last_pointer.clone();
 
             let trigger_hovered = gates.trigger_hovered(hovered);
             let trigger_focused = gates.trigger_focused(focused);
 
-            let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
+            let cursor_for_anchor = if track_cursor_axis.enabled() {
+                cx.watch_model(&last_pointer)
+                    .layout()
+                    .copied()
+                    .unwrap_or(None)
+            } else {
+                None
+            };
+            let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
+            });
             let floating_bounds = anchor_bounds.and_then(|anchor| {
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
@@ -565,7 +781,9 @@ impl Tooltip {
                 radix_tooltip::TooltipInteractionConfig {
                     disable_hoverable_content,
                     open_delay_ticks_override: open_delay_frames_override.map(|v| v as u64),
-                    close_delay_ticks_override: close_delay_frames_override.map(|v| v as u64),
+                    close_delay_ticks_override: close_delay_frames_override
+                        .map(|v| v as u64)
+                        .or(provider_cfg.close_delay_duration_ticks),
                     safe_hover_buffer: Px(5.0),
                 },
             );
@@ -651,10 +869,15 @@ impl Tooltip {
                 cx.pointer_region_on_pointer_move(Arc::new({
                     let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
                     let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                    let last_pointer = last_pointer_for_trigger.clone();
                     move |host, acx, mv| {
                         if mv.pointer_type == PointerType::Touch {
                             return false;
                         }
+
+                        let _ = host
+                            .models_mut()
+                            .update(&last_pointer, |v| *v = Some(mv.position));
 
                         let geometry = host
                             .models_mut()
@@ -699,6 +922,18 @@ impl Tooltip {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(TooltipOpenChangeCallbackState::default, |state| {
+                    tooltip_open_change_events(state, opening, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
+                handler(open);
+            }
+            if let (Some(open), Some(handler)) =
+                (open_change_complete, on_open_change_complete.as_ref())
+            {
+                handler(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: update.open,
@@ -715,7 +950,17 @@ impl Tooltip {
             let direction = direction_prim::use_direction_in_scope(cx, None);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
+                let cursor_for_anchor = if track_cursor_axis.enabled() {
+                    cx.watch_model(&last_pointer_for_overlay)
+                        .layout()
+                        .copied()
+                        .unwrap_or(None)
+                } else {
+                    None
+                };
+                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id).map(|anchor| {
+                    tooltip_anchor_with_cursor_axis(anchor, cursor_for_anchor, track_cursor_axis)
+                });
                 let Some(anchor) = anchor else {
                     return Vec::new();
                 };
@@ -859,8 +1104,11 @@ impl Tooltip {
                     host.request_redraw(acx.window);
                 }
             }));
-            if !disable_hoverable_content {
-                radix_tooltip::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
+            if !disable_hoverable_content || track_cursor_axis.enabled() {
+                radix_tooltip::tooltip_install_pointer_move_tracker(
+                    &mut request,
+                    last_pointer_for_request,
+                );
             }
             radix_tooltip::request_tooltip(cx, request);
 
@@ -1093,6 +1341,119 @@ mod tests {
         assert_eq!(colors.len(), 2);
         assert_eq!(colors[0], Some(fg));
         assert_ne!(colors[1], Some(fg));
+    }
+
+    #[test]
+    fn tooltip_track_cursor_axis_projects_anchor_center_as_expected() {
+        let trigger = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(40.0), Px(20.0)),
+        );
+        let cursor = Some(Point::new(Px(100.0), Px(200.0)));
+
+        let x_only = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::X);
+        let y_only = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::Y);
+        let both = tooltip_anchor_with_cursor_axis(trigger, cursor, TooltipTrackCursorAxis::Both);
+
+        let trigger_center = Point::new(Px(30.0), Px(30.0));
+
+        let center_of = |r: Rect| {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        };
+
+        assert_eq!(center_of(x_only).x, Px(100.0));
+        assert_eq!(center_of(x_only).y, trigger_center.y);
+
+        assert_eq!(center_of(y_only).x, trigger_center.x);
+        assert_eq!(center_of(y_only).y, Px(200.0));
+
+        assert_eq!(center_of(both).x, Px(100.0));
+        assert_eq!(center_of(both).y, Px(200.0));
+    }
+
+    #[test]
+    fn tooltip_aliases_map_to_existing_fields() {
+        let mut app = App::new();
+        let trigger = AnyElement::new(
+            fret_ui::elements::GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+        let content = AnyElement::new(
+            fret_ui::elements::GlobalElementId(2),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+
+        let tooltip = Tooltip::new(trigger, content)
+            .open_delay_ms(120)
+            .close_delay_ms(80)
+            .disable_hoverable_popup(true);
+        assert_eq!(tooltip.open_delay_frames_override, Some(120));
+        assert_eq!(tooltip.close_delay_frames_override, Some(80));
+        assert_eq!(tooltip.disable_hoverable_content_override, Some(true));
+
+        let provider = TooltipProvider::new()
+            .delay_duration_ms(200)
+            .close_delay_duration_ms(150)
+            .skip_delay_duration_ms(300)
+            .disable_hoverable_popup(true);
+        assert_eq!(provider.delay_duration_frames, 200);
+        assert_eq!(provider.close_delay_duration_frames, 150);
+        assert_eq!(provider.skip_delay_duration_frames, 300);
+        assert!(provider.disable_hoverable_content);
+
+        // Keep `app` live so this test mirrors normal construction context style.
+        let _ = app.models_mut();
+    }
+
+    #[test]
+    fn tooltip_open_change_handlers_can_be_set() {
+        let trigger = AnyElement::new(
+            fret_ui::elements::GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+        let content = AnyElement::new(
+            fret_ui::elements::GlobalElementId(2),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        );
+
+        let tooltip = Tooltip::new(trigger, content)
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(tooltip.on_open_change.is_some());
+        assert!(tooltip.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn tooltip_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = TooltipOpenChangeCallbackState::default();
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, true, true);
+        assert_eq!(changed, Some(false));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = tooltip_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(false));
     }
 
     fn render_tooltip_frame(

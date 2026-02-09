@@ -1,61 +1,53 @@
-# shadcn/ui v4 Audit — Tabs
+# shadcn/ui v4 Audit - Tabs
 
-This audit compares Fret’s shadcn-aligned `Tabs` against the upstream shadcn/ui v4 docs and
-examples in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Tabs` against upstream shadcn/ui v4 recipes and
+Base UI `Tabs.Root` behavior.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`
-- Component wrapper (Radix Tabs skin): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx`
-- Demo usage: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/tabs-demo.tsx`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/tabs.mdx`
+- shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tabs.tsx`
+- shadcn demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/tabs-demo.tsx`
+- Base UI root contract: `repo-ref/base-ui/packages/react/src/tabs/root/TabsRoot.tsx`
 
-## Fret implementation
+## Fret implementation anchors
 
 - Component code: `ecosystem/fret-ui-shadcn/src/tabs.rs`
-- Key building blocks:
-  - Roving focus utilities: `ecosystem/fret-ui-kit/src/headless/roving_focus.rs`
-  - APG navigation hooks: `ecosystem/fret-ui-kit/src/declarative/collection_semantics.rs`
+- Primitive semantics: `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
+- Roving/APG helpers: `ecosystem/fret-ui-kit/src/declarative/collection_semantics.rs`
 
 ## Audit checklist
 
-### Composition surface
+### Composition & control model
 
-- Pass: Exposes a composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` surface (Radix-shaped),
-  while keeping the legacy `Tabs` + `TabsItem` builder for convenience.
-- Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
-- Pass: Supports uncontrolled `defaultValue` (internal selection model).
-- Pass: Supports Radix `TabsContent forceMount` semantics via `Tabs::force_mount_content(true)`
-  (keeps inactive panels mounted while gating layout/paint/semantics and interactivity).
+- Pass: Exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, and keeps
+  `Tabs` + `TabsItem` recipe builder for convenience.
+- Pass: Supports controlled selection via `Model<Option<Arc<str>>>` and uncontrolled `default_value`.
+- Pass: Aligns with Base UI `onValueChange` intent via
+  `Tabs::on_value_change(...)` and `TabsRoot::on_value_change(...)`.
+- Pass: Callback only emits when value actually changes (no duplicate emission on same selection).
 
-### Keyboard & selection behavior
+### Keyboard & selection semantics
 
-- Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
-- Pass: Supports Radix `activationMode` outcomes:
-  - `TabsActivationMode::Automatic` updates the model while roving.
-  - `TabsActivationMode::Manual` keeps selection stable until activation.
-- Pass: Supports Radix `orientation` outcomes (`TabsOrientation::Horizontal` / `Vertical`).
-- Pass: `loop_navigation(true)` defaults to looping behavior (Radix `loop` default).
+- Pass: Arrow roving + APG navigation are wired through `RovingFlex` + `cx.roving_nav_apg()`.
+- Pass: `TabsActivationMode::Automatic` and `TabsActivationMode::Manual` map to expected behavior.
+- Pass: `TabsOrientation::{Horizontal, Vertical}` and `loop_navigation(true)` are supported.
+- Pass: `force_mount_content(true)` preserves inactive panels while gating layout/paint/semantics.
 
-### Visual defaults (shadcn parity)
+### Visual defaults (new-york-v4 parity)
 
-- Pass: Root layout matches shadcn’s default (`flex` column + `gap-2`) via `component.tabs.gap`.
-- Pass: List styling aligns with the wrapper:
-  - Height (`h-9`) via `component.tabs.list_height` (fallback `36px`)
-  - Padding (`p-[3px]`) via `component.tabs.list_padding` (fallback `3px`)
-  - Background uses `muted` and inactive foreground uses `muted-foreground`.
-- Pass: Trigger styling aligns with the wrapper’s active state defaults:
-  - Active background uses `background`
-  - Active border uses `input`/`border`
-  - Active shadow uses the standard shadcn-ish `shadow-sm`
-- Pass: Triggers can render arbitrary children (icons, badges) via `TabsItem::trigger_children(...)`.
+- Pass: Root/list/trigger tokens align with shadcn v4 defaults (`h-9`, `p-[3px]`, muted list chrome,
+  active trigger background/border/shadow conventions).
+- Pass: Trigger content remains rich (icons/badges/custom children).
+
+## Known gaps
+
+- Gap: Base UI `onValueChange` provides richer `eventDetails` (cancelation + activation metadata);
+  Fret currently exposes only the next value callback.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib tabs`
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
-  (`web_vs_fret_layout_tabs_demo_active_tab_height`, `web_vs_fret_layout_tabs_demo_panel_gap`).
-
-## Follow-ups (recommended)
-
-- Consider adding a composable surface (`TabsList` / `TabsTrigger` / `TabsContent`) to better match
-  Radix/shadcn authoring ergonomics.
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn tabs_root_on_value_change_builder_sets_handler`
+- `cargo nextest run -p fret-ui-shadcn tabs_on_value_change_fires_once_when_selection_changes`
+- Web layout gates remain covered in `web_vs_fret_layout` tabs assertions.

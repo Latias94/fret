@@ -25,6 +25,8 @@ examples in `repo-ref/ui`.
   active-descendant navigation).
 - Pass: Item selection is wired through `CommandItem::on_select_action(...)`, so selection works
   both via pointer click and `Enter` on the active item.
+- Pass: Open lifecycle callback is exposed via `Combobox::on_open_change`
+  (Base UI `onOpenChange`).
 
 ### Placement & sizing
 
@@ -64,6 +66,8 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
+- Contract test: `combobox_open_change_builder_sets_handler`
+- Contract test: `combobox_open_change_event_emits_only_on_state_change`
 - Highlighted option chrome gates (hover/highlight background + text color): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web`, `web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark`).
 - Highlight-state golden: `goldens/shadcn-web/v4/new-york-v4/combobox-demo.highlight-first.open.json`

@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Mechanism-layer UI engine for Fret with tree, layout, focus, routing, and interaction contracts."
 
 [features]
 default = []

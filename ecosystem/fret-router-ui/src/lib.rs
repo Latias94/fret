@@ -10,17 +10,19 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::AppWindowId;
+use fret_core::{AppWindowId, KeyCode, Modifiers};
 use fret_router::{
     HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
-use fret_runtime::{CommandId, Effect};
-use fret_runtime::{Model, WeakModel};
+use fret_runtime::{
+    CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, Effect, KeyChord,
+    Model, PlatformFilter, WeakModel, WhenExpr, WindowCommandAvailabilityService,
+};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::PressableProps;
+use fret_ui::element::{PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -51,6 +53,30 @@ where
     pub fn leaf_route(&self) -> Option<&R> {
         self.leaf_match().map(|m| &m.route)
     }
+
+    pub fn match_depth(&self) -> usize {
+        self.matches.len()
+    }
+
+    pub fn match_at(&self, index: usize) -> Option<&RouteMatchSnapshot<R>> {
+        self.matches.get(index)
+    }
+
+    pub fn route_at(&self, index: usize) -> Option<&R> {
+        self.match_at(index).map(|m| &m.route)
+    }
+
+    pub fn is_at_location(&self, location: &RouteLocation) -> bool {
+        self.location.canonicalized() == location.canonicalized()
+    }
+
+    pub fn is_at_href(&self, href: &str) -> bool {
+        self.location.to_url() == href.trim()
+    }
+
+    pub fn is_at_link(&self, link: &RouterLink) -> bool {
+        self.is_at_location(&link.to) || self.is_at_href(&link.href)
+    }
 }
 
 pub struct RouterUiStore<R, H>
@@ -62,6 +88,92 @@ where
     router: Model<Router<R, H>>,
     snapshot: Model<RouterUiSnapshot<R>>,
     intents: Model<Vec<RoutePrefetchIntent<R>>>,
+}
+
+pub const ROUTER_COMMAND_BACK: &str = "router.back";
+pub const ROUTER_COMMAND_FORWARD: &str = "router.forward";
+
+pub fn register_router_commands(registry: &mut CommandRegistry) {
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_BACK),
+        CommandMeta::new("Back")
+            .with_category("Router")
+            .with_description("Navigate back in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketLeft,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
+            .with_when(WhenExpr::parse("router.can_back").expect("when expr should parse"))
+            .with_scope(CommandScope::Window),
+    );
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_FORWARD),
+        CommandMeta::new("Forward")
+            .with_category("Router")
+            .with_description("Navigate forward in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketRight,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
+            .with_when(WhenExpr::parse("router.can_forward").expect("when expr should parse"))
+            .with_scope(CommandScope::Window),
+    );
 }
 
 impl<R, H> RouterUiStore<R, H>
@@ -149,6 +261,37 @@ where
             .expect("router model should be updatable")
     }
 
+    pub fn can_navigate(&self, app: &App, action: NavigationAction) -> bool {
+        app.models()
+            .read(&self.router, |router| router.history().can_navigate(action))
+            .expect("router model should be readable")
+    }
+
+    pub fn handle_router_command(
+        &self,
+        app: &mut App,
+        command: &CommandId,
+    ) -> Result<bool, RouteSearchValidationFailure> {
+        match command.as_str() {
+            ROUTER_COMMAND_BACK => {
+                if !self.can_navigate(app, NavigationAction::Back) {
+                    return Ok(true);
+                }
+                let _ = self.navigate_with_prefetch_intents(app, NavigationAction::Back, None)?;
+                Ok(true)
+            }
+            ROUTER_COMMAND_FORWARD => {
+                if !self.can_navigate(app, NavigationAction::Forward) {
+                    return Ok(true);
+                }
+                let _ =
+                    self.navigate_with_prefetch_intents(app, NavigationAction::Forward, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+
     fn apply_update(
         &self,
         app: &mut App,
@@ -159,15 +302,22 @@ where
             return;
         }
 
-        let next = app
+        let (next, can_back, can_forward) = app
             .models()
             .read(&self.router, |router| {
-                RouterUiSnapshot::from_state(router.state())
+                let next = RouterUiSnapshot::from_state(router.state());
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                (next, can_back, can_forward)
             })
             .expect("router model should be readable");
         let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
         let intents = intents.to_vec();
         let _ = app.models_mut().update(&self.intents, |v| *v = intents);
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_router_availability(self.window, can_back, can_forward);
+        });
         app.request_redraw(self.window);
     }
 
@@ -247,13 +397,16 @@ where
             let result = host.models_mut().update(&router, |router| {
                 let update = router.navigate_with_prefetch_intents(action, Some(to))?;
                 let snapshot = RouterUiSnapshot::from_state(router.state());
-                Ok::<_, RouteSearchValidationFailure>((update, snapshot))
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                Ok::<_, RouteSearchValidationFailure>((update, snapshot, can_back, can_forward))
             });
 
             let Ok(result) = result else {
                 return;
             };
-            let Ok((update, next_snapshot)) = result else {
+            let Ok((update, next_snapshot, can_back, can_forward)) = result else {
                 host.request_redraw(window);
                 return;
             };
@@ -266,6 +419,7 @@ where
             let _ = host
                 .models_mut()
                 .update(&intents_model, |v| *v = update.intents.clone());
+            host.set_router_command_availability(window, can_back, can_forward);
             host.request_redraw(window);
         })
     }
@@ -347,10 +501,187 @@ where
     render(cx, &snap)
 }
 
+pub fn router_outlet_with_test_id<R>(
+    cx: &mut ElementContext<'_, App>,
+    snapshot: &Model<RouterUiSnapshot<R>>,
+    test_id: impl Into<Arc<str>>,
+    render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+) -> AnyElement
+where
+    R: Clone + 'static,
+{
+    router_outlet(cx, snapshot, render)
+        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RouterLeafStatus {
+    Ready,
+    Pending,
+    Error { message: Arc<str> },
+}
+
+#[derive(Debug, Clone)]
+pub struct RouterOutlet<R>
+where
+    R: Clone + 'static,
+{
+    snapshot: Model<RouterUiSnapshot<R>>,
+    test_id: Option<Arc<str>>,
+}
+
+impl<R> RouterOutlet<R>
+where
+    R: Clone + 'static,
+{
+    pub fn new(snapshot: Model<RouterUiSnapshot<R>>) -> Self {
+        Self {
+            snapshot,
+            test_id: None,
+        }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn into_element(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let elem = router_outlet(cx, &self.snapshot, render);
+        match self.test_id {
+            Some(test_id) => elem.attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+            None => elem,
+        }
+    }
+
+    pub fn into_element_by_leaf(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        render: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let mut render = Some(render);
+        let mut not_found = Some(not_found);
+        self.into_element(cx, move |cx, snap| {
+            if snap.is_not_found {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            }
+            match snap.leaf_route() {
+                Some(route) => (render.take().expect("render should be callable"))(cx, route, snap),
+                None => (not_found.take().expect("not_found should be callable"))(cx, snap),
+            }
+        })
+    }
+
+    pub fn into_element_by_leaf_with_status(
+        self,
+        cx: &mut ElementContext<'_, App>,
+        status: impl FnOnce(&App, &RouterUiSnapshot<R>, &R) -> RouterLeafStatus,
+        ready: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        pending: impl FnOnce(&mut ElementContext<'_, App>, &R, &RouterUiSnapshot<R>) -> AnyElement,
+        error: impl FnOnce(
+            &mut ElementContext<'_, App>,
+            &R,
+            &RouterUiSnapshot<R>,
+            Arc<str>,
+        ) -> AnyElement,
+        not_found: impl FnOnce(&mut ElementContext<'_, App>, &RouterUiSnapshot<R>) -> AnyElement,
+    ) -> AnyElement {
+        let mut status = Some(status);
+        let mut ready = Some(ready);
+        let mut pending = Some(pending);
+        let mut error = Some(error);
+        let mut not_found = Some(not_found);
+        self.into_element(cx, move |cx, snap| {
+            if snap.is_not_found {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            }
+
+            let Some(route) = snap.leaf_route() else {
+                return (not_found.take().expect("not_found should be callable"))(cx, snap);
+            };
+
+            match (status.take().expect("status should be callable"))(&*cx.app, snap, route) {
+                RouterLeafStatus::Ready => {
+                    (ready.take().expect("ready should be callable"))(cx, route, snap)
+                }
+                RouterLeafStatus::Pending => {
+                    (pending.take().expect("pending should be callable"))(cx, route, snap)
+                }
+                RouterLeafStatus::Error { message } => {
+                    (error.take().expect("error should be callable"))(cx, route, snap, message)
+                }
+            }
+        })
+    }
+}
+
 pub fn router_link<R, H>(
     cx: &mut ElementContext<'_, App>,
     store: &RouterUiStore<R, H>,
     link: RouterLink,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    router_link_with_props(cx, store, link, PressableProps::default(), children)
+}
+
+pub fn router_link_to<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    route: &R,
+    params: &[PathParam],
+    search: SearchMap,
+    fragment: Option<String>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> Result<AnyElement, RouterBuildLocationError>
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let app: &App = &*cx.app;
+    let link = store.link_to(app, action, route, params, search, fragment)?;
+    Ok(router_link(cx, store, link, children))
+}
+
+pub fn router_link_to_with_test_id<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    action: NavigationAction,
+    route: &R,
+    params: &[PathParam],
+    search: SearchMap,
+    fragment: Option<String>,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> Result<AnyElement, RouterBuildLocationError>
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let app: &App = &*cx.app;
+    let link = store.link_to(app, action, route, params, search, fragment)?;
+    Ok(router_link_with_test_id(cx, store, link, test_id, children))
+}
+
+/// Build a low-level router link pressable with explicit `PressableProps`.
+///
+/// The pressable:
+/// - navigates on `pressable_on_activate`
+/// - computes prefetch intents on hover and stores them in `RouterUiStore::intents_model()`
+pub fn router_link_with_props<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    props: PressableProps,
     children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement
 where
@@ -364,8 +695,54 @@ where
     cx.pressable_with_id_props(|cx, _state, _id| {
         cx.pressable_on_activate(on_activate);
         cx.pressable_on_hover_change(on_hover);
-        (PressableProps::default(), children)
+        (props, children)
     })
+}
+
+/// Build a router link pressable and stamp a diagnostics `test_id`.
+///
+/// Prefer this in demos and automated `fretboard diag` scripts.
+pub fn router_link_with_test_id<R, H>(
+    cx: &mut ElementContext<'_, App>,
+    store: &RouterUiStore<R, H>,
+    link: RouterLink,
+    test_id: impl Into<Arc<str>>,
+    children: impl IntoIterator<Item = AnyElement>,
+) -> AnyElement
+where
+    R: Clone + Eq + Hash + 'static,
+    H: HistoryAdapter + 'static,
+{
+    let mut props = PressableProps::default();
+    props.a11y.test_id = Some(test_id.into());
+    router_link_with_props(cx, store, link, props, children)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RouterLinkContextMenuAction {
+    CopyLink,
+    OpenInNewWindow,
+}
+
+#[derive(Debug, Clone)]
+pub struct RouterLinkContextMenuItem {
+    pub action: RouterLinkContextMenuAction,
+    pub label: Arc<str>,
+}
+
+impl RouterLink {
+    pub fn default_context_menu_items(&self) -> [RouterLinkContextMenuItem; 2] {
+        [
+            RouterLinkContextMenuItem {
+                action: RouterLinkContextMenuAction::CopyLink,
+                label: Arc::from("Copy link"),
+            },
+            RouterLinkContextMenuItem {
+                action: RouterLinkContextMenuAction::OpenInNewWindow,
+                label: Arc::from("Open in new window"),
+            },
+        ]
+    }
 }
 
 #[cfg(test)]

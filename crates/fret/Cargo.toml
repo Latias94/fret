@@ -8,20 +8,21 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "The precision fretboard for Rust UI: a GPU-first framework for crisp, fluid application interactions."
 
 [dependencies]
-fret-core = { path = "../fret-core", optional = true }
-fret-app = { path = "../fret-app", optional = true }
-fret-ui = { path = "../fret-ui", optional = true }
-fret-runtime = { path = "../fret-runtime", optional = true }
-fret-render = { path = "../fret-render", optional = true }
-fret-platform = { path = "../fret-platform", optional = true }
-fret-platform-native = { path = "../fret-platform-native", optional = true }
-fret-platform-web = { path = "../fret-platform-web", optional = true }
-fret-runner-winit = { path = "../fret-runner-winit", optional = true }
-fret-runner-web = { path = "../fret-runner-web", optional = true }
-fret-launch = { path = "../fret-launch", optional = true }
-fret-fonts = { path = "../fret-fonts", optional = true }
+fret-core = { version = "0.1.0", path = "../fret-core", optional = true }
+fret-app = { version = "0.1.0", path = "../fret-app", optional = true }
+fret-ui = { version = "0.1.0", path = "../fret-ui", optional = true }
+fret-runtime = { version = "0.1.0", path = "../fret-runtime", optional = true }
+fret-render = { version = "0.1.0", path = "../fret-render", optional = true }
+fret-platform = { version = "0.1.0", path = "../fret-platform", optional = true }
+fret-platform-native = { version = "0.1.0", path = "../fret-platform-native", optional = true }
+fret-platform-web = { version = "0.1.0", path = "../fret-platform-web", optional = true }
+fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit", optional = true }
+fret-runner-web = { version = "0.1.0", path = "../fret-runner-web", optional = true }
+fret-launch = { version = "0.1.0", path = "../fret-launch", optional = true }
+fret-fonts = { version = "0.1.0", path = "../fret-fonts", optional = true }
 
 [features]
 default = ["core"]
