@@ -636,6 +636,34 @@ use fret_ui_ai::Shimmer;
 ```
 "#;
 
+pub(crate) const DOC_AI_REASONING_DEMO: &str = r#"
+## AI reasoning (demo)
+
+This page demonstrates the AI Elements-aligned `Reasoning` surfaces in `fret-ui-ai`:
+
+- `Reasoning` (collapsible root with streaming-driven open/close policy),
+- `ReasoningTrigger` (brain icon + thinking message + chevron),
+- `ReasoningContent` (markdown block mounted inside the collapsible).
+
+Upstream behavior to match:
+
+- `defaultOpen ?? isStreaming`
+- auto-open when streaming starts (unless `defaultOpen === false`)
+- auto-close once, 1000ms after streaming ends
+- compute duration (seconds, ceil) between streaming start/end and expose it via the trigger message
+
+It exists to validate:
+
+- timer scheduling (`Effect::SetTimer`) + cancellation correctness,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_REASONING_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Reasoning, ReasoningContent, ReasoningTrigger};
+```
+"#;
+
 pub(crate) const DOC_AI_SUGGESTIONS_DEMO: &str = r#"
 ## AI suggestions (demo)
 

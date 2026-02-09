@@ -49,7 +49,7 @@ Status legend:
 | `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); keep iterating on payload views and styling parity. |
 | `sources` | Prototype | `fret-ui-ai` | Collapsible parity (`Used N sources`) is implemented; keep iterating on styling and payload richness (excerpt/link affordances). |
 | `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
-| `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
+| `reasoning` | Prototype | `fret-ui-ai` | `Reasoning` + `ReasoningTrigger` + `ReasoningContent` exist with streaming-driven auto-open + timed auto-close; UI Gallery demo + diag gate added. |
 | `suggestion` | Prototype | `fret-ui-ai` | `Suggestions` + `Suggestion` surfaces exist; UI Gallery demo + diag gate exist. |
 | `queue` | Not started | `fret-ui-ai` | Optional. |
 | `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
@@ -357,5 +357,7 @@ Keep this list in sync with the pinned upstream commit recorded in
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json`
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
+- [x] AIEL-MVP1-gates-011 Gate reasoning auto-open/auto-close via diag.
+  - Script: `tools/diag-scripts/ui-gallery-ai-reasoning-demo-auto-open-close.json`
 - [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
   (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).

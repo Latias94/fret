@@ -53,6 +53,11 @@ Acceptance criteria:
 
 Status: In progress.
 
+Notes:
+
+- `Reasoning` v0 is ported with a UI Gallery demo + diag gate:
+  - `tools/diag-scripts/ui-gallery-ai-reasoning-demo-auto-open-close.json`
+
 ### M2 — Tooling UIs (sources + citations)
 
 Scope:

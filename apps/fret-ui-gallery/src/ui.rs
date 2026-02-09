@@ -707,6 +707,7 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
+        PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
         PAGE_AI_SUGGESTIONS_DEMO => preview_ai_suggestions_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
@@ -17927,6 +17928,133 @@ fn preview_ai_shimmer_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> 
                 fast,
                 slow_wide,
                 long,
+            ]
+        },
+    )]
+}
+
+fn preview_ai_reasoning_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::{ActionCx, OnActivate};
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{Justify, LayoutRefinement, Space};
+    use fret_ui_shadcn::{Button, ButtonVariant};
+
+    #[derive(Default)]
+    struct ReasoningModels {
+        streaming: Option<Model<bool>>,
+    }
+
+    let streaming = cx.with_state(ReasoningModels::default, |st| st.streaming.clone());
+    let streaming = match streaming {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ReasoningModels::default, |st| {
+                st.streaming = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let is_streaming = cx
+        .watch_model(&streaming)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+
+    let start: OnActivate = Arc::new({
+        let streaming = streaming.clone();
+        move |host, _action_cx: ActionCx, _reason| {
+            let _ = host.models_mut().update(&streaming, |v| *v = true);
+        }
+    });
+
+    let stop: OnActivate = Arc::new({
+        let streaming = streaming.clone();
+        move |host, _action_cx: ActionCx, _reason| {
+            let _ = host.models_mut().update(&streaming, |v| *v = false);
+        }
+    });
+
+    let controls = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items_center()
+            .justify(Justify::Start)
+            .gap(Space::N2),
+        move |cx| {
+            vec![
+                Button::new("Start streaming")
+                    .variant(ButtonVariant::Secondary)
+                    .test_id("ui-ai-reasoning-start-streaming")
+                    .on_activate(start.clone())
+                    .into_element(cx),
+                Button::new("Stop streaming")
+                    .variant(ButtonVariant::Secondary)
+                    .test_id("ui-ai-reasoning-stop-streaming")
+                    .on_activate(stop.clone())
+                    .into_element(cx),
+                cx.text(format!("is_streaming={is_streaming}")),
+            ]
+        },
+    );
+
+    let markdown: Arc<str> = Arc::from(
+        "This is **reasoning** content.\n\n- It is rendered as markdown.\n- It auto-opens while streaming.\n- It auto-closes 1s after streaming ends.\n",
+    );
+
+    let reasoning = ui_ai::Reasoning::new(is_streaming)
+        .test_id_root("ui-ai-reasoning-root")
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(
+            cx,
+            |cx| {
+                ui_ai::ReasoningTrigger::new()
+                    .test_id("ui-ai-reasoning-trigger")
+                    .into_element(cx)
+            },
+            |cx| {
+                ui_ai::ReasoningContent::new(markdown.clone())
+                    .test_id("ui-ai-reasoning-content")
+                    .into_element(cx)
+            },
+        );
+
+    let no_auto_open = ui_ai::Reasoning::new(is_streaming)
+        .default_open(Some(false))
+        .test_id_root("ui-ai-reasoning-explicitly-closed-root")
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(
+            cx,
+            |cx| {
+                ui_ai::ReasoningTrigger::new()
+                    .test_id("ui-ai-reasoning-explicitly-closed-trigger")
+                    .into_element(cx)
+            },
+            |cx| {
+                ui_ai::ReasoningContent::new(Arc::<str>::from("This one should not auto-open."))
+                    .test_id("ui-ai-reasoning-explicitly-closed-content")
+                    .into_element(cx)
+            },
+        );
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items_start()
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Reasoning (AI Elements)"),
+                controls,
+                reasoning,
+                cx.text("default_open=false (suppresses auto-open)"),
+                no_auto_open,
             ]
         },
     )]

@@ -113,6 +113,7 @@ pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
+pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
 pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
@@ -248,6 +249,7 @@ pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
+pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
 pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str = "ui_gallery.nav.select.ai_suggestions_demo";
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
@@ -833,6 +835,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "shimmer", "loading", "text", "animation", "demo"],
                 docs::DOC_AI_SHIMMER_DEMO,
                 docs::USAGE_AI_SHIMMER_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_REASONING_DEMO,
+                "AI Reasoning (Demo)",
+                "AI Elements Reasoning / Auto-open + Auto-close Disclosure Demo",
+                "fret-ui-ai (chatbot utility)",
+                CMD_NAV_AI_REASONING_DEMO,
+                &[
+                    "ai",
+                    "reasoning",
+                    "collapsible",
+                    "markdown",
+                    "timer",
+                    "demo",
+                ],
+                docs::DOC_AI_REASONING_DEMO,
+                docs::USAGE_AI_REASONING_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SUGGESTIONS_DEMO,

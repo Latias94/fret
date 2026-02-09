@@ -77,6 +77,7 @@ an interactive chat demo:
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
 - `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
 - `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
+- `Reasoning`: AI Elements-aligned reasoning disclosure surface (streaming-driven auto-open + timed auto-close + markdown content).
 - `FileTree`: AI Elements-aligned nested file tree surface (small trees; per-row actions; no virtualization yet).
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
@@ -574,7 +575,7 @@ Legend:
 | `shimmer.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/shimmer.rs` | Done | Animated text shimmer surface (`duration` + `spread`) + UI Gallery demo + diag gate. |
 | `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestion.rs` | Defer | Only implement if an app uses suggestions. |
-| `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |
+| `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Prototype | Auto-open while streaming (unless `default_open=false`), auto-close once (1s after stream end), duration accounting, markdown content. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
 | `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Defer | Could be a markdown-like block with disclosure; wait for consumer. |
 | `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Done | Stack trace disclosure surface + parsed frames + copy feedback + UI Gallery demo + diag gate. |
