@@ -1,0 +1,147 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "type_text", "text": "datatable (torture)" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "Pinning: <none>"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "button",
+          "name": "Column actions for mem_mb"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Column actions for mem_mb" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Left" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Left" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "Pinning: left=[mem_mb] right=[]"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Column actions for mem_mb" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Sort Asc" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Sort Asc" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "Sorting: mem_mb asc"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Column actions for mem_mb" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Hide" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Hide" } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-mem_mb" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-row-0-cell-mem_mb" }
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-data-table-retained-column-actions-menu" }
+  ]
+}
+

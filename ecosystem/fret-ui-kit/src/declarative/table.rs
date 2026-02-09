@@ -3,7 +3,7 @@ use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, VirtualListOptions,
+    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
@@ -973,6 +973,7 @@ mod tests {
                     None,
                     props,
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
                     Arc::new(
                         |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
                             cx.text(format!("{}-{row}", col.id.as_ref()))
@@ -1138,6 +1139,7 @@ mod tests {
                     None,
                     props,
                     Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
                     Arc::new(
                         |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
                             if *row == 0 && col.id.as_ref() == "b" {
@@ -1555,6 +1557,9 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
     props: TableViewProps,
     header_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
+    header_accessory_at: Option<
+        Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>) -> AnyElement>,
+    >,
     cell_at: Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement>,
     debug_header_cell_test_id_prefix: Option<Arc<str>>,
     debug_row_test_id_prefix: Option<Arc<str>>,
@@ -1757,6 +1762,7 @@ where
                         let visible_columns = visible_columns.clone();
                         let col_widths = col_widths.clone();
                         let header_label = header_label.clone();
+                        let header_accessory_at = header_accessory_at.clone();
                         let debug_header_cell_test_id_prefix =
                             debug_header_cell_test_id_prefix.clone();
                         let sorting = sorting.clone();
@@ -1777,6 +1783,7 @@ where
                                         let col = &visible_columns[*col_idx];
                                         let col_w = col_widths[*col_idx];
                                         let label = (header_label)(col);
+                                        let header_accessory_at = header_accessory_at.clone();
                                         let sort_state = sort_for_column(&sorting, &col.id);
                                         let col_id = col.id.clone();
                                         let state = state.clone();
@@ -1958,7 +1965,31 @@ where
                                                                 ..Default::default()
                                                             },
                                                             move |_cx| {
-                                                                vec![_cx.text(header_text.as_ref())]
+                                                                let accessory =
+                                                                    header_accessory_at.as_ref().map(|f| f(_cx, col));
+                                                                match accessory {
+                                                                    None => {
+                                                                        vec![_cx.text(header_text.as_ref())]
+                                                                    }
+                                                                    Some(accessory) => {
+                                                                        vec![stack::hstack(
+                                                                            _cx,
+                                                                            stack::HStackProps::default()
+                                                                                .gap_x(Space::N1)
+                                                                                .justify(Justify::Start)
+                                                                                .items(Items::Center),
+                                                                            move |_cx| {
+                                                                                vec![
+                                                                                    _cx.text(header_text.as_ref()),
+                                                                                    _cx.spacer(
+                                                                                        SpacerProps::default(),
+                                                                                    ),
+                                                                                    accessory,
+                                                                                ]
+                                                                            },
+                                                                        )]
+                                                                    }
+                                                                }
                                                             },
                                                         )]
                                                     },

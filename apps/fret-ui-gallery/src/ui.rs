@@ -16868,6 +16868,7 @@ fn preview_data_table_torture(
                 t.overscan(10)
                     .row_height(Px(28.0))
                     .measure_rows(variable_height)
+                    .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .into_element_retained(
                         cx,
@@ -16913,6 +16914,7 @@ fn preview_data_table_torture(
                 t.overscan(10)
                     .row_height(Px(28.0))
                     .measure_rows(variable_height)
+                    .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .into_element(
                         cx,
@@ -18597,6 +18599,7 @@ fn preview_table_retained_torture(
                 })),
                 props,
                 header_label,
+                None,
                 cell_at,
                 Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
                 Some(Arc::<str>::from("ui-gallery-table-retained-row-")),

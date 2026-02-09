@@ -398,6 +398,7 @@ impl ComponentsGalleryDriver {
                                         })),
                                         props,
                                         header_label,
+                                        None,
                                         cell_at,
                                         Some(Arc::<str>::from(
                                             "components-gallery-table-header-",

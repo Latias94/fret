@@ -2647,6 +2647,12 @@ See: `docs/tracy.md`.\n";
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json",
                                 ),
                             ),

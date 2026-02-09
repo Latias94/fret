@@ -963,13 +963,19 @@ Next UI parity targets (capability, not exact DOM behavior):
         - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` wires `TableState.column_visibility`)
         - Gallery: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_legacy`, `preview_data_table_torture` add toolbar)
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json`
-    - [ ] HTP-ui-dt-050 Column header actions menu (TanStack-style capability surface).
+    - [x] HTP-ui-dt-050 Column header actions menu (TanStack-style capability surface).
       - Goal: upstream-typical “Column actions” dropdown per header:
         - Sorting: asc/desc/clear
         - Visibility: hide
         - Pinning: left/right/unpin
       - Note: this is a UI recipe milestone; the headless engine already gates the underlying state transitions.
       - Gate: one diag script that exercises the menu (toggle sort + hide + pin) and asserts stable status rows.
+      - Done:
+        - UI: `ecosystem/fret-ui-shadcn/src/data_table.rs` (`render_column_actions_menu` + retained accessory wiring).
+        - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0` header accessory hook).
+        - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json`
+        - Runner: `crates/fret-diag/src/lib.rs` (suite includes the new script).
+        - Protocol: `crates/fret-diag-protocol/tests/script_json_roundtrip.rs` (roundtrip coverage).
 
 ---
 
