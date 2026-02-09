@@ -28,6 +28,18 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn test_id_slug(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_string()
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ComboboxStyle {
     pub trigger_background: OverrideSlot<ColorRef>,
@@ -185,8 +197,10 @@ pub struct Combobox {
     open: Model<bool>,
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
+    test_id_prefix: Option<Arc<str>>,
     width: Option<Px>,
     responsive: bool,
+    responsive_device_md_breakpoint: Px,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -210,8 +224,10 @@ impl Combobox {
             open,
             query: None,
             items: Vec::new(),
+            test_id_prefix: None,
             width: None,
             responsive: false,
+            responsive_device_md_breakpoint: crate::breakpoints::device::MD,
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
@@ -266,6 +282,15 @@ impl Combobox {
         self
     }
 
+    /// Overrides the device-level viewport breakpoint used by [`Combobox::responsive`].
+    ///
+    /// This is intentionally **viewport-driven** (mobile vs desktop), not container-query-driven.
+    /// For panel-width responsiveness, prefer container queries (ADR 1170).
+    pub fn responsive_device_md_breakpoint(mut self, breakpoint: Px) -> Self {
+        self.responsive_device_md_breakpoint = breakpoint;
+        self
+    }
+
     pub fn query_model(mut self, query: Model<String>) -> Self {
         self.query = Some(query);
         self
@@ -278,6 +303,11 @@ impl Combobox {
 
     pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
         self.items.extend(items);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -368,6 +398,7 @@ impl Combobox {
             self.open,
             self.query,
             &self.items,
+            self.test_id_prefix,
             self.width,
             self.placeholder,
             self.search_placeholder,
@@ -375,6 +406,7 @@ impl Combobox {
             self.disabled,
             self.a11y_label,
             self.responsive,
+            self.responsive_device_md_breakpoint,
             self.search_enabled,
             self.consume_outside_pointer_events,
             self.on_value_change,
@@ -410,6 +442,7 @@ pub fn combobox<H: UiHost>(
         open,
         query,
         items,
+        None,
         width,
         placeholder,
         search_placeholder,
@@ -417,6 +450,7 @@ pub fn combobox<H: UiHost>(
         disabled,
         a11y_label,
         false,
+        crate::breakpoints::device::MD,
         search_enabled,
         consume_outside_pointer_events,
         None,
@@ -436,6 +470,7 @@ fn combobox_with_patch<H: UiHost>(
     open: Model<bool>,
     query: Option<Model<String>>,
     items: &[ComboboxItem],
+    test_id_prefix: Option<Arc<str>>,
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -443,6 +478,7 @@ fn combobox_with_patch<H: UiHost>(
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     responsive: bool,
+    responsive_device_md_breakpoint: Px,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
     on_value_change: Option<OnValueChange>,
@@ -635,9 +671,12 @@ fn combobox_with_patch<H: UiHost>(
 
         let theme_for_trigger = theme.clone();
 
-        if responsive && cx.bounds.size.width.0 < 768.0 {
+        // Device-level responsiveness: shadcn's "responsive combobox" uses Drawer on mobile.
+        // This is a viewport breakpoint by design (not a container query).
+        if responsive && cx.bounds.size.width < responsive_device_md_breakpoint {
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();
+            let test_id_prefix_for_content = test_id_prefix.clone();
             return Drawer::new(open.clone())
                 .on_dismiss_request(Some(Arc::new({
                     let open_change_reason_model = open_change_reason_model.clone();
@@ -775,6 +814,7 @@ fn combobox_with_patch<H: UiHost>(
                         })
                     },
                     move |cx| {
+                        let test_id_prefix = test_id_prefix_for_content.clone();
                         let open_change_reason_model = open_change_reason_model_for_content.clone();
                         let theme_max_list_h = theme
                             .metric_by_key("component.combobox.max_list_height")
@@ -824,13 +864,18 @@ fn combobox_with_patch<H: UiHost>(
                                         host.request_redraw(action_cx.window);
                                     });
 
-                                command_items.push(
-                                    CommandItem::new(item.label.clone())
-                                        .value(item.value.clone())
-                                        .disabled(item_disabled)
-                                        .checkmark(is_selected)
-                                        .on_select_action(on_select),
-                                );
+                                let mut cmd_item = CommandItem::new(item.label.clone())
+                                    .value(item.value.clone())
+                                    .disabled(item_disabled)
+                                    .checkmark(is_selected)
+                                    .on_select_action(on_select);
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    cmd_item = cmd_item.test_id(format!(
+                                        "{prefix}-item-{}",
+                                        test_id_slug(item.value.as_ref())
+                                    ));
+                                }
+                                command_items.push(cmd_item);
                             }
 
                             CommandPalette::new(query_model.clone(), command_items)
@@ -933,13 +978,18 @@ fn combobox_with_patch<H: UiHost>(
                                     label.into_element(cx)
                                 };
 
-                                command_items.push(
-                                    CommandItem::new(label_text)
-                                        .value(item.value.clone())
-                                        .disabled(item_disabled)
-                                        .on_select_action(on_select)
-                                        .children(vec![text, icon]),
-                                );
+                                let mut cmd_item = CommandItem::new(label_text)
+                                    .value(item.value.clone())
+                                    .disabled(item_disabled)
+                                    .on_select_action(on_select)
+                                    .children(vec![text, icon]);
+                                if let Some(prefix) = test_id_prefix.as_deref() {
+                                    cmd_item = cmd_item.test_id(format!(
+                                        "{prefix}-item-{}",
+                                        test_id_slug(item.value.as_ref())
+                                    ));
+                                }
+                                command_items.push(cmd_item);
                             }
 
                             CommandList::new(command_items)
@@ -959,6 +1009,7 @@ fn combobox_with_patch<H: UiHost>(
 
         let open_change_reason_model_for_trigger = open_change_reason_model.clone();
         let open_change_reason_model_for_content = open_change_reason_model.clone();
+        let test_id_prefix_for_content = test_id_prefix.clone();
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
@@ -1093,6 +1144,7 @@ fn combobox_with_patch<H: UiHost>(
                     })
                 },
                 move |cx, anchor| {
+                    let test_id_prefix = test_id_prefix_for_content.clone();
                     let open_change_reason_model = open_change_reason_model_for_content.clone();
                     let theme_max_list_h = theme
                         .metric_by_key("component.combobox.max_list_height")
@@ -1140,13 +1192,18 @@ fn combobox_with_patch<H: UiHost>(
                                     host.request_redraw(action_cx.window);
                                 });
 
-                            command_items.push(
-                                CommandItem::new(item.label.clone())
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .checkmark(is_selected)
-                                    .on_select_action(on_select),
-                            );
+                            let mut cmd_item = CommandItem::new(item.label.clone())
+                                .value(item.value.clone())
+                                .disabled(item_disabled)
+                                .checkmark(is_selected)
+                                .on_select_action(on_select);
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                cmd_item = cmd_item.test_id(format!(
+                                    "{prefix}-item-{}",
+                                    test_id_slug(item.value.as_ref())
+                                ));
+                            }
+                            command_items.push(cmd_item);
                         }
 
                         CommandPalette::new(query_model.clone(), command_items)
@@ -1246,13 +1303,18 @@ fn combobox_with_patch<H: UiHost>(
                                 label.into_element(cx)
                             };
 
-                            command_items.push(
-                                CommandItem::new(label_text)
-                                    .value(item.value.clone())
-                                    .disabled(item_disabled)
-                                    .on_select_action(on_select)
-                                    .children(vec![text, icon]),
-                            );
+                            let mut cmd_item = CommandItem::new(label_text)
+                                .value(item.value.clone())
+                                .disabled(item_disabled)
+                                .on_select_action(on_select)
+                                .children(vec![text, icon]);
+                            if let Some(prefix) = test_id_prefix.as_deref() {
+                                cmd_item = cmd_item.test_id(format!(
+                                    "{prefix}-item-{}",
+                                    test_id_slug(item.value.as_ref())
+                                ));
+                            }
+                            command_items.push(cmd_item);
                         }
 
                         CommandList::new(command_items)
