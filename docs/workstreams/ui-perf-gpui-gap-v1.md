@@ -191,6 +191,13 @@ Baseline fact (quick reference):
    - Hypothesis: GPUI keeps invalidation scope tight (subtree diffs) and avoids re-walking “known static” chrome.
    - Fret TODO: tighten layout-root construction and subtree invalidation so a resize does not always imply
      “layout the whole tree” when only a small set of constraints changed.
+   - Current Fret mechanism cost center:
+     - The flow layout engine request/build phase currently walks (and “requests”) the mounted subtree each frame to
+       keep stable identity (`TaffyLayoutEngine::seen` + stale-node GC at `end_frame`).
+     - `TaffyLayoutEngine` still uses hashing-heavy per-frame tables (`HashMap`/`HashSet`) keyed by `NodeId`
+       (a `slotmap` key), which is a strong candidate explanation for
+       `layout_request_build_roots_time_us ~= 2–4ms` under resize drag-jitter.
+     - Direction: M1 “hashing → dense tables” (e.g. `slotmap::SecondaryMap` + generation stamps) in the layout engine.
 
 3) **Per-frame allocation discipline on hot resize frames**
    - GPUI likely relies heavily on per-frame scratch arenas and stable caches; sporadic allocations can manifest as
@@ -202,6 +209,10 @@ Baseline fact (quick reference):
      `TaffyLayoutEngine::set_children`).
      - Implementation: commit `10e30dac1`
      - Evidence: perf log entry `2026-02-09 09:10:11` (drag-jitter worst-case max total `27.5ms → 21.1ms`).
+   - Negative result: a wrapper-chain memoization attempt using a per-build `HashMap` regressed
+     `layout_request_build_roots_time_us` on drag-jitter (commit `96661c49c`).
+     - Evidence: perf log entry `2026-02-09 15:28:00` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+     - Takeaway: prefer the M1 dense-table refactor over adding more per-frame hashed caches.
 
 4) **GPU work scaling with surface area**
    - Even if CPU layout is stable, large resizes can spike GPU cost if we re-rasterize masks, upload atlases, or
