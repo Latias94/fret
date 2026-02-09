@@ -199,10 +199,14 @@ impl AlertDialog {
             );
             let (open_change, open_change_complete) =
                 cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
-                    alert_dialog_open_change_events(state, is_open, motion.present, motion.animating)
+                    alert_dialog_open_change_events(
+                        state,
+                        is_open,
+                        motion.present,
+                        motion.animating,
+                    )
                 });
-            if let (Some(open), Some(on_open_change)) =
-                (open_change, self.on_open_change.as_ref())
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
             {
                 on_open_change(open);
             }
@@ -804,18 +808,15 @@ mod tests {
     fn alert_dialog_open_change_events_emit_change_and_complete_after_settle() {
         let mut state = AlertDialogOpenChangeCallbackState::default();
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, false, false, false);
         assert_eq!(changed, None);
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, true);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, true);
         assert_eq!(changed, Some(true));
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
         assert_eq!(changed, None);
         assert_eq!(completed, Some(true));
     }
@@ -825,8 +826,7 @@ mod tests {
         let mut state = AlertDialogOpenChangeCallbackState::default();
 
         let _ = alert_dialog_open_change_events(&mut state, false, false, false);
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
