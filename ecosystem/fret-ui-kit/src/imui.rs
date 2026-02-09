@@ -152,6 +152,75 @@ pub struct DragResponse {
     pub total: Point,
 }
 
+/// ImGui-style hovered query flags for `ResponseExt` convenience helpers.
+///
+/// This is a facade-level surface intended to keep `fret-authoring::Response` minimal/stable while
+/// still allowing editor-grade hover policies (e.g. tooltip hover over disabled items).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ImUiHoveredFlags(u32);
+
+impl ImUiHoveredFlags {
+    pub const NONE: Self = Self(0);
+
+    /// Return true even when the item is disabled.
+    pub const ALLOW_WHEN_DISABLED: Self = Self(1 << 0);
+
+    /// Return true even when a popup/modal barrier is blocking underlay hit-testing.
+    ///
+    /// This maps to ImGui's `ImGuiHoveredFlags_AllowWhenBlockedByPopup` in the common case where a
+    /// modal barrier is active but the pointer is not currently over any active (non-blocked)
+    /// layer.
+    pub const ALLOW_WHEN_BLOCKED_BY_POPUP: Self = Self(1 << 1);
+
+    /// Disable nav-highlight participation in hovered queries; always query pointer hover.
+    pub const NO_NAV_OVERRIDE: Self = Self(1 << 2);
+
+    /// Tooltip-style hover query preset (ImGui `ForTooltip`).
+    ///
+    /// This is a convenience shorthand that expands to:
+    /// - `STATIONARY`
+    /// - `DELAY_SHORT`
+    /// - `ALLOW_WHEN_DISABLED`
+    pub const FOR_TOOLTIP: Self = Self(1 << 3);
+
+    /// Require a short stationary dwell before reporting hovered.
+    pub const STATIONARY: Self = Self(1 << 4);
+
+    /// Return true immediately (default).
+    pub const DELAY_NONE: Self = Self(1 << 5);
+
+    /// Return true after a short delay (ImGui-style, ~150ms by default).
+    pub const DELAY_SHORT: Self = Self(1 << 6);
+
+    /// Return true after a normal delay (ImGui-style, ~400ms by default).
+    pub const DELAY_NORMAL: Self = Self(1 << 7);
+
+    /// Disable the "shared delay" behavior between adjacent hovered items.
+    /// (ImGui-style).
+    ///
+    /// This is best-effort and applies to pointer hover only (nav-tooltip delay parity is not
+    /// implemented).
+    pub const NO_SHARED_DELAY: Self = Self(1 << 8);
+
+    pub fn contains(self, other: Self) -> bool {
+        (self.0 & other.0) != 0
+    }
+}
+
+impl std::ops::BitOr for ImUiHoveredFlags {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for ImUiHoveredFlags {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
 /// A richer interaction result intended for immediate-mode facade helpers.
 ///
 /// This is a ui-kit-level convenience wrapper: it extends the minimal `fret-authoring::Response`
@@ -160,6 +229,27 @@ pub struct DragResponse {
 pub struct ResponseExt {
     pub core: Response,
     pub id: Option<GlobalElementId>,
+    pub enabled: bool,
+    /// Pointer-hover signal without ImGui-style disabled gating.
+    ///
+    /// When a widget is disabled, `core.hovered` is forced to `false` by `sanitize_response_for_enabled(...)`.
+    /// This field can still carry the raw pointer-hover signal for query helpers like
+    /// `is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)`.
+    pub pointer_hovered_raw: bool,
+    /// Pointer-hover signal available even when popup policy blocks/suppresses hover (best-effort).
+    ///
+    /// This is primarily intended to support ImGui's `AllowWhenBlockedByPopup` hovered query flag.
+    pub pointer_hovered_raw_below_barrier: bool,
+    /// True once the "stationary" dwell timer has elapsed while hovered (best-effort).
+    pub hover_stationary_met: bool,
+    /// True once the short hover delay has elapsed while hovered.
+    pub hover_delay_short_met: bool,
+    /// True once the normal hover delay has elapsed while hovered.
+    pub hover_delay_normal_met: bool,
+    /// True once the short hover delay has elapsed (shared window-scoped timer, best-effort).
+    pub hover_delay_short_shared_met: bool,
+    /// True once the normal hover delay has elapsed (shared window-scoped timer, best-effort).
+    pub hover_delay_normal_shared_met: bool,
     /// True when the item is focused and the window's focus-visible policy indicates keyboard
     /// navigation is active.
     ///
@@ -278,10 +368,87 @@ impl ResponseExt {
 
     /// ImGui-style "hovered" default: pointer-hover OR nav-highlight.
     ///
-    /// Note: this does not currently implement ImGui's hovered flags (e.g.
-    /// `AllowWhenBlockedByPopup`, hover delays, `AllowWhenDisabled`).
+    /// Note: for ImGui-style hovered query flags, use `is_hovered(...)`.
     pub fn hovered_like_imgui(self) -> bool {
-        self.core.hovered || self.nav_highlighted
+        self.is_hovered(ImUiHoveredFlags::NONE)
+    }
+
+    /// ImGui-style `IsItemHovered(flags)` convenience helper.
+    ///
+    /// This is intentionally a facade-only helper: `fret-authoring::Response` remains a minimal,
+    /// stable contract.
+    ///
+    /// Implemented flags:
+    /// - `ALLOW_WHEN_DISABLED`
+    /// - `ALLOW_WHEN_BLOCKED_BY_POPUP` (best-effort; supports popup pointer-occlusion and modal barriers)
+    /// - `NO_NAV_OVERRIDE`
+    /// - `FOR_TOOLTIP` (expands to `STATIONARY | DELAY_SHORT | ALLOW_WHEN_DISABLED`)
+    /// - `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL` (best-effort; uses timers)
+    /// - `NO_SHARED_DELAY` (best-effort; disables shared delay for the query)
+    pub fn is_hovered(self, mut flags: ImUiHoveredFlags) -> bool {
+        if flags.contains(ImUiHoveredFlags::FOR_TOOLTIP) {
+            flags |= ImUiHoveredFlags::STATIONARY;
+            flags |= ImUiHoveredFlags::DELAY_SHORT;
+            flags |= ImUiHoveredFlags::ALLOW_WHEN_DISABLED;
+        }
+
+        let allow_disabled = flags.contains(ImUiHoveredFlags::ALLOW_WHEN_DISABLED);
+        let allow_blocked_by_popup = flags.contains(ImUiHoveredFlags::ALLOW_WHEN_BLOCKED_BY_POPUP);
+        let nav_override = !flags.contains(ImUiHoveredFlags::NO_NAV_OVERRIDE);
+
+        if nav_override && self.nav_highlighted {
+            return true;
+        }
+
+        let mut pointer_hovered = if allow_disabled {
+            self.pointer_hovered_raw
+        } else if self.enabled {
+            self.core.hovered
+        } else {
+            false
+        };
+
+        if allow_blocked_by_popup {
+            let below = if allow_disabled || self.enabled {
+                self.pointer_hovered_raw_below_barrier
+            } else {
+                false
+            };
+            pointer_hovered |= below;
+        }
+
+        if !pointer_hovered {
+            return false;
+        }
+
+        let delay_normal = flags.contains(ImUiHoveredFlags::DELAY_NORMAL);
+        let delay_short = flags.contains(ImUiHoveredFlags::DELAY_SHORT);
+        let stationary = flags.contains(ImUiHoveredFlags::STATIONARY);
+        let no_shared_delay = flags.contains(ImUiHoveredFlags::NO_SHARED_DELAY);
+
+        if delay_normal {
+            let delay_met = if no_shared_delay {
+                self.hover_delay_normal_met
+            } else {
+                self.hover_delay_normal_shared_met || self.hover_delay_normal_met
+            };
+            if !self.hover_stationary_met || !delay_met {
+                return false;
+            }
+        } else if delay_short {
+            let delay_met = if no_shared_delay {
+                self.hover_delay_short_met
+            } else {
+                self.hover_delay_short_shared_met || self.hover_delay_short_met
+            };
+            if !self.hover_stationary_met || !delay_met {
+                return false;
+            }
+        } else if stationary && !self.hover_stationary_met {
+            return false;
+        }
+
+        true
     }
 
     pub fn drag_started(self) -> bool {
@@ -326,6 +493,20 @@ struct ImUiLongPressStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<LongPressSignalState>>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct ImUiSharedHoverDelayState {
+    delay_short_met: bool,
+    delay_normal_met: bool,
+    short_timer: Option<fret_runtime::TimerToken>,
+    normal_timer: Option<fret_runtime::TimerToken>,
+    clear_timer: Option<fret_runtime::TimerToken>,
+}
+
+#[derive(Default)]
+struct ImUiSharedHoverDelayStore {
+    by_window: HashMap<AppWindowId, fret_runtime::Model<ImUiSharedHoverDelayState>>,
+}
+
 #[derive(Default)]
 struct ImUiFloatWindowCollapsedStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<bool>>,
@@ -353,6 +534,22 @@ fn long_press_signal_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(LongPressSignalState::default()))
+                .clone()
+        })
+}
+
+fn shared_hover_delay_model_for_window<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> fret_runtime::Model<ImUiSharedHoverDelayState> {
+    let window = cx.window;
+    cx.app
+        .with_global_mut_untracked(ImUiSharedHoverDelayStore::default, |st, app| {
+            st.by_window
+                .entry(window)
+                .or_insert_with(|| {
+                    app.models_mut()
+                        .insert(ImUiSharedHoverDelayState::default())
+                })
                 .clone()
         })
 }
@@ -725,12 +922,22 @@ const KEY_LONG_PRESSED: u64 = fnv1a64(b"fret-ui-kit.imui.long_pressed.v1");
 const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_requested.v1");
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
+const KEY_HOVER_STATIONARY_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.stationary_met.v1");
+const KEY_HOVER_DELAY_SHORT_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.delay_short_met.v1");
+const KEY_HOVER_DELAY_NORMAL_MET: u64 = fnv1a64(b"fret-ui-kit.imui.hover.delay_normal_met.v1");
 
 // ImGui default: `MouseDragThreshold = 6`.
 const DEFAULT_DRAG_THRESHOLD_PX: f32 = 6.0;
 // ImGui default: `ImGuiStyle::DisabledAlpha = 0.60f`.
 const DEFAULT_DISABLED_ALPHA: f32 = 0.60;
 const LONG_PRESS_DELAY: Duration = Duration::from_millis(450);
+// ImGui defaults:
+// - `HoverStationaryDelay ~= 0.15 sec`
+// - `HoverDelayShort ~= 0.15 sec`
+// - `HoverDelayNormal ~= 0.40 sec`
+const HOVER_STATIONARY_DELAY: Duration = Duration::from_millis(150);
+const HOVER_DELAY_SHORT: Duration = Duration::from_millis(150);
+const HOVER_DELAY_NORMAL: Duration = Duration::from_millis(400);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
 
 #[derive(Default)]
@@ -784,18 +991,8 @@ impl Drop for DisabledScopeGuard {
     }
 }
 
-fn pressable_state_for_enabled(
-    enabled: bool,
-    state: fret_ui::element::PressableState,
-) -> fret_ui::element::PressableState {
-    if enabled {
-        state
-    } else {
-        fret_ui::element::PressableState::default()
-    }
-}
-
 fn sanitize_response_for_enabled(enabled: bool, response: &mut ResponseExt) {
+    response.enabled = enabled;
     if enabled {
         return;
     }
@@ -812,6 +1009,278 @@ fn sanitize_response_for_enabled(enabled: bool, response: &mut ResponseExt) {
     response.context_menu_requested = false;
     response.context_menu_anchor = None;
     response.drag = DragResponse::default();
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct HoverQueryDelayLocalState {
+    stationary_met: bool,
+    delay_short_met: bool,
+    delay_normal_met: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct HoverQueryDelayRead {
+    stationary_met: bool,
+    delay_short_met: bool,
+    delay_normal_met: bool,
+    shared_delay_short_met: bool,
+    shared_delay_normal_met: bool,
+}
+
+fn hover_timer_token_for(kind: u64, element: GlobalElementId) -> fret_runtime::TimerToken {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for b in kind.to_le_bytes() {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3u64);
+    }
+    for b in element.0.to_le_bytes() {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3u64);
+    }
+    fret_runtime::TimerToken(hash)
+}
+
+const HOVER_TIMER_KIND_STATIONARY: u64 = fnv1a64(b"fret-ui-kit.imui.hover.timer.stationary.v1");
+const HOVER_TIMER_KIND_DELAY_SHORT: u64 = fnv1a64(b"fret-ui-kit.imui.hover.timer.delay_short.v1");
+const HOVER_TIMER_KIND_DELAY_NORMAL: u64 = fnv1a64(b"fret-ui-kit.imui.hover.timer.delay_normal.v1");
+
+const SHARED_HOVER_CLEAR_DELAY: Duration = Duration::from_millis(250);
+
+fn shared_hover_delay_on_hover_change(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    hovered: bool,
+    shared_model: &fret_runtime::Model<ImUiSharedHoverDelayState>,
+) {
+    let prev = host
+        .models_mut()
+        .read(shared_model, |st| *st)
+        .ok()
+        .unwrap_or_default();
+
+    if hovered {
+        if let Some(token) = prev.clear_timer {
+            host.push_effect(fret_runtime::Effect::CancelTimer { token });
+        }
+
+        let mut next = prev;
+        next.clear_timer = None;
+
+        if !prev.delay_short_met && prev.short_timer.is_none() {
+            let token = host.next_timer_token();
+            next.short_timer = Some(token);
+            host.push_effect(fret_runtime::Effect::SetTimer {
+                window: Some(action_cx.window),
+                token,
+                after: HOVER_DELAY_SHORT,
+                repeat: None,
+            });
+        }
+
+        if !prev.delay_normal_met && prev.normal_timer.is_none() {
+            let token = host.next_timer_token();
+            next.normal_timer = Some(token);
+            host.push_effect(fret_runtime::Effect::SetTimer {
+                window: Some(action_cx.window),
+                token,
+                after: HOVER_DELAY_NORMAL,
+                repeat: None,
+            });
+        }
+
+        let _ = host.models_mut().update(shared_model, |st| *st = next);
+        return;
+    }
+
+    if prev.clear_timer.is_some() {
+        return;
+    }
+
+    let token = host.next_timer_token();
+    host.push_effect(fret_runtime::Effect::SetTimer {
+        window: Some(action_cx.window),
+        token,
+        after: SHARED_HOVER_CLEAR_DELAY,
+        repeat: None,
+    });
+
+    let mut next = prev;
+    next.clear_timer = Some(token);
+    let _ = host.models_mut().update(shared_model, |st| *st = next);
+}
+
+fn shared_hover_delay_on_timer(
+    host: &mut dyn fret_ui::action::UiFocusActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    token: fret_runtime::TimerToken,
+    shared_model: &fret_runtime::Model<ImUiSharedHoverDelayState>,
+) -> bool {
+    let prev = host
+        .models_mut()
+        .read(shared_model, |st| *st)
+        .ok()
+        .unwrap_or_default();
+
+    if prev.short_timer == Some(token) {
+        let mut next = prev;
+        next.delay_short_met = true;
+        next.short_timer = None;
+        let _ = host.models_mut().update(shared_model, |st| *st = next);
+        host.notify(action_cx);
+        return true;
+    }
+
+    if prev.normal_timer == Some(token) {
+        let mut next = prev;
+        next.delay_normal_met = true;
+        next.normal_timer = None;
+        let _ = host.models_mut().update(shared_model, |st| *st = next);
+        host.notify(action_cx);
+        return true;
+    }
+
+    if prev.clear_timer == Some(token) {
+        if let Some(token) = prev.short_timer {
+            host.push_effect(fret_runtime::Effect::CancelTimer { token });
+        }
+        if let Some(token) = prev.normal_timer {
+            host.push_effect(fret_runtime::Effect::CancelTimer { token });
+        }
+        let _ = host.models_mut().update(shared_model, |st| {
+            *st = ImUiSharedHoverDelayState::default()
+        });
+        host.notify(action_cx);
+        return true;
+    }
+
+    false
+}
+
+fn install_hover_query_hooks_for_pressable<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    hovered_raw: bool,
+    long_press_signal_model: Option<fret_runtime::Model<LongPressSignalState>>,
+) -> HoverQueryDelayRead {
+    let shared_delay_model = shared_hover_delay_model_for_window(cx);
+    let shared_delay_model_for_hover = shared_delay_model.clone();
+    cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+        let stationary = hover_timer_token_for(HOVER_TIMER_KIND_STATIONARY, action_cx.target);
+        let delay_short = hover_timer_token_for(HOVER_TIMER_KIND_DELAY_SHORT, action_cx.target);
+        let delay_normal = hover_timer_token_for(HOVER_TIMER_KIND_DELAY_NORMAL, action_cx.target);
+
+        if hovered {
+            shared_hover_delay_on_hover_change(
+                host,
+                action_cx,
+                true,
+                &shared_delay_model_for_hover,
+            );
+            host.push_effect(fret_runtime::Effect::SetTimer {
+                window: Some(action_cx.window),
+                token: stationary,
+                after: HOVER_STATIONARY_DELAY,
+                repeat: None,
+            });
+            host.push_effect(fret_runtime::Effect::SetTimer {
+                window: Some(action_cx.window),
+                token: delay_short,
+                after: HOVER_DELAY_SHORT,
+                repeat: None,
+            });
+            host.push_effect(fret_runtime::Effect::SetTimer {
+                window: Some(action_cx.window),
+                token: delay_normal,
+                after: HOVER_DELAY_NORMAL,
+                repeat: None,
+            });
+            return;
+        }
+
+        shared_hover_delay_on_hover_change(host, action_cx, false, &shared_delay_model_for_hover);
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: stationary });
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: delay_short });
+        host.push_effect(fret_runtime::Effect::CancelTimer {
+            token: delay_normal,
+        });
+    }));
+
+    let long_press_signal_model_for_timer = long_press_signal_model.clone();
+    let shared_delay_model_for_timer = shared_delay_model.clone();
+    cx.timer_on_timer_for(
+        id,
+        Arc::new(move |host, action_cx, token| {
+            let stationary = hover_timer_token_for(HOVER_TIMER_KIND_STATIONARY, action_cx.target);
+            if token == stationary {
+                host.record_transient_event(action_cx, KEY_HOVER_STATIONARY_MET);
+                host.notify(action_cx);
+                return true;
+            }
+            let delay_short = hover_timer_token_for(HOVER_TIMER_KIND_DELAY_SHORT, action_cx.target);
+            if token == delay_short {
+                host.record_transient_event(action_cx, KEY_HOVER_DELAY_SHORT_MET);
+                host.notify(action_cx);
+                return true;
+            }
+            let delay_normal =
+                hover_timer_token_for(HOVER_TIMER_KIND_DELAY_NORMAL, action_cx.target);
+            if token == delay_normal {
+                host.record_transient_event(action_cx, KEY_HOVER_DELAY_NORMAL_MET);
+                host.notify(action_cx);
+                return true;
+            }
+
+            if shared_hover_delay_on_timer(host, action_cx, token, &shared_delay_model_for_timer) {
+                return true;
+            }
+
+            if let Some(model) = long_press_signal_model_for_timer.as_ref() {
+                return emit_long_press_if_matching(host, action_cx, model, token);
+            }
+
+            false
+        }),
+    );
+
+    let stationary_fired = cx.take_transient_for(id, KEY_HOVER_STATIONARY_MET);
+    let delay_short_fired = cx.take_transient_for(id, KEY_HOVER_DELAY_SHORT_MET);
+    let delay_normal_fired = cx.take_transient_for(id, KEY_HOVER_DELAY_NORMAL_MET);
+
+    let local = cx.with_state_for(id, HoverQueryDelayLocalState::default, |st| {
+        if stationary_fired {
+            st.stationary_met = true;
+        }
+        if delay_short_fired {
+            st.delay_short_met = true;
+        }
+        if delay_normal_fired {
+            st.delay_normal_met = true;
+        }
+
+        // Reset the delay state when the element is not hovered by the runtime.
+        // Query flags like `ALLOW_WHEN_DISABLED` may still read `pointer_hovered_raw`.
+        if !hovered_raw {
+            *st = HoverQueryDelayLocalState::default();
+        }
+
+        *st
+    });
+
+    let shared = cx
+        .read_model(
+            &shared_delay_model,
+            fret_ui::Invalidation::Paint,
+            |_app, st| (st.delay_short_met, st.delay_normal_met),
+        )
+        .unwrap_or((false, false));
+
+    HoverQueryDelayRead {
+        stationary_met: local.stationary_met,
+        delay_short_met: local.delay_short_met,
+        delay_normal_met: local.delay_normal_met,
+        shared_delay_short_met: shared.0,
+        shared_delay_normal_met: shared.1,
+    }
 }
 
 fn drag_threshold_sq_for<H: UiHost>(cx: &ElementContext<'_, H>) -> f32 {
@@ -1432,7 +1901,7 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
                 cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
                 vec![cx.opacity(alpha, |cx| {
-                    vec![cx.interactivity_gate(true, false, |cx| {
+                    vec![cx.focus_traversal_gate(false, |cx| {
                         let mut out = Vec::new();
                         let mut ui = ImUiFacade {
                             cx,
@@ -1975,7 +2444,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
                     cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
                     vec![cx.opacity(alpha, |cx| {
-                        vec![cx.interactivity_gate(true, false, |cx| build_children(cx))]
+                        vec![cx.focus_traversal_gate(false, |cx| build_children(cx))]
                     })]
                 }))
             }
@@ -2819,10 +3288,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
-            let mut stack = fret_ui::element::StackProps::default();
-            stack.layout.size.width = Length::Fill;
-            stack.layout.size.height = Length::Auto;
-
+            let response = &mut response;
             let mut panel = ContainerProps::default();
             panel.layout.size.width = Length::Fill;
             panel.layout.size.height = Length::Auto;
@@ -2840,7 +3306,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let role = role;
             let checked = checked;
 
-            cx.stack_props(stack, |cx| {
+            let mut stack = fret_ui::element::StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Auto;
+
+            cx.stack_props(stack, move |cx| {
                 let visuals = cx.container(panel, move |cx| {
                     let mut row = RowProps::default();
                     row.layout.size.width = Length::Fill;
@@ -2893,12 +3363,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     ..Default::default()
                 };
 
-                let pressable = cx.pressable_with_id(props, |cx, state, id| {
+                let pressable = cx.pressable_with_id(props, move |cx, state, id| {
                     cx.pressable_clear_on_pointer_down();
                     cx.pressable_clear_on_pointer_up();
                     cx.key_clear_on_key_down_for(id);
-
-                    let state = pressable_state_for_enabled(enabled, state);
 
                     if enabled {
                         let close_popup = close_popup.clone();
@@ -2971,7 +3439,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     response.id = Some(id);
                     response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                     response.core.rect = cx.last_bounds_for_element(id);
-                    sanitize_response_for_enabled(enabled, &mut response);
+                    let hover_delay = install_hover_query_hooks_for_pressable(
+                        cx,
+                        id,
+                        state.hovered_raw,
+                        /* long_press_signal_model */ None,
+                    );
+                    response.pointer_hovered_raw = state.hovered_raw;
+                    response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+                    response.hover_stationary_met = hover_delay.stationary_met;
+                    response.hover_delay_short_met = hover_delay.delay_short_met;
+                    response.hover_delay_normal_met = hover_delay.delay_normal_met;
+                    response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+                    response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                    sanitize_response_for_enabled(enabled, response);
 
                     Vec::<AnyElement>::new()
                 });
@@ -3018,6 +3499,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let response = &mut response;
             let enabled = !imui_is_disabled(cx);
             let mut props = fret_ui::element::PressableProps::default();
             props.enabled = enabled;
@@ -3028,7 +3510,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 ..Default::default()
             };
 
-            cx.pressable_with_id(props, |cx, state, id| {
+            cx.pressable_with_id(props, move |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
@@ -3037,22 +3519,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
                 let long_press_signal_model = long_press_signal_model_for(cx, id);
-                let long_press_signal_model_for_timer = long_press_signal_model.clone();
                 let long_press_signal_model_for_down = long_press_signal_model.clone();
                 let long_press_signal_model_for_move = long_press_signal_model.clone();
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
-
-                cx.timer_on_timer_for(
-                    id,
-                    Arc::new(move |host, action_cx, token| {
-                        emit_long_press_if_matching(
-                            host,
-                            action_cx,
-                            &long_press_signal_model_for_timer,
-                            token,
-                        )
-                    }),
-                );
 
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
@@ -3235,7 +3704,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     });
                 }
                 response.core.rect = cx.last_bounds_for_element(id);
-                sanitize_response_for_enabled(enabled, &mut response);
+                let hover_delay = install_hover_query_hooks_for_pressable(
+                    cx,
+                    id,
+                    state.hovered_raw,
+                    Some(long_press_signal_model.clone()),
+                );
+                response.pointer_hovered_raw = state.hovered_raw;
+                response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+                response.hover_stationary_met = hover_delay.stationary_met;
+                response.hover_delay_short_met = hover_delay.delay_short_met;
+                response.hover_delay_normal_met = hover_delay.delay_normal_met;
+                response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+                response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                sanitize_response_for_enabled(enabled, response);
 
                 vec![cx.text(label.clone())]
             })
@@ -3255,6 +3737,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let response = &mut response;
             let enabled = !imui_is_disabled(cx);
             let value = cx
                 .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
@@ -3270,7 +3753,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 ..Default::default()
             };
 
-            cx.pressable_with_id(props, |cx, state, id| {
+            let label_for_visuals = label.clone();
+            cx.pressable_with_id(props, move |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
@@ -3279,22 +3763,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
                 let long_press_signal_model = long_press_signal_model_for(cx, id);
-                let long_press_signal_model_for_timer = long_press_signal_model.clone();
                 let long_press_signal_model_for_down = long_press_signal_model.clone();
                 let long_press_signal_model_for_move = long_press_signal_model.clone();
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
-
-                cx.timer_on_timer_for(
-                    id,
-                    Arc::new(move |host, action_cx, token| {
-                        emit_long_press_if_matching(
-                            host,
-                            action_cx,
-                            &long_press_signal_model_for_timer,
-                            token,
-                        )
-                    }),
-                );
 
                 let model = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -3476,14 +3947,27 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     });
                 }
                 response.core.rect = cx.last_bounds_for_element(id);
-                sanitize_response_for_enabled(enabled, &mut response);
+                let hover_delay = install_hover_query_hooks_for_pressable(
+                    cx,
+                    id,
+                    state.hovered_raw,
+                    Some(long_press_signal_model.clone()),
+                );
+                response.pointer_hovered_raw = state.hovered_raw;
+                response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+                response.hover_stationary_met = hover_delay.stationary_met;
+                response.hover_delay_short_met = hover_delay.delay_short_met;
+                response.hover_delay_normal_met = hover_delay.delay_normal_met;
+                response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+                response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                sanitize_response_for_enabled(enabled, response);
 
                 let prefix: Arc<str> = if value {
                     Arc::from("[x] ")
                 } else {
                     Arc::from("[ ] ")
                 };
-                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+                vec![cx.text(Arc::from(format!("{prefix}{label_for_visuals}")))]
             })
         });
 
@@ -3527,6 +4011,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
+            let response = &mut response;
             let enabled = options.enabled && !imui_is_disabled(cx);
             let value = cx
                 .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
@@ -3541,7 +4026,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             );
             props.a11y.test_id = options.test_id.clone();
 
-            cx.pressable_with_id(props, |cx, state, id| {
+            let label_for_visuals = label.clone();
+            cx.pressable_with_id(props, move |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
@@ -3563,14 +4049,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.core.rect = cx.last_bounds_for_element(id);
-                sanitize_response_for_enabled(enabled, &mut response);
+                let hover_delay =
+                    install_hover_query_hooks_for_pressable(cx, id, state.hovered_raw, None);
+                response.pointer_hovered_raw = state.hovered_raw;
+                response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+                response.hover_stationary_met = hover_delay.stationary_met;
+                response.hover_delay_short_met = hover_delay.delay_short_met;
+                response.hover_delay_normal_met = hover_delay.delay_normal_met;
+                response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+                response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                sanitize_response_for_enabled(enabled, response);
 
                 let prefix: Arc<str> = if value {
                     Arc::from("[on] ")
                 } else {
                     Arc::from("[off] ")
                 };
-                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+                vec![cx.text(Arc::from(format!("{prefix}{label_for_visuals}")))]
             })
         });
 
@@ -3601,6 +4096,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         let step = options.step;
 
         let element = self.with_cx_mut(|cx| {
+            let response = &mut response;
             let enabled = options.enabled && !imui_is_disabled(cx);
             let mut props = PressableProps::default();
             props.enabled = enabled;
@@ -3615,7 +4111,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 ..Default::default()
             };
 
-            cx.pressable_with_id(props, |cx, state, id| {
+            let label_for_visuals = label.clone();
+            cx.pressable_with_id(props, move |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
@@ -3737,9 +4234,18 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.id = Some(id);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.core.rect = cx.last_bounds_for_element(id);
-                sanitize_response_for_enabled(enabled, &mut response);
+                let hover_delay =
+                    install_hover_query_hooks_for_pressable(cx, id, state.hovered_raw, None);
+                response.pointer_hovered_raw = state.hovered_raw;
+                response.pointer_hovered_raw_below_barrier = state.hovered_raw_below_barrier;
+                response.hover_stationary_met = hover_delay.stationary_met;
+                response.hover_delay_short_met = hover_delay.delay_short_met;
+                response.hover_delay_normal_met = hover_delay.delay_normal_met;
+                response.hover_delay_short_shared_met = hover_delay.shared_delay_short_met;
+                response.hover_delay_normal_shared_met = hover_delay.shared_delay_normal_met;
+                sanitize_response_for_enabled(enabled, response);
 
-                vec![cx.text(Arc::from(format!("{label}: {current:.2}")))]
+                vec![cx.text(Arc::from(format!("{label_for_visuals}: {current:.2}")))]
             })
         });
 
@@ -3894,6 +4400,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .unwrap_or_default();
 
                 response.id = Some(id);
+                response.enabled = enabled;
                 response.core.focused = enabled && cx.is_focused_element(id);
                 response.core.changed = enabled && text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);
@@ -3941,6 +4448,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .unwrap_or_default();
 
                 response.id = Some(id);
+                response.enabled = enabled;
                 response.core.focused = enabled && cx.is_focused_element(id);
                 response.core.changed = enabled && text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);

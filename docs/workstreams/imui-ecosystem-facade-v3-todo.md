@@ -115,21 +115,46 @@ Exit criteria:
   - Evidence (token + default): `ecosystem/fret-ui-kit/src/theme_tokens.rs` (`component.imui.drag_threshold_px`),
     `ecosystem/fret-ui-kit/src/imui.rs` (`DEFAULT_DRAG_THRESHOLD_PX = 6.0`, `drag_threshold_sq_for`).
   - Evidence (test): `ecosystem/fret-imui/src/lib.rs` (`drag_threshold_metric_controls_drag_start`).
-- [ ] IMUIECO3-resp-020 Decide whether to expose ImGui-style hovered query flags (or document divergence).
+- [x] IMUIECO3-resp-020 Expose a facade-only ImGui-style hovered query helper (`ImGuiHoveredFlags_` subset).
   - Reference: `repo-ref/imgui/imgui.h` (`enum ImGuiHoveredFlags_`, incl. `AllowWhenDisabled`, `AllowWhenBlockedByPopup`,
     `DelayShort/DelayNormal`, `ForTooltip`, `NoNavOverride`).
   - Reference: `repo-ref/imgui/imgui.cpp` (`IsItemHovered` implements nav-highlight participation, delay gating, and disabled gating).
-  - Evidence (current Fret behavior): `ecosystem/fret-authoring/src/lib.rs` (`Response.hovered` is a single boolean),
-    `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt.core.hovered` is pointer-hover driven by canonical pressable state).
-  - Note: recommended direction is to keep `Response` stable/minimal and add a facade-only helper surface (e.g. `hovered_for_tooltip`)
-    if upstream-like defaults are important for editor UX.
+  - Decision: keep `fret-authoring::Response` stable/minimal; add a facade-only query helper surface on `ResponseExt`.
+  - Implemented flags (best-effort):
+    - `ALLOW_WHEN_DISABLED`: query hover even when the facade suppresses `core.hovered` for disabled widgets.
+    - `ALLOW_WHEN_BLOCKED_BY_POPUP`: query hover even when popup policy suppresses hover (pointer occlusion / modal barriers).
+    - `NO_NAV_OVERRIDE`: do not treat nav-highlight as hovered.
+    - `FOR_TOOLTIP`: expands to `STATIONARY | DELAY_SHORT | ALLOW_WHEN_DISABLED`.
+    - `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL`: hover intent gating via element-owned timers.
+    - `NO_SHARED_DELAY`: disables the window-scoped shared delay for the query (best-effort).
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags`, `ResponseExt::is_hovered`).
+  - Evidence (mechanism): `crates/fret-ui/src/tree/dispatch.rs` (raw hovered pressable target selection),
+    `crates/fret-ui/src/elements/cx.rs` (`PressableState.hovered_raw`) + `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`,
+    `hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled`,
+    `hovered_allow_when_blocked_by_popup_reads_underlay_hit_test`).
 - [x] IMUIECO3-resp-021 Add a scoped disable helper aligned with ImGui `BeginDisabled` (and define how it affects responses).
   - Reference: `repo-ref/imgui/imgui.h` (`BeginDisabled`) + `repo-ref/imgui/imgui.cpp` (`BeginDisabled`, `EndDisabled`).
   - Decision: disabled items are inert and report `hovered=false` / `pressed=false` / `focused=false` / `clicked=false` by default
-    (ImGui-style). Tooltip-style queries that allow hover when disabled are deferred to `IMUIECO3-resp-020`.
+    (ImGui-style). Use `ResponseExt::is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)` when you need hover queries for disabled items.
   - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `begin_disabled`).
   - Evidence (policy): `ecosystem/fret-ui-kit/src/imui.rs` (`sanitize_response_for_enabled`, `component.imui.disabled_alpha`).
   - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
+- [x] IMUIECO3-resp-022 Fill remaining `ImGuiHoveredFlags_` gaps (popup blocking + delays/stationary).
+  - Reference: `repo-ref/imgui/imgui.h` (`AllowWhenBlockedByPopup`, `DelayShort/DelayNormal`, `Stationary`, `ForTooltip`).
+  - Evidence (API): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiHoveredFlags`, `ResponseExt::is_hovered`).
+  - Evidence (mechanism): `crates/fret-ui/src/tree/dispatch.rs` (hover allow-when-blocked target selection),
+    `ecosystem/fret-ui-kit/src/imui.rs` (`install_hover_query_hooks_for_pressable`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`hovered_allow_when_blocked_by_popup_reads_underlay_hit_test`,
+    `hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled`).
+- [x] IMUIECO3-resp-023 Implement ImGui-style "shared hover delay" semantics (best-effort).
+  - Reference: `repo-ref/imgui/imgui.h` (`ImGuiHoveredFlags_NoSharedDelay`, `ImGuiHoveredFlags_DelayShort/DelayNormal`)
+    + `repo-ref/imgui/imgui.cpp` (`ImGui::IsItemHovered` shared delay timer logic).
+  - Decision: add a window-scoped shared delay store to better match ImGui tooltip hand-feel, and keep `NO_SHARED_DELAY` as an
+    escape hatch for query-time behavior.
+  - Evidence (mechanism): `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiSharedHoverDelayState`, `shared_hover_delay_on_hover_change`,
+    `install_hover_query_hooks_for_pressable`).
+  - Evidence (tests): `ecosystem/fret-imui/src/lib.rs` (`no_shared_delay_disables_window_scoped_hover_delay_sharing`).
 
 ---
 

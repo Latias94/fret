@@ -70,7 +70,37 @@ Legend:
 - **Basic signals** (`hovered`, `pressed`, `focused`, `clicked`, `changed`): **Partial**
   - Fret: stable minimal contract in `fret-authoring::Response` plus `fret-ui-kit::imui::ResponseExt`.
   - ImGui: `IsItemHovered/Active/Focused/Clicked` plus status flags and per-query flags.
-  - Gap: ImGui’s per-query flags (e.g. `AllowWhenBlockedByPopup`, `AllowWhenDisabled`, hover delays) have no direct surface today.
+  - Status: `ResponseExt::is_hovered(ImUiHoveredFlags)` exposes a **subset** of ImGui-style per-query hover behavior.
+  - Status details:
+    - `AllowWhenBlockedByPopup` is implemented (best-effort) via raw hover signals that bypass popup blocking.
+    - Hover delays (`DelayShort/DelayNormal`) and stationary gating are implemented (best-effort) via element-owned timers.
+  - Remaining gaps: most of `ImGuiHoveredFlags_` (window/root/child hierarchy flags, overlap rules, active-item suppression, etc.)
+    are not implemented. Shared hover delay is implemented (best-effort) but still diverges from ImGui details.
+
+#### 1.2.1 `IsItemHovered()` flag parity notes
+
+This section focuses on `repo-ref/imgui/imgui.h` (`enum ImGuiHoveredFlags_`) + `repo-ref/imgui/imgui.cpp` (`ImGui::IsItemHovered`).
+
+Implemented (best-effort, `ResponseExt::is_hovered(ImUiHoveredFlags)`):
+
+- `ImGuiHoveredFlags_AllowWhenDisabled`
+- `ImGuiHoveredFlags_NoNavOverride`
+- `ImGuiHoveredFlags_AllowWhenBlockedByPopup`
+- `ImGuiHoveredFlags_Stationary`
+- `ImGuiHoveredFlags_DelayShort`
+- `ImGuiHoveredFlags_DelayNormal`
+- `ImGuiHoveredFlags_ForTooltip`
+
+Not implemented / diverging (explicitly):
+
+- `ImGuiHoveredFlags_AllowWhenBlockedByActiveItem`: ImGui can suppress hovered when another item is active (dragging) unless this flag is set. The current `imui` facade does not implement an equivalent "active item blocks other hover" policy.
+- `ImGuiHoveredFlags_AllowWhenOverlappedByItem`: ImGui has special overlap semantics for items using AllowOverlap mode. The current `imui` facade has no AllowOverlap submission mode.
+- `ImGuiHoveredFlags_AllowWhenOverlappedByWindow`: would require querying hover through unrelated overlay windows/layers, which is generally unsafe for editor-grade overlay stacks.
+- `ImGuiHoveredFlags_RectOnly`: not mirrored. Prefer using explicit hit-test primitives (`pointer_region`, `hit_test_passthrough`) if you need custom rect-only hover checks.
+- `ImGuiHoveredFlags_DelayNone`: default behavior in Fret is immediate; no explicit flag is exposed.
+- `ImGuiHoveredFlags_NoSharedDelay`: implemented (best-effort) as a query-time escape hatch:
+  `ImUiHoveredFlags::NO_SHARED_DELAY` ignores the window-scoped shared delay and only considers per-element delay timers.
+  This does not currently mirror ImGui's "reset shared timer on hovered ID change" side effect.
 - **Nav-highlight participates in hovered**: **Partial**
   - ImGui: `IsItemHovered()` can return true when keyboard/gamepad nav highlight is on the item (unless overridden).
   - Fret: `Response.hovered` remains pointer-hover driven, but `ResponseExt` now exposes `nav_highlighted` and a
@@ -85,9 +115,9 @@ Legend:
     number `component.imui.disabled_alpha` (default `0.60`).
   - Response contract: disabled items suppress interaction signals by default (`hovered=false`, `pressed=false`, `focused=false`,
     `clicked=false`, `changed=false`, and `hovered_like_imgui()==false`).
-  - Known gap: there is no ImGui-style per-query override (e.g. `ImGuiHoveredFlags_AllowWhenDisabled`) yet; see `IMUIECO3-resp-020`.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `sanitize_response_for_enabled`) + `ecosystem/fret-imui/src/lib.rs`
-    (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
+  - ImGui-style per-query override: `ResponseExt::is_hovered(ImUiHoveredFlags::ALLOW_WHEN_DISABLED)` (facade-only).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`disabled_scope`, `sanitize_response_for_enabled`, `ImUiHoveredFlags`,
+    `ResponseExt::is_hovered`) + `ecosystem/fret-imui/src/lib.rs` (`disabled_scope_blocks_underlay_and_suppresses_hover_and_click`).
 
 ### 1.4 Identity / ID stack ergonomics
 

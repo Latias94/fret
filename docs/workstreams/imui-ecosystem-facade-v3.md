@@ -94,10 +94,12 @@ Known gaps vs ImGui (tracked in this v3 TODO):
 - No ID-stack ergonomics (`PushID`-style nesting, `"##"` / `"###"` label parsing) at the facade level; callers must
   explicitly scope identity with `ui.push_id(...)` / `ui.keyed(...)`.
 - `Response.core.hovered` remains pointer-hover driven, but `ResponseExt` now exposes an explicit `nav_highlighted`
-  signal and a `hovered_like_imgui()` helper (pointer-hover OR nav-highlight). Remaining gap: no
-  ImGui-style hovered query flags (`ImGuiHoveredFlags_*`).
-- Hovered query flags (`ImGuiHoveredFlags_*`) remain a gap. The facade does not yet provide ImGui-style overrides like
-  `AllowWhenDisabled` for tooltip-style queries.
+  signal and a `hovered_like_imgui()` helper (pointer-hover OR nav-highlight).
+- A facade-only hovered query helper exists: `ResponseExt::is_hovered(ImUiHoveredFlags)` implements a subset of
+  ImGui-style hovered query flags (notably `ALLOW_WHEN_DISABLED`, `ALLOW_WHEN_BLOCKED_BY_POPUP`, `NO_NAV_OVERRIDE`,
+  `NO_SHARED_DELAY`, and hover intent gating via `STATIONARY` / `DELAY_SHORT` / `DELAY_NORMAL` / `FOR_TOOLTIP`).
+  A window-scoped shared hover delay is implemented (best-effort) to match ImGui tooltip hand-feel.
+  Remaining gaps include most of `ImGuiHoveredFlags_` (window/root hierarchy flags, overlap rules, active-item suppression).
 - Scoped disable helper is available (`disabled_scope` / `begin_disabled`), and disabled items suppress interaction
   signals by default (`hovered=false`, `clicked=false`, etc.).
 - Drag threshold is expressed as a theme metric knob (`component.imui.drag_threshold_px`, default `6px`).
