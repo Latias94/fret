@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::time::{Duration, Instant};
 
+use fret_diag_protocol::{DevtoolsBundleDumpedV1, DevtoolsSessionListV1, UiScriptResultV1};
+
 use zip::write::FileOptions;
 
 pub mod api;
@@ -23,6 +25,7 @@ use compare::{
     read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
     scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
 };
+use devtools::DevtoolsOps;
 use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
     check_redraw_hitches_max_total_ms, check_resource_footprint_thresholds,
@@ -242,6 +245,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut renderdoc_after_frames: Option<u32> = None;
     let mut renderdoc_markers: Vec<String> = Vec::new();
     let mut renderdoc_no_outputs_png: bool = false;
+    let mut devtools_ws_url: Option<String> = None;
+    let mut devtools_token: Option<String> = None;
+    let mut devtools_session_id: Option<String> = None;
 
     fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
         if env.iter().any(|(k, _v)| k == key) {
@@ -333,6 +339,30 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --script-result-trigger-path".to_string());
                 };
                 script_result_trigger_path = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--devtools-ws-url" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --devtools-ws-url".to_string());
+                };
+                devtools_ws_url = Some(v);
+                i += 1;
+            }
+            "--devtools-token" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --devtools-token".to_string());
+                };
+                devtools_token = Some(v);
+                i += 1;
+            }
+            "--devtools-session-id" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --devtools-session-id".to_string());
+                };
+                devtools_session_id = Some(v);
                 i += 1;
             }
             "--pick-trigger-path" => {
@@ -1674,6 +1704,223 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let use_devtools_ws = devtools_ws_url.is_some()
+                || devtools_token.is_some()
+                || devtools_session_id.is_some();
+            if use_devtools_ws {
+                if launch.is_some() || reuse_launch {
+                    return Err(
+                        "--launch/--reuse-launch is not supported with --devtools-ws-url"
+                            .to_string(),
+                    );
+                }
+                if wants_pack {
+                    return Err("--pack is not supported with --devtools-ws-url yet".to_string());
+                }
+
+                let ws_url = devtools_ws_url.clone().ok_or_else(|| {
+                    "missing --devtools-ws-url (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+                let token = devtools_token.clone().ok_or_else(|| {
+                    "missing --devtools-token (required when using DevTools WS transport)"
+                        .to_string()
+                })?;
+
+                std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
+                let script_json =
+                    serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
+                        .map_err(|e| e.to_string())?;
+
+                let wants_post_run_checks = check_stale_paint_test_id.is_some()
+                    || check_stale_scene_test_id.is_some()
+                    || check_idle_no_paint_min.is_some()
+                    || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_torture_geom_fallbacks_low
+                    || check_ui_gallery_code_editor_torture_read_only_blocks_edits
+                    || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
+                    || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
+                    || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
+                    || check_ui_gallery_markdown_editor_source_word_boundary
+                    || check_ui_gallery_web_ime_bridge_enabled
+                    || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
+                    || check_ui_gallery_markdown_editor_source_a11y_composition
+                    || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
+                    || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+                    || check_ui_gallery_markdown_editor_source_folds_toggle_stable
+                    || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                    || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
+                    || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
+                    || check_ui_gallery_markdown_editor_source_inlays_present
+                    || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+                    || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present
+                    || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
+                    || check_ui_gallery_code_editor_torture_inlays_present
+                    || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
+                    || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_semantics_changed_repainted
+                    || check_wheel_scroll_test_id.is_some()
+                    || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
+                    || check_vlist_visible_range_refreshes_min.is_some()
+                    || check_vlist_visible_range_refreshes_max.is_some()
+                    || check_vlist_window_shifts_explainable
+                    || check_vlist_window_shifts_have_prepaint_actions
+                    || check_vlist_window_shifts_non_retained_max.is_some()
+                    || check_vlist_window_shifts_prefetch_max.is_some()
+                    || check_vlist_window_shifts_escape_max.is_some()
+                    || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
+                    || check_layout_fast_path_min.is_some()
+                    || check_drag_cache_root_paint_only_test_id.is_some()
+                    || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
+                    || !check_notify_hotspot_file_max.is_empty()
+                    || check_view_cache_reuse_min.is_some()
+                    || check_view_cache_reuse_stable_min.is_some()
+                    || check_overlay_synthesis_min.is_some()
+                    || check_viewport_input_min.is_some()
+                    || check_dock_drag_min.is_some()
+                    || check_viewport_capture_min.is_some()
+                    || check_retained_vlist_reconcile_no_notify_min.is_some()
+                    || check_retained_vlist_attach_detach_max.is_some()
+                    || check_retained_vlist_keep_alive_reuse_min.is_some()
+                    || check_retained_vlist_keep_alive_budget.is_some();
+
+                let (result, bundle_path) = run_script_over_devtools_ws(
+                    &resolved_out_dir,
+                    ws_url.as_str(),
+                    token.as_str(),
+                    devtools_session_id.as_deref(),
+                    script_json,
+                    wants_post_run_checks,
+                    timeout_ms,
+                    poll_ms,
+                )?;
+
+                let _ = write_json_value(
+                    &resolved_script_result_path,
+                    &serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({})),
+                );
+
+                if !matches!(result.stage, fret_diag_protocol::UiScriptStageV1::Passed) {
+                    eprintln!(
+                        "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                        src.display(),
+                        result.run_id,
+                        result.step_index.unwrap_or(0),
+                        result.reason.as_deref().unwrap_or("unknown"),
+                        result.last_bundle_dir.as_deref().unwrap_or("")
+                    );
+                    std::process::exit(1);
+                }
+
+                if wants_post_run_checks {
+                    let Some(bundle_path) = bundle_path.as_ref() else {
+                        return Err(
+                            "script passed but no bundle.json was captured (required for post-run checks)"
+                                .to_string(),
+                        );
+                    };
+                    apply_post_run_checks(
+                        bundle_path,
+                        &resolved_out_dir,
+                        check_idle_no_paint_min,
+                        check_stale_paint_test_id.as_deref(),
+                        check_stale_paint_eps,
+                        check_stale_scene_test_id.as_deref(),
+                        check_stale_scene_eps,
+                        check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_torture_geom_fallbacks_low,
+                        check_ui_gallery_code_editor_torture_read_only_blocks_edits,
+                        check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+                        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
+                        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
+                        check_ui_gallery_markdown_editor_source_word_boundary,
+                        check_ui_gallery_web_ime_bridge_enabled,
+                        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
+                        check_ui_gallery_markdown_editor_source_a11y_composition,
+                        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
+                        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
+                        check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
+                        check_ui_gallery_markdown_editor_source_inlays_present,
+                        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present,
+                        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
+                        check_ui_gallery_code_editor_torture_inlays_present,
+                        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
+                        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
+                        check_semantics_changed_repainted,
+                        dump_semantics_changed_repainted_json,
+                        check_wheel_scroll_test_id.as_deref(),
+                        check_wheel_scroll_hit_changes_test_id.as_deref(),
+                        check_prepaint_actions_min,
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
+                        check_vlist_visible_range_refreshes_min,
+                        check_vlist_visible_range_refreshes_max,
+                        check_vlist_window_shifts_explainable,
+                        check_vlist_window_shifts_have_prepaint_actions,
+                        check_vlist_window_shifts_non_retained_max,
+                        check_vlist_window_shifts_prefetch_max,
+                        check_vlist_window_shifts_escape_max,
+                        check_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
+                        check_layout_fast_path_min,
+                        check_drag_cache_root_paint_only_test_id.as_deref(),
+                        check_hover_layout_max,
+                        check_gc_sweep_liveness,
+                        &check_notify_hotspot_file_max,
+                        check_view_cache_reuse_stable_min,
+                        check_view_cache_reuse_min,
+                        check_overlay_synthesis_min,
+                        check_viewport_input_min,
+                        check_dock_drag_min,
+                        check_viewport_capture_min,
+                        check_retained_vlist_reconcile_no_notify_min,
+                        check_retained_vlist_attach_detach_max,
+                        check_retained_vlist_keep_alive_reuse_min,
+                        check_retained_vlist_keep_alive_budget,
+                        warmup_frames,
+                    )?;
+                }
+                return Ok(());
+            }
             let script_wants_screenshots = script_requests_screenshots(&src);
             let mut run_launch_env = launch_env.clone();
             let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
@@ -8118,6 +8365,155 @@ fn matrix_launch_env(
     Ok(env)
 }
 
+fn devtools_sanitize_export_dir_name(raw: &str) -> String {
+    std::path::Path::new(raw)
+        .file_name()
+        .and_then(|v| v.to_str())
+        .filter(|s| !s.is_empty())
+        .unwrap_or("bundle")
+        .to_string()
+}
+
+fn devtools_select_session_id(
+    list: &DevtoolsSessionListV1,
+    want: Option<&str>,
+) -> Result<String, String> {
+    if let Some(want) = want {
+        if list.sessions.iter().any(|s| s.session_id == want) {
+            return Ok(want.to_string());
+        }
+        let known = list
+            .sessions
+            .iter()
+            .map(|s| s.session_id.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "unknown --devtools-session-id: {want} (known: {known})"
+        ));
+    }
+
+    if list.sessions.len() == 1 {
+        return Ok(list.sessions[0].session_id.clone());
+    }
+
+    let web_apps = list
+        .sessions
+        .iter()
+        .filter(|s| s.client_kind == "web_app")
+        .collect::<Vec<_>>();
+    if web_apps.len() == 1 {
+        return Ok(web_apps[0].session_id.clone());
+    }
+
+    let known = list
+        .sessions
+        .iter()
+        .map(|s| format!("{}({})", s.session_id, s.client_kind))
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "multiple DevTools sessions available; pass --devtools-session-id (sessions: {known})"
+    ))
+}
+
+fn run_script_over_devtools_ws(
+    out_dir: &Path,
+    ws_url: &str,
+    token: &str,
+    session_id: Option<&str>,
+    script_json: serde_json::Value,
+    dump_bundle: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Result<(UiScriptResultV1, Option<PathBuf>), String> {
+    use crate::transport::{
+        ClientKindV1, DevtoolsWsClientConfig, ToolingDiagClient, WsDiagTransportConfig,
+    };
+
+    fn wait_for_message<T>(
+        devtools: &DevtoolsOps,
+        timeout_ms: u64,
+        poll_ms: u64,
+        mut decode: impl FnMut(fret_diag_protocol::DiagTransportMessageV1) -> Option<T>,
+    ) -> Result<T, String> {
+        let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+        loop {
+            while let Some(msg) = devtools.try_recv() {
+                if let Some(v) = decode(msg) {
+                    return Ok(v);
+                }
+            }
+            if Instant::now() >= deadline {
+                return Err("timed out waiting for DevTools WS message".to_string());
+            }
+            std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
+        }
+    }
+
+    let mut cfg = DevtoolsWsClientConfig::with_defaults(ws_url.to_string(), token.to_string());
+    cfg.client_kind = ClientKindV1::Tooling;
+    cfg.capabilities = vec![
+        "inspect".to_string(),
+        "pick".to_string(),
+        "scripts".to_string(),
+        "bundles".to_string(),
+        "sessions".to_string(),
+    ];
+    let client = ToolingDiagClient::connect_ws(WsDiagTransportConfig::native(cfg))?;
+    let devtools = DevtoolsOps::new(client);
+
+    let sessions = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "session.list" {
+            return None;
+        }
+        serde_json::from_value::<DevtoolsSessionListV1>(msg.payload).ok()
+    })?;
+
+    let selected_session_id = devtools_select_session_id(&sessions, session_id)?;
+    devtools.set_default_session_id(Some(selected_session_id.clone()));
+
+    devtools.script_run_value(None, script_json);
+    let result = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "script.result" || msg.session_id.as_deref() != Some(&selected_session_id)
+        {
+            return None;
+        }
+        serde_json::from_value::<UiScriptResultV1>(msg.payload).ok()
+    })?;
+
+    if !dump_bundle {
+        return Ok((result, None));
+    }
+
+    devtools.bundle_dump(None, Some("diag-run"));
+    let dumped = wait_for_message(&devtools, timeout_ms, poll_ms, |msg| {
+        if msg.r#type != "bundle.dumped" || msg.session_id.as_deref() != Some(&selected_session_id)
+        {
+            return None;
+        }
+        serde_json::from_value::<DevtoolsBundleDumpedV1>(msg.payload).ok()
+    })?;
+
+    let export_dir_name = devtools_sanitize_export_dir_name(&dumped.dir);
+    let export_dir = out_dir.join(&export_dir_name);
+    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+    let bundle = dumped.bundle.clone().ok_or_else(|| {
+        "bundle.dumped did not include an embedded bundle payload (set diagnostics to embed bundles)"
+            .to_string()
+    })?;
+    let bundle_path = export_dir.join("bundle.json");
+    write_json_value(&bundle_path, &bundle)?;
+    let dumped_path = export_dir.join("bundle.dumped.json");
+    write_json_value(
+        &dumped_path,
+        &serde_json::to_value(&dumped).unwrap_or_else(|_| serde_json::json!({})),
+    )?;
+    let _ = std::fs::write(out_dir.join("latest.txt"), export_dir_name.as_bytes());
+
+    Ok((result, Some(bundle_path)))
+}
+
 fn run_script_suite_collect_bundles(
     scripts: &[PathBuf],
     paths: &ResolvedScriptPaths,
@@ -9405,6 +9801,7 @@ mod tests {
         check_bundle_for_windowed_rows_offset_changes_min, json_pointer_set,
         scan_semantics_changed_repainted_json,
     };
+    use fret_diag_protocol::{DevtoolsSessionDescriptorV1, DevtoolsSessionListV1};
     use serde_json::json;
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -13507,6 +13904,62 @@ mod tests {
         let err = check_bundle_for_ui_gallery_web_ime_bridge_enabled_json(&bundle, &bundle_path, 0)
             .unwrap_err();
         assert!(err.contains("ui-gallery web-ime bridge gate failed"));
+    }
+
+    #[test]
+    fn devtools_sanitize_export_dir_name_takes_file_name() {
+        assert_eq!(
+            devtools_sanitize_export_dir_name("1700000-bundle"),
+            "1700000-bundle"
+        );
+        assert_eq!(devtools_sanitize_export_dir_name("a/b/c"), "c");
+        assert_eq!(devtools_sanitize_export_dir_name(""), "bundle");
+    }
+
+    #[test]
+    fn devtools_select_session_id_prefers_single_web_app_when_multiple() {
+        let list = DevtoolsSessionListV1 {
+            sessions: vec![
+                DevtoolsSessionDescriptorV1 {
+                    session_id: "s-native".to_string(),
+                    client_kind: "native_app".to_string(),
+                    client_version: "1".to_string(),
+                    capabilities: Vec::new(),
+                },
+                DevtoolsSessionDescriptorV1 {
+                    session_id: "s-web".to_string(),
+                    client_kind: "web_app".to_string(),
+                    client_version: "1".to_string(),
+                    capabilities: Vec::new(),
+                },
+            ],
+        };
+        assert_eq!(
+            devtools_select_session_id(&list, None).unwrap(),
+            "s-web".to_string()
+        );
+    }
+
+    #[test]
+    fn devtools_select_session_id_requires_explicit_when_ambiguous() {
+        let list = DevtoolsSessionListV1 {
+            sessions: vec![
+                DevtoolsSessionDescriptorV1 {
+                    session_id: "s1".to_string(),
+                    client_kind: "native_app".to_string(),
+                    client_version: "1".to_string(),
+                    capabilities: Vec::new(),
+                },
+                DevtoolsSessionDescriptorV1 {
+                    session_id: "s2".to_string(),
+                    client_kind: "native_app".to_string(),
+                    client_version: "1".to_string(),
+                    capabilities: Vec::new(),
+                },
+            ],
+        };
+        let err = devtools_select_session_id(&list, None).unwrap_err();
+        assert!(err.contains("multiple DevTools sessions available"));
     }
 
     #[test]
