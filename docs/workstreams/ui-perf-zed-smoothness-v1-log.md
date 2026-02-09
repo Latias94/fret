@@ -8162,3 +8162,55 @@ Notes:
 - The `ui-resize-probes` `drag-jitter` script can still produce rare, near-threshold tail attempts on a busy system.
   For “do-not-regress” gating, prefer `--attempts 5` until we eliminate the underlying hitch class and can tighten
   the baseline again.
+
+## 2026-02-09 09:10:11 (commit `10e30dac1`)
+
+Change:
+- Reduce layout tree build allocations by:
+  - avoiding `UiTree::children(...).to_vec()` clones in the flow builder, and
+  - avoiding cloning the previous children vec in `TaffyLayoutEngine::set_children`.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): FAIL (passes=1/3; required=2).
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.10e30dac1.20260209-0240
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/summary.json`
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.10e30dac1.20260209-0240/summary.json`
+
+Results (us; selected pass attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18531 | 18663 | 18663 | 9610 | 2280 | 9031 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15976 | 16337 | 16337 | 9707 | 2323 | 6567 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 13348 | 15242 | 15242 | 1993 | 362 | 13808 |
+
+Tail delta (drag-jitter; max across runs; baseline pass attempt vs worst-case attempt):
+- Baseline run (commit `6c82ba58c`, `target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1`):
+  - `max total`: `27464`
+  - `max layout`: `16146`
+  - `max solve`: `4492`
+  - `max paint`: `11188`
+- This run (commit `10e30dac1`, `target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1`):
+  - `max total`: `21083` (−23%)
+  - `max layout`: `12454` (−23%)
+  - `max solve`: `2354` (−48%)
+  - `max paint`: `8927` (−20%)
+
+Worst bundles (for tail attribution):
+- Baseline drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.baseline.20260209-0200/attempt-1/1770595376269-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- This run drag-jitter (worst run): `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.10e30dac1.20260209-0225/attempt-1/1770598036992-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The steady-state medians for resize probes are already close to the baseline; this change primarily reduces
+  avoidable allocation and helps pull down the worst-case `drag-jitter` tail attempt.
+- `ui-resize-probes` still has intermittent tail failures when checked against the strict v3 baseline. Next steps:
+  investigate why view-cache roots are often not marked for reuse in resize probes, and consider cutting a new v4
+  baseline validated under idle conditions (or adding headroom policy for `drag-jitter`) once the hitch class is
+  explained and addressed.

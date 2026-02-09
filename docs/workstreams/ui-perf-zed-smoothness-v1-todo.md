@@ -64,6 +64,10 @@ Conventions:
     - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
       `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
     - Fix `element_path=null` during cache-hit frames by touching debug-identity ancestor chains (commit `e46b8df08`).
+  - [x] Reduce flow layout build allocations (avoid `UiTree::children(...).to_vec()` clones; avoid cloning the
+    previous children vec in `TaffyLayoutEngine::set_children`).
+    - Implementation: commit `10e30dac1`.
+    - Evidence: perf log entry `2026-02-09 09:10:11` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).

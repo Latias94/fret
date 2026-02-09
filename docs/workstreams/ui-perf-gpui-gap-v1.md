@@ -188,6 +188,11 @@ Baseline fact (quick reference):
      rare tail hitches even when p90 looks fine.
    - Fret TODO: track allocation and cache miss reasons directly in resize bundles (already partially available via
      layout and view-cache counters) and close remaining blind spots.
+   - Recent win: reduce avoidable allocations in the flow layout request/build phase (no more
+     `UiTree::children(...).to_vec()` clones in flow build; avoid cloning the previous children vec in
+     `TaffyLayoutEngine::set_children`).
+     - Implementation: commit `10e30dac1`
+     - Evidence: perf log entry `2026-02-09 09:10:11` (drag-jitter worst-case max total `27.5ms → 21.1ms`).
 
 4) **GPU work scaling with surface area**
    - Even if CPU layout is stable, large resizes can spike GPU cost if we re-rasterize masks, upload atlases, or
