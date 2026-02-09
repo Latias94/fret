@@ -72,6 +72,7 @@ Preferred evidence loop (commit-addressable):
 |---|---|---:|---|
 | `CodeEditorHandle` | `set_language` | Done | `perf(fret-code-editor): make set_language idempotent` (commit `1778ba563`) + perf log entry `2026-02-09 12:34:16` |
 | `CodeEditorHandle` | `set_line_folds`, `set_line_inlays` | Done | `perf(fret-code-editor): make fold/inlay setters idempotent` (commit `007006b28`) + perf log entry `2026-02-09 13:46:46` |
+| `TextArea` | `set_text` | Done | `perf(fret-ui): make TextArea::set_text idempotent` (commit TBD) |
 
 ## Next
 
