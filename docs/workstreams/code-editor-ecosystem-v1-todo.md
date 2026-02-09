@@ -336,6 +336,7 @@ Markdown Editor v0”).
     - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
     - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json`
     - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json`
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json`
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_word_boundary`).
 - [x] Add a soft-wrap editing regression: selection mapping remains stable under wrap while editing (not just toggles).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`.

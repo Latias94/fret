@@ -278,6 +278,7 @@ Diagnostics gates (baseline set; add more as needed):
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-inlays-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-inlays-soft-wrap-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`
 - Fold/inlay decoration sanity (ADR 0200; present under wrap; suppressed under inline preedit):
