@@ -1003,7 +1003,6 @@ impl Menubar {
 #[derive(Default)]
 struct MenubarMenuState {
     open: Option<Model<bool>>,
-    close_prevent_auto_focus: Option<Model<bool>>,
     keyboard_focus_last_on_open: Option<Model<bool>>,
 }
 
@@ -1181,17 +1180,6 @@ impl MenubarMenuEntries {
                 open
             };
 
-            let close_prevent_auto_focus =
-                cx.with_state(MenubarMenuState::default, |st| st.close_prevent_auto_focus.clone());
-            let close_prevent_auto_focus = if let Some(model) = close_prevent_auto_focus {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state(MenubarMenuState::default, |st| {
-                    st.close_prevent_auto_focus = Some(model.clone())
-                });
-                model
-            };
             let keyboard_focus_last_on_open = cx.with_state(MenubarMenuState::default, |st| {
                 st.keyboard_focus_last_on_open.clone()
             });
@@ -1326,12 +1314,6 @@ impl MenubarMenuEntries {
                     .layout()
                     .copied()
                     .unwrap_or(false);
-                if is_open {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&close_prevent_auto_focus, |v| *v = false);
-                }
                 let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                     cx,
                     is_open,
@@ -1387,54 +1369,14 @@ impl MenubarMenuEntries {
                     let side_offset = self.menu.side_offset;
                     let window_margin = self.menu.window_margin;
                     let typeahead_timeout_ticks = self.menu.typeahead_timeout_ticks;
-                    let on_dismiss_request: Option<fret_ui::action::OnDismissRequest> = {
-                        let open_for_dismiss = open.clone();
-                        let close_prevent_auto_focus_for_dismiss = close_prevent_auto_focus.clone();
-                        let user_on_dismiss_request = on_dismiss_request.clone();
-                        Some(Arc::new(
-                            move |host: &mut dyn fret_ui::action::UiActionHost,
-                                  cx: fret_ui::action::ActionCx,
-                                  req: &mut fret_ui::action::DismissRequestCx| {
-                                let prevent_auto_focus = matches!(
-                                    req.reason,
-                                    fret_ui::action::DismissReason::OutsidePress { .. }
-                                        | fret_ui::action::DismissReason::FocusOutside
-                                );
-                                let _ = host.models_mut().update(
-                                    &close_prevent_auto_focus_for_dismiss,
-                                    |v| *v = prevent_auto_focus,
-                                );
-
-                                if let Some(user) = user_on_dismiss_request.as_ref() {
-                                    user(host, cx, req);
-                                }
-
-                                if !req.default_prevented() {
-                                    let _ =
-                                        host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                                }
-                            },
-                        ))
-                    };
-                    let on_close_auto_focus: Option<fret_ui::action::OnCloseAutoFocus> = {
-                        let close_prevent_auto_focus_for_hook = close_prevent_auto_focus.clone();
-                        on_close_auto_focus.clone().or_else(|| {
-                            Some(Arc::new(
-                                move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                                      _cx: fret_ui::action::ActionCx,
-                                      req: &mut fret_ui::action::AutoFocusRequestCx| {
-                                    let prevent = host
-                                        .models_mut()
-                                        .read(&close_prevent_auto_focus_for_hook, |v| *v)
-                                        .ok()
-                                        .unwrap_or(false);
-                                    if prevent {
-                                        req.prevent_default();
-                                    }
-                                },
-                            ))
-                        })
-                    };
+                    let (on_dismiss_request, on_close_auto_focus) =
+                        menu::root::menu_close_auto_focus_guard_hooks(
+                            cx,
+                            menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal),
+                            open.clone(),
+                            on_dismiss_request.clone(),
+                            on_close_auto_focus.clone(),
+                        );
                     let group_active = group_active;
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
