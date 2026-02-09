@@ -48,7 +48,15 @@ fn filter_visual_maps_for_series(
 /// Splits a multi-grid `ChartSpec` into multiple single-grid `ChartSpec`s.
 ///
 /// This is a pragmatic UI adapter helper for the current v1 rendering stack, which assumes a
-/// single viewport per chart. Each returned `ChartSpec`:
+/// single viewport per chart.
+///
+/// Current (v1): `fret-chart` hosts one `ChartEngine` per grid and lays multiple canvases out in
+/// the UI (see `crate::retained::multi_grid` and `crate::declarative::multi_grid`).
+///
+/// Target: a single engine instance owns per-grid viewports/layout and emits deterministic per-grid
+/// outputs (workstream milestone M1: `docs/workstreams/delinea-engine-contract-closure-v1.md`).
+///
+/// Each returned `ChartSpec`:
 /// - keeps all datasets (shared),
 /// - keeps exactly one grid,
 /// - filters axes/series/dataZoom/visualMap to what is reachable from that grid.

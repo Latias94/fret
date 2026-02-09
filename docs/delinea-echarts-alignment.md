@@ -503,12 +503,22 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - General transform graph with cached node outputs + derived columns (ECharts-class dataset transforms).
 - `[~]` Multi-grid layout (multiple independent grids in one chart).
   - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
-    The current UI adapter workaround renders multi-grid charts by splitting the `ChartSpec` into multiple single-grid charts (one viewport per chart) and laying them out side-by-side/stacked.
+
+    - Current (v1): the UI adapter renders multi-grid charts by splitting the `ChartSpec` into multiple
+      single-grid charts (one viewport per chart), hosting one `ChartEngine` per grid, and laying them out
+      side-by-side/stacked. This keeps the engine contract surface single-viewport, but it prevents
+      engine-owned cross-grid routing (crosshair / zoom / tooltip / brush linking) and makes per-grid
+      ordering/routing rules harder to lock.
+    - Target: a single `ChartEngine` instance owns per-grid viewport/layout carriers (spec/model/output) and
+      emits deterministic per-grid outputs and routing surfaces. The adapter becomes a pure layout+input
+      router over engine-owned per-grid outputs (see workstream M1).
   - Evidence:
     - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
     - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
     - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
+    - `ecosystem/fret-chart/src/declarative/multi_grid.rs` (declarative multi-canvas builder)
     - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
+    - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
 - Category axis indexing under zoom for non-bar series (S4).
 - VisualMap: multiple maps per series and per-item attribute pipelines (S7).
 - Series-specific LOD / downsampling policies + conformance harness (S8).

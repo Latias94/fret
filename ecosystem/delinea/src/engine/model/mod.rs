@@ -66,6 +66,7 @@ impl ModelRevisions {
 pub struct ChartModel {
     pub id: ChartId,
     pub viewport: Option<Rect>,
+    pub plot_viewports_by_grid: BTreeMap<GridId, Rect>,
 
     pub datasets: BTreeMap<DatasetId, DatasetModel>,
     pub grids: BTreeMap<GridId, GridModel>,
@@ -90,6 +91,7 @@ impl ChartModel {
         let mut model = Self {
             id: spec.id,
             viewport: spec.viewport,
+            plot_viewports_by_grid: BTreeMap::default(),
             datasets: BTreeMap::default(),
             grids: BTreeMap::default(),
             axes: BTreeMap::default(),

@@ -10,6 +10,7 @@ use crate::engine::lod::{
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
+use crate::ids::GridId;
 use crate::ids::SeriesId;
 use crate::ids::StackId;
 use crate::ids::series_mark_id;
@@ -298,7 +299,7 @@ impl MarksStage {
         stack_dims: &StackDimsStage,
         bar_layout: &BarLayoutStage,
         participation: &ParticipationState,
-        viewport: Rect,
+        plot_viewports_by_grid: &BTreeMap<GridId, Rect>,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
         marks: &mut MarkTree,
@@ -314,6 +315,14 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             }
+
+            let viewport = model
+                .axes
+                .get(&series.x_axis)
+                .and_then(|axis| plot_viewports_by_grid.get(&axis.grid))
+                .copied()
+                .or_else(|| plot_viewports_by_grid.values().next().copied())
+                .unwrap_or_default();
 
             let table = datasets.dataset(series.dataset);
             let Some(table) = table else {

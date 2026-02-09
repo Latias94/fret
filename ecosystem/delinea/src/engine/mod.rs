@@ -9,7 +9,7 @@ use crate::engine::stages::{
     BarLayoutStage, FilterProcessorStage, MarksStage, NearestXIndexKey, NearestXIndexStage,
     OrdinalIndexStage, StackDimsStage,
 };
-use crate::ids::{ChartId, Revision};
+use crate::ids::{ChartId, GridId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
@@ -75,6 +75,7 @@ pub struct DataZoomXState {
 pub struct ChartOutput {
     pub revision: Revision,
     pub viewport: Option<Rect>,
+    pub plot_viewports_by_grid: BTreeMap<GridId, Rect>,
     pub marks: MarkTree,
     pub axis_windows: BTreeMap<crate::ids::AxisId, window::DataWindow>,
     pub link_events: Vec<LinkEvent>,
@@ -108,12 +109,17 @@ pub struct HoverHit {
 pub enum EngineError {
     #[allow(dead_code)]
     MissingViewport,
+    #[allow(dead_code)]
+    MissingPlotViewport { grid: GridId },
 }
 
 impl core::fmt::Display for EngineError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::MissingViewport => write!(f, "missing viewport"),
+            Self::MissingPlotViewport { grid } => {
+                write!(f, "missing plot viewport for grid {grid:?}")
+            }
         }
     }
 }
@@ -955,7 +961,61 @@ impl ChartEngine {
         mut budget: WorkBudget,
     ) -> Result<StepResult, EngineError> {
         self.output.viewport = self.model.viewport;
-        if self.output.viewport.is_none() {
+        self.output.plot_viewports_by_grid.clear();
+        let grid_ids: Vec<GridId> = self.model.grids.keys().copied().collect();
+        if grid_ids.is_empty() {
+            if self.output.viewport.is_none() {
+                return Err(EngineError::MissingViewport);
+            }
+        } else {
+            for grid in &grid_ids {
+                if let Some(vp) = self.model.plot_viewports_by_grid.get(grid).copied() {
+                    self.output.plot_viewports_by_grid.insert(*grid, vp);
+                }
+            }
+
+            if self.output.plot_viewports_by_grid.len() != grid_ids.len() {
+                let Some(chart_viewport) = self.output.viewport else {
+                    for grid in &grid_ids {
+                        if !self.output.plot_viewports_by_grid.contains_key(grid) {
+                            return Err(EngineError::MissingPlotViewport { grid: *grid });
+                        }
+                    }
+                    unreachable!("covered by per-grid viewport check");
+                };
+
+                let grid_count = grid_ids.len().max(1);
+                let origin = chart_viewport.origin;
+                let total_w = chart_viewport.size.width.0.max(0.0);
+                let total_h = chart_viewport.size.height.0.max(0.0);
+                let cell_h = if grid_count == 0 {
+                    total_h
+                } else {
+                    total_h / (grid_count as f32)
+                };
+
+                for (i, grid) in grid_ids.iter().copied().enumerate() {
+                    if self.output.plot_viewports_by_grid.contains_key(&grid) {
+                        continue;
+                    }
+                    let y = origin.y.0 + cell_h * (i as f32);
+                    let h = if i + 1 == grid_count {
+                        (origin.y.0 + total_h - y).max(0.0)
+                    } else {
+                        cell_h.max(0.0)
+                    };
+                    let rect =
+                        Rect::new(Point::new(origin.x, Px(y)), Size::new(Px(total_w), Px(h)));
+                    self.output.plot_viewports_by_grid.insert(grid, rect);
+                }
+            }
+        }
+
+        if self.output.viewport.is_none() && grid_ids.len() == 1 {
+            let grid = grid_ids[0];
+            self.output.viewport = self.output.plot_viewports_by_grid.get(&grid).copied();
+        }
+        if self.output.viewport.is_none() && self.output.plot_viewports_by_grid.is_empty() {
             return Err(EngineError::MissingViewport);
         }
 
@@ -1140,7 +1200,6 @@ impl ChartEngine {
         self.stats.stage_visual_runs += 1;
         self.stats.stage_marks_runs += 1;
 
-        let viewport = self.output.viewport.unwrap();
         let done = if xy_weak_filter_pending {
             false
         } else {
@@ -1152,7 +1211,7 @@ impl ChartEngine {
                 &self.stack_dims_stage,
                 &self.bar_layout_stage,
                 &self.participation,
-                viewport,
+                &self.output.plot_viewports_by_grid,
                 &mut budget,
                 &mut self.lod_scratch,
                 &mut self.output.marks,
@@ -1216,17 +1275,38 @@ impl ChartEngine {
                 self.axis_pointer_cache.output = None;
 
                 if let Some(spec) = axis_pointer {
-                    let viewport = self.output.viewport.unwrap_or_default();
-                    if rect_contains_point(viewport, hover_px) {
+                    let raw_hit = hit_test::hover_hit_test(
+                        &self.model,
+                        &self.datasets,
+                        &self.output.marks,
+                        hover_px,
+                        &self.stack_dims_stage,
+                    );
+
+                    let mut hovered_grid_viewport: Option<Rect> = None;
+                    if let Some(hit) = raw_hit {
+                        if let Some(series) = self.model.series.get(&hit.series)
+                            && let Some(x_axis) = self.model.axes.get(&series.x_axis)
+                        {
+                            hovered_grid_viewport = self
+                                .output
+                                .plot_viewports_by_grid
+                                .get(&x_axis.grid)
+                                .copied();
+                        }
+                    }
+                    if hovered_grid_viewport.is_none() {
+                        hovered_grid_viewport = self
+                            .output
+                            .plot_viewports_by_grid
+                            .values()
+                            .find(|rect| rect_contains_point(**rect, hover_px))
+                            .copied();
+                    }
+
+                    if let Some(viewport) = hovered_grid_viewport {
                         match spec.trigger {
                             AxisPointerTrigger::Item => {
-                                let raw_hit = hit_test::hover_hit_test(
-                                    &self.model,
-                                    &self.datasets,
-                                    &self.output.marks,
-                                    hover_px,
-                                    &self.stack_dims_stage,
-                                );
                                 let output = compute_item_axis_pointer_output(
                                     &self.model,
                                     hover_px,
@@ -1237,13 +1317,6 @@ impl ChartEngine {
                                 self.axis_pointer_cache.output = output;
                             }
                             AxisPointerTrigger::Axis => {
-                                let raw_hit = hit_test::hover_hit_test(
-                                    &self.model,
-                                    &self.datasets,
-                                    &self.output.marks,
-                                    hover_px,
-                                    &self.stack_dims_stage,
-                                );
                                 let output = compute_axis_axis_pointer_output(
                                     &self.model,
                                     &self.datasets,

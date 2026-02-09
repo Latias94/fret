@@ -3919,7 +3919,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 Ok(step) => {
                     unfinished = step.unfinished;
                 }
-                Err(EngineError::MissingViewport) => {
+                Err(EngineError::MissingViewport | EngineError::MissingPlotViewport { .. }) => {
                     unfinished = false;
                 }
             }

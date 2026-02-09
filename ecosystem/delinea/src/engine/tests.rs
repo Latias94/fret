@@ -89,6 +89,258 @@ fn basic_spec() -> ChartSpec {
 }
 
 #[test]
+fn multi_grid_plot_viewports_route_mark_mapping_by_grid() {
+    use crate::engine::model::{ChartPatch, PatchMode};
+    use crate::text::{TextMeasurer, TextMetrics};
+
+    #[derive(Debug, Default)]
+    struct NullTextMeasurer;
+
+    impl TextMeasurer for NullTextMeasurer {
+        fn measure(
+            &mut self,
+            _text: crate::ids::StringId,
+            _style: crate::text::TextStyleId,
+        ) -> TextMetrics {
+            TextMetrics::default()
+        }
+    }
+
+    fn rect_contains_point(rect: Rect, point: Point) -> bool {
+        let x0 = rect.origin.x.0;
+        let y0 = rect.origin.y.0;
+        let x1 = x0 + rect.size.width.0;
+        let y1 = y0 + rect.size.height.0;
+        point.x.0 >= x0 && point.x.0 <= x1 && point.y.0 >= y0 && point.y.0 <= y1
+    }
+
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let grid_a = crate::ids::GridId::new(1);
+    let grid_b = crate::ids::GridId::new(2);
+
+    let x_a = crate::ids::AxisId::new(1);
+    let y_a = crate::ids::AxisId::new(2);
+    let x_b = crate::ids::AxisId::new(3);
+    let y_b = crate::ids::AxisId::new(4);
+
+    let s_a = crate::ids::SeriesId::new(1);
+    let s_b = crate::ids::SeriesId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: None,
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
+        axes: vec![
+            AxisSpec {
+                id: x_a,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_a,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x_b,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_b,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: s_a,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_a,
+                y_axis: y_a,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: s_b,
+                name: None,
+                kind: SeriesKind::Scatter,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_b,
+                y_axis: y_b,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    let viewport_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    let viewport_b = Rect::new(
+        Point::new(Px(200.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    let mut patch = ChartPatch::default();
+    patch
+        .plot_viewports_by_grid
+        .insert(grid_a, Some(viewport_a));
+    patch
+        .plot_viewports_by_grid
+        .insert(grid_b, Some(viewport_b));
+    engine.apply_patch(patch, PatchMode::Merge).unwrap();
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..32 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let output = engine.output();
+    assert_eq!(
+        output.plot_viewports_by_grid.get(&grid_a).copied(),
+        Some(viewport_a)
+    );
+    assert_eq!(
+        output.plot_viewports_by_grid.get(&grid_b).copied(),
+        Some(viewport_b)
+    );
+
+    let mut a_points: Vec<Point> = Vec::new();
+    let mut b_points: Vec<Point> = Vec::new();
+    for node in &output.marks.nodes {
+        let series = match node.source_series {
+            Some(s) => s,
+            None => continue,
+        };
+        let out = if series == s_a {
+            &mut a_points
+        } else if series == s_b {
+            &mut b_points
+        } else {
+            continue;
+        };
+
+        match &node.payload {
+            MarkPayloadRef::Points(p) => {
+                out.extend(p.points.clone().map(|i| output.marks.arena.points[i]));
+            }
+            MarkPayloadRef::Polyline(p) => {
+                out.extend(p.points.clone().map(|i| output.marks.arena.points[i]));
+            }
+            MarkPayloadRef::Rect(r) => {
+                out.extend(
+                    r.rects
+                        .clone()
+                        .map(|i| output.marks.arena.rects[i])
+                        .map(|rect| rect.origin),
+                );
+            }
+            MarkPayloadRef::Text(t) => {
+                out.push(t.rect.origin);
+            }
+            MarkPayloadRef::Group(_) => {}
+        }
+    }
+
+    assert!(!a_points.is_empty());
+    assert!(!b_points.is_empty());
+    for p in a_points {
+        assert!(rect_contains_point(viewport_a, p));
+    }
+    for p in b_points {
+        assert!(rect_contains_point(viewport_b, p));
+    }
+
+    let before_windows = output.axis_windows.clone();
+
+    engine.apply_action(Action::SetAxisWindowPercent {
+        axis: x_a,
+        range: Some((25.0, 75.0)),
+    });
+    for _ in 0..32 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let after_windows = engine.output().axis_windows.clone();
+    assert_ne!(before_windows.get(&x_a), after_windows.get(&x_a));
+    assert_eq!(before_windows.get(&x_b), after_windows.get(&x_b));
+}
+
+#[test]
 fn bar_emits_rect_batch() {
     let dataset_id = crate::ids::DatasetId::new(1);
     let grid_id = crate::ids::GridId::new(1);
