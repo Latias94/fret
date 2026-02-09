@@ -2638,6 +2638,11 @@ impl SidebarMenuSubButton {
                     .w_full()
                     .h_px(sidebar_menu_sub_button_h(&theme)),
             ),
+            key_activation: if a11y_role == SemanticsRole::Link {
+                fret_ui::element::PressableKeyActivation::EnterOnly
+            } else {
+                Default::default()
+            },
             a11y: fret_ui::element::PressableA11y {
                 role: Some(a11y_role),
                 label: Some(label.clone()),
@@ -2936,6 +2941,11 @@ impl SidebarMenuButton {
                 &theme,
                 LayoutRefinement::default().w_full().h_px(MetricRef::Px(h)),
             ),
+            key_activation: if a11y_role == SemanticsRole::Link {
+                fret_ui::element::PressableKeyActivation::EnterOnly
+            } else {
+                Default::default()
+            },
             a11y: fret_ui::element::PressableA11y {
                 role: Some(a11y_role),
                 label: Some(label.clone()),
