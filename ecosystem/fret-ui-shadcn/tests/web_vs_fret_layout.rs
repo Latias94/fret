@@ -47,6 +47,8 @@ mod chart;
 mod chart_scaffold;
 #[path = "web_vs_fret_layout/dashboard.rs"]
 mod dashboard;
+#[path = "web_vs_fret_layout/empty.rs"]
+mod empty;
 #[path = "web_vs_fret_layout/field.rs"]
 mod field;
 #[path = "web_vs_fret_layout/form.rs"]
@@ -55,6 +57,12 @@ mod form;
 mod input;
 #[path = "web_vs_fret_layout/kbd.rs"]
 mod kbd;
+#[path = "web_vs_fret_layout/native_select.rs"]
+mod native_select;
+#[path = "web_vs_fret_layout/radio_group.rs"]
+mod radio_group;
+#[path = "web_vs_fret_layout/resizable.rs"]
+mod resizable;
 #[path = "web_vs_fret_layout/scroll.rs"]
 mod scroll;
 #[path = "web_vs_fret_layout/shell.rs"]
@@ -63,8 +71,14 @@ mod shell;
 mod sidebar;
 #[path = "web_vs_fret_layout/skeleton.rs"]
 mod skeleton;
+#[path = "web_vs_fret_layout/switch.rs"]
+mod switch;
 #[path = "web_vs_fret_layout/table.rs"]
 mod table;
+#[path = "web_vs_fret_layout/textarea.rs"]
+mod textarea;
+#[path = "web_vs_fret_layout/triggers.rs"]
+mod triggers;
 #[path = "web_vs_fret_layout/typography.rs"]
 mod typography;
 
@@ -1720,86 +1734,6 @@ fn overlap_area(a: Rect, b: Rect) -> f32 {
     w * h
 }
 
-#[test]
-fn web_vs_fret_layout_trigger_heights_match_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_trigger_height_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutTriggerHeightCase> =
-        serde_json::from_str(raw).expect("layout trigger height fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!("layout trigger height case={}", case.id);
-        let web = read_web_golden(&case.web_name);
-        let theme = web_theme(&web);
-        let web_trigger = web_find_by_tag_and_text(&theme.root, "button", &case.label)
-            .unwrap_or_else(|| {
-                panic!(
-                    "web trigger missing: web={} label={}",
-                    case.web_name, case.label
-                )
-            });
-
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-        );
-
-        let snap = match case.recipe {
-            LayoutTriggerHeightRecipe::PlainButton => run_fret_root(bounds, |cx| {
-                vec![fret_ui_shadcn::Button::new(case.label.clone()).into_element(cx)]
-            }),
-            LayoutTriggerHeightRecipe::DrawerTrigger => run_fret_root(bounds, |cx| {
-                use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
-
-                let open: Model<bool> = cx.app.models_mut().insert(false);
-                vec![Drawer::new(open).into_element(
-                    cx,
-                    |cx| {
-                        Button::new(case.label.clone())
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
-                )]
-            }),
-            LayoutTriggerHeightRecipe::DialogTrigger => run_fret_root(bounds, |cx| {
-                use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
-
-                let open: Model<bool> = cx.app.models_mut().insert(false);
-                vec![Dialog::new(open).into_element(
-                    cx,
-                    |cx| {
-                        Button::new(case.label.clone())
-                            .variant(ButtonVariant::Outline)
-                            .into_element(cx)
-                    },
-                    |cx| DialogContent::new(Vec::new()).into_element(cx),
-                )]
-            }),
-        };
-
-        let trigger = find_semantics(&snap, SemanticsRole::Button, Some(&case.label))
-            .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
-            .unwrap_or_else(|| {
-                panic!(
-                    "missing fret trigger semantics: web={} label={}",
-                    case.web_name, case.label
-                )
-            });
-
-        assert_close_px(
-            &format!("{} trigger height", case.web_name),
-            trigger.bounds.size.height,
-            web_trigger.rect.h,
-            1.0,
-        );
-    }
-}
-
 fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect, tol: f32) {
     assert_close_px(&format!("{web_name} {label} x"), fret.origin.x, web.x, tol);
     assert_close_px(
@@ -2529,339 +2463,6 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
 }
 
 #[test]
-fn web_vs_fret_layout_switch_demo_geometry_matches_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_switch_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutSwitchCase> =
-        serde_json::from_str(raw).expect("layout switch fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!("layout switch case={}", case.id);
-        let web = read_web_golden(&case.web_name);
-        let theme = web_theme(&web);
-        let web_switch = find_first(&theme.root, &|n| {
-            n.tag == "button"
-                && n.attrs.get("role").is_some_and(|r| r == "switch")
-                && n.attrs.get("aria-checked").is_some_and(|v| v == "false")
-        })
-        .expect("web switch");
-
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-        );
-
-        match case.recipe {
-            LayoutSwitchRecipe::TrackSize => {
-                let snap = run_fret_root(bounds, |cx| {
-                    let model: Model<bool> = cx.app.models_mut().insert(false);
-                    vec![
-                        fret_ui_shadcn::Switch::new(model)
-                            .a11y_label("Switch")
-                            .into_element(cx),
-                    ]
-                });
-
-                let switch = find_semantics(&snap, SemanticsRole::Switch, Some("Switch"))
-                    .or_else(|| find_semantics(&snap, SemanticsRole::Switch, None))
-                    .expect("fret switch semantics node");
-
-                assert_close_px(
-                    "switch width",
-                    switch.bounds.size.width,
-                    web_switch.rect.w,
-                    1.0,
-                );
-                assert_close_px(
-                    "switch height",
-                    switch.bounds.size.height,
-                    web_switch.rect.h,
-                    1.0,
-                );
-            }
-            LayoutSwitchRecipe::ThumbOffsetUnchecked => {
-                let web_thumb = find_first(web_switch, &|n| {
-                    n.tag == "span"
-                        && n.attrs
-                            .get("data-state")
-                            .is_some_and(|state| state == "unchecked")
-                        && (n.rect.w - 16.0).abs() <= 0.2
-                        && (n.rect.h - 16.0).abs() <= 0.2
-                })
-                .expect("web switch thumb");
-
-                let (snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
-                    let model: Model<bool> = cx.app.models_mut().insert(false);
-                    vec![
-                        fret_ui_shadcn::Switch::new(model)
-                            .a11y_label("Switch")
-                            .into_element(cx),
-                    ]
-                });
-
-                let switch = find_semantics(&snap, SemanticsRole::Switch, Some("Switch"))
-                    .or_else(|| find_semantics(&snap, SemanticsRole::Switch, None))
-                    .expect("fret switch semantics");
-                let switch_bounds = switch.bounds;
-
-                let mut track_rect: Option<Rect> = None;
-                let mut best_track_score = 0.0f32;
-                let mut thumb_rect: Option<Rect> = None;
-                let mut best_thumb_score = 0.0f32;
-
-                for op in scene.ops() {
-                    let SceneOp::Quad {
-                        rect, background, ..
-                    } = op
-                    else {
-                        continue;
-                    };
-
-                    // Ignore low-alpha shadow quads. The switch thumb/track are fully opaque in shadcn-web.
-                    if background.a < 0.5 {
-                        continue;
-                    }
-
-                    let score = overlap_area(*rect, switch_bounds);
-                    if score <= 0.0 {
-                        continue;
-                    }
-
-                    let is_track = (rect.size.width.0 - switch_bounds.size.width.0).abs() <= 1.0
-                        && (rect.size.height.0 - switch_bounds.size.height.0).abs() <= 1.0;
-                    if is_track && score > best_track_score {
-                        best_track_score = score;
-                        track_rect = Some(*rect);
-                    }
-
-                    let is_thumb = (rect.size.width.0 - 16.0).abs() <= 0.2
-                        && (rect.size.height.0 - 16.0).abs() <= 0.2;
-                    if is_thumb && score > best_thumb_score {
-                        best_thumb_score = score;
-                        thumb_rect = Some(*rect);
-                    }
-                }
-
-                let track = track_rect.expect("missing switch track quad");
-                let thumb = thumb_rect.expect("missing switch thumb quad");
-
-                let expected_dx = web_thumb.rect.x - web_switch.rect.x;
-                let expected_dy = web_thumb.rect.y - web_switch.rect.y;
-
-                assert_close_px(
-                    "switch thumb offset x",
-                    Px(thumb.origin.x.0 - track.origin.x.0),
-                    expected_dx,
-                    1.0,
-                );
-                assert_close_px(
-                    "switch thumb offset y",
-                    Px(thumb.origin.y.0 - track.origin.y.0),
-                    expected_dy,
-                    1.0,
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn web_vs_fret_layout_radio_group_demo_geometry_matches_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_radio_group_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutRadioGroupCase> =
-        serde_json::from_str(raw).expect("layout radio group fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!("layout radio group case={}", case.id);
-        let web = read_web_golden(&case.web_name);
-        let theme = web_theme(&web);
-
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-        );
-
-        match case.recipe {
-            LayoutRadioGroupRecipe::RowGeometry => {
-                let mut rows: Vec<&WebNode> = Vec::new();
-                let mut stack = vec![&theme.root];
-                while let Some(node) = stack.pop() {
-                    let class_name = node.class_name.as_deref().unwrap_or_default();
-                    if node.tag == "div"
-                        && class_name.contains("flex")
-                        && class_name.contains("items-center")
-                        && class_name.contains("gap-3")
-                        && node
-                            .children
-                            .iter()
-                            .any(|c| c.attrs.get("role").is_some_and(|role| role == "radio"))
-                    {
-                        rows.push(node);
-                    }
-
-                    for child in node.children.iter().rev() {
-                        stack.push(child);
-                    }
-                }
-
-                rows.sort_by(|a, b| {
-                    a.rect
-                        .y
-                        .partial_cmp(&b.rect.y)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
-                assert!(
-                    rows.len() >= 2,
-                    "expected at least two radio-group rows in web golden"
-                );
-
-                let web_row0 = rows[0];
-                let web_row1 = rows[1];
-
-                let web_row_h = web_row0.rect.h;
-                let web_gap_y = web_row1.rect.y - (web_row0.rect.y + web_row0.rect.h);
-
-                let snap = run_fret_root(bounds, |cx| {
-                    let items = vec![
-                        fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
-                        fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
-                        fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
-                    ];
-
-                    let group = items.into_iter().fold(
-                        fret_ui_shadcn::RadioGroup::uncontrolled(Some("comfortable"))
-                            .a11y_label("Options"),
-                        |group, item| group.item(item),
-                    );
-
-                    vec![group.into_element(cx)]
-                });
-
-                let fret_row0 = find_semantics(&snap, SemanticsRole::RadioButton, Some("Default"))
-                    .expect("fret radio row Default");
-                let fret_row1 =
-                    find_semantics(&snap, SemanticsRole::RadioButton, Some("Comfortable"))
-                        .expect("fret radio row Comfortable");
-
-                let fret_row_h = fret_row0.bounds.size.height.0;
-                let fret_gap_y = fret_row1.bounds.origin.y.0
-                    - (fret_row0.bounds.origin.y.0 + fret_row0.bounds.size.height.0);
-
-                assert!(
-                    fret_gap_y.is_finite(),
-                    "expected finite fret gap; got={fret_gap_y}"
-                );
-
-                assert_close_px("radio-group row height", Px(fret_row_h), web_row_h, 1.0);
-                assert_close_px("radio-group row gap", Px(fret_gap_y), web_gap_y, 1.0);
-            }
-            LayoutRadioGroupRecipe::IndicatorOffset => {
-                let web_radio = find_first(&theme.root, &|n| {
-                    n.tag == "button"
-                        && n.attrs.get("role").is_some_and(|r| r == "radio")
-                        && n.attrs.get("aria-checked").is_some_and(|v| v == "true")
-                })
-                .expect("web checked radio");
-                let web_indicator = find_first(web_radio, &|n| {
-                    n.tag == "svg" && (n.rect.w - 8.0).abs() <= 0.2
-                })
-                .expect("web radio indicator svg");
-
-                let expected_dx = web_indicator.rect.x - web_radio.rect.x;
-                let expected_dy = web_indicator.rect.y - web_radio.rect.y;
-
-                let (snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
-                    let items = vec![
-                        fret_ui_shadcn::RadioGroupItem::new("default", "Default"),
-                        fret_ui_shadcn::RadioGroupItem::new("comfortable", "Comfortable"),
-                        fret_ui_shadcn::RadioGroupItem::new("compact", "Compact"),
-                    ];
-
-                    let group = items.into_iter().fold(
-                        fret_ui_shadcn::RadioGroup::uncontrolled(Some("comfortable"))
-                            .a11y_label("Options"),
-                        |group, item| group.item(item),
-                    );
-
-                    vec![group.into_element(cx)]
-                });
-
-                let row = find_semantics(&snap, SemanticsRole::RadioButton, Some("Comfortable"))
-                    .expect("fret comfortable row");
-                let row_bounds = row.bounds;
-
-                let mut icon_rect: Option<Rect> = None;
-                let mut best_icon_score = 0.0f32;
-                let mut dot_rect: Option<Rect> = None;
-                let mut best_dot_score = 0.0f32;
-
-                for op in scene.ops() {
-                    let SceneOp::Quad { rect, .. } = op else {
-                        continue;
-                    };
-
-                    let score = overlap_area(*rect, row_bounds);
-                    if score <= 0.0 {
-                        continue;
-                    }
-
-                    let is_icon = (rect.size.width.0 - 16.0).abs() <= 0.2
-                        && (rect.size.height.0 - 16.0).abs() <= 0.2;
-                    if is_icon && score > best_icon_score {
-                        best_icon_score = score;
-                        icon_rect = Some(*rect);
-                    }
-                }
-
-                let icon = icon_rect.expect("missing radio icon quad");
-
-                for op in scene.ops() {
-                    let SceneOp::Quad { rect, .. } = op else {
-                        continue;
-                    };
-
-                    let score_icon = overlap_area(*rect, icon);
-                    if score_icon <= 0.0 {
-                        continue;
-                    }
-
-                    let is_dot = (rect.size.width.0 - 8.0).abs() <= 0.2
-                        && (rect.size.height.0 - 8.0).abs() <= 0.2;
-                    if is_dot && score_icon > best_dot_score {
-                        best_dot_score = score_icon;
-                        dot_rect = Some(*rect);
-                    }
-                }
-
-                let dot = dot_rect.expect("missing radio indicator dot quad");
-
-                assert_close_px(
-                    "radio indicator offset x",
-                    Px(dot.origin.x.0 - icon.origin.x.0),
-                    expected_dx,
-                    1.0,
-                );
-                assert_close_px(
-                    "radio indicator offset y",
-                    Px(dot.origin.y.0 - icon.origin.y.0),
-                    expected_dy,
-                    1.0,
-                );
-            }
-        }
-    }
-}
-
-#[test]
 fn web_vs_fret_layout_slider_demo_geometry() {
     let web = read_web_golden("slider-demo");
     let theme = web_theme(&web);
@@ -3000,6 +2601,8 @@ fn web_vs_fret_layout_slider_demo_geometry() {
     assert_close_px("thumb h", fret_thumb.size.height, web_thumb.rect.h, 1.0);
 }
 
+// Moved to web_vs_fret_layout/textarea.rs
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
@@ -3335,6 +2938,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
     }
 }
 
+// Moved to web_vs_fret_layout/empty.rs
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
@@ -4315,90 +3920,6 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
         web_content.rect.y,
         2.0,
     );
-}
-
-#[test]
-fn web_vs_fret_layout_resizable_geometry_matches_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_resizable_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutResizableCase> =
-        serde_json::from_str(raw).expect("layout resizable fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!(
-            "layout resizable case={} web_name={}",
-            case.id, case.web_name
-        );
-        match case.recipe {
-            LayoutResizableRecipe::Demo => {
-                assert_resizable_demo_geometry_matches_web(&case.web_name)
-            }
-            LayoutResizableRecipe::DemoWithHandle => {
-                assert_resizable_demo_with_handle_geometry_matches_web(&case.web_name)
-            }
-            LayoutResizableRecipe::Handle => {
-                assert_resizable_handle_geometry_matches_web(&case.web_name)
-            }
-            LayoutResizableRecipe::Vertical => {
-                assert_resizable_vertical_geometry_matches_web(&case.web_name)
-            }
-        }
-    }
-}
-
-#[test]
-fn web_vs_fret_layout_native_select_heights_match_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_native_select_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutNativeSelectCase> =
-        serde_json::from_str(raw).expect("layout native select fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!("layout native select case={}", case.id);
-        let web = read_web_golden(&case.web_name);
-        let theme = web_theme(&web);
-        let web_select = find_first(&theme.root, &|n| n.tag == "select").expect("web select");
-
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-        );
-
-        let snap = run_fret_root(bounds, |cx| {
-            let mut select = fret_ui_shadcn::NativeSelect::new(case.label_text.clone())
-                .a11y_label("NativeSelect")
-                .refine_layout(
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_select.rect.w))),
-                );
-            if case.disabled {
-                select = select.disabled(true);
-            }
-            if case.aria_invalid {
-                select = select.aria_invalid(true);
-            }
-
-            vec![select.into_element(cx)]
-        });
-
-        let select = find_semantics(&snap, SemanticsRole::ComboBox, Some("NativeSelect"))
-            .or_else(|| find_semantics(&snap, SemanticsRole::ComboBox, None))
-            .expect("fret native select");
-
-        assert_close_px(
-            &format!("{} h", case.web_name),
-            select.bounds.size.height,
-            web_select.rect.h,
-            1.0,
-        );
-    }
 }
 
 #[test]
@@ -9807,6 +9328,8 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
     );
 }
 
+// Moved to web_vs_fret_layout/triggers.rs
+#[cfg(any())]
 #[test]
 fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
