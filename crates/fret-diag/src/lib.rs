@@ -5575,6 +5575,7 @@ See: `docs/tracy.md`.\n";
                 }
             }
 
+            let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
             if wants_perf_thresholds {
                 let out_path = resolved_out_dir.join("check.perf_thresholds.json");
                 let payload = serde_json::json!({
@@ -5602,15 +5603,8 @@ See: `docs/tracy.md`.\n";
                 });
                 let _ = write_json_value(&out_path, &payload);
                 if !perf_threshold_failures.is_empty() {
-                    if launched_by_fretboard {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                    }
-                    eprintln!(
-                        "PERF threshold gate failed (failures={}, evidence={})",
-                        perf_threshold_failures.len(),
-                        out_path.display()
-                    );
-                    std::process::exit(1);
+                    perf_threshold_failure =
+                        Some((perf_threshold_failures.len(), out_path.clone()));
                 }
             }
 
@@ -5644,6 +5638,15 @@ See: `docs/tracy.md`.\n";
                     us,
                     bundle.display()
                 );
+            }
+
+            if let Some((failures, evidence)) = perf_threshold_failure {
+                eprintln!(
+                    "PERF threshold gate failed (failures={}, evidence={})",
+                    failures,
+                    evidence.display()
+                );
+                std::process::exit(1);
             }
 
             std::process::exit(0);
