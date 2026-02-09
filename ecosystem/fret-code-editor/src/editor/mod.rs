@@ -283,6 +283,17 @@ pub struct CodeEditorCacheStats {
     pub row_text_evictions: u64,
     pub row_text_resets: u64,
 
+    #[cfg(feature = "syntax")]
+    pub row_rich_get_calls: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_hits: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_misses: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_evictions: u64,
+    #[cfg(feature = "syntax")]
+    pub row_rich_resets: u64,
+
     /// Number of pointer hit-tests that fell back to the monospace `cell_w` heuristic
     /// (caret stops unavailable).
     pub geom_pointer_hit_test_fallbacks: u64,
@@ -352,6 +363,12 @@ struct CodeEditorState {
     syntax_row_cache: HashMap<usize, (Arc<[SyntaxSpan]>, u64)>,
     #[cfg(feature = "syntax")]
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_tick: u64,
+    #[cfg(feature = "syntax")]
+    row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_queue: VecDeque<(usize, u64)>,
 }
 
 #[derive(Debug, Clone)]
@@ -369,6 +386,16 @@ struct BaselineMeasureCache {
     text_style: TextStyle,
     metrics: fret_core::TextMetrics,
     measured_h: Px,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+struct RowRichCacheEntry {
+    row_range: Range<usize>,
+    line: Arc<str>,
+    syntax_spans: Arc<[SyntaxSpan]>,
+    theme_revision: u64,
+    rich: fret_core::AttributedText,
 }
 
 impl CodeEditorState {
@@ -479,6 +506,12 @@ impl CodeEditorHandle {
                 syntax_row_cache: HashMap::new(),
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                row_rich_cache_tick: 0,
+                #[cfg(feature = "syntax")]
+                row_rich_cache: HashMap::new(),
+                #[cfg(feature = "syntax")]
+                row_rich_cache_queue: VecDeque::new(),
             })),
         }
     }
@@ -493,6 +526,10 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
+            st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
         #[cfg(not(feature = "syntax"))]
         {
@@ -724,6 +761,9 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
         }
     }
 

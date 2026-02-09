@@ -137,56 +137,127 @@ pub(super) fn paint_row(
             let line_idx = st.display_map.display_row_line(row);
             let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
             if !spans.is_empty() {
+                let rich_cache_max_entries = text_cache_max_entries.min(2048);
+                st.cache_stats.row_rich_get_calls =
+                    st.cache_stats.row_rich_get_calls.saturating_add(1);
+
                 let seg_start_in_line = row_range
                     .start
                     .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start));
                 let seg_end_in_line = seg_start_in_line.saturating_add(line.len());
 
-                let mut clipped: Vec<SyntaxSpan> = Vec::new();
-                for span in spans.as_ref() {
-                    let start = span.range.start.max(seg_start_in_line);
-                    let end = span.range.end.min(seg_end_in_line);
-                    if start >= end {
-                        continue;
+                let theme = painter.theme();
+                let theme_revision = theme.revision();
+
+                st.row_rich_cache_tick = st.row_rich_cache_tick.saturating_add(1);
+                let tick = st.row_rich_cache_tick;
+
+                if let Some((cached, last_used)) = st.row_rich_cache.get_mut(&row) {
+                    let hit = cached.theme_revision == theme_revision
+                        && cached.row_range == row_range
+                        && Arc::ptr_eq(&cached.line, &line)
+                        && Arc::ptr_eq(&cached.syntax_spans, &spans);
+                    if hit {
+                        *last_used = tick;
+                        st.row_rich_cache_queue.push_back((row, tick));
+                        st.cache_stats.row_rich_hits =
+                            st.cache_stats.row_rich_hits.saturating_add(1);
+
+                        let (blob, metrics) = painter.rich_text_with_blob(
+                            key,
+                            DrawOrder(2),
+                            origin,
+                            cached.rich.clone(),
+                            text_style.clone(),
+                            fg,
+                            constraints,
+                            scale_factor,
+                        );
+                        row_blob = Some(blob);
+                        row_blob_metrics = Some(metrics);
+                        drew_rich = true;
                     }
-                    clipped.push(SyntaxSpan {
-                        range: (start - seg_start_in_line)..(end - seg_start_in_line),
-                        highlight: span.highlight,
-                    });
                 }
 
-                if !clipped.is_empty() {
-                    clipped.sort_by_key(|s| s.range.start);
-                    clipped.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
-                    let mut merged: Vec<SyntaxSpan> = Vec::new();
-                    for span in clipped {
-                        if let Some(last) = merged.last_mut()
-                            && last.highlight == span.highlight
-                            && last.range.end == span.range.start
-                        {
-                            last.range.end = span.range.end;
+                if !drew_rich {
+                    st.cache_stats.row_rich_misses =
+                        st.cache_stats.row_rich_misses.saturating_add(1);
+
+                    let mut clipped: Vec<SyntaxSpan> = Vec::new();
+                    for span in spans.as_ref() {
+                        let start = span.range.start.max(seg_start_in_line);
+                        let end = span.range.end.min(seg_end_in_line);
+                        if start >= end {
                             continue;
                         }
-                        merged.push(span);
+                        clipped.push(SyntaxSpan {
+                            range: (start - seg_start_in_line)..(end - seg_start_in_line),
+                            highlight: span.highlight,
+                        });
                     }
 
-                    let rich = {
-                        let theme = painter.theme();
-                        materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
-                    };
-                    let (blob, metrics) = painter.rich_text_with_blob(
-                        key,
-                        DrawOrder(2),
-                        origin,
-                        rich,
-                        text_style.clone(),
-                        fg,
-                        constraints,
-                        scale_factor,
-                    );
-                    row_blob = Some(blob);
-                    row_blob_metrics = Some(metrics);
-                    drew_rich = true;
+                    if !clipped.is_empty() {
+                        clipped.sort_by_key(|s| s.range.start);
+                        clipped.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+                        let mut merged: Vec<SyntaxSpan> = Vec::new();
+                        for span in clipped {
+                            if let Some(last) = merged.last_mut()
+                                && last.highlight == span.highlight
+                                && last.range.end == span.range.start
+                            {
+                                last.range.end = span.range.end;
+                                continue;
+                            }
+                            merged.push(span);
+                        }
+
+                        let rich =
+                            materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref());
+                        st.row_rich_cache.insert(
+                            row,
+                            (
+                                RowRichCacheEntry {
+                                    row_range: row_range.clone(),
+                                    line: Arc::clone(&line),
+                                    syntax_spans: Arc::clone(&spans),
+                                    theme_revision,
+                                    rich: rich.clone(),
+                                },
+                                tick,
+                            ),
+                        );
+                        st.row_rich_cache_queue.push_back((row, tick));
+
+                        while st.row_rich_cache.len() > rich_cache_max_entries {
+                            let Some((victim, victim_tick)) = st.row_rich_cache_queue.pop_front()
+                            else {
+                                break;
+                            };
+                            let remove = st
+                                .row_rich_cache
+                                .get(&victim)
+                                .is_some_and(|(_, last_used)| *last_used == victim_tick);
+                            if remove {
+                                st.row_rich_cache.remove(&victim);
+                                st.cache_stats.row_rich_evictions =
+                                    st.cache_stats.row_rich_evictions.saturating_add(1);
+                            }
+                        }
+
+                        let (blob, metrics) = painter.rich_text_with_blob(
+                            key,
+                            DrawOrder(2),
+                            origin,
+                            rich,
+                            text_style.clone(),
+                            fg,
+                            constraints,
+                            scale_factor,
+                        );
+                        row_blob = Some(blob);
+                        row_blob_metrics = Some(metrics);
+                        drew_rich = true;
+                    }
                 }
             }
         }
@@ -586,6 +657,13 @@ pub(super) fn cached_row_text_with_range(
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
+        #[cfg(feature = "syntax")]
+        {
+            st.row_rich_cache_tick = 0;
+            st.row_rich_cache.clear();
+            st.row_rich_cache_queue.clear();
+            st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
+        }
     }
 
     st.row_text_cache_tick = st.row_text_cache_tick.saturating_add(1);
@@ -1003,6 +1081,10 @@ pub(super) fn cached_row_syntax_spans(
         st.syntax_row_cache.clear();
         st.syntax_row_cache_queue.clear();
         st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
+        st.row_rich_cache_tick = 0;
+        st.row_rich_cache.clear();
+        st.row_rich_cache_queue.clear();
+        st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
     }
 
     st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
