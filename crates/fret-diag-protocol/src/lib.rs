@@ -403,18 +403,13 @@ fn default_slider_epsilon() -> f32 {
     0.5
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
+    #[default]
     Left,
     Right,
     Middle,
-}
-
-impl Default for UiMouseButtonV1 {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 impl UiMouseButtonV1 {

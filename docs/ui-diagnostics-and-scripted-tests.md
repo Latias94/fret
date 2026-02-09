@@ -207,6 +207,32 @@ Web runner note:
   2) compute a baseline from those bundle paths:
      - `cargo run -p fretboard -- diag perf-baseline-from-bundles <script.json> .fret/diag/exports/<exported_unix_ms> --perf-baseline-out .fret/perf.web.baseline.json`
 
+### Web runner: exporting bundles headlessly (Trunk + devtools-ws)
+
+This is the simplest repeatable workflow for producing `.fret/diag/exports/<timestamp>/bundle.json` from a web/WASM app.
+
+1. Start the loopback devtools WS hub (prints the token):
+
+   - `cargo run -p fret-devtools-ws`
+
+2. Serve the WASM app with Trunk:
+
+   - `cd apps/fret-ui-gallery-web`
+   - `trunk serve --port 8080`
+
+3. Open the app URL with WS parameters:
+
+   - `http://127.0.0.1:8080/?fret_devtools_ws=ws://127.0.0.1:7331/&fret_devtools_token=<token>`
+
+4. Export a bundle by running a script that includes a `capture_bundle` step:
+
+   - `cargo run -p fret-diag-export -- --script tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --token <token>`
+
+The command prints the export directory path, and writes:
+
+- `.fret/diag/exports/<timestamp>/bundle.json`
+
+
 3. Inspect the slowest snapshots in the resulting bundle:
 
    - `cargo run -p fretboard -- diag stats <bundle_dir> --sort time --top 20`

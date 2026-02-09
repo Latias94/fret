@@ -1278,6 +1278,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-diag-export"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-diag",
+ "fret-diag-protocol",
+ "serde_json",
+]
+
+[[package]]
 name = "fret-diag-protocol"
 version = "0.1.0"
 dependencies = [
