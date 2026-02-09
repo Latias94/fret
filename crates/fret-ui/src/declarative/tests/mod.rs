@@ -145,6 +145,7 @@ mod canvas;
 mod command_hooks;
 mod core;
 mod element_state_gc;
+mod environment_queries;
 mod identity;
 mod interactions;
 mod layout;

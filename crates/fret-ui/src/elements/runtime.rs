@@ -18,6 +18,13 @@ use crate::widget::Invalidation;
 use super::GlobalElementId;
 use super::hash::stable_hash;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum EnvironmentQueryKey {
+    ViewportSize,
+    ScaleFactor,
+    PrefersReducedMotion,
+}
+
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone)]
 pub struct WindowElementDiagnosticsSnapshot {
@@ -116,6 +123,15 @@ impl ElementRuntime {
         self.gc_lag_frames = frames;
     }
 
+    pub fn set_window_prefers_reduced_motion(
+        &mut self,
+        window: AppWindowId,
+        prefers_reduced_motion: Option<bool>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_prefers_reduced_motion(prefers_reduced_motion);
+    }
+
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
         self.windows.entry(window).or_default()
     }
@@ -199,8 +215,14 @@ pub struct WindowElementState {
         HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
     pub(super) observed_layout_queries_next:
         HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
+    pub(super) observed_environment_rendered:
+        HashMap<GlobalElementId, Vec<(EnvironmentQueryKey, Invalidation)>>,
+    pub(super) observed_environment_next:
+        HashMap<GlobalElementId, Vec<(EnvironmentQueryKey, Invalidation)>>,
     layout_query_region_revisions: HashMap<GlobalElementId, u64>,
     layout_query_regions_changed_this_frame: HashSet<GlobalElementId>,
+    environment_revisions: HashMap<EnvironmentQueryKey, u64>,
+    environment_changed_this_frame: HashSet<EnvironmentQueryKey>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
     scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
@@ -215,6 +237,9 @@ pub struct WindowElementState {
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
+    committed_viewport_bounds: Rect,
+    committed_scale_factor: f32,
+    committed_prefers_reduced_motion: Option<bool>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -406,6 +431,13 @@ impl WindowElementState {
         self.observed_layout_queries_next.clear();
         self.layout_query_regions_changed_this_frame.clear();
 
+        std::mem::swap(
+            &mut self.observed_environment_rendered,
+            &mut self.observed_environment_next,
+        );
+        self.observed_environment_next.clear();
+        self.environment_changed_this_frame.clear();
+
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
         // caching:
         // - `prev_*` stores the last committed snapshot (used by cross-frame queries).
@@ -536,6 +568,43 @@ impl WindowElementState {
                     *inv as u8,
                 )
             })
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+        stable_hash(&entries)
+    }
+
+    pub(crate) fn environment_deps_fingerprint_rendered(&self, root: GlobalElementId) -> u64 {
+        self.environment_deps_fingerprint_from_list(self.observed_environment_rendered.get(&root))
+    }
+
+    pub(crate) fn environment_deps_fingerprint_next(&self, root: GlobalElementId) -> u64 {
+        self.environment_deps_fingerprint_from_list(self.observed_environment_next.get(&root))
+    }
+
+    fn environment_revision(&self, key: EnvironmentQueryKey) -> u64 {
+        self.environment_revisions.get(&key).copied().unwrap_or(0)
+    }
+
+    fn environment_deps_fingerprint_from_list(
+        &self,
+        deps: Option<&Vec<(EnvironmentQueryKey, Invalidation)>>,
+    ) -> u64 {
+        let Some(deps) = deps else {
+            return 0;
+        };
+        if deps.is_empty() {
+            return 0;
+        }
+
+        let key_id = |k: EnvironmentQueryKey| match k {
+            EnvironmentQueryKey::ViewportSize => 0u8,
+            EnvironmentQueryKey::ScaleFactor => 1u8,
+            EnvironmentQueryKey::PrefersReducedMotion => 2u8,
+        };
+
+        let mut entries: Vec<(u8, u64, u8)> = deps
+            .iter()
+            .map(|(key, inv)| (key_id(*key), self.environment_revision(*key), *inv as u8))
             .collect();
         entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
         stable_hash(&entries)
@@ -704,6 +773,19 @@ impl WindowElementState {
         };
         self.observed_layout_queries_next
             .insert(element, list.clone());
+    }
+
+    pub(crate) fn touch_observed_environment_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_environment_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_environment_rendered.get(&element) else {
+            return;
+        };
+        self.observed_environment_next.insert(element, list.clone());
     }
 
     pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
@@ -1080,6 +1162,66 @@ impl WindowElementState {
             .get(&element)
             .copied()
             .or_else(|| self.prev_visual_bounds.get(&element).copied())
+    }
+
+    pub(crate) fn committed_viewport_bounds(&self) -> Rect {
+        self.committed_viewport_bounds
+    }
+
+    pub(crate) fn committed_scale_factor(&self) -> f32 {
+        self.committed_scale_factor
+    }
+
+    pub(crate) fn committed_prefers_reduced_motion(&self) -> Option<bool> {
+        self.committed_prefers_reduced_motion
+    }
+
+    pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
+        if self.committed_prefers_reduced_motion == value {
+            return;
+        }
+        self.committed_prefers_reduced_motion = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersReducedMotion)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
+        // Environment-driven responsiveness is typically sensitive to viewport size. Ignore origin
+        // changes so panning/multi-monitor movement cannot trigger rebuild storms.
+        const EPS_PX: f32 = 0.5;
+        let prev = self.committed_viewport_bounds.size;
+        let next = bounds.size;
+        let changed = (prev.width.0 - next.width.0).abs() > EPS_PX
+            || (prev.height.0 - next.height.0).abs() > EPS_PX;
+
+        self.committed_viewport_bounds = bounds;
+        if !changed {
+            return;
+        }
+
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ViewportSize)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ViewportSize);
+    }
+
+    pub(crate) fn record_committed_scale_factor(&mut self, scale_factor: f32) {
+        if (self.committed_scale_factor - scale_factor).abs() < 0.0001 {
+            return;
+        }
+        self.committed_scale_factor = scale_factor;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ScaleFactor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ScaleFactor);
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {

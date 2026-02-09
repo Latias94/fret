@@ -34,7 +34,7 @@ use crate::{SvgSource, Theme, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
-use super::runtime::LayoutQueryRegionMarker;
+use super::runtime::{EnvironmentQueryKey, LayoutQueryRegionMarker};
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
 pub struct ElementContext<'a, H: UiHost> {
@@ -95,6 +95,12 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         runtime.prepare_window_for_frame(window, frame_id);
 
         let window_state = runtime.for_window_mut(window);
+        let scale_factor = app
+            .global::<WindowMetricsService>()
+            .and_then(|svc| svc.scale_factor(window))
+            .unwrap_or(1.0);
+        window_state.record_committed_viewport_bounds(bounds);
+        window_state.record_committed_scale_factor(scale_factor);
 
         Self {
             app,
@@ -491,6 +497,51 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         list.push((region, invalidation));
     }
 
+    pub(crate) fn observe_environment_query(
+        &mut self,
+        key: EnvironmentQueryKey,
+        invalidation: Invalidation,
+    ) {
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
+        let list = self
+            .window_state
+            .observed_environment_next
+            .entry(id)
+            .or_default();
+        if list
+            .iter()
+            .any(|(k, inv)| *k == key && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((key, invalidation));
+    }
+
+    pub fn environment_viewport_bounds(&mut self, invalidation: Invalidation) -> Rect {
+        self.observe_environment_query(EnvironmentQueryKey::ViewportSize, invalidation);
+        self.window_state.committed_viewport_bounds()
+    }
+
+    pub fn environment_viewport_width(&mut self, invalidation: Invalidation) -> Px {
+        self.environment_viewport_bounds(invalidation).size.width
+    }
+
+    pub fn environment_scale_factor(&mut self, invalidation: Invalidation) -> f32 {
+        self.observe_environment_query(EnvironmentQueryKey::ScaleFactor, invalidation);
+        self.window_state.committed_scale_factor()
+    }
+
+    pub fn environment_prefers_reduced_motion(
+        &mut self,
+        invalidation: Invalidation,
+    ) -> Option<bool> {
+        self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
+        self.window_state.committed_prefers_reduced_motion()
+    }
+
     pub fn layout_query_bounds(
         &mut self,
         region: GlobalElementId,
@@ -747,8 +798,14 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
             let rendered_query_fingerprint =
                 cx.window_state.layout_query_deps_fingerprint_rendered(id);
+            let rendered_env_fingerprint =
+                cx.window_state.environment_deps_fingerprint_rendered(id);
             let base_key = (theme_revision, scale_factor.to_bits(), props.cache_key);
-            let key = stable_hash(&(base_key, rendered_query_fingerprint));
+            let key = stable_hash(&(
+                base_key,
+                rendered_query_fingerprint,
+                rendered_env_fingerprint,
+            ));
 
             let key_matches = if should_reuse {
                 let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
@@ -771,6 +828,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .touch_observed_globals_for_element_if_recorded(id);
                 cx.window_state
                     .touch_observed_layout_queries_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_environment_for_element_if_recorded(id);
                 Vec::new()
             } else {
                 cx.window_state.begin_view_cache_scope(id);
@@ -779,7 +838,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx.window_state.end_view_cache_scope(id);
 
                 let next_query_fingerprint = cx.window_state.layout_query_deps_fingerprint_next(id);
-                let key = stable_hash(&(base_key, next_query_fingerprint));
+                let next_env_fingerprint = cx.window_state.environment_deps_fingerprint_next(id);
+                let key = stable_hash(&(base_key, next_query_fingerprint, next_env_fingerprint));
                 cx.window_state.set_view_cache_key(id, key);
                 children
             };
