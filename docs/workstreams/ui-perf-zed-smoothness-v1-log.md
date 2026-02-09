@@ -8214,3 +8214,54 @@ Notes:
   investigate why view-cache roots are often not marked for reuse in resize probes, and consider cutting a new v4
   baseline validated under idle conditions (or adding headroom policy for `drag-jitter`) once the hitch class is
   explained and addressed.
+
+## 2026-02-09 10:20:13 (commit `427b91866`)
+
+Change:
+- Restore perf suite expansion for:
+  - `ui-resize-probes` (stress + drag-jitter), and
+  - `ui-code-editor-resize-probes` (editor drag-jitter).
+
+Suites:
+- `ui-resize-probes` gate (attempts=5): PASS (passes=3/5; required=3).
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=1/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 5 --out-dir target/perf-gates/ui-resize-probes.427b91866.20260209-094813
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813
+```
+
+Artifacts:
+- `ui-resize-probes`: `target/perf-gates/ui-resize-probes.427b91866.20260209-094813/summary.json`
+- `ui-code-editor-resize-probes`: `target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/summary.json`
+
+Results (us; selected attempts):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 16169 | 16287 | 16287 | 10003 | 2473 | 6407 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 18674 | 19041 | 19041 | 9743 | 2324 | 9407 |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 12798 | 15305 | 15305 | 1989 | 324 | 13820 |
+
+Tail failures (to keep the gate honest; worst bundles via `diag triage --sort time --top 1`):
+
+- `ui-resize-probes` attempt-2 drag-jitter threshold failure:
+  - `top_total_time_us=19477` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-2/1770602292281-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- `ui-resize-probes` attempt-5 drag-jitter threshold failure:
+  - `top_total_time_us=22347` (threshold `19128`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-resize-probes.427b91866.20260209-094813/attempt-5/1770603193223-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+
+- `ui-code-editor-resize-probes` attempt-1 threshold failures:
+  - `top_total_time_us=18560` (threshold `16308`)
+  - `top_layout_time_us=4115` (threshold `3432`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-1/1770601859375-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- `ui-code-editor-resize-probes` attempt-3 threshold failure:
+  - `top_total_time_us=17684` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret/target/perf-gates/ui-code-editor-resize-probes.427b91866.20260209-094813/attempt-3/1770602132829-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- `ui-resize-probes` is “majority-pass stable” at attempts=5, but `drag-jitter` still produces intermittent tail
+  frames above the v3 baseline threshold. The dominant levers remain:
+  - reduce layout plumbing overhead (`layout_request/build` + solve count), and
+  - reduce paint/text prepare churn (it is still paint-dominant on `drag-jitter`).

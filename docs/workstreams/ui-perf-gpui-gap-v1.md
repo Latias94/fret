@@ -151,6 +151,8 @@ Open questions / likely gaps (need code-level confirmation against `repo-ref/zed
 Baseline fact (quick reference):
 - On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
   (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+  - It also sets the view’s layer redraw policy to redraw during live resize:
+    `NSViewLayerContentsRedrawDuringViewResize` (same file).
 - On Wayland, GPUI explicitly throttles interactive resizes to once per vblank (`configure.resizing` + `resize_throttle`)
   (see `repo-ref/zed/crates/gpui/src/platform/linux/wayland/window.rs`).
 

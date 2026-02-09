@@ -214,6 +214,10 @@ Execution plan:
   - Baseline: `docs/workstreams/perf-baselines/ui-code-editor-resize-probes.macos-m4.v2.json`.
   - Seed policy preset: `docs/workstreams/perf-baselines/policies/ui-code-editor-resize-probes.v1.json`.
   - Gate runner: `tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes`.
+- [x] Ensure `diag perf --json` still emits the JSON payload even when perf thresholds fail (so gate triage can
+  resolve worst bundles without rerunning).
+- [x] Fix `tools/perf/diag_resize_probes_gate.sh` to record non-zero attempt exit codes correctly (for trustworthy
+  gate summaries and downstream triage).
 - [x] Create a commit-addressable perf log:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:

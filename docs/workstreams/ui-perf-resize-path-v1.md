@@ -104,6 +104,30 @@ Local GPUI references:
 - `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`
 - `repo-ref/zed/crates/gpui/src/platform/linux/wayland/window.rs` (interactive resize throttling)
 
+### What GPUI actually does during interactive resize (high signal)
+
+On macOS (Cocoa / layer-backed view):
+
+- GPUI sets the view’s layer redraw policy to redraw during live resize:
+  - `setLayerContentsRedrawPolicy: NSViewLayerContentsRedrawDuringViewResize`
+- Size changes flow through `set_frame_size`:
+  - updates the renderer drawable size, then calls the registered `resize_callback`.
+- Actual redraw work is still driven by the frame pump:
+  - `display_layer` calls `request_frame_callback` (and GPUI also has a display link `step` path).
+
+Implication:
+- Zed/GPUI is not “free” during drag-resize — it redraws continuously; it just keeps per-frame work bounded and
+  stable via reuse + allocation discipline.
+
+On Wayland (xdg configure floods are real):
+
+- GPUI explicitly throttles interactive resizes to at most once per vblank.
+  - When `configure.resizing` is true, it drops additional configure events while `resize_throttle` is set.
+  - The throttle is cleared on `wl_surface.frame` (`frame()`), i.e. after the compositor has presented a frame.
+
+This is similar in spirit to Fret’s “coalesce to once per redraw” behavior, but the key insight is:
+- **interactive resize is shaped by the frame boundary**, not by “number of OS events”.
+
 ## Milestone candidates (make the path measurable)
 
 These are deliberately phrased as “mechanism-first” items that can be gated.
