@@ -19,10 +19,11 @@ Acceptance criteria:
 - ADRs and alignment docs accurately describe the shipped v1 subset:
   - multi-dimensional `WeakFilter` subset and size caps,
   - Y dataZoom “mapping-first” boundary and indices materialization constraints,
-  - current multi-grid posture (spec split) and the target (single-engine).
+  - current multi-grid posture (single engine + per-grid plot viewports) and the follow-up target
+    (global controllers + opt-in cross-grid linking).
 - Implementation alignment table reflects current reality for the above ADRs.
 
-Status: In progress.
+Status: Done (2026-02-09).
 
 ## M1 — Single-engine multi-grid viewport/layout contract
 
@@ -41,7 +42,7 @@ Acceptance criteria:
 - The existing multi-axis harness can be extended into a multi-grid harness with deterministic routing outcomes.
 - At least one headless regression gate covers multi-grid window + marks outputs.
 
-Status: Planned.
+Status: In progress (engine + retained adapter landed; global controllers landed; remaining: brush contract closure + opt-in linking semantics).
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 
@@ -86,4 +87,3 @@ Acceptance criteria:
 - Interactive demo(s) exist with a stable “what to validate” checklist.
 
 Status: Planned.
-

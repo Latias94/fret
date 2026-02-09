@@ -56,6 +56,9 @@ Adapter-level anchors:
 - Multi-grid UI (retained) hosts a **single** engine instance and supplies per-grid plot viewports:
   - multi-canvas layout: `ecosystem/fret-chart/src/retained/multi_grid.rs`
   - per-grid plot viewport patching: `ecosystem/fret-chart/src/retained/canvas.rs` (`grid_override`)
+  - global controllers (single legend + tooltip/axisPointer overlay):
+    `ecosystem/fret-chart/src/retained/multi_grid.rs` (`FillStack`) +
+    `ecosystem/fret-chart/src/retained/canvas.rs` (`ChartCanvas::new_overlay`)
   - demo: `apps/fret-examples/src/echarts_multi_grid_demo.rs`
 
 ## 7) UI adapter consolidation plan (TanStack-style posture)
@@ -68,6 +71,7 @@ The long-term “correct” shape is:
 2. **Global controllers (B)**
    - One shared legend + one shared tooltip/axisPointer overlay for the whole multi-grid surface.
    - Individual grid views are “plot-only” surfaces (no per-grid legend duplication).
+   - v1 retained status: implemented (grid views suppress legend/tooltip; overlay canvas draws once).
 3. **Unambiguous routing in outputs**
    - Engine outputs that are tied to a specific grid (e.g. `axisPointer`) must carry `GridId` so
      adapters do not guess and do not draw duplicates.
