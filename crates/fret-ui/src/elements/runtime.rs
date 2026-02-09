@@ -5,7 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, NodeId, Rect};
+use fret_core::{AppWindowId, NodeId, PointerType, Rect};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -23,6 +23,7 @@ pub(crate) enum EnvironmentQueryKey {
     ViewportSize,
     ScaleFactor,
     PrefersReducedMotion,
+    PrimaryPointerType,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -99,6 +100,7 @@ pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub viewport_bounds: Rect,
     pub scale_factor: f32,
     pub prefers_reduced_motion: Option<bool>,
+    pub primary_pointer_type: PointerType,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -157,6 +159,15 @@ impl ElementRuntime {
     ) {
         self.for_window_mut(window)
             .set_committed_prefers_reduced_motion(prefers_reduced_motion);
+    }
+
+    pub fn set_window_primary_pointer_type(
+        &mut self,
+        window: AppWindowId,
+        pointer_type: PointerType,
+    ) {
+        self.for_window_mut(window)
+            .record_committed_primary_pointer_type(pointer_type);
     }
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
@@ -267,6 +278,7 @@ pub struct WindowElementState {
     committed_viewport_bounds: Rect,
     committed_scale_factor: f32,
     committed_prefers_reduced_motion: Option<bool>,
+    committed_primary_pointer_type: Option<PointerType>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -627,6 +639,7 @@ impl WindowElementState {
             EnvironmentQueryKey::ViewportSize => 0u8,
             EnvironmentQueryKey::ScaleFactor => 1u8,
             EnvironmentQueryKey::PrefersReducedMotion => 2u8,
+            EnvironmentQueryKey::PrimaryPointerType => 3u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1203,6 +1216,11 @@ impl WindowElementState {
         self.committed_prefers_reduced_motion
     }
 
+    pub(crate) fn committed_primary_pointer_type(&self) -> PointerType {
+        self.committed_primary_pointer_type
+            .unwrap_or(PointerType::Unknown)
+    }
+
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
         if self.committed_prefers_reduced_motion == value {
             return;
@@ -1214,6 +1232,19 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn record_committed_primary_pointer_type(&mut self, pointer_type: PointerType) {
+        if self.committed_primary_pointer_type == Some(pointer_type) {
+            return;
+        }
+        self.committed_primary_pointer_type = Some(pointer_type);
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrimaryPointerType)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrimaryPointerType);
     }
 
     pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
@@ -1275,6 +1306,7 @@ impl WindowElementState {
             EnvironmentQueryKey::ViewportSize => "viewport_size",
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+            EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
         };
 
         let bounds_for = |element: Option<GlobalElementId>| {
@@ -1402,6 +1434,7 @@ impl WindowElementState {
             viewport_bounds: self.committed_viewport_bounds,
             scale_factor: self.committed_scale_factor,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
+            primary_pointer_type: self.committed_primary_pointer_type(),
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1708,6 +1741,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn primary_pointer_type_defaults_to_unknown_until_observed() {
+        let mut state = WindowElementState::default();
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Unknown);
+
+        state.record_committed_primary_pointer_type(PointerType::Touch);
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Touch);
+    }
+
+    #[test]
     fn transient_events_survive_one_frame_and_clear_on_read() {
         let mut state = WindowElementState::default();
         let element = GlobalElementId(123);
@@ -1769,6 +1811,52 @@ mod tests {
                 last_seen_frame: FrameId(1),
                 root: GlobalElementId(2),
             },
+        );
+    }
+
+    #[test]
+    fn primary_pointer_type_is_unknown_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_primary_pointer_type(), PointerType::Unknown);
+    }
+
+    #[test]
+    fn primary_pointer_type_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_primary_pointer_type(PointerType::Mouse);
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::PrimaryPointerType)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::PrimaryPointerType)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_primary_pointer_type(PointerType::Mouse);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrimaryPointerType)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_primary_pointer_type(PointerType::Touch);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrimaryPointerType)
+                .copied()
+                .unwrap(),
+            first_revision + 1
         );
     }
 }

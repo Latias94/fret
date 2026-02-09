@@ -69,9 +69,11 @@ Definition of done:
 
 - Known viewport-driven responsive recipes stop hard-coding `cx.bounds` thresholds and instead use
   the environment query helpers.
+- Known hover-driven affordances are gated by pointer capability helpers (touch-first should not
+  open hover-only UI).
 - At least one migration is gated by an automated test or `fretboard diag` script.
 
 Recommended first target:
 
 - `Combobox(responsive)` Drawer-vs-Popover selection (device/viewport-driven shell behavior).
-
+- `Tooltip` / `HoverCard` hover gating (pointer-capability-driven affordance).

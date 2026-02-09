@@ -21,6 +21,7 @@ pub mod model_watch;
 pub mod overlay_motion;
 #[cfg(feature = "recipes")]
 pub mod pixelate;
+pub mod pointer_queries;
 pub mod prelude;
 pub mod presence;
 pub mod scheduling;
@@ -47,6 +48,9 @@ pub use container_queries::{
 };
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
+pub use pointer_queries::{
+    primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
+};
 pub use semantics::AnyElementSemanticsExt;
 pub use viewport_queries::tailwind as viewport_tailwind;
 pub use viewport_queries::{

@@ -30,13 +30,14 @@ ADR anchor:
 - [ ] Add unit tests for:
   - [x] invalidation on viewport bounds change,
   - [x] view-cache key participation via deps fingerprint,
+  - [x] revision tracking for pointer capability keys,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
 - [x] Add environment query helper surface:
   - [x] viewport breakpoint tokens (Tailwind-aligned labels, optional),
-  - [ ] pointer capability gates (hover vs touch-first),
+  - [x] pointer capability gates (hover vs touch-first),
   - [ ] reduced-motion preference helpers (if available).
 - [x] Add unit tests for hysteresis / non-oscillation where applicable.
 
@@ -49,3 +50,8 @@ ADR anchor:
 - [x] Migrate `SidebarProvider` “mobile/offcanvas shell” to infer from environment queries by
   default (override allowed).
   - Evidence: `fret-ui-shadcn::sidebar::tests::sidebar_provider_infers_mobile_from_viewport_width_when_unset`
+
+- [x] Gate hover-driven affordances on pointer capability queries (touch-first should not open
+  hover-only UI):
+  - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/hover_card.rs`

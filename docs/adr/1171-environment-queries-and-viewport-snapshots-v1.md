@@ -104,6 +104,22 @@ Per-window snapshot fields:
 - `safe_area_insets_logical: Option<Edges<Px>>` (future mobile).
 - `prefers_reduced_motion: Option<bool>` (runner-provided or app-provided).
 
+## v1 Implementation Status (as of 2026-02-09)
+
+The current implementation provides a small set of typed environment query keys via
+`fret-ui::ElementContext`:
+
+- `viewport_bounds_logical: Rect` (key: `ViewportSize`)
+- `scale_factor: f32` (key: `ScaleFactor`)
+- `prefers_reduced_motion: Option<bool>` (key: `PrefersReducedMotion`)
+- `primary_pointer_type: PointerType` (key: `PrimaryPointerType`)
+  - Best-effort: `PointerType::Unknown` is returned until a pointer event is observed for the
+    window (native and wasm).
+
+Policy remains in ecosystem crates. `ecosystem/fret-ui-kit` exposes small helpers that derive
+`primary_pointer_can_hover` and `primary_pointer_is_coarse` from `primary_pointer_type` so recipes
+can gate hover-only affordances (tooltips / hover cards) without embedding policy in the runtime.
+
 ## Consequences
 
 - We can migrate ad-hoc viewport breakpoints (magic numbers) to a single, typed query surface,

@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, Px, Rect};
+use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, PointerType, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -540,6 +540,35 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> Option<bool> {
         self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
         self.window_state.committed_prefers_reduced_motion()
+    }
+
+    pub fn environment_primary_pointer_type(&mut self, invalidation: Invalidation) -> PointerType {
+        self.observe_environment_query(EnvironmentQueryKey::PrimaryPointerType, invalidation);
+        self.window_state.committed_primary_pointer_type()
+    }
+
+    pub fn environment_primary_pointer_can_hover(
+        &mut self,
+        invalidation: Invalidation,
+        default_when_unknown: bool,
+    ) -> bool {
+        match self.environment_primary_pointer_type(invalidation) {
+            PointerType::Touch => false,
+            PointerType::Unknown => default_when_unknown,
+            PointerType::Mouse | PointerType::Pen => true,
+        }
+    }
+
+    pub fn environment_primary_pointer_is_coarse(
+        &mut self,
+        invalidation: Invalidation,
+        default_when_unknown: bool,
+    ) -> bool {
+        match self.environment_primary_pointer_type(invalidation) {
+            PointerType::Touch => true,
+            PointerType::Unknown => default_when_unknown,
+            PointerType::Mouse | PointerType::Pen => false,
+        }
     }
 
     pub fn layout_query_bounds(

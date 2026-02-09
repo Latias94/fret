@@ -25,7 +25,7 @@ use fret_ui::element::{
     SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::overlay_motion;
 
@@ -680,7 +680,11 @@ impl Tooltip {
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
+        let pointer_can_hover =
+            fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
+
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+            let hovered = hovered && pointer_can_hover;
             let focused = cx.is_focused_element(trigger_id);
             let event_models = tooltip_trigger_event_models(cx);
             let tooltip_id = cx.root_id();

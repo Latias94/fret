@@ -10,7 +10,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, HoverRegionProps, Length, Overflow, PointerRegionProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::headless::safe_hover;
@@ -396,7 +396,10 @@ impl HoverCard {
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
         let debug_trace = cfg!(test) && std::env::var_os("FRET_DEBUG_HOVERCARD").is_some();
+        let pointer_can_hover =
+            fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
+            let hovered = hovered && pointer_can_hover;
             let hover_card_id = cx.root_id();
             let open = open.clone();
             let last_pointer = hover_card_last_pointer_model(cx, hover_card_id);
