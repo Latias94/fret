@@ -2552,6 +2552,7 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_hotspot(
         &mut self,
         node: NodeId,
@@ -2587,6 +2588,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn debug_record_paint_text_prepare_reasons(
         &mut self,
         blob_missing: bool,
@@ -3518,9 +3520,7 @@ impl<H: UiHost> UiTree<H> {
         wrap: fret_core::TextWrap,
         max_width: Option<fret_core::Px>,
     ) -> Option<fret_core::Px> {
-        let Some(max_width) = max_width else {
-            return None;
-        };
+        let max_width = max_width?;
         Some(self.maybe_bucket_text_wrap_width(wrap, max_width))
     }
 

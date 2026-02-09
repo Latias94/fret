@@ -2488,7 +2488,6 @@ mod tests {
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
         let changed_values: Arc<Mutex<Vec<Vec<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
-        let changed_values_for_handler = changed_values.clone();
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -2504,6 +2503,7 @@ mod tests {
             bounds,
             "test",
             |cx| {
+                let changed_values_for_handler = changed_values.clone();
                 let item_1 = AccordionItem::new(
                     Arc::from("item-1"),
                     AccordionTrigger::new(vec![cx.text("Item 1")])
@@ -2559,6 +2559,46 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let changed_values_for_handler = changed_values.clone();
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                vec![
+                    Accordion::single(open.clone())
+                        .on_value_change(Some(Arc::new(move |value| {
+                            changed_values_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push(value);
+                        })))
+                        .items([item_1, item_2])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let selected = app.models().get_cloned(&open).flatten();
         assert_eq!(selected.as_deref(), Some("item-2"));
