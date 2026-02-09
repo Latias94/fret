@@ -47,6 +47,12 @@ Landed behavior gates (in-tree):
 - `ecosystem/fret-ui-shadcn/tests/extras_marquee_pause_on_hover.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
 
+Landed perf gates (in-tree):
+
+- `tools/diag-scripts/extras-marquee-steady.json`
+- `tools/perf/diag_extras_marquee_gate.sh`
+- `docs/workstreams/perf-baselines/policies/extras-marquee-steady.v1.json`
+
 ## Candidate components (staged)
 
 Legend:
@@ -77,7 +83,8 @@ Legend:
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
 | `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | Rust test + perf note |
-| `Marquee` / `Ticker` | `repo-ref/kibo/packages/marquee`, `.../ticker` (MIT) | continuous frames lease | scripted + perf note (perf gate later if needed) |
+| `Marquee` | `repo-ref/kibo/packages/marquee` (MIT) | continuous frames lease | scripted + perf suite (`extras-marquee-steady`) |
+| `Ticker` | `repo-ref/kibo/packages/ticker` (MIT) | pure composition | snapshot |
 
 ## Per-component checklist (copy/paste into PRs)
 
