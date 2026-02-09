@@ -511,6 +511,7 @@ mod tests {
         );
 
         state.brush_selection_2d = Some(crate::selection::BrushSelection2D {
+            grid: None,
             x_axis: AxisId::new(1),
             y_axis: AxisId::new(2),
             x: DataWindow { min: 0.0, max: 1.0 },

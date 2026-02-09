@@ -1486,6 +1486,7 @@ fn brush_selection_updates_state_without_bumping_view_revision_and_is_exposed_in
     assert_eq!(
         engine.state().brush_selection_2d,
         Some(crate::engine::BrushSelection2D {
+            grid: Some(crate::ids::GridId::new(1)),
             x_axis,
             y_axis,
             x: DataWindow {
@@ -1568,6 +1569,182 @@ fn brush_x_row_range_is_derived_for_matching_series_axes() {
         .copied()
         .expect("expected row range for the brushed series");
     assert_eq!(range, RowRange { start: 2, end: 6 });
+}
+
+#[test]
+fn brush_selection_is_scoped_to_grid_and_filters_series_ranges() {
+    use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+
+    let dataset_id = DatasetId::new(1);
+    let x_field = FieldId::new(1);
+    let y_field = FieldId::new(2);
+
+    let grid_a = GridId::new(1);
+    let grid_b = GridId::new(2);
+
+    let x_a = AxisId::new(1);
+    let y_a = AxisId::new(2);
+    let x_b = AxisId::new(3);
+    let y_b = AxisId::new(4);
+
+    let series_a = SeriesId::new(1);
+    let series_b = SeriesId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(200.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
+        axes: vec![
+            AxisSpec {
+                id: x_a,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_a,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_a,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: x_b,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_b,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_b,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: None,
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: series_a,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_a,
+                y_axis: y_a,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: series_b,
+                name: None,
+                kind: SeriesKind::Line,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis: x_b,
+                y_axis: y_b,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64((0..=9).map(|v| v as f64).collect()));
+    table.push_column(Column::F64((0..=9).map(|v| (v * 10) as f64).collect()));
+    engine.datasets_mut().insert(dataset_id, table);
+
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis: x_a,
+        y_axis: y_a,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    let _step = engine
+        .step(&mut measurer, WorkBudget::new(1_000_000, 0, 2_048))
+        .unwrap();
+
+    let selection = engine
+        .output()
+        .brush_selection_2d
+        .expect("expected brush selection in output");
+    assert_eq!(selection.grid, Some(grid_a));
+
+    assert!(
+        engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_a)
+    );
+    assert!(
+        !engine
+            .output()
+            .brush_x_row_ranges_by_series
+            .contains_key(&series_b)
+    );
+
+    // Mismatched grids should clear the selection defensively.
+    engine.apply_action(Action::SetBrushSelection2D {
+        x_axis: x_a,
+        y_axis: y_b,
+        x: DataWindow { min: 2.0, max: 5.0 },
+        y: DataWindow {
+            min: -100.0,
+            max: 100.0,
+        },
+    });
+    assert_eq!(engine.state().brush_selection_2d, None);
 }
 
 #[test]

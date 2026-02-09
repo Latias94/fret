@@ -299,7 +299,15 @@ impl ChartEngine {
                 x,
                 y,
             } => {
+                let grid_x = self.model.axes.get(&x_axis).map(|a| a.grid);
+                let grid_y = self.model.axes.get(&y_axis).map(|a| a.grid);
+                if grid_x.is_none() || grid_x != grid_y {
+                    self.state.brush_selection_2d = None;
+                    return;
+                }
+
                 let next = BrushSelection2D {
+                    grid: grid_x,
                     x_axis,
                     y_axis,
                     x,

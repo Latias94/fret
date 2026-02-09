@@ -498,7 +498,11 @@ impl ChartCanvas {
             return;
         };
         let current = self.with_engine(|engine| engine.state().brush_selection_2d);
-        if selection == current {
+        let normalize = |mut s: BrushSelection2D| {
+            s.grid = None;
+            s
+        };
+        if selection.map(normalize) == current.map(normalize) {
             return;
         }
 
@@ -4904,7 +4908,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             rect: self.last_layout.plot,
         });
 
-        let brush = self.with_engine(|engine| engine.state().brush_selection_2d);
+        let brush = self
+            .with_engine(|engine| engine.state().brush_selection_2d)
+            .and_then(|brush| {
+                if let Some(grid) = self.grid_override
+                    && brush.grid != Some(grid)
+                {
+                    return None;
+                }
+                Some(brush)
+            });
         let brush_rect_px = if let Some(brush) = brush {
             self.brush_rect_px(brush)
                 .filter(|rect| rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0)
