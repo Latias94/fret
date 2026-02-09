@@ -63,6 +63,41 @@ Heuristics:
 
 ---
 
+## Find the frame that maxes a specific metric (bundle-local, deterministic)
+
+Many perf thresholds are keyed to “max of a metric over all frames”, not necessarily the single “worst total” frame.
+When you need the exact frame that triggered a max threshold (e.g. `layout_engine_solve_time_us`), use `jq` to scan
+the bundle snapshots directly:
+
+```bash
+jq -c '
+  .windows[0].snapshots
+  | map({
+      frame_id,
+      tick_id,
+      ts: .timestamp_unix_ms,
+      layout: .debug.stats.layout_time_us,
+      solve: .debug.stats.layout_engine_solve_time_us,
+      paint: .debug.stats.paint_time_us,
+      prepaint: .debug.stats.prepaint_time_us,
+      total: ((.debug.stats.layout_time_us // 0) + (.debug.stats.prepaint_time_us // 0) + (.debug.stats.paint_time_us // 0))
+    })
+  | max_by(.solve)
+' <bundle.json> | jq .
+```
+
+Then extract that exact snapshot (example uses `frame_id==1071`):
+
+```bash
+jq '
+  .windows[0].snapshots[]
+  | select(.frame_id == 1071)
+  | {frame_id, tick_id, ts: .timestamp_unix_ms, stats: .debug.stats, layout_hotspots: .debug.layout_hotspots[0:10], paint_text_prepare_hotspots: .debug.paint_text_prepare_hotspots[0:10]}
+' <bundle.json> | head -n 200
+```
+
+--- 
+
 ## Common hitch classes (and what to try next)
 
 ### A) Resize-drag jank
@@ -156,4 +191,3 @@ When you finish attribution:
 
 - Record the **commit hash**, **command**, **out-dir**, and **worst bundle** in the perf log.
 - If you introduce a new probe/script, add a baseline and wire it into a gate before moving on.
-
