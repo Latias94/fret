@@ -232,7 +232,7 @@ fn mermaid_svg_entry<H: UiHost>(
                 .map_err(|e| QueryError::permanent(format!("mermaid render error: {e}")))?;
             let svg = set_svg_root_id(svg, &diagram_id);
 
-            let svg = merman::render::foreign_object_label_fallback_svg_text(&svg);
+            let svg = foreign_object_label_fallback_svg_text(&svg);
             let (viewbox_w, viewbox_h) = svg_viewbox_wh(&svg);
 
             Ok(MermaidSvgReady {
@@ -319,4 +319,227 @@ fn svg_viewbox_wh(svg: &str) -> (Option<f32>, Option<f32>) {
     let w = it.next().and_then(|s| s.parse::<f32>().ok());
     let h = it.next().and_then(|s| s.parse::<f32>().ok());
     (w, h)
+}
+
+// --- foreignObject overlay fallback ---
+//
+// Mermaid SVG output uses `<foreignObject>` for many labels. Most headless SVG stacks (including
+// `resvg`) do not fully support HTML inside SVG. For Markdown rendering we keep the upstream-like
+// SVG as-is, but add a best-effort `<text>` overlay so diagrams remain readable.
+
+#[derive(Clone, Copy, Debug, Default)]
+struct Translate {
+    x: f64,
+    y: f64,
+}
+
+fn parse_attr_str<'a>(tag: &'a str, key: &str) -> Option<&'a str> {
+    let needle = format!(r#"{key}=""#);
+    let i = tag.find(&needle)?;
+    let rest = &tag[i + needle.len()..];
+    let end = rest.find('"')?;
+    Some(rest[..end].trim())
+}
+
+fn parse_attr_f64(tag: &str, key: &str) -> Option<f64> {
+    parse_attr_str(tag, key)?.parse::<f64>().ok()
+}
+
+fn is_self_closing(tag: &str) -> bool {
+    tag.trim_end().ends_with("/>")
+}
+
+fn parse_translate(transform: &str) -> Translate {
+    let lower = transform.to_ascii_lowercase();
+    let Some(i) = lower.find("translate(") else {
+        return Translate::default();
+    };
+    let after = &transform[i + "translate(".len()..];
+    let Some(end) = after.find(')') else {
+        return Translate::default();
+    };
+    let args = &after[..end];
+
+    let mut nums = Vec::<f64>::with_capacity(2);
+    let mut cur = String::new();
+    for ch in args.chars() {
+        if ch.is_ascii_digit() || ch == '.' || ch == '-' || ch == '+' || ch == 'e' || ch == 'E' {
+            cur.push(ch);
+        } else if !cur.is_empty() {
+            if let Ok(v) = cur.parse::<f64>() {
+                nums.push(v);
+            }
+            cur.clear();
+        }
+    }
+    if !cur.is_empty() {
+        if let Ok(v) = cur.parse::<f64>() {
+            nums.push(v);
+        }
+    }
+
+    Translate {
+        x: *nums.get(0).unwrap_or(&0.0),
+        y: *nums.get(1).unwrap_or(&0.0),
+    }
+}
+
+fn sum_translate(stack: &[Translate]) -> Translate {
+    let mut acc = Translate::default();
+    for t in stack {
+        acc.x += t.x;
+        acc.y += t.y;
+    }
+    acc
+}
+
+fn escape_xml_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+fn strip_html_tags(s: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for ch in s.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(ch),
+            _ => {}
+        }
+    }
+    out
+}
+
+fn htmlish_to_text_lines(html: &str) -> Vec<String> {
+    // Mermaid foreignObject labels often look like:
+    //   <div class="label">Line 1<br/>Line 2</div>
+    // We treat `<br>` as line breaks and strip remaining tags.
+    let mut normalized = html.replace("<br/>", "\n");
+    normalized = normalized.replace("<br />", "\n");
+    normalized = normalized.replace("<br>", "\n");
+    normalized = normalized.replace("</br>", "\n");
+    let text = strip_html_tags(&normalized);
+
+    text.lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .map(|l| l.to_string())
+        .collect()
+}
+
+fn foreign_object_label_fallback_svg_text(svg: &str) -> String {
+    let close_tag = "</foreignObject>";
+    let mut out = String::with_capacity(svg.len() + 2048);
+    let mut overlays = String::new();
+    let mut g_translate_stack: Vec<Translate> = Vec::new();
+
+    let mut i = 0usize;
+    while let Some(lt_rel) = svg[i..].find('<') {
+        let lt = i + lt_rel;
+        out.push_str(&svg[i..lt]);
+
+        let Some(gt_rel) = svg[lt..].find('>') else {
+            out.push_str(&svg[lt..]);
+            i = svg.len();
+            break;
+        };
+        let gt = lt + gt_rel + 1;
+        let tag = &svg[lt..gt];
+
+        // Comments / declarations: passthrough.
+        if tag.starts_with("<!--") || tag.starts_with("<!") || tag.starts_with("<?") {
+            out.push_str(tag);
+            i = gt;
+            continue;
+        }
+
+        if tag.starts_with("</g") {
+            if !g_translate_stack.is_empty() {
+                g_translate_stack.pop();
+            }
+            out.push_str(tag);
+            i = gt;
+            continue;
+        }
+
+        if tag.starts_with("<g") {
+            let t = parse_attr_str(tag, "transform")
+                .map(parse_translate)
+                .unwrap_or_default();
+            if !is_self_closing(tag) {
+                g_translate_stack.push(t);
+            }
+            out.push_str(tag);
+            i = gt;
+            continue;
+        }
+
+        if tag.starts_with("<foreignObject") {
+            let x = parse_attr_f64(tag, "x").unwrap_or(0.0);
+            let y = parse_attr_f64(tag, "y").unwrap_or(0.0);
+            let w = parse_attr_f64(tag, "width").unwrap_or(0.0);
+            let h = parse_attr_f64(tag, "height").unwrap_or(0.0);
+            let t = sum_translate(&g_translate_stack);
+
+            let body_start = gt;
+            let Some(close_rel) = svg[body_start..].find(close_tag) else {
+                out.push_str(tag);
+                i = gt;
+                continue;
+            };
+            let body_end = body_start + close_rel;
+            let body = &svg[body_start..body_end];
+
+            let lines = htmlish_to_text_lines(body);
+            if !lines.is_empty() {
+                // Approximate line height. Mermaid defaults look like 14–16px.
+                let font_size = 14.0f64;
+                let line_h = (font_size * 1.2).max(12.0);
+                let text_x = x + t.x + w * 0.5;
+                let text_y0 = y + t.y + h * 0.5 - (lines.len() as f64 - 1.0) * line_h * 0.5;
+
+                for (idx, line) in lines.iter().enumerate() {
+                    let yy = text_y0 + idx as f64 * line_h;
+                    let line = escape_xml_text(line);
+                    overlays.push_str(&format!(
+                        "<text x=\"{text_x}\" y=\"{yy}\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-size=\"{font_size}\">{line}</text>"
+                    ));
+                }
+            }
+
+            // Skip the original foreignObject block.
+            let after_close = body_end + close_tag.len();
+            i = after_close;
+            continue;
+        }
+
+        out.push_str(tag);
+        i = gt;
+    }
+    if i < svg.len() {
+        out.push_str(&svg[i..]);
+    }
+
+    if overlays.is_empty() {
+        return out;
+    }
+
+    // Insert overlays near the end of the SVG so they draw above shapes.
+    if let Some(pos) = out.rfind("</svg>") {
+        out.insert_str(pos, &overlays);
+        out
+    } else {
+        out.push_str(&overlays);
+        out
+    }
 }
