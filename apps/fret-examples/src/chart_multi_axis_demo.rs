@@ -20,18 +20,21 @@ use delinea::{
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
 use fret_chart::retained::{ChartCanvas, ChartCanvasOutput};
+use fret_chart::{
+    AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkPolicy, ChartLinkRouter, LinkAxisKey,
+    LinkedChartGroup, LinkedChartMember,
+};
 use fret_runtime::Model;
 
 struct ChartMultiAxisDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    shared_brush: Model<Option<delinea::BrushSelection2D>>,
-    shared_axis_pointer: Model<Option<delinea::AxisPointerAnchor>>,
-    shared_domain_windows: Model<BTreeMap<AxisId, Option<DataWindow>>>,
+    linked: Option<LinkedChartGroup>,
+    shared_brush: Model<Option<BrushSelectionLink2D>>,
+    shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
     top_output: Model<ChartCanvasOutput>,
     bottom_output: Model<ChartCanvasOutput>,
-    last_top_output_revision: u64,
-    last_bottom_output_revision: u64,
 }
 
 #[derive(Default)]
@@ -53,37 +56,36 @@ impl ChartMultiAxisDemoDriver {
              Brush linking (P0):\n\
              - Both charts are in the same LinkGroup.\n\
              - Use Alt + RMB drag to brush-select; the selection is mirrored to the other chart.\n\
-             - This demo routes LinkEvent::BrushSelectionChanged into a shared brush model."
+             - This demo uses fret-chart LinkedChartGroup to route delinea link events by LinkAxisKey."
         );
 
-        let shared_brush = app.models_mut().insert(None::<delinea::BrushSelection2D>);
-        let shared_axis_pointer = app.models_mut().insert(None::<delinea::AxisPointerAnchor>);
+        let shared_brush = app.models_mut().insert(None::<BrushSelectionLink2D>);
+        let shared_axis_pointer = app.models_mut().insert(None::<AxisPointerLinkAnchor>);
         let shared_domain_windows = app
             .models_mut()
-            .insert(BTreeMap::<AxisId, Option<DataWindow>>::default());
+            .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
         let top_output = app.models_mut().insert(ChartCanvasOutput::default());
         let bottom_output = app.models_mut().insert(ChartCanvasOutput::default());
 
         ChartMultiAxisDemoWindowState {
             ui,
             root: None,
+            linked: None,
             shared_brush,
             shared_axis_pointer,
             shared_domain_windows,
             top_output,
             bottom_output,
-            last_top_output_revision: 0,
-            last_bottom_output_revision: 0,
         }
     }
 
     fn build_canvas(
         chart_id: delinea::ids::ChartId,
-        shared_brush: Model<Option<delinea::BrushSelection2D>>,
-        shared_axis_pointer: Model<Option<delinea::AxisPointerAnchor>>,
-        shared_domain_windows: Model<BTreeMap<AxisId, Option<DataWindow>>>,
+        shared_brush: Model<Option<BrushSelectionLink2D>>,
+        shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+        shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
         output: Model<ChartCanvasOutput>,
-    ) -> ChartCanvas {
+    ) -> (ChartCanvas, ChartLinkRouter) {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
 
@@ -312,6 +314,7 @@ impl ChartMultiAxisDemoDriver {
             ],
         };
 
+        let router = ChartLinkRouter::from_spec(&spec);
         let mut canvas = ChartCanvas::new(spec)
             .expect("chart spec should be valid")
             .linked_brush(shared_brush)
@@ -385,88 +388,7 @@ impl ChartMultiAxisDemoDriver {
             }),
         });
 
-        canvas
-    }
-
-    fn tick_link_events(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        shared_brush: &Model<Option<delinea::BrushSelection2D>>,
-        shared_axis_pointer: &Model<Option<delinea::AxisPointerAnchor>>,
-        shared_domain_windows: &Model<BTreeMap<AxisId, Option<DataWindow>>>,
-        source_output: &Model<ChartCanvasOutput>,
-        last_seen_revision: &mut u64,
-    ) {
-        let Ok((revision, link_events)) = source_output.read(app, |_app, out| {
-            (out.revision, out.snapshot.link_events.clone())
-        }) else {
-            return;
-        };
-
-        if revision == *last_seen_revision {
-            return;
-        };
-        *last_seen_revision = revision;
-
-        let mut changed = false;
-
-        if let Some(next) = link_events.iter().rev().find_map(|e| match e {
-            delinea::LinkEvent::BrushSelectionChanged { selection } => Some(*selection),
-            _ => None,
-        }) {
-            let Ok(current) = shared_brush.read(app, |_app, s| *s) else {
-                return;
-            };
-            if current != next {
-                let _ = shared_brush.update(app, |s, _cx| {
-                    *s = next;
-                });
-                changed = true;
-            }
-        }
-
-        if let Some(next) = link_events.iter().rev().find_map(|e| match e {
-            delinea::LinkEvent::AxisPointerChanged { anchor } => Some(anchor.clone()),
-            _ => None,
-        }) {
-            let Ok(current) = shared_axis_pointer.read(app, |_app, a| a.clone()) else {
-                return;
-            };
-            if current != next {
-                let _ = shared_axis_pointer.update(app, |a, _cx| {
-                    *a = next;
-                });
-                changed = true;
-            }
-        }
-
-        let domain_updates: Vec<(AxisId, Option<DataWindow>)> = link_events
-            .iter()
-            .filter_map(|e| match e {
-                delinea::LinkEvent::DomainWindowChanged { axis, window } => Some((*axis, *window)),
-                _ => None,
-            })
-            .collect();
-        if !domain_updates.is_empty() {
-            let Ok(current) = shared_domain_windows.read(app, |_app, w| w.clone()) else {
-                return;
-            };
-            let mut next = current.clone();
-            for (axis, window) in domain_updates {
-                next.insert(axis, window);
-            }
-            if next != current {
-                let _ = shared_domain_windows.update(app, |w, _cx| {
-                    *w = next;
-                });
-                changed = true;
-            }
-        }
-
-        if changed {
-            app.request_redraw(window);
-        }
+        (canvas, router)
     }
 }
 
@@ -493,9 +415,16 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
                 ..
             } => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);
+            }
+        }
+
+        if let Some(linked) = state.linked.as_mut() {
+            if linked.tick(app) {
+                app.request_redraw(window);
             }
         }
     }
@@ -516,20 +445,44 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
             let shared_axis_pointer = state.shared_axis_pointer.clone();
             let shared_domain_windows = state.shared_domain_windows.clone();
 
-            let top_canvas = Self::build_canvas(
+            let (top_canvas, top_router) = Self::build_canvas(
                 delinea::ids::ChartId::new(1),
                 shared_brush.clone(),
                 shared_axis_pointer.clone(),
                 shared_domain_windows.clone(),
                 state.top_output.clone(),
             );
-            let bottom_canvas = Self::build_canvas(
+            let (bottom_canvas, bottom_router) = Self::build_canvas(
                 delinea::ids::ChartId::new(2),
                 shared_brush,
                 shared_axis_pointer,
                 shared_domain_windows,
                 state.bottom_output.clone(),
             );
+
+            if state.linked.is_none() {
+                let policy = ChartLinkPolicy {
+                    brush: true,
+                    axis_pointer: true,
+                    domain_windows: true,
+                };
+                let mut linked = LinkedChartGroup::new(
+                    policy,
+                    state.shared_brush.clone(),
+                    state.shared_axis_pointer.clone(),
+                    state.shared_domain_windows.clone(),
+                );
+                linked
+                    .push(LinkedChartMember {
+                        router: top_router,
+                        output: state.top_output.clone(),
+                    })
+                    .push(LinkedChartMember {
+                        router: bottom_router,
+                        output: state.bottom_output.clone(),
+                    });
+                state.linked = Some(linked);
+            }
 
             let top_node = ChartCanvas::create_node(&mut state.ui, top_canvas);
             let bottom_node = ChartCanvas::create_node(&mut state.ui, bottom_canvas);
@@ -553,31 +506,6 @@ impl WinitAppDriver for ChartMultiAxisDemoDriver {
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
         frame.paint_all(scene);
-
-        let shared_brush = state.shared_brush.clone();
-        let shared_axis_pointer = state.shared_axis_pointer.clone();
-        let shared_domain_windows = state.shared_domain_windows.clone();
-        let top_output = state.top_output.clone();
-        let bottom_output = state.bottom_output.clone();
-
-        self.tick_link_events(
-            app,
-            window,
-            &shared_brush,
-            &shared_axis_pointer,
-            &shared_domain_windows,
-            &top_output,
-            &mut state.last_top_output_revision,
-        );
-        self.tick_link_events(
-            app,
-            window,
-            &shared_brush,
-            &shared_axis_pointer,
-            &shared_domain_windows,
-            &bottom_output,
-            &mut state.last_bottom_output_revision,
-        );
     }
 
     fn window_create_spec(
