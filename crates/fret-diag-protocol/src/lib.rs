@@ -601,6 +601,49 @@ pub struct UiInspectConfigV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsBundleDumpV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsBundleDumpedV1 {
+    pub schema_version: u32,
+    pub exported_unix_ms: u64,
+    pub out_dir: String,
+    pub dir: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bundle: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsScreenshotRequestV1 {
+    pub schema_version: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(default = "default_capture_screenshot_timeout_frames")]
+    pub timeout_frames: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DevtoolsScreenshotResultV1 {
+    pub schema_version: u32,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    pub request_id: String,
+    pub window: u64,
+    pub bundle_dir_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screenshots_dir: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entry: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiScriptResultV1 {
     pub schema_version: u32,
     pub run_id: u64,

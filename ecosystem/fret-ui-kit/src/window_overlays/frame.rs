@@ -88,6 +88,9 @@ pub fn request_hover_overlay_for_window<H: UiHost>(
     app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
         let w = overlays.windows.entry(window).or_default();
         overlays
+            .cached_hover_overlay_pointer_move_handlers
+            .insert((window, request.id), request.on_pointer_move.clone());
+        overlays
             .cached_hover_overlay_requests
             .insert((window, request.id), request.clone());
         w.hover_overlays.push(request);

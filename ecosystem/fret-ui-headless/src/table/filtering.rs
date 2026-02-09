@@ -8,6 +8,55 @@ use super::{
     TanStackValue, column::BuiltInFilterFn,
 };
 
+enum ColumnValueGetter<TData> {
+    Value(SortValueFn<TData>),
+    U64(Arc<dyn Fn(&TData) -> u64>),
+    FacetKey(Arc<dyn Fn(&TData) -> u64>),
+    FacetStr(Arc<dyn for<'r> Fn(&'r TData) -> &'r str>),
+}
+
+impl<TData> Clone for ColumnValueGetter<TData> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Value(v) => Self::Value(v.clone()),
+            Self::U64(v) => Self::U64(v.clone()),
+            Self::FacetKey(v) => Self::FacetKey(v.clone()),
+            Self::FacetStr(v) => Self::FacetStr(v.clone()),
+        }
+    }
+}
+
+impl<TData> ColumnValueGetter<TData> {
+    fn get(&self, row: &TData) -> TanStackValue {
+        match self {
+            Self::Value(get_value) => get_value(row),
+            Self::U64(get_value) => TanStackValue::Number(get_value(row) as f64),
+            Self::FacetKey(get_value) => TanStackValue::Number(get_value(row) as f64),
+            Self::FacetStr(get_value) => TanStackValue::String(Arc::<str>::from(get_value(row))),
+        }
+    }
+}
+
+fn column_value_getter<TData>(column: &ColumnDef<TData>) -> Option<ColumnValueGetter<TData>> {
+    if let Some(get_value) = column.sort_value.as_ref() {
+        return Some(ColumnValueGetter::Value(get_value.clone()));
+    }
+
+    if let Some(get_value) = column.value_u64_fn.as_ref() {
+        return Some(ColumnValueGetter::U64(get_value.clone()));
+    }
+
+    if let Some(get_value) = column.facet_key_fn.as_ref() {
+        return Some(ColumnValueGetter::FacetKey(get_value.clone()));
+    }
+
+    if let Some(get_value) = column.facet_str_fn.as_ref() {
+        return Some(ColumnValueGetter::FacetStr(get_value.clone()));
+    }
+
+    None
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnFilter {
     pub column: ColumnId,
@@ -162,14 +211,14 @@ pub fn evaluate_row_filter_state<'a, TData>(
         CustomWithMeta(super::FilterFnWithMeta<TData>),
         BuiltIn {
             builtin: BuiltInFilterFn,
-            value: SortValueFn<TData>,
+            getter: ColumnValueGetter<TData>,
         },
         Value {
-            value: SortValueFn<TData>,
+            getter: ColumnValueGetter<TData>,
             f: Arc<dyn Fn(&TanStackValue, &Value) -> bool>,
         },
         ValueWithMeta {
-            value: SortValueFn<TData>,
+            getter: ColumnValueGetter<TData>,
             f: Arc<dyn Fn(&TanStackValue, &Value, &mut dyn FnMut(Value)) -> bool>,
         },
     }
@@ -195,16 +244,16 @@ pub fn evaluate_row_filter_state<'a, TData>(
             match self {
                 Self::Custom(f) => f(row, filter_value),
                 Self::CustomWithMeta(f) => f(row, filter_value, add_meta),
-                Self::BuiltIn { builtin, value } => {
-                    let v = value(row);
+                Self::BuiltIn { builtin, getter } => {
+                    let v = getter.get(row);
                     apply_built_in_filter_fn(*builtin, &v, filter_value)
                 }
-                Self::Value { value, f } => {
-                    let v = value(row);
+                Self::Value { getter, f } => {
+                    let v = getter.get(row);
                     f(&v, filter_value)
                 }
-                Self::ValueWithMeta { value, f } => {
-                    let v = value(row);
+                Self::ValueWithMeta { getter, f } => {
+                    let v = getter.get(row);
                     f(&v, filter_value, add_meta)
                 }
             }
@@ -226,16 +275,17 @@ pub fn evaluate_row_filter_state<'a, TData>(
         let spec = column.filtering_fn.as_ref()?;
         match spec {
             FilteringFnSpec::Auto => {
+                let getter = column_value_getter(column)?;
                 let first_row = row_model
                     .flat_rows()
                     .first()
                     .and_then(|&i| row_model.row(i));
-                let value = match (first_row, column.sort_value.as_ref()) {
-                    (Some(row), Some(get_value)) => get_value(row.original),
+                let first_value = match first_row {
+                    Some(row) => getter.get(row.original),
                     _ => TanStackValue::Undefined,
                 };
 
-                let builtin = match value {
+                let builtin = match first_value {
                     TanStackValue::String(_) => BuiltInFilterFn::IncludesString,
                     TanStackValue::Number(_) => BuiltInFilterFn::InNumberRange,
                     TanStackValue::Bool(_) => BuiltInFilterFn::Equals,
@@ -244,42 +294,41 @@ pub fn evaluate_row_filter_state<'a, TData>(
                     _ => BuiltInFilterFn::WeakEquals,
                 };
 
-                let value = column.sort_value.as_ref()?.clone();
-                Some(ResolvedFilterFn::BuiltIn { builtin, value })
+                Some(ResolvedFilterFn::BuiltIn { builtin, getter })
             }
             FilteringFnSpec::BuiltIn(builtin) => {
-                let value = column.sort_value.as_ref()?.clone();
+                let getter = column_value_getter(column)?;
                 Some(ResolvedFilterFn::BuiltIn {
                     builtin: *builtin,
-                    value,
+                    getter,
                 })
             }
             FilteringFnSpec::Named(key) => match filter_fns.get(key) {
                 Some(FilterFnDef::BuiltIn(builtin)) => {
-                    let value = column.sort_value.as_ref()?.clone();
+                    let getter = column_value_getter(column)?;
                     Some(ResolvedFilterFn::BuiltIn {
                         builtin: *builtin,
-                        value,
+                        getter,
                     })
                 }
                 Some(FilterFnDef::Value(f)) => {
-                    let value = column.sort_value.as_ref()?.clone();
+                    let getter = column_value_getter(column)?;
                     Some(ResolvedFilterFn::Value {
-                        value,
+                        getter,
                         f: f.clone(),
                     })
                 }
                 Some(FilterFnDef::ValueWithMeta(f)) => {
-                    let value = column.sort_value.as_ref()?.clone();
+                    let getter = column_value_getter(column)?;
                     Some(ResolvedFilterFn::ValueWithMeta {
-                        value,
+                        getter,
                         f: f.clone(),
                     })
                 }
                 None => {
                     let builtin = builtin_filter_key(key.as_ref())?;
-                    let value = column.sort_value.as_ref()?.clone();
-                    Some(ResolvedFilterFn::BuiltIn { builtin, value })
+                    let getter = column_value_getter(column)?;
+                    Some(ResolvedFilterFn::BuiltIn { builtin, getter })
                 }
             },
         }
@@ -335,9 +384,9 @@ pub fn evaluate_row_filter_state<'a, TData>(
                 let can_global_filter = match get_column_can_global_filter {
                     Some(f) => first_row_original.is_some_and(|first| f(col, first)),
                     None => match first_row_original {
-                        Some(first) => match col.sort_value.as_ref() {
+                        Some(first) => match column_value_getter(col) {
                             Some(get_value) => matches!(
-                                (get_value)(first),
+                                get_value.get(first),
                                 TanStackValue::String(_) | TanStackValue::Number(_)
                             ),
                             None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
@@ -350,35 +399,35 @@ pub fn evaluate_row_filter_state<'a, TData>(
                     continue;
                 }
 
-                if let Some(value) = col.sort_value.as_ref().cloned() {
+                if let Some(getter) = column_value_getter(col) {
                     let resolved_global = match global_filter_fn {
                         FilteringFnSpec::Auto => ResolvedFilterFn::BuiltIn {
                             builtin: BuiltInFilterFn::IncludesString,
-                            value,
+                            getter: getter.clone(),
                         },
                         FilteringFnSpec::BuiltIn(builtin) => ResolvedFilterFn::BuiltIn {
                             builtin: *builtin,
-                            value,
+                            getter: getter.clone(),
                         },
                         FilteringFnSpec::Named(key) => match filter_fns.get(key) {
                             Some(FilterFnDef::BuiltIn(builtin)) => ResolvedFilterFn::BuiltIn {
                                 builtin: *builtin,
-                                value,
+                                getter: getter.clone(),
                             },
                             Some(FilterFnDef::Value(f)) => ResolvedFilterFn::Value {
-                                value,
+                                getter: getter.clone(),
                                 f: f.clone(),
                             },
                             Some(FilterFnDef::ValueWithMeta(f)) => {
                                 ResolvedFilterFn::ValueWithMeta {
-                                    value,
+                                    getter: getter.clone(),
                                     f: f.clone(),
                                 }
                             }
                             None => {
                                 let builtin = builtin_filter_key(key.as_ref())
                                     .unwrap_or(BuiltInFilterFn::IncludesString);
-                                ResolvedFilterFn::BuiltIn { builtin, value }
+                                ResolvedFilterFn::BuiltIn { builtin, getter }
                             }
                         },
                     };
@@ -831,8 +880,8 @@ fn resolve_filter_fn_for_column<TData>(
             let Some(first) = data.first() else {
                 return Some(ResolvedFilterBehavior::BuiltIn(BuiltInFilterFn::WeakEquals));
             };
-            let value = match column.sort_value.as_ref() {
-                Some(get_value) => get_value(first),
+            let value = match column_value_getter(column) {
+                Some(get_value) => get_value.get(first),
                 None => TanStackValue::Undefined,
             };
             let builtin = match value {

@@ -242,6 +242,26 @@ let editor = CodeEditor::new(handle)
 ```
 "#;
 
+pub(crate) const DOC_MARKDOWN_EDITOR_SOURCE: &str = r#"
+## Markdown editor (source mode)
+
+This page is a v0 **source-mode** Markdown editor milestone:
+
+- edit Markdown as plain text (no WYSIWYG),
+- validate `fret-code-editor` interaction control (edit vs read-only),
+- validate Markdown syntax highlighting (best-effort) and wrap stability,
+- optionally validate a live preview rendered by `fret-markdown`.
+"#;
+
+pub(crate) const USAGE_MARKDOWN_EDITOR_SOURCE: &str = r##"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("# Hello\n\n- Item\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"##;
+
 pub(crate) const DOC_TEXT_SELECTION_PERF: &str = r#"
 ## Text selection (perf diagnostics)
 
@@ -585,6 +605,24 @@ It exists to validate:
 pub(crate) const USAGE_AI_CHAT_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{ConversationTranscript, PromptInput};
+```
+"#;
+
+pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
+## AI file tree (demo)
+
+This page is a small demo for the AI Elements-aligned `FileTree` surface in `fret-ui-ai`.
+
+It exists to validate:
+
+- nested expand/collapse behavior (folder nodes),
+- selection intent emission (`on_select`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_FILE_TREE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{FileTree, FileTreeFile, FileTreeFolder};
 ```
 "#;
 

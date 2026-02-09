@@ -34,6 +34,41 @@ fn default_overlay_color() -> Color {
     }
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct DialogOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn dialog_open_change_events(
+    state: &mut DialogOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 /// shadcn/ui `Dialog` (v4).
 ///
 /// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager
@@ -52,6 +87,8 @@ pub struct Dialog {
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -64,6 +101,11 @@ impl std::fmt::Debug for Dialog {
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -78,6 +120,8 @@ impl Dialog {
             on_dismiss_request: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -99,6 +143,15 @@ impl Dialog {
 
     pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
         self.overlay_closable = overlay_closable;
+        self
+    }
+
+    /// Base UI-compatible alias.
+    ///
+    /// When `true`, outside pointer press does not dismiss the dialog.
+    /// This is equivalent to `overlay_closable(false)`.
+    pub fn disable_pointer_dismissal(mut self, disable: bool) -> Self {
+        self.overlay_closable = !disable;
         self
     }
 
@@ -130,6 +183,21 @@ impl Dialog {
     /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
     pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
         self.on_close_auto_focus = hook;
+        self
+    }
+
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
         self
     }
 
@@ -166,6 +234,19 @@ impl Dialog {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) = cx
+                .with_state(DialogOpenChangeCallbackState::default, |state| {
+                    dialog_open_change_events(state, is_open, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -751,6 +832,46 @@ mod tests {
                 .unwrap_or(false);
             assert!(open);
         });
+    }
+
+    #[test]
+    fn dialog_disable_pointer_dismissal_alias_maps_overlay_closable() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let a = Dialog::new(open.clone()).disable_pointer_dismissal(true);
+        assert!(!a.overlay_closable);
+
+        let b = Dialog::new(open).disable_pointer_dismissal(false);
+        assert!(b.overlay_closable);
+    }
+
+    #[test]
+    fn dialog_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = DialogOpenChangeCallbackState::default();
+
+        let (changed, completed) = dialog_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn dialog_open_change_events_complete_without_animation() {
+        let mut state = DialogOpenChangeCallbackState::default();
+
+        let _ = dialog_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = dialog_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
     }
 
     #[derive(Default)]

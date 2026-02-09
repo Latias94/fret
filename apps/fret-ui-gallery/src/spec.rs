@@ -96,6 +96,7 @@ pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
 pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
+pub(crate) const PAGE_MARKDOWN_EDITOR_SOURCE: &str = "markdown_editor_source";
 pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = "text_bidi_rtl_conformance";
 pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
@@ -112,6 +113,7 @@ pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
+pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -217,6 +219,8 @@ pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_k
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
 pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
+pub(crate) const CMD_NAV_MARKDOWN_EDITOR_SOURCE: &str =
+    "ui_gallery.nav.select.markdown_editor_source";
 pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_TEXT_BIDI_RTL_CONFORMANCE: &str =
     "ui_gallery.nav.select.text_bidi_rtl_conformance";
@@ -238,6 +242,7 @@ pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
 pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
+pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -573,6 +578,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_CODE_EDITOR_TORTURE,
             ),
             PageSpec::new(
+                PAGE_MARKDOWN_EDITOR_SOURCE,
+                "Markdown Editor (Source)",
+                "Markdown / Source-mode Editor (v0)",
+                "code-editor ecosystem milestone",
+                CMD_NAV_MARKDOWN_EDITOR_SOURCE,
+                &["markdown", "editor", "source-mode", "preview"],
+                docs::DOC_MARKDOWN_EDITOR_SOURCE,
+                docs::USAGE_MARKDOWN_EDITOR_SOURCE,
+            ),
+            PageSpec::new(
                 PAGE_TEXT_SELECTION_PERF,
                 "Text Selection (Perf)",
                 "Text Selection / Selection Rect Culling",
@@ -795,6 +810,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_CHAT_DEMO,
                 docs::USAGE_AI_CHAT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_FILE_TREE_DEMO,
+                "AI File Tree (Demo)",
+                "AI Elements FileTree / Nested Collapsible Demo",
+                "fret-ui-ai (file tree surface)",
+                CMD_NAV_AI_FILE_TREE_DEMO,
+                &["ai", "file", "tree", "outline", "demo"],
+                docs::DOC_AI_FILE_TREE_DEMO,
+                docs::USAGE_AI_FILE_TREE_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,

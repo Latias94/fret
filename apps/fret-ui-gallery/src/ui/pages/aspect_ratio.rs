@@ -76,7 +76,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             )
             .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
             .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+            .test_id(test_id)
     };
 
     let demo_content = ratio_example(
@@ -137,9 +137,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             .layout(LayoutRefinement::default().w_full()),
         |_cx| vec![preview_hint, demo, square, portrait, rtl],
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-aspect-ratio-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-aspect-ratio-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -1892,6 +1892,12 @@ impl From<Vec<AnyElement>> for Elements {
     }
 }
 
+impl From<AnyElement> for Elements {
+    fn from(value: AnyElement) -> Self {
+        Self::new([value])
+    }
+}
+
 impl<const N: usize> From<[AnyElement; N]> for Elements {
     fn from(value: [AnyElement; N]) -> Self {
         Self::new(value)

@@ -112,7 +112,7 @@ impl ToggleRoot {
     /// Reads the current pressed value from the derived pressed model.
     pub fn is_pressed<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
         let model = self.pressed_model(cx);
-        cx.watch_model(&model).copied().unwrap_or(false)
+        cx.watch_model(&model).copied_or_default()
     }
 
     /// Renders a toggle-like pressable, wiring Radix-like pressed state and a11y.
@@ -139,7 +139,7 @@ impl ToggleRoot {
                 cx.pressable_toggle_bool(&model);
             }
 
-            let pressed = cx.watch_model(&model).copied().unwrap_or(false);
+            let pressed = cx.watch_model(&model).copied_or_default();
             props.enabled = props.enabled && !disabled;
             props.a11y = toggle_a11y(label.clone(), pressed);
 

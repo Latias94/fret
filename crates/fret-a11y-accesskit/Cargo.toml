@@ -8,9 +8,10 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "AccessKit accessibility bridge for Fret UI trees."
 
 [dependencies]
 accesskit.workspace = true
-fret-core = { path = "../fret-core" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
 slotmap.workspace = true
 

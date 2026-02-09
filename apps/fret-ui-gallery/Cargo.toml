@@ -62,4 +62,4 @@ web-sys = { version = "0.3", features = ["Window", "Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
-fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust"] }
+fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust", "syntax-markdown"] }

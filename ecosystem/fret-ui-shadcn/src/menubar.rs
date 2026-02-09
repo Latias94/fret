@@ -762,6 +762,7 @@ fn submenu_chevron_right_text<H: UiHost>(
 #[derive(Clone)]
 pub struct Menubar {
     menus: Vec<MenubarMenuEntries>,
+    modal: bool,
     disabled: bool,
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
@@ -776,6 +777,7 @@ impl std::fmt::Debug for Menubar {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Menubar")
             .field("menus_len", &self.menus.len())
+            .field("modal", &self.modal)
             .field("disabled", &self.disabled)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
@@ -790,6 +792,7 @@ impl Menubar {
         let menus = menus.into_iter().collect();
         Self {
             menus,
+            modal: false,
             disabled: false,
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
@@ -803,6 +806,14 @@ impl Menubar {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Controls whether outside interactions are blocked while submenus are open (Base UI `modal`).
+    ///
+    /// Default is `false` to preserve current shadcn menubar behavior.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -889,6 +900,7 @@ impl Menubar {
             let layout = decl_style::layout_style(&theme, self.layout.clone());
 
             let disabled = self.disabled;
+            let modal = self.modal;
             let menus = self.menus;
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
             let align_leading_icons = self.align_leading_icons;
@@ -914,73 +926,76 @@ impl Menubar {
             let menus: Vec<MenubarMenuEntries> = menus
                 .into_iter()
                 .map(|menu| {
-                    menu.on_dismiss_request(on_dismiss_request.clone())
+                    menu.modal(modal)
+                        .on_dismiss_request(on_dismiss_request.clone())
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone())
                 })
                 .collect();
 
-            cx.semantics(
-                SemanticsProps {
-                    layout: LayoutStyle::default(),
-                    role: SemanticsRole::MenuBar,
-                    disabled,
-                    ..Default::default()
-                },
-                |cx| {
-                    vec![cx.container(
-                        ContainerProps {
-                            layout,
-                            padding: Edges {
-                                top: pad_top,
-                                right: pad_right,
-                                bottom: pad_bottom,
-                                left: pad_left,
+            with_menubar_provider_state(cx, disabled, |cx| {
+                cx.semantics(
+                    SemanticsProps {
+                        layout: LayoutStyle::default(),
+                        role: SemanticsRole::MenuBar,
+                        disabled,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout,
+                                padding: Edges {
+                                    top: pad_top,
+                                    right: pad_right,
+                                    bottom: pad_bottom,
+                                    left: pad_left,
+                                },
+                                background: Some(bg),
+                                shadow: Some(shadow),
+                                border: Edges::all(border_width),
+                                border_color: Some(border),
+                                corner_radii: Corners::all(radius),
+                                ..Default::default()
                             },
-                            background: Some(bg),
-                            shadow: Some(shadow),
-                            border: Edges::all(border_width),
-                            border_color: Some(border),
-                            corner_radii: Corners::all(radius),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![roving_focus_group::roving_focus_group_apg(
-                                cx,
-                                RovingFlexProps {
-                                    flex: FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap,
-                                        padding: Edges::all(Px(0.0)),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
+                            move |cx| {
+                                vec![roving_focus_group::roving_focus_group_apg(
+                                    cx,
+                                    RovingFlexProps {
+                                        flex: FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap,
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        roving: RovingFocusProps {
+                                            enabled: !disabled,
+                                            wrap: true,
+                                            disabled: trigger_disabled.clone(),
+                                        },
                                     },
-                                    roving: RovingFocusProps {
-                                        enabled: !disabled,
-                                        wrap: true,
-                                        disabled: trigger_disabled.clone(),
+                                    roving_focus_group::TypeaheadPolicy::Prefix {
+                                        labels: trigger_labels.clone(),
+                                        timeout_ticks: typeahead_timeout_ticks,
                                     },
-                                },
-                                roving_focus_group::TypeaheadPolicy::Prefix {
-                                    labels: trigger_labels.clone(),
-                                    timeout_ticks: typeahead_timeout_ticks,
-                                },
-                                move |cx| {
-                                    menus
-                                        .into_iter()
-                                        .map(|m| {
-                                            m.align_leading_icons(align_leading_icons)
-                                                .into_element(cx)
-                                        })
-                                        .collect::<Vec<_>>()
-                                },
-                            )]
-                        },
-                    )]
-                },
-            )
+                                    move |cx| {
+                                        menus
+                                            .into_iter()
+                                            .map(|m| {
+                                                m.align_leading_icons(align_leading_icons)
+                                                    .into_element(cx)
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
+                                )]
+                            },
+                        )]
+                    },
+                )
+            })
         })
     }
 }
@@ -989,6 +1004,35 @@ impl Menubar {
 struct MenubarMenuState {
     open: Option<Model<bool>>,
     close_prevent_auto_focus: Option<Model<bool>>,
+    keyboard_focus_last_on_open: Option<Model<bool>>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct MenubarProviderState {
+    disabled: bool,
+}
+
+fn menubar_disabled_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
+    cx.inherited_state_where::<MenubarProviderState>(|st| st.disabled)
+        .is_some_and(|st| st.disabled)
+}
+
+#[track_caller]
+fn with_menubar_provider_state<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    disabled: bool,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MenubarProviderState::default, |st| {
+        let prev = st.disabled;
+        st.disabled = disabled;
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MenubarProviderState::default, |st| {
+        st.disabled = prev;
+    });
+    out
 }
 
 #[derive(Clone)]
@@ -1035,6 +1079,7 @@ impl MenubarMenu {
         MenubarMenuEntries {
             menu: self,
             entries: Arc::from(entries.into_boxed_slice()),
+            modal: false,
             align_leading_icons: true,
             on_dismiss_request: None,
             on_open_auto_focus: None,
@@ -1067,6 +1112,7 @@ impl MenubarMenu {
 pub struct MenubarMenuEntries {
     menu: MenubarMenu,
     entries: Arc<[MenubarEntry]>,
+    modal: bool,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -1079,6 +1125,7 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("label", &self.menu.label)
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
+            .field("modal", &self.modal)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
@@ -1087,6 +1134,11 @@ impl std::fmt::Debug for MenubarMenuEntries {
 }
 
 impl MenubarMenuEntries {
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
+        self
+    }
+
     pub fn align_leading_icons(mut self, align: bool) -> Self {
         self.align_leading_icons = align;
         self
@@ -1111,6 +1163,7 @@ impl MenubarMenuEntries {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
+        let modal = self.modal;
         let align_leading_icons = self.align_leading_icons;
         let on_dismiss_request = self.on_dismiss_request.clone();
         let on_open_auto_focus = self.on_open_auto_focus.clone();
@@ -1139,9 +1192,21 @@ impl MenubarMenuEntries {
                 });
                 model
             };
+            let keyboard_focus_last_on_open = cx.with_state(MenubarMenuState::default, |st| {
+                st.keyboard_focus_last_on_open.clone()
+            });
+            let keyboard_focus_last_on_open = if let Some(model) = keyboard_focus_last_on_open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state(MenubarMenuState::default, |st| {
+                    st.keyboard_focus_last_on_open = Some(model.clone())
+                });
+                model
+            };
 
             let theme = Theme::global(&*cx.app).clone();
-            let enabled = !self.menu.disabled;
+            let enabled = !(self.menu.disabled || menubar_disabled_in_scope(cx));
 
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
@@ -1165,8 +1230,57 @@ impl MenubarMenuEntries {
             let test_id = self.menu.test_id.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
+                let (patient_click_sticky, patient_click_timer) =
+                    menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
+                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 if enabled {
-                    menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, open.clone());
+                    let open_for_arrow_keys = open.clone();
+                    let first_item_focus_id_for_arrow_keys = first_item_focus_id.clone();
+                    let last_item_focus_id_for_arrow_keys = last_item_focus_id.clone();
+                    let keyboard_focus_last_on_open_for_arrow_keys =
+                        keyboard_focus_last_on_open.clone();
+                    cx.key_on_key_down_for(
+                        trigger_id,
+                        Arc::new(move |host, _acx, down| {
+                            if down.repeat {
+                                return false;
+                            }
+
+                            let focus_last = match down.key {
+                                fret_core::KeyCode::ArrowDown => false,
+                                fret_core::KeyCode::ArrowUp => true,
+                                _ => return false,
+                            };
+
+                            let is_open = host
+                                .models_mut()
+                                .read(&open_for_arrow_keys, |v| *v)
+                                .ok()
+                                .unwrap_or(false);
+
+                            if !is_open {
+                                let _ = host.models_mut().update(
+                                    &keyboard_focus_last_on_open_for_arrow_keys,
+                                    |v| *v = focus_last,
+                                );
+                                let _ = host.models_mut().update(&open_for_arrow_keys, |v| *v = true);
+                                return true;
+                            }
+
+                            let target = if focus_last {
+                                last_item_focus_id_for_arrow_keys.get()
+                            } else {
+                                first_item_focus_id_for_arrow_keys.get()
+                            };
+                            let Some(target) = target else {
+                                return false;
+                            };
+                            host.request_focus(target);
+                            true
+                        }),
+                    );
                 }
 
                 menubar_trigger_row::register_trigger_in_registry(
@@ -1187,6 +1301,8 @@ impl MenubarMenuEntries {
                     group_active.clone(),
                     trigger_id,
                     open.clone(),
+                    patient_click_sticky.clone(),
+                    patient_click_timer.clone(),
                     enabled,
                     st.hovered,
                     st.pressed,
@@ -1196,9 +1312,20 @@ impl MenubarMenuEntries {
                     group_active.clone(),
                     trigger_id,
                     open.clone(),
+                    patient_click_sticky,
+                    patient_click_timer,
                 ));
 
-                let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+                let model_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+                if !enabled && model_open {
+                    let _ = cx.app.models_mut().update(&open, |v| *v = false);
+                }
+                let is_open = model_open && enabled;
+                let keyboard_focus_last_on_open_now = cx
+                    .watch_model(&keyboard_focus_last_on_open)
+                    .layout()
+                    .copied()
+                    .unwrap_or(false);
                 if is_open {
                     let _ = cx
                         .app
@@ -1320,12 +1447,14 @@ impl MenubarMenuEntries {
                         content_focus_id_for_children.clone();
                     let content_focus_id_for_children_for_submenu =
                         content_focus_id_for_children.clone();
-                    let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
-                        Rc::new(Cell::new(None));
                     let first_item_focus_id_for_request = first_item_focus_id.clone();
                     let first_item_focus_id_for_children = first_item_focus_id.clone();
                     let first_item_focus_id_for_children_for_content =
                         first_item_focus_id_for_children.clone();
+                    let last_item_focus_id_for_request = last_item_focus_id.clone();
+                    let last_item_focus_id_for_children = last_item_focus_id.clone();
+                    let last_item_focus_id_for_children_for_content =
+                        last_item_focus_id_for_children.clone();
                     let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let (overlay_children, dismissible_on_pointer_move) =
@@ -1662,6 +1791,8 @@ impl MenubarMenuEntries {
                                                                 trigger_registry_for_overlay_for_content.clone();
                                                             let first_item_focus_id_for_items =
                                                                 first_item_focus_id_for_children_for_content.clone();
+                                                            let last_item_focus_id_for_items =
+                                                                last_item_focus_id_for_children_for_content.clone();
 
                                                             let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
@@ -1675,6 +1806,8 @@ impl MenubarMenuEntries {
                                                                             first_item_focus_id_for_items
                                                                                 .set(Some(item_id));
                                                                         }
+                                                                        last_item_focus_id_for_items
+                                                                            .set(Some(item_id));
                                                                     }
 
                                                                     let _ = menu::sub_trigger::wire(
@@ -1835,6 +1968,8 @@ impl MenubarMenuEntries {
                                                                 trigger_registry_for_overlay_for_content.clone();
                                                             let first_item_focus_id_for_items =
                                                                 first_item_focus_id_for_children_for_content.clone();
+                                                            let last_item_focus_id_for_items =
+                                                                last_item_focus_id_for_children_for_content.clone();
 
                                                             let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
@@ -1852,6 +1987,8 @@ impl MenubarMenuEntries {
                                                                             first_item_focus_id_for_items
                                                                                 .set(Some(item_id));
                                                                         }
+                                                                        last_item_focus_id_for_items
+                                                                            .set(Some(item_id));
                                                                     }
 
                                                                     let _ = menu::sub_trigger::wire(
@@ -2072,14 +2209,18 @@ impl MenubarMenuEntries {
                                                                     overlay_root_name_for_controls.clone();
                                                                 let first_item_focus_id_for_items =
                                                                     first_item_focus_id_for_children_for_content.clone();
-                                                               out.push(cx.keyed(value.clone(), move |cx| {
-                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                     if item_enabled {
-                                                                         if first_item_focus_id_for_items.get().is_none() {
-                                                                             first_item_focus_id_for_items
-                                                                                 .set(Some(item_id));
-                                                                         }
-                                                                     }
+                                                                let last_item_focus_id_for_items =
+                                                                    last_item_focus_id_for_children_for_content.clone();
+                                                                out.push(cx.keyed(value.clone(), move |cx| {
+                                                                    cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                      if item_enabled {
+                                                                          if first_item_focus_id_for_items.get().is_none() {
+                                                                              first_item_focus_id_for_items
+                                                                                  .set(Some(item_id));
+                                                                          }
+                                                                          last_item_focus_id_for_items
+                                                                              .set(Some(item_id));
+                                                                      }
                                                                      let geometry_hint = submenu_desired_for_hint.map(|desired| {
                                                                          menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                              outer,
@@ -3257,14 +3398,24 @@ impl MenubarMenuEntries {
                         overlay_root_name,
                         menu::root::MenuInitialFocusTargets::new()
                             .pointer_content_focus(content_focus_id.get())
-                            .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                            .keyboard_entry_focus(if keyboard_focus_last_on_open_now {
+                                last_item_focus_id_for_request.get()
+                            } else {
+                                first_item_focus_id_for_request.get()
+                            }),
                         on_open_auto_focus.clone(),
                         on_close_auto_focus.clone(),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
-                        false,
+                        modal,
                     );
                     OverlayController::request(cx, request);
+                    if keyboard_focus_last_on_open_now {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&keyboard_focus_last_on_open, |v| *v = false);
+                    }
                 }
 
                 let content = cx.container(
@@ -3332,6 +3483,17 @@ mod tests {
     use std::sync::Arc;
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn menubar_modal_builder_updates_flag() {
+        let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>()).modal(true);
+        assert!(menubar.modal);
+
+        let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>())
+            .modal(true)
+            .modal(false);
+        assert!(!menubar.modal);
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -3415,12 +3577,23 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
     ) {
+        render_frame_with_disabled(ui, app, services, window, bounds, false);
+    }
+
+    fn render_frame_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        disabled: bool,
+    ) {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
         OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
-                vec![menubar(cx, |_cx| {
-                    vec![
+                vec![
+                    Menubar::new(vec![
                         MenubarMenu::new("File").entries(vec![
                             MenubarEntry::Item(MenubarItem::new("New")),
                             MenubarEntry::Separator,
@@ -3432,8 +3605,10 @@ mod tests {
                             MenubarEntry::Separator,
                             MenubarEntry::Item(MenubarItem::new("Redo")),
                         ]),
-                    ]
-                })]
+                    ])
+                    .disabled(disabled)
+                    .into_element(cx),
+                ]
             });
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
@@ -3826,8 +4001,9 @@ mod tests {
         // Hover switching is timer-driven (small delay) to avoid accidental flicker while the
         // pointer travels across triggers.
         let effects = app.flush_effects();
+        let switch_delay = std::time::Duration::from_millis(100);
         let switch_timer = effects.iter().find_map(|e| match e {
-            Effect::SetTimer { token, .. } => Some(*token),
+            Effect::SetTimer { token, after, .. } if *after == switch_delay => Some(*token),
             _ => None,
         });
         let Some(switch_timer) = switch_timer else {
@@ -3851,6 +4027,80 @@ mod tests {
         let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!menu_trigger_expanded(snap3, "File"));
         assert!(menu_trigger_expanded(snap3, "Edit"));
+    }
+
+    #[test]
+    fn menubar_disabled_hides_content_even_when_menu_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        // Open one menu first (open model = true in component state), then switch root to disabled.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, false);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file = center(menu_trigger_bounds(&snap0, "File"));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, false);
+        let opened = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            menu_trigger_expanded(opened, "File"),
+            "baseline: menu should be open before disabling root"
+        );
+
+        // Disabled root should immediately gate expanded semantics, while content can still be
+        // present for one close-transition frame.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !menu_trigger_expanded(&snap, "File") && !menu_trigger_expanded(&snap, "Edit"),
+            "disabled menubar should not expose expanded trigger semantics"
+        );
+
+        // Next frame: close transition settles and menu content should no longer be exposed.
+        render_frame_with_disabled(&mut ui, &mut app, &mut services, window, bounds, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(|n| {
+                !(n.role == SemanticsRole::MenuItem
+                    && matches!(
+                        n.label.as_deref(),
+                        Some("New") | Some("Open") | Some("Exit") | Some("Undo") | Some("Redo")
+                    ))
+            }),
+            "disabled menubar should keep menu content hidden"
+        );
     }
 
     #[test]
@@ -3955,6 +4205,56 @@ mod tests {
         assert!(
             ui.debug_node_path(focus).contains(&first_item.id),
             "keyboard-open should move focus into the first menu item (Radix entry focus)"
+        );
+    }
+
+    #[test]
+    fn menubar_opens_on_arrow_up_from_focused_trigger_and_focuses_last_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowUp,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+        assert!(
+            snap1.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Exit")
+            }),
+            "menu items should render after ArrowUp opens the menubar menu"
+        );
+
+        let last_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Exit"))
+            .expect("Exit menu item");
+        let focus = ui.focus().expect("expected focus after keyboard-open");
+        assert!(
+            ui.debug_node_path(focus).contains(&last_item.id),
+            "ArrowUp keyboard-open should move focus into the last menu item"
         );
     }
 

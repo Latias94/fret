@@ -111,6 +111,10 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 - `hover` (3)
 - `popover` (3)
 
+Sidebar note (2026-02-08): key-level gate coverage (`sidebar` keys gated) should not be treated as
+full component-surface parity. Sidebar currently has dedicated component-surface + Base UI contract
+tracking in `docs/audits/shadcn-sidebar.md`.
+
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 
 ```bash

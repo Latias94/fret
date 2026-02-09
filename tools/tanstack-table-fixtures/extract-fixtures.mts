@@ -400,6 +400,23 @@ type RowSelectionDetail = {
   can_select_sub_rows: Record<string, boolean>
 }
 
+type RowTraversalDetail = {
+  parent_rows: Record<string, string[]>
+  leaf_rows: Record<string, string[]>
+}
+
+type RowStructureDetail = {
+  rows: Record<
+    string,
+    {
+      index: number
+      depth: number
+      parent_id: string | null
+      sub_row_ids: string[]
+    }
+  >
+}
+
 type FilteringHelpersSnapshot = {
   columns: Record<
     string,
@@ -455,6 +472,8 @@ type FixtureSnapshot = {
     is_all_page_rows_selected?: boolean
     is_some_page_rows_selected?: boolean
     row_selection_detail?: RowSelectionDetail
+    row_traversal_detail?: RowTraversalDetail
+    row_structure_detail?: RowStructureDetail
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
@@ -674,21 +693,37 @@ type FixtureSnapshot = {
       cells: Record<
         string,
         {
-          all: { id: string; column_id: string }[]
-          visible: { id: string; column_id: string }[]
-          left: { id: string; column_id: string }[]
-          center: { id: string; column_id: string }[]
-          right: { id: string; column_id: string }[]
+          all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+          right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
         }
       >
     }
     core_model?: {
+      schema_version?: number
       column_tree: {
         id: string
         depth: number
         parent_id: string | null
         child_ids: string[]
       }[]
+      flat_columns?: {
+        all: string[]
+        visible: string[]
+      }
+      column_capabilities?: Record<
+        string,
+        {
+          can_hide: boolean
+          can_pin: boolean
+          pin_position: "left" | "right" | null
+          pinned_index: number
+          can_resize: boolean
+          is_visible: boolean
+        }
+      >
       leaf_columns: {
         all: string[]
         visible: string[]
@@ -706,11 +741,16 @@ type FixtureSnapshot = {
       right_header_groups: NonNullable<
         NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["right_header_groups"]
       >
+      header_sizing: NonNullable<FixtureSnapshot["expect"]["header_sizing"]>
       rows: {
         core: RowModelSnapshot
         row_model: RowModelSnapshot
       }
       cells: NonNullable<NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["cells"]>
+    }
+    flat_columns?: {
+      all: string[]
+      visible: string[]
     }
     column_sizing?: {
       total_size: number
@@ -2235,6 +2275,50 @@ function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
   return out
 }
 
+function snapshotRowTraversalDetail(table: any, rowIds: string[]): RowTraversalDetail {
+  const out: RowTraversalDetail = {
+    parent_rows: {},
+    leaf_rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.parent_rows[id] = []
+      out.leaf_rows[id] = []
+      continue
+    }
+
+    out.parent_rows[id] = (row.getParentRows?.() ?? []).map((r: any) => String(r.id))
+    out.leaf_rows[id] = (row.getLeafRows?.() ?? []).map((r: any) => String(r.id))
+  }
+
+  return out
+}
+
+function snapshotRowStructureDetail(table: any, rowIds: string[]): RowStructureDetail {
+  const out: RowStructureDetail = {
+    rows: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.rows[id] = { index: -1, depth: -1, parent_id: null, sub_row_ids: [] }
+      continue
+    }
+
+    out.rows[id] = {
+      index: Number(row.index ?? -1),
+      depth: Number(row.depth ?? -1),
+      parent_id: row.parentId != null ? String(row.parentId) : null,
+      sub_row_ids: (row.subRows ?? []).map((r: any) => String(r.id)),
+    }
+  }
+
+  return out
+}
+
 function snapshotSortingHelpers(table: any): SortingHelpersSnapshot {
   const out: SortingHelpersSnapshot = {
     columns: {},
@@ -2349,47 +2433,39 @@ function snapshotHeaders(headers: any[]): {
 function snapshotCells(table: any): Record<
   string,
   {
-    all: { id: string; column_id: string }[]
-    visible: { id: string; column_id: string }[]
-    left: { id: string; column_id: string }[]
-    center: { id: string; column_id: string }[]
-    right: { id: string; column_id: string }[]
+    all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+    right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
   }
 > {
   const rows = table.getRowModel().rows ?? []
   const out: Record<
     string,
     {
-      all: { id: string; column_id: string }[]
-      visible: { id: string; column_id: string }[]
-      left: { id: string; column_id: string }[]
-      center: { id: string; column_id: string }[]
-      right: { id: string; column_id: string }[]
+      all: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      visible: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      left: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      center: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
+      right: { id: string; column_id: string; is_grouped: boolean; is_placeholder: boolean; is_aggregated: boolean }[]
     }
   > = {}
   for (const r of rows) {
     const rowId = String(r.id)
+    const mk = (c: any) => ({
+      id: String(c.id),
+      column_id: String(c.column?.id),
+      is_grouped: Boolean(c.getIsGrouped?.()),
+      is_placeholder: Boolean(c.getIsPlaceholder?.()),
+      is_aggregated: Boolean(c.getIsAggregated?.()),
+    })
     out[rowId] = {
-      all: (r.getAllCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      visible: (r.getVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      left: (r.getLeftVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      center: (r.getCenterVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
-      right: (r.getRightVisibleCells?.() ?? []).map((c: any) => ({
-        id: String(c.id),
-        column_id: String(c.column?.id),
-      })),
+      all: (r.getAllCells?.() ?? []).map(mk),
+      visible: (r.getVisibleCells?.() ?? []).map(mk),
+      left: (r.getLeftVisibleCells?.() ?? []).map(mk),
+      center: (r.getCenterVisibleCells?.() ?? []).map(mk),
+      right: (r.getRightVisibleCells?.() ?? []).map(mk),
     }
   }
   return out
@@ -2415,6 +2491,47 @@ function snapshotColumnTree(columns: any[], parent_id: string | null = null): {
     out.push({ id, depth, parent_id, child_ids: childIds })
     if (c.columns && c.columns.length) {
       out.push(...snapshotColumnTree(c.columns, id))
+    }
+  }
+
+  return out
+}
+
+function snapshotLeafColumnCapabilities(table: any): Record<
+  string,
+  {
+    can_hide: boolean
+    can_pin: boolean
+    pin_position: "left" | "right" | null
+    pinned_index: number
+    can_resize: boolean
+    is_visible: boolean
+  }
+> {
+  const out: Record<
+    string,
+    {
+      can_hide: boolean
+      can_pin: boolean
+      pin_position: "left" | "right" | null
+      pinned_index: number
+      can_resize: boolean
+      is_visible: boolean
+    }
+  > = {}
+
+  const leaf = table.getAllLeafColumns?.() ?? []
+  for (const col of leaf) {
+    const id = String(col.id)
+    const pinned = col.getIsPinned?.()
+    const pin_position = pinned === "left" ? "left" : pinned === "right" ? "right" : null
+    out[id] = {
+      can_hide: Boolean(col.getCanHide?.()),
+      can_pin: Boolean(col.getCanPin?.()),
+      pin_position,
+      pinned_index: Number(col.getPinnedIndex?.() ?? 0),
+      can_resize: Boolean(col.getCanResize?.()),
+      is_visible: Boolean(col.getIsVisible?.()),
     }
   }
 
@@ -2544,11 +2661,17 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   const bottom = (table.getBottomRows?.() ?? []).map((r: any) => String(r.id))
 
   const coreRows = table.getCoreRowModel?.()?.flatRows ?? []
+  const modelRows = table.getRowModel?.()?.flatRows ?? []
+  const rowIds = [
+    ...new Set([
+      ...coreRows.map((row: any) => String(row.id)),
+      ...modelRows.map((row: any) => String(row.id)),
+    ]),
+  ]
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "top" | "bottom" | null> = {}
   const pinned_index: Record<string, number> = {}
-  for (const row of coreRows) {
-    const id = String(row.id)
+  for (const id of rowIds) {
     const r = table.getRow?.(id, true)
     if (!r) {
       continue
@@ -4090,6 +4213,8 @@ function snapshotColumnPinning(
         expect: {
           ...baseSnap,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
@@ -4113,6 +4238,8 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+          row_traversal_detail: snapshotRowTraversalDetail(table, rowIds),
+          row_structure_detail: snapshotRowStructureDetail(table, rowIds),
         },
       }
     }
@@ -4781,8 +4908,14 @@ function snapshotColumnPinning(
             right_leaf_headers,
             cells,
           },
+          flat_columns: {
+            all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+            visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+          },
           core_model: {
+            schema_version: 2,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4800,6 +4933,7 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -4907,7 +5041,9 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
+            schema_version: 2,
             column_tree: snapshotColumnTree(table.getAllColumns()),
+            column_capabilities: snapshotLeafColumnCapabilities(table),
             leaf_columns: {
               all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
               visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4925,6 +5061,7 @@ function snapshotColumnPinning(
             left_header_groups,
             center_header_groups,
             right_header_groups,
+            header_sizing: snapshotHeaderSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -4962,7 +5099,13 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
+        schema_version: 2,
         column_tree: snapshotColumnTree(table.getAllColumns()),
+        flat_columns: {
+          all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+          visible: (table.getVisibleFlatColumns?.() ?? []).map((c: any) => String(c.id)),
+        },
+        column_capabilities: snapshotLeafColumnCapabilities(table),
         leaf_columns: {
           all: (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id)),
           visible: (table.getVisibleLeafColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -4978,6 +5121,7 @@ function snapshotColumnPinning(
         left_header_groups,
         center_header_groups,
         right_header_groups,
+        header_sizing: snapshotHeaderSizing(table),
         rows: {
           core: snapshotRowModel(table.getCoreRowModel()),
           row_model: snapshotRowModel(table.getRowModel()),
@@ -5794,6 +5938,16 @@ function snapshotColumnPinning(
         "column_pinning_enable_pinning_false_disables_can_pin",
         { enablePinning: false },
         {},
+      ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_still_in_leaf_splits_but_not_visible_cells",
+        {},
+        { columnPinning: { left: ["a"], right: [] }, columnVisibility: { a: false } },
+      ),
+      mk(
+        "column_pinning_pinned_hidden_leaf_in_group_pinning_keeps_leaf_splits_but_filters_visible_cells",
+        {},
+        { columnPinning: { left: ["a", "b"], right: [] }, columnVisibility: { b: false } },
       ),
       mkActions(
         "column_pinning_action_pin_left_right_unpin",

@@ -61,6 +61,41 @@ pub enum DropdownMenuSide {
     Left,
 }
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct DropdownMenuOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn dropdown_menu_open_change_events(
+    state: &mut DropdownMenuOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
 #[derive(Debug, Clone)]
 pub enum DropdownMenuEntry {
     Item(DropdownMenuItem),
@@ -1031,6 +1066,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 #[derive(Clone)]
 pub struct DropdownMenu {
     open: Model<bool>,
+    disabled: bool,
     modal: bool,
     align: DropdownMenuAlign,
     align_offset: Px,
@@ -1045,18 +1081,26 @@ pub struct DropdownMenu {
     arrow_padding_override: Option<Px>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for DropdownMenu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DropdownMenu")
             .field("open", &"<model>")
+            .field("disabled", &self.disabled)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
             .field("window_margin", &self.window_margin)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -1065,6 +1109,7 @@ impl DropdownMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            disabled: false,
             modal: true,
             align: DropdownMenuAlign::default(),
             align_offset: Px(0.0),
@@ -1079,11 +1124,51 @@ impl DropdownMenu {
             arrow_padding_override: None,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
+    }
+
+    /// Creates a dropdown menu with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        #[derive(Default)]
+        struct OpenModelState {
+            model: Option<Model<bool>>,
+        }
+
+        let open = if let Some(model) = open {
+            model
+        } else {
+            let existing = cx.with_state(OpenModelState::default, |st| st.model.clone());
+            if let Some(model) = existing {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(default_open);
+                cx.with_state(OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            }
+        };
+
+        Self::new(open)
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Whether trigger keyboard interaction should be ignored.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -1158,6 +1243,21 @@ impl DropdownMenu {
         self
     }
 
+    /// Called when the effective open state changes (Base UI / Radix `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -1170,11 +1270,12 @@ impl DropdownMenu {
         cx.scope(|cx| {
             let overlay_id = cx.root_id();
             let theme = Theme::global(&*cx.app).clone();
-            let is_open = cx
+            let model_open = cx
                 .watch_model(&self.open)
                 .layout()
                 .copied()
                 .unwrap_or(false);
+            let is_open = model_open && !self.disabled;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
@@ -1184,6 +1285,20 @@ impl DropdownMenu {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(DropdownMenuOpenChangeCallbackState::default, |state| {
+                    dropdown_menu_open_change_events(state, is_open, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) =
+                (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -1192,6 +1307,27 @@ impl DropdownMenu {
             let scale = motion.scale;
             let opening = is_open;
             let arrow = self.arrow;
+            #[derive(Default)]
+            struct TriggerKeyboardOpenState {
+                focus_last_on_open: Option<Model<bool>>,
+            }
+            let focus_last_on_open = cx.with_state(TriggerKeyboardOpenState::default, |st| {
+                st.focus_last_on_open.clone()
+            });
+            let focus_last_on_open = if let Some(model) = focus_last_on_open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state(TriggerKeyboardOpenState::default, |st| {
+                    st.focus_last_on_open = Some(model.clone());
+                });
+                model
+            };
+            let keyboard_focus_last_on_open = cx
+                .watch_model(&focus_last_on_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
                 theme
                     .metric_by_key("component.dropdown_menu.arrow_size")
@@ -1214,7 +1350,57 @@ impl DropdownMenu {
             // behaviors like submenu close delays).
             let trigger = cx.keyed(("dropdown-menu-trigger", overlay_id), |cx| trigger(cx));
             let trigger_id = trigger.id;
-            menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
+            let disabled = self.disabled;
+            let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+            let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+            let open_for_trigger_arrow_keys = self.open.clone();
+            let first_item_focus_id_for_trigger_arrow_keys = first_item_focus_id.clone();
+            let last_item_focus_id_for_trigger_arrow_keys = last_item_focus_id.clone();
+            let focus_last_on_open_for_trigger_arrow_keys = focus_last_on_open.clone();
+            cx.key_on_key_down_for(
+                trigger_id,
+                Arc::new(move |host, _acx, down| {
+                    if disabled {
+                        return false;
+                    }
+                    if down.repeat {
+                        return false;
+                    }
+
+                    let focus_last = match down.key {
+                        fret_core::KeyCode::ArrowDown => false,
+                        fret_core::KeyCode::ArrowUp => true,
+                        _ => return false,
+                    };
+
+                    let is_open = host
+                        .models_mut()
+                        .read(&open_for_trigger_arrow_keys, |v| *v)
+                        .ok()
+                        .unwrap_or(false);
+
+                    if !is_open {
+                        let _ = host
+                            .models_mut()
+                            .update(&focus_last_on_open_for_trigger_arrow_keys, |v| {
+                                *v = focus_last;
+                            });
+                        let _ = host.models_mut().update(&open_for_trigger_arrow_keys, |v| *v = true);
+                        return true;
+                    }
+
+                    let target = if focus_last {
+                        last_item_focus_id_for_trigger_arrow_keys.get()
+                    } else {
+                        first_item_focus_id_for_trigger_arrow_keys.get()
+                    };
+                    let Some(target) = target else {
+                        return false;
+                    };
+                    host.request_focus(target);
+                    true
+                }),
+            );
             let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
@@ -1243,10 +1429,8 @@ impl DropdownMenu {
                 let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
-                let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_request = first_item_focus_id.clone();
-                let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-                let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
+                let last_item_focus_id_for_request = last_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -3159,7 +3343,11 @@ impl DropdownMenu {
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
                         .pointer_content_focus(content_focus_id.get())
-                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        .keyboard_entry_focus(if keyboard_focus_last_on_open {
+                            last_item_focus_id_for_request.get()
+                        } else {
+                            first_item_focus_id_for_request.get()
+                        }),
                     None,
                     None,
                     on_dismiss_request.clone(),
@@ -3167,6 +3355,12 @@ impl DropdownMenu {
                     modal,
                 );
                 OverlayController::request(cx, request);
+                if keyboard_focus_last_on_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&focus_last_on_open, |v| *v = false);
+                }
             }
 
             trigger
@@ -3195,6 +3389,72 @@ mod tests {
     use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
+
+    #[test]
+    fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = DropdownMenu::new_controllable(cx, None, true);
+            let open = cx
+                .watch_model(&menu.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(open);
+        });
+    }
+
+    #[test]
+    fn dropdown_menu_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = DropdownMenuOpenChangeCallbackState::default();
+
+        let (changed, completed) =
+            dropdown_menu_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn dropdown_menu_open_change_events_complete_without_animation() {
+        let mut state = DropdownMenuOpenChangeCallbackState::default();
+
+        let _ = dropdown_menu_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = dropdown_menu_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
 
     #[test]
     fn estimated_menu_panel_height_clamps_to_max_height() {
@@ -3471,6 +3731,21 @@ mod tests {
         open: Model<bool>,
         entries: Vec<DropdownMenuEntry>,
     ) -> fret_core::NodeId {
+        render_frame_focusable_trigger_with_disabled(
+            ui, app, services, window, bounds, open, entries, false,
+        )
+    }
+
+    fn render_frame_focusable_trigger_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
@@ -3483,7 +3758,7 @@ mod tests {
             bounds,
             "dropdown-menu-trigger",
             move |cx| {
-                vec![DropdownMenu::new(open).into_element(
+                vec![DropdownMenu::new(open).disabled(disabled).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -4175,6 +4450,118 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_disabled_blocks_arrow_key_open_from_trigger() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let root = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+            true,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            !open_now,
+            "disabled dropdown menu should ignore trigger ArrowDown open"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled dropdown menu should not render menu content"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_disabled_hides_content_even_when_open_model_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries,
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            open_now,
+            "disabled root should not mutate controlled open model value"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled dropdown menu should not render menu content when model is open"
+        );
+    }
+
+    #[test]
     fn dropdown_menu_modal_outside_press_can_be_prevented_via_dismiss_handler() {
         use fret_core::MouseButton;
 
@@ -4489,6 +4876,160 @@ mod tests {
             vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
         );
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dropdown_menu_arrow_down_moves_focus_into_menu_when_already_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out,
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            ],
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            Rc::new(Cell::new(None)),
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            ],
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+
+        assert_eq!(
+            ui.focus(),
+            Some(alpha.id),
+            "ArrowDown on open trigger should move focus to first menu item"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_arrow_up_opens_and_focuses_last_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha")),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Beta")),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Gamma")),
+        ];
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowUp,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "ArrowUp should open dropdown menu from trigger"
+        );
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let gamma = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Gamma"))
+            .expect("Gamma menu item");
+
+        assert_eq!(
+            ui.focus(),
+            Some(gamma.id),
+            "ArrowUp open should focus last menu item"
+        );
     }
 
     #[test]

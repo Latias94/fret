@@ -29,14 +29,13 @@ pub(super) fn a11y_composed_text_window(
 
         let composition = Some((before_len, before_len.saturating_add(preedit_len)));
 
+        // ADR 0071: selection offsets are (anchor, focus) byte offsets into the semantics value.
+        // Preserve directionality when the IME reports a cursor range.
         let (mut a, mut b) = preedit
             .cursor
             .unwrap_or_else(|| (preedit.text.len(), preedit.text.len()));
         a = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, a).min(preedit.text.len());
         b = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, b).min(preedit.text.len());
-        if a > b {
-            std::mem::swap(&mut a, &mut b);
-        }
 
         let selection = Some((
             before_len.saturating_add(a as u32),
@@ -85,4 +84,86 @@ pub(super) fn map_a11y_offset_to_buffer(
         .min(window_len);
     let byte = window_start.saturating_add(offset).min(window_end);
     buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
+}
+
+pub(super) fn map_a11y_offset_to_buffer_with_preedit(
+    buf: &TextBuffer,
+    window_start: usize,
+    window_end: usize,
+    caret: usize,
+    preedit_len: usize,
+    offset: u32,
+) -> usize {
+    let window_start = window_start.min(buf.len_bytes());
+    let window_end = window_end.min(buf.len_bytes()).max(window_start);
+    let caret = buf
+        .clamp_to_char_boundary_left(caret)
+        .min(window_end)
+        .max(window_start);
+
+    let anchor = caret.saturating_sub(window_start);
+    let display_len = window_end
+        .saturating_sub(window_start)
+        .saturating_add(preedit_len);
+    let display_offset = usize::try_from(offset)
+        .unwrap_or(usize::MAX)
+        .min(display_len);
+
+    let base_offset = if preedit_len == 0 {
+        display_offset
+    } else if display_offset <= anchor {
+        display_offset
+    } else if display_offset >= anchor.saturating_add(preedit_len) {
+        display_offset.saturating_sub(preedit_len)
+    } else {
+        anchor
+    };
+
+    let byte = window_start.saturating_add(base_offset).min(window_end);
+    buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{CodeEditorHandle, PreeditState, Selection};
+    use super::a11y_composed_text_window;
+
+    #[test]
+    fn a11y_window_selection_preserves_direction_without_preedit() {
+        let handle = CodeEditorHandle::new("hello world");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 8,
+                focus: 3,
+            };
+        }
+
+        let st = handle.state.borrow();
+        let (_value, selection, composition) = a11y_composed_text_window(&st);
+        assert_eq!(composition, None);
+        assert_eq!(selection, Some((8, 3)));
+    }
+
+    #[test]
+    fn a11y_window_selection_preserves_direction_for_preedit_cursor() {
+        let handle = CodeEditorHandle::new("hello world");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 5,
+                focus: 5,
+            };
+            st.preedit = Some(PreeditState {
+                text: "yo".to_string(),
+                cursor: Some((2, 0)),
+            });
+        }
+
+        let st = handle.state.borrow();
+        let (value, selection, composition) = a11y_composed_text_window(&st);
+        assert_eq!(value, "helloyo world");
+        assert_eq!(composition, Some((5, 7)));
+        assert_eq!(selection, Some((7, 5)));
+    }
 }

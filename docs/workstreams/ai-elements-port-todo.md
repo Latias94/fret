@@ -69,7 +69,7 @@ Status legend:
 | --- | --- | --- | --- |
 | `code-block` | Not started | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`. |
 | `snippet` | Not started | `fret-ui-ai` | Likely a thin wrapper over `code-block`. |
-| `file-tree` | Not started | `fret-ui-ai` | Reuse `fret-ui-kit` tree + virtualization patterns. |
+| `file-tree` | Prototype | `fret-ui-ai` | AI Elements-aligned nested `FileTree` surface (small trees) + future path to UI Kit virtualization for large outlines. |
 | `commit` | Not started | `fret-ui-ai` | Add only after code-block is stable. |
 | `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
 | `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |

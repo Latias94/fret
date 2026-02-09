@@ -36,8 +36,26 @@ struct LeafColumnsExpect {
     right_visible: Vec<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct ColumnNodeExpect {
+    id: String,
+    depth: usize,
+    parent_id: Option<String>,
+    child_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FlatColumnsExpect {
+    all: Vec<String>,
+    visible: Vec<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct CoreModelExpect {
+    #[serde(default)]
+    column_tree: Vec<ColumnNodeExpect>,
+    #[serde(default)]
+    flat_columns: Option<FlatColumnsExpect>,
     leaf_columns: LeafColumnsExpect,
 }
 
@@ -615,5 +633,75 @@ fn tanstack_v8_visibility_ordering_parity() {
             "snapshot {} core_model.leaf_columns.right_visible mismatch",
             snap.id
         );
+
+        if !snap.expect.core_model.column_tree.is_empty() {
+            let column_tree: Vec<ColumnNodeExpect> = table
+                .column_tree_snapshot()
+                .into_iter()
+                .map(|n| ColumnNodeExpect {
+                    id: n.id.as_ref().to_string(),
+                    depth: n.depth,
+                    parent_id: n.parent_id.as_ref().map(|s| s.as_ref().to_string()),
+                    child_ids: n
+                        .child_ids
+                        .into_iter()
+                        .map(|s| s.as_ref().to_string())
+                        .collect(),
+                })
+                .collect();
+
+            assert_eq!(
+                column_tree, snap.expect.core_model.column_tree,
+                "snapshot {} core_model.column_tree mismatch",
+                snap.id
+            );
+
+            for expected in &snap.expect.core_model.column_tree {
+                let got = table
+                    .column_node_snapshot(expected.id.as_str())
+                    .unwrap_or_else(|| panic!("unknown column id: {}", expected.id));
+                let got = ColumnNodeExpect {
+                    id: got.id.as_ref().to_string(),
+                    depth: got.depth,
+                    parent_id: got.parent_id.as_ref().map(|s| s.as_ref().to_string()),
+                    child_ids: got
+                        .child_ids
+                        .into_iter()
+                        .map(|s| s.as_ref().to_string())
+                        .collect(),
+                };
+                assert_eq!(
+                    got,
+                    expected.clone(),
+                    "snapshot {} column_node_snapshot({}) mismatch",
+                    snap.id,
+                    expected.id
+                );
+            }
+        }
+
+        if let Some(expected) = snap.expect.core_model.flat_columns.as_ref() {
+            let all_flat: Vec<String> = table
+                .all_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+            let visible_flat: Vec<String> = table
+                .visible_flat_columns()
+                .into_iter()
+                .map(|c| c.id.to_string())
+                .collect();
+
+            assert_eq!(
+                all_flat, expected.all,
+                "snapshot {} core_model.flat_columns.all mismatch",
+                snap.id
+            );
+            assert_eq!(
+                visible_flat, expected.visible,
+                "snapshot {} core_model.flat_columns.visible mismatch",
+                snap.id
+            );
+        }
     }
 }

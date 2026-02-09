@@ -139,7 +139,7 @@ API that lets you choose invalidation once and then read:
 use fret_ui_kit::declarative::model_watch::ModelWatchExt;
 
 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-let label = cx.watch_model(&label).layout().cloned().unwrap_or_default();
+let label = cx.watch_model(&label).layout().cloned_or_default();
 ```
 
 ### Long-lived callbacks: prefer `WeakModel<T>`

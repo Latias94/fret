@@ -138,6 +138,7 @@ struct HoverCardIntentDriverState {
     saw_active_since_open: bool,
     last_pointer_down: bool,
     close_suppressed_after_pointer_down: bool,
+    saw_text_selection_while_pointer_down: bool,
 }
 
 /// Updates hover-card open state using Radix-aligned hover intent policy.
@@ -180,6 +181,11 @@ pub fn hover_card_update_interaction<H: UiHost>(
             st.intent.set_open(open_now);
             st.saw_active_since_open = false;
             st.close_suppressed_after_pointer_down = false;
+            st.saw_text_selection_while_pointer_down = false;
+        }
+
+        if pointer_down_on_content && has_text_selection {
+            st.saw_text_selection_while_pointer_down = true;
         }
 
         let was_open = st.intent.is_open();
@@ -187,13 +193,18 @@ pub fn hover_card_update_interaction<H: UiHost>(
         if pointer_down_on_content != st.last_pointer_down {
             if pointer_down_on_content {
                 st.close_suppressed_after_pointer_down = false;
-            } else if was_open && !signal_active {
+            } else if was_open && !signal_active && !has_text_selection {
                 // Mirror Radix HoverCard: if the pointer left while the button is held, `onClose`
                 // does not schedule a close timer. We model that by suppressing close until the
                 // next "active -> inactive" edge.
-                st.close_suppressed_after_pointer_down = true;
+                if !st.saw_text_selection_while_pointer_down {
+                    st.close_suppressed_after_pointer_down = true;
+                }
             }
             st.last_pointer_down = pointer_down_on_content;
+            if !pointer_down_on_content {
+                st.saw_text_selection_while_pointer_down = false;
+            }
         }
         if st.close_suppressed_after_pointer_down && signal_active {
             st.close_suppressed_after_pointer_down = false;
@@ -223,6 +234,7 @@ pub fn hover_card_update_interaction<H: UiHost>(
         } else if was_open && !out.open {
             st.saw_active_since_open = false;
             st.close_suppressed_after_pointer_down = false;
+            st.saw_text_selection_while_pointer_down = false;
         }
 
         out
@@ -388,6 +400,56 @@ mod tests {
             open_now = hover_card_update_interaction(cx, open_now, true, false, false, cfg).open;
             assert!(open_now);
 
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
+    }
+
+    #[test]
+    fn hover_card_text_selection_release_clears_without_reenter() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            // While selecting text inside content, pointer-down keeps the card open.
+            open_now = hover_card_update_interaction(cx, open_now, true, true, true, cfg).open;
+            assert!(open_now);
+
+            // Leave while still pressed.
+            open_now = hover_card_update_interaction(cx, open_now, false, true, true, cfg).open;
+            assert!(open_now);
+
+            // Release outside while text selection is still active.
+            open_now = hover_card_update_interaction(cx, open_now, false, false, true, cfg).open;
+            assert!(open_now);
+
+            // Clearing selection should allow immediate close (close_delay=0).
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
+    }
+
+    #[test]
+    fn hover_card_text_selection_cleared_after_stale_pointer_down_closes() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            open_now = hover_card_update_interaction(cx, open_now, true, true, true, cfg).open;
+            assert!(open_now);
+
+            // Pointer leaves while selection is still active.
+            open_now = hover_card_update_interaction(cx, open_now, false, true, true, cfg).open;
+            assert!(open_now);
+
+            // If selection then clears and pointer-down state is reconciled to false in the same
+            // frame, hover card should close (not arm pointer-down close suppression).
             open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
             assert!(!open_now);
         });

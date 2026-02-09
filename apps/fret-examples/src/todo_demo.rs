@@ -5,7 +5,6 @@ use fret_kit::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
-use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::state::{query_error_alert, query_status_badge};
 
 const TEST_ID_INPUT: &str = "todo-input";
@@ -156,25 +155,19 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     st.router.clear();
     let theme = Theme::global(&*cx.app).clone();
 
-    let draft_value = cx
-        .watch_model(&st.draft)
-        .layout()
-        .cloned()
-        .unwrap_or_default();
+    let draft_value = cx.watch_model(&st.draft).layout().cloned_or_default();
 
     let filter_value = cx
         .watch_model(&st.filter)
         .layout()
-        .copied()
-        .unwrap_or(TodoFilter::All);
+        .copied_or(TodoFilter::All);
 
     let derived = cx.use_selector(
         |cx| {
             let filter = cx
                 .watch_model(&st.filter)
                 .layout()
-                .copied()
-                .unwrap_or(TodoFilter::All);
+                .copied_or(TodoFilter::All);
             let (todos_rev, done_revs) = cx
                 .watch_model(&st.todos)
                 .layout()
@@ -252,8 +245,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let tip_state = cx
         .watch_model(tip_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<TipData>::default);
+        .cloned_or_else(QueryState::<TipData>::default);
 
     let tip_status = query_status_badge(cx, &tip_state);
     let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
@@ -315,21 +307,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .on_click(add_cmd.clone())
         .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_ADD),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_ADD);
 
     let input = shadcn::Input::new(st.draft.clone())
         .placeholder("Add a task")
         .submit_command(add_cmd.clone())
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::TextField)
-                .test_id(TEST_ID_INPUT),
-        );
+        .a11y_role(SemanticsRole::TextField)
+        .test_id(TEST_ID_INPUT);
 
     let input_row = ui::h_flex(cx, |_cx| [input, add_button])
         .gap(Space::N2)
@@ -391,21 +377,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .disabled(derived.completed == 0)
         .on_click(clear_done_cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_CLEAR_DONE),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_CLEAR_DONE);
 
     let refresh_tip = shadcn::Button::new("Refresh tip")
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(refresh_tip_cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(TEST_ID_REFRESH_TIP),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(TEST_ID_REFRESH_TIP);
 
     let summary = ui::text(
         cx,
@@ -460,7 +440,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn filter_chip(
@@ -479,11 +459,8 @@ fn filter_chip(
         .size(shadcn::ButtonSize::Sm)
         .on_click(cmd)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(test_id),
-        )
+        .a11y_role(SemanticsRole::Button)
+        .test_id(test_id)
 }
 
 fn todo_row(
@@ -499,11 +476,8 @@ fn todo_row(
         .on_click(remove_cmd)
         .children([icon::icon(cx, IconId::new("lucide.trash"))])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(todo_remove_test_id(row.id)),
-        );
+        .a11y_role(SemanticsRole::Button)
+        .test_id(todo_remove_test_id(row.id));
 
     let label = cx.text_props(TextProps {
         layout: Default::default(),
@@ -538,11 +512,8 @@ fn todo_row(
         .p(Space::N3)
         .w_full()
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::ListItem)
-                .test_id(todo_row_test_id(row.id)),
-        )
+        .a11y_role(SemanticsRole::ListItem)
+        .test_id(todo_row_test_id(row.id))
 }
 
 fn on_command(

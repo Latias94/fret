@@ -49,6 +49,9 @@ pub mod ids {
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
+        pub const FILE: IconId = IconId::new_static("ui.file");
+        pub const FOLDER: IconId = IconId::new_static("ui.folder");
+        pub const FOLDER_OPEN: IconId = IconId::new_static("ui.folder.open");
         pub const LOADER: IconId = IconId::new_static("ui.loader");
         pub const MORE_HORIZONTAL: IconId = IconId::new_static("ui.more.horizontal");
         pub const MINUS: IconId = IconId::new_static("ui.minus");

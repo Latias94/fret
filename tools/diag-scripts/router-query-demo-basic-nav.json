@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "router-query-demo-link-settings" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "router-query-demo-hover-intents-empty" }
+      }
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "router-query-demo-link-settings" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "router-query-demo-hover-intents-nonempty" }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "capture_bundle", "label": "router-query-demo-after-hover-prefetch" },
+    { "type": "click", "target": { "kind": "test_id", "id": "router-query-demo-link-settings" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "router-query-demo-leaf-settings" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "router-query-demo-after-click-nav" }
+  ]
+}

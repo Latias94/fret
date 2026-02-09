@@ -1,12 +1,16 @@
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::ids;
-use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
-use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_runtime::{CommandId, Effect, Model, ModelId, TimerToken, WindowCommandGatingSnapshot};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus, PressablePointerUpResult,
+    UiPointerActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
     MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
@@ -63,6 +67,196 @@ fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) ->
         0.1
     };
     alpha_mul(destructive_fg, alpha)
+}
+
+const CONTEXT_MENU_CANCEL_OPEN_DELAY: Duration = Duration::from_millis(500);
+const CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX: f32 = 1.0;
+
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct ContextMenuOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    pending_complete: Option<bool>,
+}
+
+fn context_menu_open_change_events(
+    state: &mut ContextMenuOpenChangeCallbackState,
+    open: bool,
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+struct ContextMenuCancelOpenState {
+    active: bool,
+    allow_item_mouse_up: bool,
+    pointer_id: Option<fret_core::PointerId>,
+    anchor: Option<Point>,
+    armed: Option<TimerToken>,
+    moved_from_anchor: bool,
+}
+
+type ContextMenuCancelOpenShared = Arc<Mutex<ContextMenuCancelOpenState>>;
+
+fn context_menu_cancel_open_shared() -> ContextMenuCancelOpenShared {
+    Arc::new(Mutex::new(ContextMenuCancelOpenState::default()))
+}
+
+fn context_menu_cancel_open_distance_exceeds_threshold(anchor: Point, position: Point) -> bool {
+    let dx = anchor.x.0 - position.x.0;
+    let dy = anchor.y.0 - position.y.0;
+    (dx * dx + dy * dy)
+        > CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX * CONTEXT_MENU_CANCEL_OPEN_MOVE_THRESHOLD_PX
+}
+
+fn context_menu_cancel_open_clear_inner(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    state: &mut ContextMenuCancelOpenState,
+) {
+    if let Some(token) = state.armed.take() {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+    *state = ContextMenuCancelOpenState::default();
+}
+
+fn context_menu_cancel_open_start(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn UiPointerActionHost,
+    window: fret_core::AppWindowId,
+    pointer_id: fret_core::PointerId,
+    anchor: Point,
+) {
+    let token = host.next_timer_token();
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    context_menu_cancel_open_clear_inner(host, &mut state);
+    state.active = true;
+    state.pointer_id = Some(pointer_id);
+    state.anchor = Some(anchor);
+    state.armed = Some(token);
+    host.push_effect(Effect::SetTimer {
+        window: Some(window),
+        token,
+        after: CONTEXT_MENU_CANCEL_OPEN_DELAY,
+        repeat: None,
+    });
+}
+
+fn context_menu_cancel_open_mark_moved_if_needed(
+    shared: &ContextMenuCancelOpenShared,
+    pointer_id: fret_core::PointerId,
+    position: Point,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) || state.moved_from_anchor {
+        return;
+    }
+    let Some(anchor) = state.anchor else {
+        return;
+    };
+    if context_menu_cancel_open_distance_exceeds_threshold(anchor, position) {
+        state.moved_from_anchor = true;
+    }
+}
+
+fn context_menu_cancel_open_on_timer(
+    shared: &ContextMenuCancelOpenShared,
+    _host: &mut dyn fret_ui::action::UiActionHost,
+    token: TimerToken,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if state.armed != Some(token) {
+        return;
+    }
+    state.armed = None;
+    state.allow_item_mouse_up = true;
+}
+
+fn context_menu_cancel_open_on_pointer_up(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn fret_ui::action::UiActionHost,
+    open: &Model<bool>,
+    pointer_id: fret_core::PointerId,
+    position: Point,
+    button: fret_core::MouseButton,
+) {
+    if button != fret_core::MouseButton::Right {
+        return;
+    }
+
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) {
+        return;
+    }
+
+    let should_cancel = state.allow_item_mouse_up
+        && state.anchor.is_some_and(|anchor| {
+            let near_anchor =
+                !context_menu_cancel_open_distance_exceeds_threshold(anchor, position);
+            if state.moved_from_anchor {
+                true
+            } else {
+                !near_anchor
+            }
+        });
+    if should_cancel {
+        let _ = host.models_mut().update(open, |v| *v = false);
+    }
+    context_menu_cancel_open_clear_inner(host, &mut state);
+}
+
+fn context_menu_cancel_open_stop_without_close(
+    shared: &ContextMenuCancelOpenShared,
+    host: &mut dyn fret_ui::action::UiActionHost,
+    pointer_id: fret_core::PointerId,
+) {
+    let mut state = shared.lock().unwrap_or_else(|e| e.into_inner());
+    if !state.active || state.pointer_id != Some(pointer_id) {
+        return;
+    }
+    context_menu_cancel_open_clear_inner(host, &mut state);
+}
+
+fn context_menu_cancel_open_item_pointer_up_handler(
+    shared: ContextMenuCancelOpenShared,
+    open: Model<bool>,
+) -> fret_ui::action::OnPressablePointerUp {
+    Arc::new(move |host, _acx, up| {
+        context_menu_cancel_open_on_pointer_up(
+            &shared,
+            host,
+            &open,
+            up.pointer_id,
+            up.position,
+            up.button,
+        );
+        // 右键释放不应走 Pressable 默认激活链路。
+        if up.button == fret_core::MouseButton::Right {
+            PressablePointerUpResult::SkipActivate
+        } else {
+            PressablePointerUpResult::Continue
+        }
+    })
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -564,6 +758,7 @@ where
 #[derive(Clone)]
 struct ContextMenuRenderEnv {
     open: Model<bool>,
+    cancel_open: ContextMenuCancelOpenShared,
     gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
@@ -733,6 +928,7 @@ impl ContextMenuRenderEnv {
         };
 
         let open_for_item = self.open.clone();
+        let cancel_open_for_item = self.cancel_open.clone();
         let ring = self.ring;
         let item_count = self.item_count;
         let reserve_leading_slot = self.reserve_leading_slot;
@@ -753,6 +949,10 @@ impl ContextMenuRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open_for_item.clone(),
+                    open_for_item.clone(),
+                ));
 
                 if !disabled {
                     cx.pressable_dispatch_command_if_enabled_opt(command.clone());
@@ -853,6 +1053,7 @@ impl ContextMenuRenderEnv {
         let trailing = item.trailing.clone();
 
         let open_for_item = self.open.clone();
+        let cancel_open_for_item = self.cancel_open.clone();
         let ring = self.ring;
         let item_count = self.item_count;
         let reserve_leading_slot = self.reserve_leading_slot;
@@ -871,6 +1072,10 @@ impl ContextMenuRenderEnv {
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open_for_item.clone(),
+                    open_for_item.clone(),
+                ));
 
                 let checked_now = cx.watch_model(&checked).copied().unwrap_or(false);
                 if !disabled {
@@ -961,6 +1166,7 @@ impl ContextMenuRenderEnv {
         let trailing = item.trailing.clone();
 
         let open_for_item = self.open.clone();
+        let cancel_open_for_item = self.cancel_open.clone();
         let ring = self.ring;
         let item_count = self.item_count;
         let reserve_leading_slot = self.reserve_leading_slot;
@@ -982,6 +1188,10 @@ impl ContextMenuRenderEnv {
 
             cx.pressable_with_id_props(move |cx, st, item_id| {
                 menu::sub_content::wire_item(cx, item_id, disabled, &submenu_for_item);
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open_for_item.clone(),
+                    open_for_item.clone(),
+                ));
 
                 if !disabled {
                     menu::radio_group::wire_select_on_activate(
@@ -1054,6 +1264,7 @@ impl ContextMenuRenderEnv {
 #[derive(Clone)]
 struct ContextMenuContentRenderEnv {
     open: Model<bool>,
+    cancel_open: ContextMenuCancelOpenShared,
     gating: WindowCommandGatingSnapshot,
     reserve_leading_slot: bool,
     item_count: usize,
@@ -1233,6 +1444,7 @@ impl ContextMenuContentRenderEnv {
         };
 
         let open = self.open.clone();
+        let cancel_open = self.cancel_open.clone();
         let ring = self.ring;
         let item_count = self.item_count;
         let reserve_leading_slot = self.reserve_leading_slot;
@@ -1281,6 +1493,11 @@ impl ContextMenuContentRenderEnv {
                     geometry_hint,
                 )
                 .unwrap_or(false);
+
+                cx.pressable_add_on_pointer_up(context_menu_cancel_open_item_pointer_up_handler(
+                    cancel_open.clone(),
+                    open.clone(),
+                ));
 
                 if !has_submenu && !disabled {
                     cx.pressable_dispatch_command_if_enabled_opt(command.clone());
@@ -1393,6 +1610,7 @@ impl ContextMenuContentRenderEnv {
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
+        let cancel_open = self.cancel_open.clone();
 
         let ring = self.ring;
         let item_count = self.item_count;
@@ -1426,6 +1644,13 @@ impl ContextMenuContentRenderEnv {
                     ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_add_on_pointer_up(
+                        context_menu_cancel_open_item_pointer_up_handler(
+                            cancel_open.clone(),
+                            open.clone(),
+                        ),
+                    );
+
                     let checked_now = cx.watch_model(&checked).copied().unwrap_or(false);
 
                     if !disabled {
@@ -1499,6 +1724,7 @@ impl ContextMenuContentRenderEnv {
         let leading = item.leading.clone();
         let trailing = item.trailing.clone();
         let open = self.open.clone();
+        let cancel_open = self.cancel_open.clone();
 
         let ring = self.ring;
         let item_count = self.item_count;
@@ -1533,6 +1759,13 @@ impl ContextMenuContentRenderEnv {
                     ..Default::default()
                 },
                 move |cx, st| {
+                    cx.pressable_add_on_pointer_up(
+                        context_menu_cancel_open_item_pointer_up_handler(
+                            cancel_open.clone(),
+                            open.clone(),
+                        ),
+                    );
+
                     let selected = cx.watch_model(&group_value).cloned().flatten();
                     let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
 
@@ -1807,6 +2040,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
     submenu_models: menu::sub::MenuSubmenuModels,
+    cancel_open: ContextMenuCancelOpenShared,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
@@ -1928,6 +2162,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         move |cx| {
             let render_env = ContextMenuRenderEnv {
                 open: open.clone(),
+                cancel_open: cancel_open.clone(),
                 gating: gating.clone(),
                 reserve_leading_slot,
                 item_count,
@@ -1992,11 +2227,11 @@ fn context_menu_submenu_panel<H: UiHost>(
 ///
 /// Notes:
 /// - Position is anchored at the last pointer-down location observed within the trigger region.
-/// - Keyboard invocation via Shift+F10 is supported (there is no dedicated `ContextMenu` key in
-///   `fret_core::KeyCode` yet).
+/// - Keyboard invocation via Shift+F10 and `ContextMenu` key is supported.
 #[derive(Clone)]
 pub struct ContextMenu {
     open: Model<bool>,
+    disabled: bool,
     modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
@@ -2012,12 +2247,15 @@ pub struct ContextMenu {
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
     on_close_auto_focus: Option<OnCloseAutoFocus>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for ContextMenu {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ContextMenu")
             .field("open", &"<model>")
+            .field("disabled", &self.disabled)
             .field("align", &self.align)
             .field("side", &self.side)
             .field("side_offset", &self.side_offset)
@@ -2026,6 +2264,11 @@ impl std::fmt::Debug for ContextMenu {
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -2034,6 +2277,7 @@ impl ContextMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            disabled: false,
             modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
@@ -2051,11 +2295,51 @@ impl ContextMenu {
             on_dismiss_request: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
+            on_open_change: None,
+            on_open_change_complete: None,
         }
+    }
+
+    /// Creates a context menu with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        #[derive(Default)]
+        struct OpenModelState {
+            model: Option<Model<bool>>,
+        }
+
+        let open = if let Some(model) = open {
+            model
+        } else {
+            let existing = cx.with_state(OpenModelState::default, |st| st.model.clone());
+            if let Some(model) = existing {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(default_open);
+                cx.with_state(OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            }
+        };
+
+        Self::new(open)
     }
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Whether trigger gestures/shortcuts should be ignored.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -2137,6 +2421,21 @@ impl ContextMenu {
         self
     }
 
+    /// Called when the open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -2163,6 +2462,20 @@ impl ContextMenu {
                 1.0,
                 overlay_motion::shadcn_ease,
             );
+            let (open_change, open_change_complete) =
+                cx.with_state(ContextMenuOpenChangeCallbackState::default, |state| {
+                    context_menu_open_change_events(state, is_open, motion.present, motion.animating)
+                });
+            if let (Some(open), Some(on_open_change)) =
+                (open_change, self.on_open_change.as_ref())
+            {
+                on_open_change(open);
+            }
+            if let (Some(open), Some(on_open_change_complete)) =
+                (open_change_complete, self.on_open_change_complete.as_ref())
+            {
+                on_open_change_complete(open);
+            }
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -2189,6 +2502,7 @@ impl ContextMenu {
             let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+            let disabled = self.disabled;
             let trigger_element = trigger(cx);
             let trigger_element = menu::trigger::apply_menu_trigger_a11y(
                 trigger_element,
@@ -2197,7 +2511,9 @@ impl ContextMenu {
             );
             let trigger_id = trigger_element.id;
 
-            menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
+            if !disabled {
+                menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
+            }
 
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
@@ -2212,30 +2528,126 @@ impl ContextMenu {
                 ))
             });
             let open_model_id = open.id();
+            let cancel_open = context_menu_cancel_open_shared();
             let anchor_store_model: Model<HashMap<ModelId, Point>> =
                 menu::context_menu_anchor_store_model(cx.app);
 
             let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
+            let touch_long_press = menu::context_menu_touch_long_press();
             let pointer_policy = Arc::new({
                 let anchor_store_model = anchor_store_model.clone();
+                let touch_long_press = touch_long_press.clone();
+                let cancel_open = cancel_open.clone();
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       cx: fret_ui::action::ActionCx,
                       down: fret_ui::action::PointerDownCx| {
+                    if disabled {
+                        return false;
+                    }
+                    let _ = menu::context_menu_touch_long_press_on_pointer_down(
+                        &touch_long_press,
+                        host,
+                        cx,
+                        down,
+                    );
                     let handled = base_pointer_policy(host, cx, down);
                     if handled {
+                        menu::context_menu_touch_long_press_clear(&touch_long_press, host);
                         let _ = host.models_mut().update(&anchor_store_model, |map| {
                             map.insert(open_model_id, down.position);
                         });
+                        // Base UI: contextmenu 打开后 500ms 再允许 mouseup 触发 cancel-open。
+                        if down.button == fret_core::MouseButton::Right {
+                            context_menu_cancel_open_start(
+                                &cancel_open,
+                                host,
+                                cx.window,
+                                down.pointer_id,
+                                down.position,
+                            );
+                            // 在此期间持续收到 pointer move/up。
+                            host.capture_pointer();
+                        }
                     }
                     handled
                 }
             });
 
             let pointer_policy_for_region = pointer_policy.clone();
+            let anchor_store_model_for_region = anchor_store_model.clone();
+            let open_for_region = open.clone();
+            let cancel_open_for_region = cancel_open.clone();
             let trigger = cx.keyed((open_model_id, "context-menu-trigger-region"), move |cx| {
                 let pointer_policy_for_region = pointer_policy_for_region.clone();
+                let cancel_open_for_region = cancel_open_for_region.clone();
+                let (touch_on_move, touch_on_up, touch_on_cancel) =
+                    menu::context_menu_touch_long_press_pointer_handlers(touch_long_press.clone());
+                let touch_long_press_for_timer = touch_long_press.clone();
+                let anchor_store_model_for_timer = anchor_store_model_for_region.clone();
+                let open_for_timer = open_for_region.clone();
                 cx.pointer_region(PointerRegionProps::default(), move |cx| {
                     cx.pointer_region_on_pointer_down(pointer_policy_for_region);
+                    let cancel_open_for_move = cancel_open_for_region.clone();
+                    cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+                        context_menu_cancel_open_mark_moved_if_needed(
+                            &cancel_open_for_move,
+                            mv.pointer_id,
+                            mv.position,
+                        );
+                        touch_on_move(host, acx, mv)
+                    }));
+                    let cancel_open_for_up = cancel_open_for_region.clone();
+                    let cancel_open_for_up_release = cancel_open_for_region.clone();
+                    let open_for_up = open_for_region.clone();
+                    cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+                        context_menu_cancel_open_mark_moved_if_needed(
+                            &cancel_open_for_up_release,
+                            up.pointer_id,
+                            up.position,
+                        );
+                        context_menu_cancel_open_on_pointer_up(
+                            &cancel_open_for_up,
+                            host,
+                            &open_for_up,
+                            up.pointer_id,
+                            up.position,
+                            up.button,
+                        );
+                        if up.button == fret_core::MouseButton::Right {
+                            host.release_pointer_capture();
+                        }
+                        touch_on_up(host, acx, up)
+                    }));
+                    let cancel_open_for_cancel = cancel_open_for_region.clone();
+                    cx.pointer_region_on_pointer_cancel(Arc::new(move |host, acx, cancel| {
+                        context_menu_cancel_open_stop_without_close(
+                            &cancel_open_for_cancel,
+                            host,
+                            cancel.pointer_id,
+                        );
+                        host.release_pointer_capture();
+                        touch_on_cancel(host, acx, cancel)
+                    }));
+                    let cancel_open_for_timer = cancel_open_for_region.clone();
+                    cx.timer_add_on_timer_for(
+                        cx.root_id(),
+                        Arc::new(move |host, action_cx, token| {
+                            context_menu_cancel_open_on_timer(&cancel_open_for_timer, host, token);
+                            let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
+                                &touch_long_press_for_timer,
+                                token,
+                            ) else {
+                                return false;
+                            };
+
+                            let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
+                                map.insert(open_model_id, anchor);
+                            });
+                            let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
+                            host.request_redraw(action_cx.window);
+                            true
+                        }),
+                    );
                     vec![trigger_element]
                 })
             });
@@ -2442,6 +2854,7 @@ impl ContextMenu {
                     let open_for_submenu = open_for_overlay.clone();
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
+                    let cancel_open_for_panel = cancel_open.clone();
 
                     // Match Radix: `role=menu` is on the content panel element (not a fullscreen
                     // wrapper). We keep the popper wrapper for arrow hit-test expansion, but
@@ -2528,6 +2941,7 @@ impl ContextMenu {
                                                 move |cx| {
                                                     let render_env = ContextMenuContentRenderEnv {
                                                         open: open_for_overlay.clone(),
+                                                        cancel_open: cancel_open.clone(),
                                                         gating: gating.clone(),
                                                         reserve_leading_slot,
                                                         item_count,
@@ -3210,6 +3624,7 @@ impl ContextMenu {
                                 typeahead_timeout_ticks,
                                 align_leading_icons,
                                 submenu_for_panel.clone(),
+                                cancel_open_for_panel.clone(),
                             );
 
                             let side =
@@ -3247,7 +3662,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let mut request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
+                let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
                     cx,
                     id,
                     trigger_id,
@@ -3283,13 +3698,79 @@ mod tests {
     use fret_app::App;
     use fret_core::UiServices;
     use fret_core::{
-        AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
+        AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn context_menu_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = ContextMenu::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn context_menu_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let menu = ContextMenu::new_controllable(cx, None, true);
+            let open = cx
+                .watch_model(&menu.open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            assert!(open);
+        });
+    }
+
+    #[test]
+    fn context_menu_open_change_events_emit_change_and_complete_after_settle() {
+        let mut state = ContextMenuOpenChangeCallbackState::default();
+
+        let (changed, completed) = context_menu_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, None);
+
+        let (changed, completed) = context_menu_open_change_events(&mut state, true, true, true);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = context_menu_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn context_menu_open_change_events_complete_without_animation() {
+        let mut state = ContextMenuOpenChangeCallbackState::default();
+
+        let _ = context_menu_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = context_menu_open_change_events(&mut state, true, true, false);
+
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+    }
 
     #[test]
     fn estimated_menu_panel_height_clamps_to_max_height() {
@@ -3491,6 +3972,18 @@ mod tests {
         bounds: Rect,
         open: Model<bool>,
     ) -> fret_core::NodeId {
+        render_frame_focusable_trigger_with_disabled(ui, app, services, window, bounds, open, false)
+    }
+
+    fn render_frame_focusable_trigger_with_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        disabled: bool,
+    ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
@@ -3503,7 +3996,7 @@ mod tests {
             bounds,
             "context-menu-shift-f10",
             |cx| {
-                vec![ContextMenu::new(open).into_element(
+                vec![ContextMenu::new(open).disabled(disabled).into_element(
                     cx,
                     |cx| {
                         cx.pressable(
@@ -3525,6 +4018,242 @@ mod tests {
                     },
                     |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
                 )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_focusable_trigger_with_debug_cancel_open(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        debug_out: Rc<Cell<Option<ContextMenuCancelOpenShared>>>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-debug-cancel-open",
+            |cx| {
+                let shared = context_menu_cancel_open_shared();
+                debug_out.set(Some(shared.clone()));
+
+                let theme = Theme::global(&*cx.app).clone();
+                let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+                let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
+                    cx,
+                    is_open,
+                    overlay_motion::SHADCN_MOTION_TICKS_100,
+                    overlay_motion::SHADCN_MOTION_TICKS_100,
+                    0.95,
+                    1.0,
+                    overlay_motion::shadcn_ease,
+                );
+                let overlay_presence = OverlayPresence {
+                    present: motion.present,
+                    interactive: is_open,
+                };
+
+                let overlay_root_name = menu::context_menu_root_name(cx.root_id());
+                let content_id_for_trigger =
+                    menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| vec![cx.container(ContainerProps::default(), |_cx| Vec::new())],
+                );
+                let trigger = menu::trigger::apply_menu_trigger_a11y(
+                    trigger,
+                    is_open,
+                    Some(content_id_for_trigger),
+                );
+                let trigger_id = trigger.id;
+
+                let open_model_id = open.id();
+                let anchor_store_model: Model<HashMap<ModelId, Point>> =
+                    menu::context_menu_anchor_store_model(cx.app);
+                let base_pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
+                let touch_long_press = menu::context_menu_touch_long_press();
+                let pointer_policy = Arc::new({
+                    let anchor_store_model = anchor_store_model.clone();
+                    let touch_long_press = touch_long_press.clone();
+                    let cancel_open = shared.clone();
+                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          down: fret_ui::action::PointerDownCx| {
+                        let _ = menu::context_menu_touch_long_press_on_pointer_down(
+                            &touch_long_press,
+                            host,
+                            acx,
+                            down,
+                        );
+                        let handled = base_pointer_policy(host, acx, down);
+                        if handled {
+                            menu::context_menu_touch_long_press_clear(&touch_long_press, host);
+                            let _ = host.models_mut().update(&anchor_store_model, |map| {
+                                map.insert(open_model_id, down.position);
+                            });
+                            if down.button == fret_core::MouseButton::Right {
+                                context_menu_cancel_open_start(
+                                    &cancel_open,
+                                    host,
+                                    acx.window,
+                                    down.pointer_id,
+                                    down.position,
+                                );
+                                host.capture_pointer();
+                            }
+                        }
+                        handled
+                    }
+                });
+
+                let pointer_policy_for_region = pointer_policy.clone();
+                let open_for_region = open.clone();
+                let cancel_open_for_region = shared.clone();
+                let trigger = cx.keyed(
+                    (open_model_id, "context-menu-debug-trigger-region"),
+                    move |cx| {
+                        let pointer_policy_for_region = pointer_policy_for_region.clone();
+                        let cancel_open_for_region = cancel_open_for_region.clone();
+                        cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                            cx.pointer_region_on_pointer_down(pointer_policy_for_region);
+                            let cancel_open_for_move = cancel_open_for_region.clone();
+                            cx.pointer_region_on_pointer_move(Arc::new(move |_host, _acx, mv| {
+                                context_menu_cancel_open_mark_moved_if_needed(
+                                    &cancel_open_for_move,
+                                    mv.pointer_id,
+                                    mv.position,
+                                );
+                                false
+                            }));
+                            let cancel_open_for_up = cancel_open_for_region.clone();
+                            let cancel_open_for_up_release = cancel_open_for_region.clone();
+                            let open_for_up = open_for_region.clone();
+                            cx.pointer_region_on_pointer_up(Arc::new(move |host, _acx, up| {
+                                context_menu_cancel_open_mark_moved_if_needed(
+                                    &cancel_open_for_up_release,
+                                    up.pointer_id,
+                                    up.position,
+                                );
+                                context_menu_cancel_open_on_pointer_up(
+                                    &cancel_open_for_up,
+                                    host,
+                                    &open_for_up,
+                                    up.pointer_id,
+                                    up.position,
+                                    up.button,
+                                );
+                                if up.button == fret_core::MouseButton::Right {
+                                    host.release_pointer_capture();
+                                }
+                                false
+                            }));
+                            let cancel_open_for_timer = cancel_open_for_region.clone();
+                            cx.timer_add_on_timer_for(
+                                cx.root_id(),
+                                Arc::new(move |host, _acx, token| {
+                                    context_menu_cancel_open_on_timer(
+                                        &cancel_open_for_timer,
+                                        host,
+                                        token,
+                                    );
+                                    false
+                                }),
+                            );
+                            vec![trigger]
+                        })
+                    },
+                );
+
+                if overlay_presence.present {
+                    let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
+                    let open_for_panel_item = open.clone();
+                    let placed = Rect::new(
+                        Point::new(Px(16.0), Px(48.0)),
+                        Size::new(Px(120.0), Px(44.0)),
+                    );
+                    let panel = menu::content_panel::menu_panel_at(
+                        cx,
+                        placed,
+                        move |layout| {
+                            let mut props = decl_style::container_props(
+                                &theme,
+                                panel_chrome,
+                                LayoutRefinement::default(),
+                            );
+                            props.layout = layout;
+                            props
+                        },
+                        move |cx| {
+                            vec![cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.min_height = Some(Px(28.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: menu::item::menu_item_a11y(
+                                        Some(Arc::from("Alpha")),
+                                        None,
+                                    ),
+                                    ..Default::default()
+                                },
+                                move |cx, _st| {
+                                    cx.pressable_add_on_pointer_up(
+                                        context_menu_cancel_open_item_pointer_up_handler(
+                                            shared.clone(),
+                                            open_for_panel_item.clone(),
+                                        ),
+                                    );
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )]
+                        },
+                    );
+                    let request = menu::root::dismissible_menu_request_with_modal(
+                        cx,
+                        cx.root_id(),
+                        trigger_id,
+                        open.clone(),
+                        overlay_presence,
+                        vec![panel],
+                        overlay_root_name,
+                        menu::root::MenuInitialFocusTargets::new(),
+                        None,
+                        None,
+                        None,
+                        false,
+                    );
+                    OverlayController::request(cx, request);
+                }
+
+                vec![trigger]
             },
         );
         ui.set_root(root);
@@ -3606,6 +4335,87 @@ mod tests {
         );
 
         assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn context_menu_touch_long_press_timer_opens_menu() {
+        use fret_runtime::Effect;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(false);
+
+        // Frame 1: establish trigger geometry and pointer hooks.
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let touch_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(7),
+                position: touch_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Touch,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let long_press_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. }
+                if *after == menu::CONTEXT_MENU_TOUCH_LONG_PRESS_DELAY =>
+            {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(long_press_token) = long_press_token else {
+            panic!("expected touch long-press timer; effects={effects:?}");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer {
+                token: long_press_token,
+            },
+        );
+
+        // Frame 2: long-press timer should have opened the context menu.
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
@@ -4175,6 +4985,157 @@ mod tests {
     }
 
     #[test]
+    fn context_menu_opens_on_context_menu_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ContextMenu,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ =
+            render_frame_focusable_trigger(&mut ui, &mut app, &mut services, window, bounds, open);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+        assert_eq!(ui.focus(), Some(alpha.id));
+    }
+
+    #[test]
+    fn context_menu_disabled_blocks_pointer_and_keyboard_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::F10,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+                is_click: true,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger_with_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(
+            !open_now,
+            "disabled context menu should not open via keyboard or pointer triggers"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().all(
+                |n| !(n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            ),
+            "disabled context menu should not render menu content"
+        );
+    }
+
+    #[test]
     fn context_menu_focus_outside_can_be_prevented_via_dismiss_handler() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4587,6 +5548,355 @@ mod tests {
         assert_ne!(
             focus, trigger,
             "pointer-open should focus menu content/roving container rather than keeping trigger focus"
+        );
+    }
+
+    #[test]
+    fn context_menu_ignores_right_mouse_up_directly_under_anchor_before_move() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let anchor_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: anchor_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let arm_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. } if *after == CONTEXT_MENU_CANCEL_OPEN_DELAY => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(arm_token) = arm_token else {
+            panic!("expected cancel-open arm timer; effects={effects:?}");
+        };
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: arm_token });
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        // 在原始锚点处右键抬起：应被忽略，不关闭菜单。
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: anchor_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "right mouseup at anchor should not close freshly opened context menu"
+        );
+    }
+
+    #[test]
+    fn context_menu_cancel_open_state_marks_moved_after_pointer_leaves_anchor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let debug_state_out: Rc<Cell<Option<ContextMenuCancelOpenShared>>> =
+            Rc::new(Cell::new(None));
+        let root = render_frame_focusable_trigger_with_debug_cancel_open(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            debug_state_out.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let anchor_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: anchor_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let arm_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. } if *after == CONTEXT_MENU_CANCEL_OPEN_DELAY => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(arm_token) = arm_token else {
+            panic!("expected cancel-open arm timer; effects={effects:?}");
+        };
+
+        let _ = render_frame_focusable_trigger_with_debug_cancel_open(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            debug_state_out.clone(),
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: arm_token });
+
+        let _ = render_frame_focusable_trigger_with_debug_cancel_open(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            debug_state_out.clone(),
+        );
+
+        let moved_pos = Point::new(Px(anchor_pos.x.0 + 6.0), Px(anchor_pos.y.0 + 6.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: moved_pos,
+                buttons: fret_core::MouseButtons {
+                    right: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let debug_shared = debug_state_out
+            .replace(None)
+            .expect("debug cancel-open shared state should be available");
+        let state = context_menu_cancel_open_debug_state(&debug_shared);
+        assert_eq!(
+            state.moved_from_anchor, true,
+            "pointer move away from anchor should mark cancel-open state as moved"
+        );
+    }
+
+    fn context_menu_cancel_open_debug_state(
+        shared: &ContextMenuCancelOpenShared,
+    ) -> ContextMenuCancelOpenState {
+        *shared.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    #[test]
+    fn context_menu_closes_on_right_mouse_up_after_pointer_moves_away_from_anchor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let anchor_pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: anchor_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let arm_token = effects.iter().find_map(|effect| match effect {
+            Effect::SetTimer { token, after, .. } if *after == CONTEXT_MENU_CANCEL_OPEN_DELAY => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(arm_token) = arm_token else {
+            panic!("expected cancel-open arm timer; effects={effects:?}");
+        };
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: arm_token });
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        let moved_pos = Point::new(Px(anchor_pos.x.0 + 6.0), Px(anchor_pos.y.0 + 6.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: moved_pos,
+                buttons: fret_core::MouseButtons {
+                    right: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: moved_pos,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "right mouseup after moving away from anchor should close context menu"
         );
     }
 

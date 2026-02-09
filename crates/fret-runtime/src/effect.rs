@@ -95,6 +95,8 @@ pub enum Effect {
     },
     OpenUrl {
         url: String,
+        target: Option<String>,
+        rel: Option<String>,
     },
     FileDialogOpen {
         window: AppWindowId,

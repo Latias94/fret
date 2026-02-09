@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Web event loop runner for Fret on wasm32."
 
 [lib]
 crate-type = ["rlib"]
@@ -15,8 +16,8 @@ crate-type = ["rlib"]
 [dependencies]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-core = { path = "../fret-core" }
-fret-platform-web = { path = "../fret-platform-web" }
+fret-core = { version = "0.1.0", path = "../fret-core" }
+fret-platform-web = { version = "0.1.0", path = "../fret-platform-web" }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = [
     "Document",

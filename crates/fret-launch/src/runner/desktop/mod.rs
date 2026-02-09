@@ -3773,7 +3773,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     Effect::ExternalDropRelease { token } => {
                         self.external_drop.release(token);
                     }
-                    Effect::OpenUrl { url } => {
+                    Effect::OpenUrl { url, .. } => {
                         let caps = self
                             .app
                             .global::<PlatformCapabilities>()
