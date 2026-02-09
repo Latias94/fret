@@ -76,6 +76,33 @@ Optional:
 
 - If there is a web reference golden (rare for non-v4 blocks), add a targeted “web vs fret” gate.
 
+## Component template (recommended baseline)
+
+Use this template to keep extras consistent and reviewable:
+
+1. File layout:
+   - Implementation: `ecosystem/fret-ui-shadcn/src/extras/<component>.rs`
+   - Module entry: `ecosystem/fret-ui-shadcn/src/extras/mod.rs`
+2. Public surface:
+   - Expose under `fret_ui_shadcn::extras::<component>::...`
+   - Re-export from `extras/mod.rs` for convenience
+   - Do not re-export from the crate root (`fret_ui_shadcn::*`)
+3. State (Radix-style controlled vs uncontrolled):
+   - Prefer `fret_ui_kit::declarative::controllable_state::use_controllable_model`
+   - Controlled = caller provides `Model<T>`
+   - Uncontrolled = element-local model initialized once from `default_*`
+4. Semantics + test hooks:
+   - Assign stable roles/labels where it improves automation and accessibility outcomes
+   - Add `test_id` for key subparts (root, triggers, close buttons, etc.) when stateful
+5. Gates (minimum bar):
+   - Snapshot: `ecosystem/fret-ui-shadcn/tests/snapshots.rs` + a new/updated
+     `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`
+   - Scripted diag (when needed): add a `tools/diag-scripts/*.json` script and gate it via the
+     appropriate suite (see `docs/ui-diagnostics-and-scripted-tests.md`)
+6. Attribution:
+   - Add a short rustdoc note with upstream inspiration + license, and record the source in the
+     `docs/workstreams/shadcn-extras-todo.md` “sources table” if/when created.
+
 ## Component selection criteria (what we add first)
 
 We prioritize components that are:
@@ -129,4 +156,3 @@ We only port outcomes from permissive sources:
 - Avoid strong copyleft sources (GPL/AGPL) for direct code reuse.
 - For each extras component, record its upstream inspiration in rustdoc (short) and in a small
   “sources table” in `docs/workstreams/shadcn-extras-todo.md`.
-

@@ -14,11 +14,11 @@ Milestones (one-screen): `docs/workstreams/shadcn-extras-milestones.md`
 
 ## M0 — Extras skeleton + gates
 
-- [ ] Add `ecosystem/fret-ui-shadcn/src/extras/mod.rs` with module docs and export policy.
-- [ ] Add `pub mod extras;` to `ecosystem/fret-ui-shadcn/src/lib.rs` (no root re-exports).
-- [ ] Add snapshot coverage for at least one extras root (new snapshot file under
+- [x] Add `ecosystem/fret-ui-shadcn/src/extras/mod.rs` with module docs and export policy.
+- [x] Add `pub mod extras;` to `ecosystem/fret-ui-shadcn/src/lib.rs` (no root re-exports).
+- [x] Add snapshot coverage for at least one extras root (new snapshot file under
       `ecosystem/fret-ui-shadcn/tests/snapshots/*.json`).
-- [ ] Add a small “component template” section to `docs/workstreams/shadcn-extras.md` (or a dedicated
+- [x] Add a small “component template” section to `docs/workstreams/shadcn-extras.md` (or a dedicated
       appendix) that standardizes:
       - controlled/uncontrolled pattern (use `fret-ui-kit::declarative::controllable_state`),
       - semantics roles + labels,
@@ -66,4 +66,3 @@ Legend:
 - [ ] At least one regression gate lands (snapshot or diag script).
 - [ ] No new runtime contract changes; no platform deps.
 - [ ] Rustdoc includes upstream inspiration + license note (short).
-
