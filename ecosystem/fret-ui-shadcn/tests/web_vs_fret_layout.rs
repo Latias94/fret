@@ -35,6 +35,11 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
+#[path = "web_vs_fret_layout/input.rs"]
+mod layout_input_fixtures;
+#[path = "web_vs_fret_layout/scroll.rs"]
+mod layout_scroll_fixtures;
+
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
     themes: BTreeMap<String, WebGoldenTheme>,
@@ -7924,7 +7929,6 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
     assert_close_px("tab panel gap", Px(fret_gap_y), web_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_root_size() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -7981,7 +7985,6 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     let web = read_web_golden("scroll-area-demo");
     let theme = web_theme(&web);
@@ -8067,7 +8070,6 @@ fn web_vs_fret_layout_scroll_area_demo_max_offset_y_matches_web() {
     assert!(max.y.0 > 0.0, "expected scroll area to overflow vertically");
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     let web = read_web_golden("scroll-area-horizontal-demo");
     let theme = web_theme(&web);
@@ -8168,7 +8170,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_max_offset_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web_theme(&web);
@@ -8370,7 +8371,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_bounds_match_web_hover() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -8574,7 +8574,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_light(
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-demo.hover");
     let theme = web
@@ -8778,7 +8777,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_background_matches_web_hover_dark()
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -9076,7 +9074,6 @@ fn web_vs_fret_layout_scroll_area_demo_scrollbar_hides_after_hover_out_delay() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-demo.scrolled");
     let theme = web_theme(&web);
@@ -9287,7 +9284,6 @@ fn web_vs_fret_layout_scroll_area_demo_thumb_bounds_match_web_scrolled() {
     assert_rect_close_px("scroll-area-demo thumb", thumb_bounds, expected_abs, 2.0);
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hover() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web_theme(&web);
@@ -9492,7 +9488,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_bounds_match_web_hov
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_light() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -9701,7 +9696,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_hover_dark() {
     let web = read_web_golden("scroll-area-horizontal-demo.hover");
     let theme = web
@@ -9910,7 +9904,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_background_matches_web_h
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_out_delay() {
     let web_early = read_web_golden("scroll-area-horizontal-demo.hover-out-550ms");
     let theme_early = web_theme(&web_early);
@@ -10204,7 +10197,6 @@ fn web_vs_fret_layout_scroll_area_horizontal_demo_scrollbar_hides_after_hover_ou
     );
 }
 
-#[test]
 fn web_vs_fret_layout_scroll_area_horizontal_demo_thumb_bounds_match_web_scrolled() {
     let web = read_web_golden("scroll-area-horizontal-demo.scrolled");
     let theme = web_theme(&web);
@@ -10499,7 +10491,6 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_demo_geometry() {
     let web = read_web_golden("input-demo");
     let theme = web_theme(&web);
@@ -10537,7 +10528,6 @@ fn web_vs_fret_layout_input_demo_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_disabled_geometry_matches() {
     let web = read_web_golden("input-disabled");
     let theme = web_theme(&web);
@@ -10579,7 +10569,6 @@ fn web_vs_fret_layout_input_disabled_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_file_geometry_matches() {
     let web = read_web_golden("input-file");
     let theme = web_theme(&web);
@@ -10663,7 +10652,6 @@ fn web_vs_fret_layout_input_file_geometry_matches() {
     assert_close_px("input-file gap", Px(gap_y), expected_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_button_geometry_matches() {
     let web = read_web_golden("input-with-button");
     let theme = web_theme(&web);
@@ -10766,7 +10754,6 @@ fn web_vs_fret_layout_input_with_button_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_text_geometry_matches() {
     let web = read_web_golden("input-with-text");
     let theme = web_theme(&web);
@@ -10914,7 +10901,6 @@ fn web_vs_fret_layout_input_with_text_geometry_matches() {
     assert_close_px("input-with-text gap1", Px(gap1_fret), gap1, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_label_geometry_matches() {
     let web = read_web_golden("input-group-label");
     let theme = web_theme(&web);
@@ -11136,7 +11122,6 @@ fn web_vs_fret_layout_input_group_label_geometry_matches() {
     assert_close_px("input-group-label gap", Px(gap_y), expected_gap_y, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_button_group_geometry_matches() {
     let web = read_web_golden("input-group-button-group");
     let theme = web_theme(&web);
@@ -11514,7 +11499,6 @@ fn assert_input_otp_block_relative_geometry_matches_web(web_name: &str, row_toke
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_01_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-01",
@@ -11528,7 +11512,6 @@ fn web_vs_fret_layout_otp_01_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_02_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-02",
@@ -11542,7 +11525,6 @@ fn web_vs_fret_layout_otp_02_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_03_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-03",
@@ -11556,7 +11538,6 @@ fn web_vs_fret_layout_otp_03_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_otp_05_input_otp_row_geometry_matches_web() {
     assert_input_otp_block_relative_geometry_matches_web(
         "otp-05",
@@ -11573,7 +11554,6 @@ fn web_vs_fret_layout_otp_05_input_otp_row_geometry_matches_web() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_demo_geometry_matches() {
     let web = read_web_golden("input-otp-demo");
     let theme = web_theme(&web);
@@ -11601,7 +11581,6 @@ fn web_vs_fret_layout_input_otp_demo_geometry_matches() {
     assert_input_otp_separators_match_web("input-otp-demo", &web_seps, &fret_seps, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_separator_geometry_matches() {
     let web = read_web_golden("input-otp-separator");
     let theme = web_theme(&web);
@@ -11629,7 +11608,6 @@ fn web_vs_fret_layout_input_otp_separator_geometry_matches() {
     assert_input_otp_separators_match_web("input-otp-separator", &web_seps, &fret_seps, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_pattern_geometry_matches() {
     let web = read_web_golden("input-otp-pattern");
     let theme = web_theme(&web);
@@ -11653,7 +11631,6 @@ fn web_vs_fret_layout_input_otp_pattern_geometry_matches() {
     assert_input_otp_slots_match_web("input-otp-pattern", &web_slots, &fret_slots, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_otp_controlled_geometry_matches() {
     let web = read_web_golden("input-otp-controlled");
     let theme = web_theme(&web);
@@ -11713,7 +11690,6 @@ fn command_demo_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot
     })
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_input_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11734,7 +11710,6 @@ fn web_vs_fret_layout_command_demo_input_height_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11755,7 +11730,6 @@ fn web_vs_fret_layout_command_demo_listbox_height_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_option_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11800,7 +11774,6 @@ fn web_vs_fret_layout_command_demo_listbox_option_height_matches() {
     assert_close_px("command-demo option height", Px(actual_h), expected_h, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_command_demo_listbox_option_insets_match() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);
@@ -11815,7 +11788,6 @@ fn web_vs_fret_layout_command_demo_listbox_option_insets_match() {
     assert_inset_quad_close("command-demo", actual, expected, 1.0);
 }
 
-#[test]
 fn web_vs_fret_layout_input_with_label_geometry() {
     let web = read_web_golden("input-with-label");
     let theme = web_theme(&web);
@@ -11926,7 +11898,6 @@ fn web_vs_fret_layout_input_with_label_geometry() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_dropdown_height() {
     let web = read_web_golden("input-group-dropdown");
     let theme = web_theme(&web);
@@ -12012,7 +11983,6 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_icon_geometry_matches() {
     let web = read_web_golden("input-group-icon");
     let theme = web_theme(&web);
@@ -12165,7 +12135,6 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
     let web = read_web_golden("input-group-spinner");
     let theme = web_theme(&web);
@@ -12319,7 +12288,6 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_button_geometry_matches() {
     let web = read_web_golden("input-group-button");
     let theme = web_theme(&web);
@@ -12498,7 +12466,6 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
     let web = read_web_golden("input-group-tooltip");
     let theme = web_theme(&web);
@@ -12850,7 +12817,6 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_empty_input_group_geometry_matches() {
     let web = read_web_golden("empty-input-group");
     let theme = web_theme(&web);
@@ -13055,7 +13021,6 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
     let web = read_web_golden("kbd-input-group");
     let theme = web_theme(&web);
@@ -13303,7 +13268,6 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
     let web = read_web_golden("input-group-textarea");
     let theme = web_theme(&web);
@@ -13730,7 +13694,6 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -13890,7 +13853,6 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -14108,7 +14070,6 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -14289,7 +14250,6 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
     let web = read_web_golden("input-group-text");
     let theme = web_theme(&web);
@@ -14492,7 +14452,6 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_custom_geometry_matches() {
     let web = read_web_golden("input-group-custom");
     let theme = web_theme(&web);
@@ -14662,7 +14621,6 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
     );
 }
 
-#[test]
 fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
     let web = read_web_golden("input-group-demo");
     let theme = web_theme(&web);
