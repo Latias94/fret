@@ -3970,6 +3970,150 @@ mod tests {
     }
 
     #[test]
+    fn select_pointer_open_click_commits_and_fires_on_value_change_once() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+        let on_value_change_count = app.models_mut().insert(0_u32);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana"))
+            .expect("banana option node");
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("banana"));
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&on_value_change_count),
+            Some(1),
+            "expected exactly one `on_value_change` callback for an item click"
+        );
+    }
+
+    #[test]
     fn select_keyboard_open_focuses_selected_entry() {
         let window = AppWindowId::default();
         let mut app = App::new();
