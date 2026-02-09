@@ -70,8 +70,10 @@ Regression gates:
 
 Design gates:
 
-- [ ] DEL-ENG3-contract-001 Document supported mutation operations in v1 (append-only required; updates constrained and explicit).
-- [ ] DEL-ENG3-contract-002 Define which caches must resume vs invalidate for each mutation type.
+- [x] DEL-ENG3-contract-001 Document supported mutation operations in v1 (append-only required; updates constrained and explicit).
+  - ADR 1178: `docs/adr/1178-delinea-mutation-surface-and-data-revisioning-v1.md`
+- [x] DEL-ENG3-contract-002 Define which caches must resume vs invalidate for each mutation type.
+  - ADR 1179: `docs/adr/1179-delinea-mutation-cache-invalidation-and-resume-policy-v1.md`
 
 Implementation steps:
 

@@ -88,7 +88,12 @@ Acceptance criteria:
 - Append-only behavior is regression-gated and remains bounded under budget.
 - Update semantics are explicit (what is supported, what is not) and covered by at least one invariant test.
 
-Status: Planned.
+Contracts (v1 subset):
+
+- ADR 1178: mutation surface + data revisioning rules.
+- ADR 1179: cache invalidation + resume policy matrix.
+
+Status: In progress (contracts drafted; implementation + gates pending).
 
 ## M4 — Conformance harnesses (keep refactors safe)
 
