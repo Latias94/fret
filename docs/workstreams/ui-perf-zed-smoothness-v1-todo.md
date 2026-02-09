@@ -144,6 +144,11 @@ Conventions:
     - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
     - Evidence: perf log entry `2026-02-09 16:37:00` (both resize probe gates PASS; `ui-resize-probes` p95 total down
       ~0.3ms on the worst jitter probe).
+  - [x] Widen the “small-step” `dw` threshold so bucketing applies under common drag deltas (not only <=16px).
+    - Implementation: `perf(fret-ui): widen resize small-step wrap bucketing` (commit `53aa6534a`).
+    - Knob: `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`).
+    - Evidence: perf log entry `2026-02-09 22:54:20` (`ui-code-editor-resize-probes` gate passes 3/3; p95 total down
+      ~0.95ms vs the prior run).
   - [x] Normalize nowrap text-blob cache keys to ignore `max_width` when `overflow!=Ellipsis` (clip/visible).
     - Implementation: `perf(fret-render): ignore max_width for nowrap blobs` (commit `1ce4693a9`).
     - Evidence: perf log entry `2026-02-08` (editor resize gate delta).

@@ -8968,3 +8968,96 @@ Notes:
 - The selected attempt still shows noise on `drag-jitter` `p95 layout_time_us`; consider validating this change against
   a more text-amplifying probe (e.g. editor labels / status-bar churn) to confirm the allocation win translates into
   frame-time improvements.
+
+## 2026-02-09 22:49:42 (commit `2085f8ff6`)
+
+Change:
+- Cache glyph image placement (left/top/width/height) in the text atlas entries and skip swash rendering when the
+  exact glyph key is already present. Also avoid double-rendering missing glyphs (insert into atlas from the first
+  render result).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 11699 | 12195 | 12195 | 2265 | 339 | 10459 | 624 |
+
+Worst bundle (selected attempt-1):
+- `target/perf-samples/ui-code-editor-resize-probes.glyph-placement.2085f8ff6.20260209-223720/attempt-1/1770647870243-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- The worst-frame attribution still points at `paint_text_prepare.reasons=width`, and worst snapshots show
+  `paint_text_prepare_time_us` spikes ~4ms with ~33 prepares per frame. This suggests the next win is still reducing
+  width-driven prepare churn (bucketing/freeze/LOD), not micro-optimizing per-glyph placement.
+
+## 2026-02-09 22:54:20 (commit `53aa6534a`)
+
+Change:
+- Widen interactive-resize “small-step” detection for wrap-width bucketing by introducing
+  `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`; previously effectively `16` hardcoded). This is
+  intended to apply the existing `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` policy to a broader class of
+  real-world resize drags where the per-frame width delta is larger than 16px but still “jitter class”.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114/summary.json`
+
+Results (selected attempt-1; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 10620 | 11243 | 11243 | 2183 | 327 | 9638 | 638 |
+
+Worst bundle (selected attempt-1):
+- `target/perf-samples/ui-code-editor-resize-probes.smallstep64.53aa6534a.20260209-225114/attempt-1/1770648681030-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Notes:
+- Compared to the prior run (commit `2085f8ff6`), `p95 total_time_us` improved by ~0.95ms (`12195 -> 11243`), and
+  `p95 paint_time_us` improved by ~0.82ms (`10459 -> 9638`).
+- Bundle-level scan (selected attempt-1; 7 repeats; 1302 frames) still shows `paint_text_prepare_calls.p95=33` with
+  `paint_text_prepare_reason_width_changed == paint_text_prepare_calls` on all nonzero frames, i.e. this change
+  does not reduce prepare *frequency* in this probe. It does reduce prepare *cost*:
+  - `paint_text_prepare_time_us.p95`: `4182 -> 3871`
+  - `paint_text_prepare_time_us.max`: `7750 -> 7118`
+
+Additional validation:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-resize-probes.smallstep64.53aa6534a.20260209-230250
+```
+
+Artifacts:
+- `target/perf-samples/ui-resize-probes.smallstep64.53aa6534a.20260209-230250/summary.json`
+
+Results (selected attempt-2; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15987 | 22027 | 22027 | 9534 | 2228 | 12204 | 189 |
+| tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15826 | 16083 | 16083 | 9895 | 2230 | 6760 | 207 |
