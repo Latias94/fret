@@ -329,7 +329,7 @@ impl WinitAppDriver for CanvasDataGridStressDriver {
             cx.observe_model(&state.revision, Invalidation::Layout);
             cx.observe_model(&state.grid_output, Invalidation::Layout);
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
             let padding = theme.metric_required("metric.padding.md");
 
             let mut root_layout = LayoutStyle::default();
