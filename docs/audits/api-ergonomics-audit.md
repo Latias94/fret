@@ -75,7 +75,7 @@ Practical recommendation:
 The codebase often stamps automation identifiers like:
 
 ```rust
-node = node.attach_semantics(SemanticsDecoration::default().test_id("..."));
+node = node.test_id("...");
 ```
 
 This is pure authoring noise in most cases.
@@ -131,4 +131,3 @@ Tradeoffs:
 - Authoring conversion boundary and `Elements`: `crates/fret-ui/src/element.rs`
 - View wiring signature: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Unified builder surface: `ecosystem/fret-ui-kit/src/ui_builder.rs`
-

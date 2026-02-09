@@ -209,7 +209,7 @@ fn scroll_node_into_view_does_not_scroll_scrollable_target_via_itself() {
                     .collect::<Vec<_>>()
             },
         )
-        .attach_semantics(crate::element::SemanticsDecoration::default().test_id("vlist-root"))
+        .test_id("vlist-root")
     }
 
     let root = declarative::render_root(
