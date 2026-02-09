@@ -42,6 +42,49 @@ struct ContainerBreakpointsState {
     initialized: bool,
 }
 
+fn container_breakpoints_init_active_index(width: Px, breakpoints: &[(Px, impl Copy)]) -> usize {
+    let mut active_index = 0;
+    for (i, (min_width, _)) in breakpoints.iter().enumerate() {
+        if width.0 >= min_width.0 {
+            active_index = i + 1;
+        }
+    }
+    active_index
+}
+
+fn container_breakpoints_apply_hysteresis(
+    width: Px,
+    breakpoints: &[(Px, impl Copy)],
+    hysteresis: ContainerQueryHysteresis,
+    mut active_index: usize,
+) -> usize {
+    loop {
+        if active_index >= breakpoints.len() {
+            break;
+        }
+        let next_min_width = breakpoints[active_index].0;
+        if width.0 >= next_min_width.0 + hysteresis.up.0 {
+            active_index = active_index.saturating_add(1);
+            continue;
+        }
+        break;
+    }
+
+    loop {
+        if active_index == 0 {
+            break;
+        }
+        let cur_min_width = breakpoints[active_index - 1].0;
+        if width.0 < cur_min_width.0 - hysteresis.down.0 {
+            active_index = active_index.saturating_sub(1);
+            continue;
+        }
+        break;
+    }
+
+    active_index
+}
+
 /// Marks a subtree as a container-query region.
 ///
 /// This is a mechanism-only wrapper: it is paint- and input-transparent, but records committed
@@ -109,38 +152,16 @@ where
 
         cx.with_state(ContainerBreakpointsState::default, |st| {
             if !st.initialized {
-                st.active_index = 0;
-                for (i, (min_width, _)) in breakpoints.iter().enumerate() {
-                    if width.0 >= min_width.0 {
-                        st.active_index = i + 1;
-                    }
-                }
+                st.active_index = container_breakpoints_init_active_index(width, breakpoints);
                 st.initialized = true;
             }
 
-            loop {
-                if st.active_index >= breakpoints.len() {
-                    break;
-                }
-                let next_min_width = breakpoints[st.active_index].0;
-                if width.0 >= next_min_width.0 + hysteresis.up.0 {
-                    st.active_index = st.active_index.saturating_add(1);
-                    continue;
-                }
-                break;
-            }
-
-            loop {
-                if st.active_index == 0 {
-                    break;
-                }
-                let cur_min_width = breakpoints[st.active_index - 1].0;
-                if width.0 < cur_min_width.0 - hysteresis.down.0 {
-                    st.active_index = st.active_index.saturating_sub(1);
-                    continue;
-                }
-                break;
-            }
+            st.active_index = container_breakpoints_apply_hysteresis(
+                width,
+                breakpoints,
+                hysteresis,
+                st.active_index,
+            );
 
             if st.active_index == 0 {
                 return base;
@@ -151,4 +172,42 @@ where
                 .unwrap_or(base)
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn container_breakpoints_hysteresis_transitions() {
+        let breakpoints = &[
+            (tailwind::SM, 1usize),
+            (tailwind::MD, 2usize),
+            (tailwind::LG, 3usize),
+        ];
+        let hysteresis = ContainerQueryHysteresis {
+            up: Px(8.0),
+            down: Px(8.0),
+        };
+
+        // Initialize at SM.
+        let mut active_index = container_breakpoints_init_active_index(Px(700.0), breakpoints);
+        assert_eq!(active_index, 1);
+
+        // Approach MD but do not cross until width >= MD + up.
+        active_index = container_breakpoints_apply_hysteresis(Px(770.0), breakpoints, hysteresis, active_index);
+        assert_eq!(active_index, 1);
+        active_index = container_breakpoints_apply_hysteresis(Px(776.0), breakpoints, hysteresis, active_index);
+        assert_eq!(active_index, 2);
+
+        // Approach back below MD but do not drop until width < MD - down.
+        active_index = container_breakpoints_apply_hysteresis(Px(762.0), breakpoints, hysteresis, active_index);
+        assert_eq!(active_index, 2);
+        active_index = container_breakpoints_apply_hysteresis(Px(759.0), breakpoints, hysteresis, active_index);
+        assert_eq!(active_index, 1);
+
+        // Jump up multiple breakpoints in one update.
+        active_index = container_breakpoints_apply_hysteresis(Px(2000.0), breakpoints, hysteresis, active_index);
+        assert_eq!(active_index, 3);
+    }
 }
