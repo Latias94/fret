@@ -398,7 +398,6 @@ fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRun
 
 fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select) -> AnyElement {
     cx.scope(|cx| {
-        let theme = Theme::global(&*cx.app).clone();
         let runtime = select_runtime_models(cx);
 
         let is_open = cx
@@ -415,9 +414,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             opening
         });
 
-        let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(
-            &theme,
-        )));
+        let close_grace_frames = {
+            let theme = Theme::global(&*cx.app);
+            Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(theme)))
+        };
         let motion = drive_overlay_open_close_motion(cx, is_open, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
@@ -444,7 +444,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             let first_enabled_idx = select.items.iter().position(|it| !it.disabled);
             let tab_stop_idx = selected_idx.or(first_enabled_idx).unwrap_or(0);
 
-            let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
+            let item_height = {
+                let theme = Theme::global(&*cx.app);
+                select_tokens::menu_list_item_height(theme, select.variant)
+            };
             let menu_vertical_padding = Px(8.0);
             let target_y =
                 Px(((item_height.0 * (tab_stop_idx as f32)) - menu_vertical_padding.0).max(0.0));
@@ -467,7 +470,6 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
         let trigger = select_trigger_element(
             cx,
-            &theme,
             select.variant,
             select.disabled,
             select.error,
@@ -495,14 +497,17 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
 
-            let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
+            let item_height = {
+                let theme = Theme::global(&*cx.app);
+                select_tokens::menu_list_item_height(theme, select.variant)
+            };
             let menu_vertical_padding = Px(8.0);
             let select_width = anchor.size.width;
             let desired_width = if select.match_anchor_width {
                 select_width
             } else {
                 let estimate =
-                    estimate_select_menu_content_width(&theme, select.variant, &select.items);
+                    estimate_select_menu_content_width(&*cx, select.variant, &select.items);
                 resolve_select_menu_width(select_width, estimate, select.menu_width_floor)
             };
             let desired_height = Px((item_height.0 * (select.items.len().max(1) as f32))
@@ -602,7 +607,6 @@ struct SelectTriggerOutput {
 
 fn select_trigger_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: SelectVariant,
     disabled: bool,
     error: bool,
@@ -624,10 +628,18 @@ fn select_trigger_element<H: UiHost>(
     let focused_out: Cell<bool> = Cell::new(false);
     let focus_visible_out: Cell<bool> = Cell::new(false);
     let has_leading_icon = leading_icon.is_some();
-    let leading_icon_size = crate::foundation::context::resolved_icon_size(
-        cx,
-        select_tokens::leading_icon_size(theme, variant),
-    );
+    let leading_icon_fallback = {
+        let theme = Theme::global(&*cx.app);
+        select_tokens::leading_icon_size(theme, variant)
+    };
+    let leading_icon_size =
+        crate::foundation::context::resolved_icon_size(&*cx, leading_icon_fallback);
+    let trailing_icon_fallback = {
+        let theme = Theme::global(&*cx.app);
+        select_tokens::trailing_icon_size(theme, variant)
+    };
+    let trailing_icon_size =
+        crate::foundation::context::resolved_icon_size(&*cx, trailing_icon_fallback);
 
     let container = cx.pressable_with_id_props(|cx, st, pressable_id| {
         anchor_id_out.set(pressable_id);
@@ -682,17 +694,6 @@ fn select_trigger_element<H: UiHost>(
             }),
         );
 
-        let corner = select_tokens::container_corner(theme, variant);
-        let token_container_bg = Some(select_tokens::container_background(
-            theme, variant, !enabled,
-        ));
-        let container_bg = resolve_override_slot_opt_with(
-            style.container_background.as_ref(),
-            states,
-            |color| color.resolve(theme),
-            || token_container_bg,
-        );
-
         let mut states_for_style = states;
         // Align with Material Web: when the menu is open, the field is treated as focused.
         // (see `select/internal/select.ts`: `.focused=${this.focused || this.open}`)
@@ -707,62 +708,159 @@ fn select_trigger_element<H: UiHost>(
         focused_out.set(focused);
         focus_visible_out.set(focus_visible);
 
-        let (token_text_color, token_text_opacity) =
-            select_tokens::input_text_color(theme, variant, hovered, !enabled, error, focused);
-        let text_color = resolve_override_slot_with(
-            style.text_color.as_ref(),
-            states_for_style,
-            |color| color.resolve(theme),
-            || token_text_color,
-        );
-        let text_color = with_opacity(text_color, token_text_opacity);
+        let (
+            corner,
+            container_bg,
+            text_color,
+            icon_color,
+            icon_opacity,
+            leading_icon_color,
+            leading_icon_opacity,
+            outline,
+            indicator,
+            container_height,
+            hover_state_layer,
+            pressed_opacity,
+            focus_opacity,
+            ripple_base_opacity,
+            ripple_config,
+            float_duration_ms,
+            float_easing,
+            open_duration_ms,
+            close_duration_ms,
+            open_easing,
+            placeholder_color,
+            input_text_style_fallback,
+        ) = {
+            let theme = Theme::global(&*cx.app);
 
-        let (token_icon_color, token_icon_opacity) =
-            select_tokens::trailing_icon_color(theme, variant, hovered, !enabled, error, focused);
-        let icon_color = resolve_override_slot_with(
-            style.trailing_icon_color.as_ref(),
-            states_for_style,
-            |color| color.resolve(theme),
-            || token_icon_color,
-        );
-        let icon_opacity = token_icon_opacity.clamp(0.0, 1.0);
+            let corner = select_tokens::container_corner(theme, variant);
+            let token_container_bg = Some(select_tokens::container_background(
+                theme, variant, !enabled,
+            ));
+            let container_bg = resolve_override_slot_opt_with(
+                style.container_background.as_ref(),
+                states,
+                |color| color.resolve(theme),
+                || token_container_bg,
+            );
 
-        let (leading_icon_color, leading_icon_opacity) =
-            select_tokens::leading_icon_color(theme, variant, hovered, !enabled, error, focused);
-        let leading_icon_color = resolve_override_slot_with(
-            style.leading_icon_color.as_ref(),
-            states_for_style,
-            |color| color.resolve(theme),
-            || leading_icon_color,
-        );
-        let leading_icon_opacity = leading_icon_opacity.clamp(0.0, 1.0);
-
-        let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
-            .map(|(w, c, opacity)| (w, with_opacity(c, opacity)));
-        let outline = outline.map(|(w, c)| {
-            let c = resolve_override_slot_opt_with(
-                style.outline_color.as_ref(),
+            let (token_text_color, token_text_opacity) =
+                select_tokens::input_text_color(theme, variant, hovered, !enabled, error, focused);
+            let text_color = resolve_override_slot_with(
+                style.text_color.as_ref(),
                 states_for_style,
                 |color| color.resolve(theme),
-                || Some(c),
-            )
-            .unwrap_or(c);
-            (w, c)
-        });
+                || token_text_color,
+            );
+            let text_color = with_opacity(text_color, token_text_opacity);
 
-        let indicator =
-            select_tokens::active_indicator(theme, variant, hovered, !enabled, error, focused)
-                .map(|(h, c, opacity)| (h, with_opacity(c, opacity)));
-        let indicator = indicator.map(|(h, c)| {
-            let c = resolve_override_slot_opt_with(
-                style.active_indicator_color.as_ref(),
+            let (token_icon_color, token_icon_opacity) = select_tokens::trailing_icon_color(
+                theme, variant, hovered, !enabled, error, focused,
+            );
+            let icon_color = resolve_override_slot_with(
+                style.trailing_icon_color.as_ref(),
                 states_for_style,
                 |color| color.resolve(theme),
-                || Some(c),
+                || token_icon_color,
+            );
+            let icon_opacity = token_icon_opacity.clamp(0.0, 1.0);
+
+            let (leading_icon_color, leading_icon_opacity) = select_tokens::leading_icon_color(
+                theme, variant, hovered, !enabled, error, focused,
+            );
+            let leading_icon_color = resolve_override_slot_with(
+                style.leading_icon_color.as_ref(),
+                states_for_style,
+                |color| color.resolve(theme),
+                || leading_icon_color,
+            );
+            let leading_icon_opacity = leading_icon_opacity.clamp(0.0, 1.0);
+
+            let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
+                .map(|(w, c, opacity)| (w, with_opacity(c, opacity)));
+            let outline = outline.map(|(w, c)| {
+                let c = resolve_override_slot_opt_with(
+                    style.outline_color.as_ref(),
+                    states_for_style,
+                    |color| color.resolve(theme),
+                    || Some(c),
+                )
+                .unwrap_or(c);
+                (w, c)
+            });
+
+            let indicator =
+                select_tokens::active_indicator(theme, variant, hovered, !enabled, error, focused)
+                    .map(|(h, c, opacity)| (h, with_opacity(c, opacity)));
+            let indicator = indicator.map(|(h, c)| {
+                let c = resolve_override_slot_opt_with(
+                    style.active_indicator_color.as_ref(),
+                    states_for_style,
+                    |color| color.resolve(theme),
+                    || Some(c),
+                )
+                .unwrap_or(c);
+                (h, c)
+            });
+
+            let container_height = select_tokens::container_height(theme, variant);
+
+            let hover_state_layer = select_tokens::hover_state_layer(theme, variant, error);
+            let pressed_opacity = theme
+                .number_by_key("md.sys.state.pressed.state-layer-opacity")
+                .unwrap_or(0.1);
+            let focus_opacity = theme
+                .number_by_key("md.sys.state.focus.state-layer-opacity")
+                .unwrap_or(0.1);
+            let ripple_base_opacity = pressed_opacity;
+            let ripple_config = material_pressable_indication_config(theme, None);
+
+            let float_duration_ms = theme
+                .duration_ms_by_key("md.sys.motion.duration.short4")
+                .unwrap_or(200);
+            let float_easing = theme
+                .easing_by_key("md.sys.motion.easing.standard")
+                .unwrap_or(fret_ui::theme::CubicBezier {
+                    x1: 0.0,
+                    y1: 0.0,
+                    x2: 1.0,
+                    y2: 1.0,
+                });
+
+            let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
+            let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
+            let open_easing = dropdown_menu_tokens::easing(theme);
+
+            let placeholder_color =
+                select_tokens::placeholder_color(theme, variant, !enabled, error);
+            let input_text_style_fallback = select_tokens::input_text_style(theme, variant);
+
+            (
+                corner,
+                container_bg,
+                text_color,
+                icon_color,
+                icon_opacity,
+                leading_icon_color,
+                leading_icon_opacity,
+                outline,
+                indicator,
+                container_height,
+                hover_state_layer,
+                pressed_opacity,
+                focus_opacity,
+                ripple_base_opacity,
+                ripple_config,
+                float_duration_ms,
+                float_easing,
+                open_duration_ms,
+                close_duration_ms,
+                open_easing,
+                placeholder_color,
+                input_text_style_fallback,
             )
-            .unwrap_or(c);
-            (h, c)
-        });
+        };
 
         let a11y = PressableA11y {
             role: Some(SemanticsRole::ComboBox),
@@ -780,7 +878,7 @@ fn select_trigger_element<H: UiHost>(
             layout: {
                 let mut l = fret_ui::element::LayoutStyle::default();
                 l.size.width = Length::Fill;
-                l.size.height = Length::Px(select_tokens::container_height(theme, variant));
+                l.size.height = Length::Px(container_height);
                 l.overflow = Overflow::Visible;
                 l
             },
@@ -797,27 +895,18 @@ fn select_trigger_element<H: UiHost>(
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
                 let now_frame = cx.frame_id.0;
-                let (state_layer_color, hover_opacity) =
-                    select_tokens::hover_state_layer(theme, variant, error);
+                let (state_layer_color, hover_opacity) = hover_state_layer;
 
                 let state_layer_target = if enabled && st.pressed {
-                    theme
-                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                        .unwrap_or(0.1)
+                    pressed_opacity
                 } else if enabled && focus_visible {
-                    theme
-                        .number_by_key("md.sys.state.focus.state-layer-opacity")
-                        .unwrap_or(0.1)
+                    focus_opacity
                 } else if hovered {
                     hover_opacity
                 } else {
                     0.0
                 };
 
-                let ripple_base_opacity = theme
-                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                    .unwrap_or(0.1);
-                let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -828,22 +917,11 @@ fn select_trigger_element<H: UiHost>(
                     enabled && st.pressed,
                     state_layer_target,
                     ripple_base_opacity,
-                    config,
+                    ripple_config,
                     false,
                 );
 
                 let should_float = focused || open || populated;
-                let duration_ms = theme
-                    .duration_ms_by_key("md.sys.motion.duration.short4")
-                    .unwrap_or(200);
-                let easing = theme
-                    .easing_by_key("md.sys.motion.easing.standard")
-                    .unwrap_or(fret_ui::theme::CubicBezier {
-                        x1: 0.0,
-                        y1: 0.0,
-                        x2: 1.0,
-                        y2: 1.0,
-                    });
 
                 let (float_progress, float_want_frames) =
                     cx.with_state(SelectTriggerRuntime::default, |rt| {
@@ -852,17 +930,13 @@ fn select_trigger_element<H: UiHost>(
                             rt.float.set_target(
                                 now_frame,
                                 if should_float { 1.0 } else { 0.0 },
-                                duration_ms,
-                                easing,
+                                float_duration_ms,
+                                float_easing,
                             );
                         }
                         rt.float.advance(now_frame);
                         (rt.float.value(), rt.float.is_active())
                     });
-
-                let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
-                let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
-                let open_easing = dropdown_menu_tokens::easing(theme);
 
                 let (chevron_progress, chevron_want_frames) =
                     cx.with_state(SelectChevronRuntime::default, |rt| {
@@ -901,8 +975,6 @@ fn select_trigger_element<H: UiHost>(
                 };
                 let is_placeholder = !populated && show_placeholder;
 
-                let placeholder_color =
-                    select_tokens::placeholder_color(theme, variant, !enabled, error);
                 let display_color = if is_placeholder {
                     placeholder_color
                 } else {
@@ -911,7 +983,7 @@ fn select_trigger_element<H: UiHost>(
 
                 let text_el = {
                     let mut props = TextProps::new(display_text);
-                    let mut style = select_tokens::input_text_style(theme, variant);
+                    let mut style = input_text_style_fallback;
                     if let Some(inherited) = crate::foundation::context::inherited_text_style(cx) {
                         style = Some(inherited);
                     }
@@ -926,10 +998,7 @@ fn select_trigger_element<H: UiHost>(
                     cx,
                     icon_color,
                     icon_opacity,
-                    crate::foundation::context::resolved_icon_size(
-                        cx,
-                        select_tokens::trailing_icon_size(theme, variant),
-                    ),
+                    trailing_icon_size,
                     chevron_progress,
                 );
 
@@ -1032,7 +1101,6 @@ fn select_trigger_element<H: UiHost>(
                     if let Some(label) = label.as_ref() {
                         children.push(select_trigger_label(
                             cx,
-                            theme,
                             variant,
                             states_for_style,
                             &style_override,
@@ -1096,7 +1164,6 @@ fn select_trigger_element<H: UiHost>(
                 container,
                 select_supporting_text(
                     cx,
-                    theme,
                     variant,
                     supporting_states,
                     &supporting_style_override,
@@ -1206,7 +1273,6 @@ struct SelectChevronRuntime {
 
 fn select_trigger_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: SelectVariant,
     states: WidgetStates,
     style_override: &SelectStyle,
@@ -1220,8 +1286,18 @@ fn select_trigger_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
 ) -> AnyElement {
-    let style = floating_label::material_floating_label_text_style(theme, progress)
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = floating_label::material_floating_label_text_style(theme, progress)
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+        let color = resolve_override_slot_with(
+            style_override.label_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || select_tokens::label_color(theme, variant, hovered, disabled, error, focused),
+        );
+        (style, color)
+    };
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
 
@@ -1259,12 +1335,7 @@ fn select_trigger_label<H: UiHost>(
             layout: fret_ui::element::LayoutStyle::default(),
             text: text.clone(),
             style,
-            color: Some(resolve_override_slot_with(
-                style_override.label_color.as_ref(),
-                states,
-                |color| color.resolve(theme),
-                || select_tokens::label_color(theme, variant, hovered, disabled, error, focused),
-            )),
+            color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         })]
@@ -1283,7 +1354,6 @@ fn material_field_text_start_inset_x(default: Px, leading_icon_size: Option<Px>)
 
 fn select_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: SelectVariant,
     states: WidgetStates,
     style_override: &SelectStyle,
@@ -1294,6 +1364,22 @@ fn select_supporting_text<H: UiHost>(
     error: bool,
     focused: bool,
 ) -> AnyElement {
+    let (style, color) = {
+        let theme = Theme::global(&*cx.app);
+        let style = theme.text_style_by_key("md.sys.typescale.body-small");
+        let color = resolve_override_slot_with(
+            style_override.supporting_text_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || {
+                select_tokens::supporting_text_color(
+                    theme, variant, hovered, disabled, error, focused,
+                )
+            },
+        );
+        (style, color)
+    };
+
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
         Px(16.0),
@@ -1304,17 +1390,8 @@ fn select_supporting_text<H: UiHost>(
     cx.text_props(TextProps {
         layout,
         text,
-        style: theme.text_style_by_key("md.sys.typescale.body-small"),
-        color: Some(resolve_override_slot_with(
-            style_override.supporting_text_color.as_ref(),
-            states,
-            |color| color.resolve(theme),
-            || {
-                select_tokens::supporting_text_color(
-                    theme, variant, hovered, disabled, error, focused,
-                )
-            },
-        )),
+        style,
+        color: Some(color),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
@@ -1347,11 +1424,12 @@ fn resolve_select_menu_width(select_width: Px, estimate: Px, floor: Px) -> Px {
     Px(select_width.0.max(estimate.0).max(floor.0))
 }
 
-fn estimate_select_menu_content_width(
-    theme: &Theme,
+fn estimate_select_menu_content_width<H: UiHost>(
+    cx: &ElementContext<'_, H>,
     variant: SelectVariant,
     items: &[SelectItem],
 ) -> Px {
+    let theme = Theme::global(&*cx.app);
     let padding_left = Px(12.0);
     let padding_right = Px(12.0);
     let gap = Px(8.0);
@@ -1507,8 +1585,6 @@ fn select_listbox_panel<H: UiHost>(
     typeahead_delay_ms: u32,
     style: SelectStyle,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-
     let listbox_test_id = test_id.as_ref().map(|id| {
         let id = id.as_ref();
         Arc::<str>::from(format!("{id}-listbox"))
@@ -1547,20 +1623,25 @@ fn select_listbox_panel<H: UiHost>(
         disabled: disabled.clone(),
     };
 
-    let container_bg = select_tokens::menu_container_background(&theme, variant);
-    let elevation = select_tokens::menu_container_elevation(&theme, variant);
-    let shadow_color = select_tokens::menu_container_shadow_color(&theme, variant);
-    let corner = select_tokens::menu_container_shape(&theme, variant);
-    let surface =
-        material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
+    let (surface, corner, selected_bg) = {
+        let theme = Theme::global(&*cx.app);
+        let container_bg = select_tokens::menu_container_background(theme, variant);
+        let elevation = select_tokens::menu_container_elevation(theme, variant);
+        let shadow_color = select_tokens::menu_container_shadow_color(theme, variant);
+        let corner = select_tokens::menu_container_shape(theme, variant);
+        let surface =
+            material_surface_style(theme, container_bg, elevation, Some(shadow_color), corner);
 
-    let selected_bg_token = select_tokens::menu_list_item_selected_container_color(&theme, variant);
-    let selected_bg = resolve_override_slot_with(
-        style.menu_selected_container_color.as_ref(),
-        WidgetStates::SELECTED,
-        |color| color.resolve(&theme),
-        || selected_bg_token,
-    );
+        let selected_bg_token =
+            select_tokens::menu_list_item_selected_container_color(theme, variant);
+        let selected_bg = resolve_override_slot_with(
+            style.menu_selected_container_color.as_ref(),
+            WidgetStates::SELECTED,
+            |color| color.resolve(theme),
+            || selected_bg_token,
+        );
+        (surface, corner, selected_bg)
+    };
 
     cx.semantics_with_id(sem, move |cx, listbox_id| {
         listbox_element_id_out.set(Some(listbox_id));
@@ -1688,7 +1769,6 @@ fn select_listbox_panel<H: UiHost>(
                                         let tab_stop = idx == tab_stop_idx;
                                         out.push(select_list_item(
                                             cx,
-                                            &theme,
                                             variant,
                                             item,
                                             two_line,
@@ -1715,7 +1795,6 @@ fn select_listbox_panel<H: UiHost>(
 
 fn select_list_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     variant: SelectVariant,
     item: SelectItem,
     two_line: bool,
@@ -1728,10 +1807,13 @@ fn select_list_item<H: UiHost>(
     set_size: usize,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
-    let height = if two_line {
-        list_tokens::two_line_container_height(theme)
-    } else {
-        select_tokens::menu_list_item_height(theme, variant)
+    let height = {
+        let theme = Theme::global(&*cx.app);
+        if two_line {
+            list_tokens::two_line_container_height(theme)
+        } else {
+            select_tokens::menu_list_item_height(theme, variant)
+        }
     };
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
@@ -1794,31 +1876,108 @@ fn select_list_item<H: UiHost>(
                 cx.pointer_region_on_pointer_down(Arc::new(|_host, _cx, _down| false));
 
                 let now_frame = cx.frame_id.0;
-                let state_layer_color = theme
-                    .color_by_key("md.sys.color.on-surface")
-                    .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-                let state_layer_target = if enabled && st.pressed {
-                    theme
+                let supporting_text = item.supporting_text.clone();
+                let trailing_supporting_text = item.trailing_supporting_text.clone();
+                let has_secondary_text =
+                    supporting_text.is_some() || trailing_supporting_text.is_some();
+
+                let leading_icon = item.leading_icon.clone();
+                let trailing_icon = item.trailing_icon.clone();
+
+                let (
+                    state_layer_color,
+                    pressed_opacity,
+                    hover_opacity,
+                    focus_opacity,
+                    ripple_base_opacity,
+                    config,
+                    label_color,
+                    label_style,
+                    item_top_space,
+                    item_bottom_space,
+                    supporting_color,
+                    supporting_style,
+                    trailing_supporting_color,
+                    trailing_supporting_style,
+                    leading_icon_color,
+                    leading_icon_size,
+                    trailing_icon_color,
+                    trailing_icon_size,
+                ) = {
+                    let theme = Theme::global(&*cx.app);
+                    let state_layer_color = theme
+                        .color_by_key("md.sys.color.on-surface")
+                        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+                    let pressed_opacity = theme
                         .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                        .unwrap_or(0.1)
-                } else if enabled && st.hovered {
-                    theme
+                        .unwrap_or(0.1);
+                    let hover_opacity = theme
                         .number_by_key("md.sys.state.hover.state-layer-opacity")
-                        .unwrap_or(0.08)
-                } else if enabled
-                    && st.focused
-                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window))
-                {
-                    theme
+                        .unwrap_or(0.08);
+                    let focus_opacity = theme
                         .number_by_key("md.sys.state.focus.state-layer-opacity")
-                        .unwrap_or(0.1)
+                        .unwrap_or(0.1);
+                    let ripple_base_opacity = pressed_opacity;
+                    let config = material_pressable_indication_config(theme, None);
+
+                    let label_color =
+                        select_tokens::menu_list_item_label_text_color(theme, variant);
+                    let label_style =
+                        select_tokens::menu_list_item_label_text_style(theme, variant);
+
+                    let item_top_space = list_tokens::item_top_space(theme);
+                    let item_bottom_space = list_tokens::item_bottom_space(theme);
+
+                    let supporting_color =
+                        list_tokens::supporting_text_color(theme, enabled, is_selected);
+                    let supporting_style = list_tokens::supporting_text_style(theme, is_selected);
+                    let trailing_supporting_color =
+                        list_tokens::trailing_supporting_text_color(theme, enabled, is_selected);
+                    let trailing_supporting_style =
+                        list_tokens::trailing_supporting_text_style(theme, is_selected);
+
+                    let leading_icon_color =
+                        select_tokens::menu_list_item_leading_icon_color(theme, variant);
+                    let leading_icon_size =
+                        select_tokens::menu_list_item_leading_icon_size(theme, variant);
+                    let trailing_icon_color =
+                        select_tokens::menu_list_item_trailing_icon_color(theme, variant);
+                    let trailing_icon_size =
+                        select_tokens::menu_list_item_trailing_icon_size(theme, variant);
+
+                    (
+                        state_layer_color,
+                        pressed_opacity,
+                        hover_opacity,
+                        focus_opacity,
+                        ripple_base_opacity,
+                        config,
+                        label_color,
+                        label_style,
+                        item_top_space,
+                        item_bottom_space,
+                        supporting_color,
+                        supporting_style,
+                        trailing_supporting_color,
+                        trailing_supporting_style,
+                        leading_icon_color,
+                        leading_icon_size,
+                        trailing_icon_color,
+                        trailing_icon_size,
+                    )
+                };
+
+                let focus_visible =
+                    fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+                let state_layer_target = if enabled && st.pressed {
+                    pressed_opacity
+                } else if enabled && st.hovered {
+                    hover_opacity
+                } else if enabled && st.focused && focus_visible {
+                    focus_opacity
                 } else {
                     0.0
                 };
-                let ripple_base_opacity = theme
-                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
-                    .unwrap_or(0.1);
-                let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
                     cx,
                     pressable_id,
@@ -1832,17 +1991,6 @@ fn select_list_item<H: UiHost>(
                     config,
                     false,
                 );
-
-                let label_color = select_tokens::menu_list_item_label_text_color(theme, variant);
-                let label_style = select_tokens::menu_list_item_label_text_style(theme, variant);
-
-                let supporting_text = item.supporting_text.clone();
-                let trailing_supporting_text = item.trailing_supporting_text.clone();
-                let has_secondary_text =
-                    supporting_text.is_some() || trailing_supporting_text.is_some();
-
-                let leading_icon = item.leading_icon.clone();
-                let trailing_icon = item.trailing_icon.clone();
 
                 let bg = if is_selected { Some(selected_bg) } else { None };
                 let mut chrome = ContainerProps::default();
@@ -1867,12 +2015,12 @@ fn select_list_item<H: UiHost>(
                     left: Px(12.0),
                     right: Px(12.0),
                     top: if has_secondary_text {
-                        list_tokens::item_top_space(theme)
+                        item_top_space
                     } else {
                         Px(0.0)
                     },
                     bottom: if has_secondary_text {
-                        list_tokens::item_bottom_space(theme)
+                        item_bottom_space
                     } else {
                         Px(0.0)
                     },
@@ -1881,19 +2029,6 @@ fn select_list_item<H: UiHost>(
                 vec![cx.container(chrome, move |cx| {
                     vec![cx.flex(row, move |cx| {
                         let body_slot = if has_secondary_text {
-                            let supporting_color =
-                                list_tokens::supporting_text_color(theme, enabled, is_selected);
-                            let supporting_style =
-                                list_tokens::supporting_text_style(theme, is_selected);
-                            let trailing_supporting_color =
-                                list_tokens::trailing_supporting_text_color(
-                                    theme,
-                                    enabled,
-                                    is_selected,
-                                );
-                            let trailing_supporting_style =
-                                list_tokens::trailing_supporting_text_style(theme, is_selected);
-
                             let headline_el = {
                                 let mut props = TextProps::new(item.label.clone());
                                 props.style = label_style;
@@ -1988,21 +2123,11 @@ fn select_list_item<H: UiHost>(
                         };
 
                         let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(
-                                cx,
-                                icon,
-                                select_tokens::menu_list_item_leading_icon_color(theme, variant),
-                                select_tokens::menu_list_item_leading_icon_size(theme, variant),
-                            )
+                            select_menu_item_icon(cx, icon, leading_icon_color, leading_icon_size)
                         });
 
                         let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(
-                                cx,
-                                icon,
-                                select_tokens::menu_list_item_trailing_icon_color(theme, variant),
-                                select_tokens::menu_list_item_trailing_icon_size(theme, variant),
-                            )
+                            select_menu_item_icon(cx, icon, trailing_icon_color, trailing_icon_size)
                         });
 
                         let mut children = Vec::new();
