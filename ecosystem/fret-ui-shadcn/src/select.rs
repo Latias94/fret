@@ -2702,33 +2702,11 @@ fn select_impl<H: UiHost>(
                                                                                             enabled: true,
                                                                                          },
                                                                                          move |cx| {
-                                                                                             let open_for_pointer_up = open.clone();
-                                                                                             let model_for_pointer_up = model.clone();
-                                                                                             let item_value_for_pointer_up = item_value.clone();
-                                                                                             let item_disabled_for_pointer_up = item_disabled;
-                                                                                             let mouse_open_guard_for_pointer_up =
-                                                                                                 mouse_open_guard_for_item_pointer_up.clone();
-                                                                                             let mouse_up_selection_gate_for_pointer_up =
-                                                                                                 mouse_up_selection_gate_for_item_pointer_up.clone();
-                                                                                             let item_is_selected_for_pointer_up = is_selected;
-
-                                                                                             cx.pointer_region_on_pointer_up(
-                                                                                                 radix_select::select_item_pointer_up_handler_with_mouse_up_gate(
-                                                                                                     open_for_pointer_up,
-                                                                                                     model_for_pointer_up,
-                                                                                                     item_value_for_pointer_up,
-                                                                                                     item_disabled_for_pointer_up,
-                                                                                                     mouse_open_guard_for_pointer_up,
-                                                                                                     item_is_selected_for_pointer_up,
-                                                                                                     Some(mouse_up_selection_gate_for_pointer_up),
-                                                                                                 ),
-                                                                                             );
-
-                                                                                             vec![cx.container(
-                                                                                                ContainerProps {
-                                                                                                    layout: {
-                                                                                                        let mut layout =
-                                                                                                            LayoutStyle::default();
+                                                                                              vec![cx.container(
+                                                                                                 ContainerProps {
+                                                                                                     layout: {
+                                                                                                         let mut layout =
+                                                                                                             LayoutStyle::default();
                                                                                                         layout.size.width = Length::Fill;
                                                                                                         layout.size.height = Length::Fill;
                                                                                                         layout
