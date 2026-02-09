@@ -31,6 +31,7 @@ Landed snapshot gates (in-tree):
 - `extras_avatar_stack_default.json`
 - `extras_avatar_stack_overflow_default.json`
 - `extras_banner_default.json`
+- `extras_marquee_default.json`
 - `extras_rating_default.json`
 - `extras_tags_default.json`
 - `extras_relative_time_default.json`
@@ -38,6 +39,7 @@ Landed snapshot gates (in-tree):
 Landed behavior gates (in-tree):
 
 - `ecosystem/fret-ui-shadcn/tests/extras_rating_keyboard.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_motion.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
 
 ## Candidate components (staged)
