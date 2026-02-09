@@ -63,11 +63,17 @@ Scope:
 
 Acceptance criteria:
 
-- A minimal “dataset transform graph v0” exists (filter + sort + simple derived columns).
+- A minimal “dataset transform graph v0” exists (filter + sort for derived datasets; derived columns are a follow-up).
 - Raw-index identity is stable and testable across transform chains.
 - Headless golden coverage includes at least one chained transform scenario.
 
-Status: Planned.
+Contracts (v1 subset):
+
+- ADR 1175: transform lineage + raw-index identity.
+- ADR 1176: minimal dataset transform node set (filter + sort + derived dataset chaining).
+- ADR 1177: cache keys + invalidation boundaries for dataset transforms.
+
+Status: In progress (filter/sort lineage + raw-index identity landed; derived columns still planned).
 
 ## M3 — Incremental mutation semantics (append/update)
 

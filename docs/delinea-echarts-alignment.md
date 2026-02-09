@@ -571,12 +571,11 @@ goal is to establish a stable “Option -> Engine” spine that scales to more s
   - `ecosystem/fret-chart/src/echarts/mod.rs` (dataset parsing + encode mapping)
   - `ecosystem/delinea/src/spec/mod.rs` (`DatasetSpec`, `FieldSpec`, `SeriesEncode`)
 - Missing vs ECharts:
-  - `[~]` `dataset.transform` (ECharts dataset transforms): v1 supports a small eager translator subset:
-    - `filter` (numeric dimension + `gte/gt/lte/lt/eq/ne`)
-    - `sort` (numeric dimension + `order=asc/desc`)
-    - `fromDatasetIndex` chaining for derived datasets
-    - Evidence: `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-*.json`
-    - Known gap: raw-index identity across dataset transforms is not yet modeled as an ECharts-class `DataStore` graph; derived datasets currently re-index rows (needs an engine-level transform graph contract).
+  - `[x]` `dataset.transform` (ECharts dataset transforms): v1 supports a minimal engine-owned subset:
+    - derived datasets via `fromDatasetIndex` + row-preserving transform chains (`filter`, `sort`)
+    - stable raw-index identity (selection and marks refer to the lineage root table indices)
+    - Evidence: `ecosystem/delinea/src/transform_graph/dataset_transform.rs`, `ecosystem/delinea/src/engine/stages/filter_processor.rs`, `ecosystem/fret-chart/src/echarts/mod.rs`, `ecosystem/fret-chart/tests/echarts_headless_goldens.rs`, `goldens/echarts-headless/v1/dataset-transform-chain-filter-sort-desc.json`
+    - Remaining gaps: broader transform types (aggregate/group), derived columns beyond category scaffolding, and more complete conformance coverage.
   - `source` object rows, `sourceHeader`, and type inference (P1)
 
 ### P0-2: Multi-axis binding via indices (`xAxisIndex` / `yAxisIndex`)

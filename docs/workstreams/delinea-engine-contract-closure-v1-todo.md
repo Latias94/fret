@@ -53,18 +53,18 @@ Regression gates:
 
 Design gates:
 
-- [ ] DEL-ENG2-contract-001 Define “raw index identity” across transform chains (what is stable, what may change).
-- [ ] DEL-ENG2-contract-002 Define the minimum transform node set for v1 (filter, sort, fromDatasetIndex chaining; no computed expressions yet).
-- [ ] DEL-ENG2-contract-003 Define caching keys and invalidation boundaries (dataset revision + transform params + row gating).
+- [x] DEL-ENG2-contract-001 Define “raw index identity” across transform chains (ADR 1175).
+- [x] DEL-ENG2-contract-002 Define the minimum transform node set for v1 (ADR 1176).
+- [x] DEL-ENG2-contract-003 Define caching keys and invalidation boundaries (ADR 1177).
 
 Implementation steps:
 
-- [ ] DEL-ENG2-impl-010 Introduce a minimal engine-owned transform graph for datasets (not just indices views).
-- [ ] DEL-ENG2-impl-011 Migrate the ECharts translator’s eager `dataset.transform` table cloning to the engine contract surface (keep v1 subset).
+- [x] DEL-ENG2-impl-010 Introduce a minimal engine-owned transform graph for datasets (not just indices views).
+- [x] DEL-ENG2-impl-011 Migrate the ECharts translator’s eager `dataset.transform` table cloning to the engine contract surface (keep v1 subset).
 
 Regression gates:
 
-- [ ] DEL-ENG2-tests-020 Add headless goldens for chained transforms with stable raw-index identity assertions.
+- [x] DEL-ENG2-tests-020 Add headless goldens for chained transforms with stable raw-index identity assertions.
 
 ## M3 — Incremental mutation semantics (append/update)
 
