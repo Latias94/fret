@@ -189,8 +189,6 @@ impl SuggestionChip {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
                 let focusable = match self.roving_tab_stop {
@@ -203,7 +201,22 @@ impl SuggestionChip {
                 }
 
                 let now_frame = cx.frame_id.0;
-                let corner_radii = suggestion_chip_tokens::container_shape(&theme);
+                let (corner_radii, layout, focus_ring) = {
+                    let theme = Theme::global(&*cx.app);
+                    let corner_radii = suggestion_chip_tokens::container_shape(theme);
+
+                    let mut layout = fret_ui::element::LayoutStyle::default();
+                    layout.overflow = Overflow::Visible;
+                    enforce_minimum_interactive_size(&mut layout, theme);
+
+                    let focus_ring = material_focus_ring_for_component(
+                        theme,
+                        suggestion_chip_tokens::COMPONENT_PREFIX,
+                        corner_radii,
+                    );
+
+                    (corner_radii, layout, focus_ring)
+                };
 
                 let pressable_props = PressableProps {
                     enabled,
@@ -214,17 +227,8 @@ impl SuggestionChip {
                         test_id: self.test_id.clone(),
                         ..Default::default()
                     },
-                    layout: {
-                        let mut l = fret_ui::element::LayoutStyle::default();
-                        l.overflow = Overflow::Visible;
-                        enforce_minimum_interactive_size(&mut l, &theme);
-                        l
-                    },
-                    focus_ring: Some(material_focus_ring_for_component(
-                        &theme,
-                        suggestion_chip_tokens::COMPONENT_PREFIX,
-                        corner_radii,
-                    )),
+                    layout,
+                    focus_ring: Some(focus_ring),
                     focus_ring_bounds: None,
                 };
 
@@ -244,41 +248,135 @@ impl SuggestionChip {
                         let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
                         let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                        let label_color =
-                            suggestion_chip_tokens::label_color(&theme, enabled, interaction);
-                        let label_color = resolve_override_slot_with(
-                            self.style.label_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || label_color,
-                        );
+                        let (
+                            height,
+                            label_style,
+                            leading_icon,
+                            leading_icon_size,
+                            label_color,
+                            leading_icon_color,
+                            state_layer_color,
+                            state_layer_target,
+                            ripple_base_opacity,
+                            config,
+                            background,
+                            shadow,
+                            outline,
+                        ) = {
+                            let theme = Theme::global(&*cx.app);
 
-                        let leading_icon_color = suggestion_chip_tokens::leading_icon_color(
-                            &theme,
-                            enabled,
-                            interaction,
-                        );
-                        let leading_icon_color = resolve_override_slot_with(
-                            self.style.leading_icon_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || leading_icon_color,
-                        );
+                            let height = suggestion_chip_tokens::container_height(theme);
+                            let label_style = theme
+                                .text_style_by_key("md.sys.typescale.label-large")
+                                .unwrap_or_else(|| fret_core::TextStyle::default());
 
-                        let state_layer_color =
-                            suggestion_chip_tokens::state_layer_color(&theme, interaction);
-                        let state_layer_color = resolve_override_slot_with(
-                            self.style.state_layer_color.as_ref(),
-                            states,
-                            |color| color.resolve(&theme),
-                            || state_layer_color,
-                        );
+                            let label_color =
+                                suggestion_chip_tokens::label_color(theme, enabled, interaction);
+                            let label_color = resolve_override_slot_with(
+                                self.style.label_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || label_color,
+                            );
 
-                        let state_layer_target =
-                            suggestion_chip_tokens::state_layer_opacity(&theme, interaction);
-                        let ripple_base_opacity =
-                            suggestion_chip_tokens::pressed_state_layer_opacity(&theme);
-                        let config = material_pressable_indication_config(&theme, None);
+                            let leading_icon_color = suggestion_chip_tokens::leading_icon_color(
+                                theme,
+                                enabled,
+                                interaction,
+                            );
+                            let leading_icon_color = resolve_override_slot_with(
+                                self.style.leading_icon_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || leading_icon_color,
+                            );
+
+                            let state_layer_color =
+                                suggestion_chip_tokens::state_layer_color(theme, interaction);
+                            let state_layer_color = resolve_override_slot_with(
+                                self.style.state_layer_color.as_ref(),
+                                states,
+                                |color| color.resolve(theme),
+                                || state_layer_color,
+                            );
+
+                            let state_layer_target =
+                                suggestion_chip_tokens::state_layer_opacity(theme, interaction);
+                            let ripple_base_opacity =
+                                suggestion_chip_tokens::pressed_state_layer_opacity(theme);
+                            let config = material_pressable_indication_config(theme, None);
+
+                            let (background, shadow, outline) = match self.variant {
+                                SuggestionChipVariant::Elevated => {
+                                    let bg = suggestion_chip_tokens::elevated_container_background(
+                                        theme, enabled,
+                                    );
+                                    let bg = resolve_override_slot_with(
+                                        self.style.container_background.as_ref(),
+                                        states,
+                                        |color| color.resolve(theme),
+                                        || bg,
+                                    );
+                                    let elevation =
+                                        suggestion_chip_tokens::elevated_container_elevation(
+                                            theme,
+                                            enabled,
+                                            interaction,
+                                        );
+                                    let shadow_color =
+                                        suggestion_chip_tokens::elevated_container_shadow_color(
+                                            theme,
+                                        );
+                                    let surface = material_surface_style(
+                                        theme,
+                                        bg,
+                                        elevation,
+                                        Some(shadow_color),
+                                        corner_radii,
+                                    );
+                                    (Some(surface.background), surface.shadow, None)
+                                }
+                                SuggestionChipVariant::Flat => {
+                                    let outline = suggestion_chip_tokens::flat_outline(
+                                        theme,
+                                        enabled,
+                                        interaction,
+                                    );
+                                    let outline = resolve_override_slot_opt_with(
+                                        self.style.outline_color.as_ref(),
+                                        states,
+                                        |color| color.resolve(theme),
+                                        || Some(outline.color),
+                                    )
+                                    .map(|color| suggestion_chip_tokens::ChipOutline {
+                                        width: outline.width,
+                                        color,
+                                    });
+                                    (None, None, outline)
+                                }
+                            };
+
+                            let leading_icon = self.leading_icon;
+                            let leading_icon_size = leading_icon
+                                .as_ref()
+                                .map(|_| suggestion_chip_tokens::leading_icon_size(theme));
+
+                            (
+                                height,
+                                label_style,
+                                leading_icon,
+                                leading_icon_size,
+                                label_color,
+                                leading_icon_color,
+                                state_layer_color,
+                                state_layer_target,
+                                ripple_base_opacity,
+                                config,
+                                background,
+                                shadow,
+                                outline,
+                            )
+                        };
 
                         let overlay = material_ink_layer_for_pressable(
                             cx,
@@ -294,67 +392,10 @@ impl SuggestionChip {
                             false,
                         );
 
-                        let height = suggestion_chip_tokens::container_height(&theme);
-
-                        let (background, shadow, outline) = match self.variant {
-                            SuggestionChipVariant::Elevated => {
-                                let bg = suggestion_chip_tokens::elevated_container_background(
-                                    &theme, enabled,
-                                );
-                                let bg = resolve_override_slot_with(
-                                    self.style.container_background.as_ref(),
-                                    states,
-                                    |color| color.resolve(&theme),
-                                    || bg,
-                                );
-                                let elevation =
-                                    suggestion_chip_tokens::elevated_container_elevation(
-                                        &theme,
-                                        enabled,
-                                        interaction,
-                                    );
-                                let shadow_color =
-                                    suggestion_chip_tokens::elevated_container_shadow_color(&theme);
-                                let surface = material_surface_style(
-                                    &theme,
-                                    bg,
-                                    elevation,
-                                    Some(shadow_color),
-                                    corner_radii,
-                                );
-                                (Some(surface.background), surface.shadow, None)
-                            }
-                            SuggestionChipVariant::Flat => {
-                                let outline = suggestion_chip_tokens::flat_outline(
-                                    &theme,
-                                    enabled,
-                                    interaction,
-                                );
-                                let outline = resolve_override_slot_opt_with(
-                                    self.style.outline_color.as_ref(),
-                                    states,
-                                    |color| color.resolve(&theme),
-                                    || Some(outline.color),
-                                )
-                                .map(|color| {
-                                    suggestion_chip_tokens::ChipOutline {
-                                        width: outline.width,
-                                        color,
-                                    }
-                                });
-                                (None, None, outline)
-                            }
-                        };
-
-                        let leading_icon = self.leading_icon;
-                        let leading_icon_size = leading_icon
-                            .as_ref()
-                            .map(|_| suggestion_chip_tokens::leading_icon_size(&theme));
-
                         let content = chip_content(
                             cx,
-                            &theme,
                             &self.label,
+                            label_style,
                             label_color,
                             leading_icon,
                             leading_icon_size,
@@ -390,8 +431,8 @@ impl SuggestionChip {
 
 fn chip_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     label: &Arc<str>,
+    label_style: fret_core::TextStyle,
     label_color: Color,
     leading_icon: Option<IconId>,
     leading_icon_size: Option<Px>,
@@ -407,12 +448,8 @@ fn chip_content<H: UiHost>(
     const WITH_LEADING_ICON_LEADING_SPACE: Px = Px(8.0);
     const WITH_TRAILING_ICON_TRAILING_SPACE: Px = Px(8.0);
 
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-
     let mut text = TextProps::new(label.clone());
-    text.style = Some(style);
+    text.style = Some(label_style);
     text.color = Some(label_color);
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Ellipsis;
