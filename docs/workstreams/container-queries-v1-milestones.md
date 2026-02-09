@@ -108,6 +108,8 @@ Evidence:
 
 - A `fretboard diag` script (or a minimal harness test) that exercises panel resize and captures a
   stable outcome across DPIs.
+  - Script: `tools/diag-scripts/container-queries-docking-panel-resize.json`
+  - Demo: `cargo run -p fret-demo --bin container_queries_docking_demo --release`
 
 ## M6 — Ecosystem adoption sweep (incremental, not "big bang")
 

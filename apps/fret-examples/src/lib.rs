@@ -1,4 +1,4 @@
-﻿#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
@@ -30,6 +30,8 @@ pub mod chart_multi_axis_demo;
 pub mod chart_stress_demo;
 pub mod cjk_conformance_demo;
 pub mod components_gallery;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod container_queries_docking_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod datatable_demo;
 #[cfg(not(target_arch = "wasm32"))]
