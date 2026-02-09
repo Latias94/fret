@@ -375,6 +375,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`
     - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
 
+- [x] BU-FR-ui-029 Reduce “god test file” risk in `crates/fret-ui` declarative interaction tests by splitting `interactions.rs` into submodules.
+  - Target: `crates/fret-ui/src/declarative/tests/interactions.rs`
+  - Gate: `cargo nextest run -p fret-ui`
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/interactions.rs`
+    - `crates/fret-ui/src/declarative/tests/interactions/text_input.rs`
+    - `crates/fret-ui/src/declarative/tests/interactions/selectable_text.rs`
+
 ## M3 — Renderer closure
 
 - [x] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
