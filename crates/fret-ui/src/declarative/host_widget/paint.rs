@@ -1293,6 +1293,7 @@ impl ElementHostWidget {
                         order: DrawOrder(0),
                         rect: cx.bounds,
                         image: props.image,
+                        fit: props.fit,
                         opacity,
                     });
                 }

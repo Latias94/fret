@@ -1228,6 +1228,7 @@ impl std::fmt::Debug for ResizablePanelGroupProps {
 pub struct ImageProps {
     pub layout: LayoutStyle,
     pub image: ImageId,
+    pub fit: ViewportFit,
     pub opacity: f32,
     pub uv: Option<UvRect>,
 }
@@ -1237,6 +1238,7 @@ impl ImageProps {
         Self {
             layout: LayoutStyle::default(),
             image,
+            fit: ViewportFit::Stretch,
             opacity: 1.0,
             uv: None,
         }
