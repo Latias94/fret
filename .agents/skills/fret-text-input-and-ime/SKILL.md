@@ -44,6 +44,13 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
 - If focus stays in the input while navigating results, use `active_descendant` and `expanded` on the input.
 - Keep global keybindings gated with `when: "focus.is_text_input == false"` unless they are explicitly editing commands.
 
+## Workflow
+
+1. Keep channels separate (ADR 0012): `KeyDown` for commands/editing keys, `TextInput` for committed text, `ImeEvent` for composition.
+2. Ensure IME gets first refusal while composing (Tab/Enter/Escape/arrows must not be stolen).
+3. Provide caret rect feedback so candidate windows place correctly (`Effect::ImeSetCursorArea`).
+4. Gate global shortcuts on focus/composition state and add a regression artifact (script or unit test).
+
 ## Common pitfalls
 
 - **Manually inserting characters from `KeyDown`** (breaks IME and international layouts).
@@ -76,3 +83,15 @@ pub fn search_box<H: UiHost>(cx: &mut ElementContext<'_, H>, query: Model<String
   - `crates/fret-ui/src/text_input/mod.rs` / `crates/fret-ui/src/text_area/mod.rs` (element internals)
   - `ecosystem/fret-ui-shadcn/src/input.rs` / `ecosystem/fret-ui-shadcn/src/textarea.rs`
   - `ecosystem/fret-ui-shadcn/src/combobox.rs` (active descendant + overlay patterns)
+
+## Evidence anchors
+
+- Contract: `docs/adr/0012-keyboard-ime-and-text-input.md`
+- Editing commands: `docs/adr/0044-text-editing-state-and-commands.md`
+- Geometry/caret metrics: `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
+- Platform bridge: `crates/fret-runtime/src/platform_text_input.rs`
+
+## Related skills
+
+- `fret-commands-and-keymap` (shortcut gating and focus-aware routing)
+- `fret-overlays-and-focus` (combobox/select overlays that must not break typing)

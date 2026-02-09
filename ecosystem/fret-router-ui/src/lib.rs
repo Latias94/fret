@@ -10,17 +10,19 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::AppWindowId;
+use fret_core::{AppWindowId, KeyCode, Modifiers};
 use fret_router::{
     HistoryAdapter, NavigationAction, PathParam, RouteLocation, RouteMatchSnapshot,
     RoutePrefetchIntent, RouteSearchValidationFailure, Router, RouterBuildLocationError,
     RouterEvent, RouterTransition, RouterUpdate, RouterUpdateWithPrefetchIntents, SearchMap,
 };
-use fret_runtime::{CommandId, Effect};
-use fret_runtime::{Model, WeakModel};
+use fret_runtime::{
+    CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, Effect, KeyChord,
+    Model, PlatformFilter, WeakModel, WhenExpr, WindowCommandAvailabilityService,
+};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::{PressableProps, SemanticsDecoration};
+use fret_ui::element::PressableProps;
 use fret_ui::{ElementContext, Invalidation};
 
 #[derive(Debug, Clone)]
@@ -86,6 +88,92 @@ where
     router: Model<Router<R, H>>,
     snapshot: Model<RouterUiSnapshot<R>>,
     intents: Model<Vec<RoutePrefetchIntent<R>>>,
+}
+
+pub const ROUTER_COMMAND_BACK: &str = "router.back";
+pub const ROUTER_COMMAND_FORWARD: &str = "router.forward";
+
+pub fn register_router_commands(registry: &mut CommandRegistry) {
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_BACK),
+        CommandMeta::new("Back")
+            .with_category("Router")
+            .with_description("Navigate back in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketLeft,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowLeft,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
+            .with_when(WhenExpr::parse("router.can_back").expect("when expr should parse"))
+            .with_scope(CommandScope::Window),
+    );
+    registry.register(
+        CommandId::from(ROUTER_COMMAND_FORWARD),
+        CommandMeta::new("Forward")
+            .with_category("Router")
+            .with_description("Navigate forward in router history.")
+            .with_default_keybindings([
+                DefaultKeybinding::single(
+                    PlatformFilter::Macos,
+                    KeyChord::new(
+                        KeyCode::BracketRight,
+                        Modifiers {
+                            meta: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Windows,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+                DefaultKeybinding::single(
+                    PlatformFilter::Linux,
+                    KeyChord::new(
+                        KeyCode::ArrowRight,
+                        Modifiers {
+                            alt: true,
+                            ..Default::default()
+                        },
+                    ),
+                ),
+            ])
+            .with_when(WhenExpr::parse("router.can_forward").expect("when expr should parse"))
+            .with_scope(CommandScope::Window),
+    );
 }
 
 impl<R, H> RouterUiStore<R, H>
@@ -173,6 +261,37 @@ where
             .expect("router model should be updatable")
     }
 
+    pub fn can_navigate(&self, app: &App, action: NavigationAction) -> bool {
+        app.models()
+            .read(&self.router, |router| router.history().can_navigate(action))
+            .expect("router model should be readable")
+    }
+
+    pub fn handle_router_command(
+        &self,
+        app: &mut App,
+        command: &CommandId,
+    ) -> Result<bool, RouteSearchValidationFailure> {
+        match command.as_str() {
+            ROUTER_COMMAND_BACK => {
+                if !self.can_navigate(app, NavigationAction::Back) {
+                    return Ok(true);
+                }
+                let _ = self.navigate_with_prefetch_intents(app, NavigationAction::Back, None)?;
+                Ok(true)
+            }
+            ROUTER_COMMAND_FORWARD => {
+                if !self.can_navigate(app, NavigationAction::Forward) {
+                    return Ok(true);
+                }
+                let _ =
+                    self.navigate_with_prefetch_intents(app, NavigationAction::Forward, None)?;
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
+    }
+
     fn apply_update(
         &self,
         app: &mut App,
@@ -183,15 +302,22 @@ where
             return;
         }
 
-        let next = app
+        let (next, can_back, can_forward) = app
             .models()
             .read(&self.router, |router| {
-                RouterUiSnapshot::from_state(router.state())
+                let next = RouterUiSnapshot::from_state(router.state());
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                (next, can_back, can_forward)
             })
             .expect("router model should be readable");
         let _ = app.models_mut().update(&self.snapshot, |v| *v = next);
         let intents = intents.to_vec();
         let _ = app.models_mut().update(&self.intents, |v| *v = intents);
+        app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
+            svc.set_router_availability(self.window, can_back, can_forward);
+        });
         app.request_redraw(self.window);
     }
 
@@ -271,13 +397,16 @@ where
             let result = host.models_mut().update(&router, |router| {
                 let update = router.navigate_with_prefetch_intents(action, Some(to))?;
                 let snapshot = RouterUiSnapshot::from_state(router.state());
-                Ok::<_, RouteSearchValidationFailure>((update, snapshot))
+                let history = router.history();
+                let can_back = history.can_navigate(NavigationAction::Back);
+                let can_forward = history.can_navigate(NavigationAction::Forward);
+                Ok::<_, RouteSearchValidationFailure>((update, snapshot, can_back, can_forward))
             });
 
             let Ok(result) = result else {
                 return;
             };
-            let Ok((update, next_snapshot)) = result else {
+            let Ok((update, next_snapshot, can_back, can_forward)) = result else {
                 host.request_redraw(window);
                 return;
             };
@@ -290,6 +419,7 @@ where
             let _ = host
                 .models_mut()
                 .update(&intents_model, |v| *v = update.intents.clone());
+            host.set_router_command_availability(window, can_back, can_forward);
             host.request_redraw(window);
         })
     }
@@ -380,8 +510,7 @@ pub fn router_outlet_with_test_id<R>(
 where
     R: Clone + 'static,
 {
-    router_outlet(cx, snapshot, render)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    router_outlet(cx, snapshot, render).test_id(test_id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -423,7 +552,7 @@ where
     ) -> AnyElement {
         let elem = router_outlet(cx, &self.snapshot, render);
         match self.test_id {
-            Some(test_id) => elem.attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+            Some(test_id) => elem.test_id(test_id),
             None => elem,
         }
     }

@@ -767,6 +767,8 @@ fn render_menu_from_runtime<H: UiHost>(
         };
 
         cx.pressable_with_id_props(|cx, st, trigger_id| {
+            let (patient_click_sticky, patient_click_timer) =
+                menubar_trigger_row::ensure_trigger_patient_click_models(cx, trigger_id);
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
             let group_has_active = cx.watch_model(&group_active).cloned().is_some();
             let show_mnemonics =
@@ -785,6 +787,8 @@ fn render_menu_from_runtime<H: UiHost>(
                 group_active.clone(),
                 trigger_id,
                 open.clone(),
+                patient_click_sticky.clone(),
+                patient_click_timer.clone(),
                 enabled,
                 st.hovered,
                 st.pressed,
@@ -795,6 +799,8 @@ fn render_menu_from_runtime<H: UiHost>(
                 group_active.clone(),
                 trigger_id,
                 open.clone(),
+                patient_click_sticky,
+                patient_click_timer,
             ));
             cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
                 if down.button == fret_core::MouseButton::Left {
@@ -1564,6 +1570,8 @@ fn menu_fallback_input_context<H: UiHost>(
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 

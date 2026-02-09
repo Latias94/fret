@@ -56,11 +56,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
     let theme = Theme::global(&*cx.app).clone();
     st.router.clear();
 
-    let fail_mode = cx
-        .watch_model(&st.fail_mode)
-        .layout()
-        .copied()
-        .unwrap_or(false);
+    let fail_mode = cx.watch_model(&st.fail_mode).layout().copied_or_default();
 
     let key = demo_key();
     let policy = QueryPolicy {
@@ -83,8 +79,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
     let state = cx
         .watch_model(handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(|| QueryState::<DemoData>::default());
+        .cloned_or_else(QueryState::<DemoData>::default);
 
     let status_label = match state.status {
         QueryStatus::Idle => "Idle",
@@ -228,7 +223,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn on_command(

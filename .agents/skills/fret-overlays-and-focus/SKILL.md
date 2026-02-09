@@ -5,6 +5,14 @@ description: Overlays and focus in Fret (Radix-aligned behavior). Use when imple
 
 # Fret overlays and focus
 
+## When to use
+
+Use this skill when:
+
+- Implementing overlay components: popovers, menus, tooltips, dialogs, sheets.
+- Debugging dismissal bugs (Escape/outside press), click-through issues, or focus trap/restore.
+- Working on overlay placement/anchoring or modal barrier behavior.
+
 Fret splits overlays into:
 
 - **Mechanism (runtime):** overlay roots/layers, modal barrier, outside-press observers, placement solver
@@ -12,7 +20,7 @@ Fret splits overlays into:
 - **Policy (components):** dismissal rules, focus trap/restore, hover intent, presence/transition behavior
   (`ecosystem/fret-ui-kit`, `ecosystem/fret-ui-shadcn`)
 
-## Overview
+## Quick start
 
 **Key building blocks:**
 
@@ -26,7 +34,7 @@ Fret splits overlays into:
   - `on_open_auto_focus`, `on_close_auto_focus`
   - `initial_focus` (when you want deterministic first focus)
 
-## Quick start: request a menu-like overlay (dismiss on outside press without click-through)
+### Request a menu-like overlay (dismiss on outside press without click-through)
 
 ```rust
 use fret_ui_kit::prelude::*;
@@ -64,6 +72,15 @@ pub fn menu_example<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>
 }
 ```
 
+## Workflow
+
+1. Decide the overlay family (menu vs popover vs modal dialog) and pick the correct `OverlayRequest::*` constructor.
+2. Ensure the trigger has stable identity (anchor + focus restore depend on it).
+3. Implement policy in the component layer (dismiss rules, focus trap/restore, hover intent, presence).
+4. Add a regression artifact:
+   - Invariant test for placement/geometry/semantics, and/or
+   - `tools/diag-scripts/*.json` scripted repro with stable `test_id` targets.
+
 ## Behavior checklist (Radix-correct outcomes)
 
 - **Dismiss**
@@ -81,6 +98,24 @@ pub fn menu_example<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>
   - clamp/flip within constrained viewport
   - content becomes scrollable with max-height on tiny windows
 
+## Evidence anchors (where to look)
+
+- ADRs:
+  - Overlay architecture + policy split: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
+  - Outside press + non-click-through menus: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
+  - Focus traversal/scopes: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
+  - Placement contract: `docs/adr/0064-overlay-placement-contract.md`
+- Code entry points:
+  - Runtime overlay layering + outside press: `crates/fret-ui/src/tree/mod.rs`
+  - Placement solver: `crates/fret-ui/src/overlay_placement/mod.rs`
+  - Policy/controller: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
+
+## Common pitfalls
+
+- Fixing a dismissal/focus behavior mismatch by adding runtime knobs (usually wrong layer; prefer component policy).
+- Missing stable element identity for triggers/owners (anchoring and focus restore become flaky).
+- “Click-through” semantics wrong for menus (menus should usually be non-click-through outside press).
+
 ## Debugging tips
 
 - Capture a window snapshot after overlay synthesis:
@@ -88,12 +123,8 @@ pub fn menu_example<H: UiHost>(cx: &mut ElementContext<'_, H>, open: Model<bool>
   - `OverlayController::stack_snapshot_for_window(...)`
 - For scripted repros and bundles: use `fret-diag-workflow`.
 
-## References
+## Related skills
 
-- Overlay architecture + policy split: `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
-- Outside press + non-click-through menus: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
-- Focus traversal/scopes: `docs/adr/0068-focus-traversal-and-focus-scopes.md`
-- Placement contract: `docs/adr/0064-overlay-placement-contract.md`
-- Code entry points:
-  - Runtime: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/overlay_placement/mod.rs`
-  - Policy/controller: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
+- `fret-action-hooks` (dismiss/activate/focus policy wiring)
+- `fret-diag-workflow` (scripted repros + bundles)
+- `fret-shadcn-source-alignment` (Radix/shadcn outcome alignment + gates)

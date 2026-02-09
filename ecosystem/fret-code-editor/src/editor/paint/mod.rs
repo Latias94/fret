@@ -21,7 +21,7 @@ pub(super) fn paint_row(
 ) {
     st.last_bounds = Some(painter.bounds());
 
-    let (row_range, line) = cached_row_text_with_range(st, row, text_cache_max_entries);
+    let (row_range, line, row_folds) = cached_row_text_with_range(st, row, text_cache_max_entries);
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
@@ -40,7 +40,10 @@ pub(super) fn paint_row(
     let scale_factor = painter.scale_factor();
     let scale_bits = scale_factor.to_bits();
     let cached = st.baseline_measure_cache.as_ref().is_some_and(|cache| {
-        cache.row_h == row_h && cache.scale_bits == scale_bits && &cache.text_style == text_style
+        cache.max_width == rect.size.width
+            && cache.row_h == row_h
+            && cache.scale_bits == scale_bits
+            && &cache.text_style == text_style
     });
     let (metrics, measured_h) = if cached {
         let cache = st
@@ -51,7 +54,7 @@ pub(super) fn paint_row(
     } else {
         let (services, _) = painter.services_and_scene();
         let measure_constraints = fret_core::TextConstraints {
-            max_width: None,
+            max_width: Some(rect.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             scale_factor,
@@ -67,6 +70,7 @@ pub(super) fn paint_row(
             Px(row_h.0.max(16.0))
         };
         st.baseline_measure_cache = Some(BaselineMeasureCache {
+            max_width: rect.size.width,
             row_h,
             scale_bits,
             text_style: text_style.clone(),
@@ -246,6 +250,7 @@ pub(super) fn paint_row(
                 row_range: row_range.clone(),
                 blob,
                 caret_stops: stops,
+                fold_map: row_folds.clone(),
                 caret_rect_top,
                 caret_rect_height,
                 preedit: row_preedit,
@@ -266,8 +271,14 @@ pub(super) fn paint_row(
         if global_start < global_end
             && let Some(blob) = row_blob
         {
-            let local_start = global_start.saturating_sub(row_range.start).min(line.len());
-            let local_end = global_end.saturating_sub(row_range.start).min(line.len());
+            let mut local_start = global_start.saturating_sub(row_range.start);
+            let mut local_end = global_end.saturating_sub(row_range.start);
+            if let Some(folds) = &row_folds {
+                local_start = folds.buffer_local_to_display_local(local_start);
+                local_end = folds.buffer_local_to_display_local(local_end);
+            }
+            local_start = local_start.min(line.len());
+            local_end = local_end.min(line.len());
             if local_start < local_end {
                 let (services, _) = painter.services_and_scene();
                 st.selection_rect_scratch.clear();
@@ -310,8 +321,12 @@ pub(super) fn paint_row(
             let global_start = sel.start.max(row_range.start).min(row_range.end);
             let global_end = sel.end.max(row_range.start).min(row_range.end);
             if global_start < global_end {
-                let local_start = global_start.saturating_sub(row_range.start);
-                let local_end = global_end.saturating_sub(row_range.start);
+                let mut local_start = global_start.saturating_sub(row_range.start);
+                let mut local_end = global_end.saturating_sub(row_range.start);
+                if let Some(folds) = &row_folds {
+                    local_start = folds.buffer_local_to_display_local(local_start);
+                    local_end = folds.buffer_local_to_display_local(local_end);
+                }
                 let mut ranges: Vec<(usize, usize)> = Vec::new();
                 if let Some(preedit) = row_preedit {
                     if local_end <= preedit.insert_at {
@@ -363,6 +378,9 @@ pub(super) fn paint_row(
             let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
             if caret_pt.row == row {
                 let mut local = caret.saturating_sub(row_range.start);
+                if let Some(folds) = &row_folds {
+                    local = folds.buffer_local_to_display_local(local);
+                }
                 if let Some(preedit) = &st.preedit
                     && row_preedit.is_some()
                 {
@@ -430,15 +448,55 @@ pub(super) fn paint_row(
             let caret = st.selection.caret().min(st.buffer.len_bytes());
             let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
             if caret_pt.row == row {
-                let mut col = caret_pt.col;
-                if let Some(preedit) = &st.preedit {
-                    col = col.saturating_add(preedit_cursor_offset_cols(preedit));
-                }
-                let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
-                let caret_rect = Rect::new(
-                    fret_core::Point::new(x, rect.origin.y),
-                    Size::new(Px(1.0), row_h),
-                );
+                let caret_rect = if let Some(blob) = row_blob {
+                    let mut local = caret.saturating_sub(row_range.start);
+                    if let Some(folds) = &row_folds {
+                        local = folds.buffer_local_to_display_local(local);
+                    }
+                    local = local.min(line.len());
+                    if let Some(preedit) = &st.preedit
+                        && row_preedit.is_some()
+                    {
+                        local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+                    }
+                    let max_len = if let Some(preedit) = &st.preedit
+                        && row_preedit.is_some()
+                    {
+                        line.len().saturating_add(preedit.text.len())
+                    } else {
+                        line.len()
+                    };
+                    local = local.min(max_len);
+
+                    let (services, _) = painter.services_and_scene();
+                    let x0 = services.text().caret_x(blob, local);
+
+                    let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                        (caret_rect_top, caret_rect_height)
+                        && h.0 > 0.0
+                    {
+                        (top, Px(h.0.min(row_h.0)))
+                    } else {
+                        (Px(0.0), row_h)
+                    };
+                    Rect::new(
+                        fret_core::Point::new(
+                            Px(rect.origin.x.0 + x0.0),
+                            Px(rect.origin.y.0 + caret_top.0),
+                        ),
+                        Size::new(Px(1.0), caret_h),
+                    )
+                } else {
+                    let mut col = caret_pt.col;
+                    if let Some(preedit) = &st.preedit {
+                        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+                    }
+                    let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
+                    Rect::new(
+                        fret_core::Point::new(x, rect.origin.y),
+                        Size::new(Px(1.0), row_h),
+                    )
+                };
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
@@ -454,9 +512,17 @@ pub(super) fn paint_row(
     // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
-    if st.row_geom_cache_rev != rev || st.row_geom_cache_wrap_cols != wrap_cols {
+    let folds_epoch = st.folds_epoch;
+    let inlays_epoch = st.inlays_epoch;
+    if st.row_geom_cache_rev != rev
+        || st.row_geom_cache_wrap_cols != wrap_cols
+        || st.row_geom_cache_folds_epoch != folds_epoch
+        || st.row_geom_cache_inlays_epoch != inlays_epoch
+    {
         st.row_geom_cache_rev = rev;
         st.row_geom_cache_wrap_cols = wrap_cols;
+        st.row_geom_cache_folds_epoch = folds_epoch;
+        st.row_geom_cache_inlays_epoch = inlays_epoch;
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
@@ -501,13 +567,21 @@ pub(super) fn cached_row_text_with_range(
     st: &mut CodeEditorState,
     row: usize,
     max_entries: usize,
-) -> (Range<usize>, Arc<str>) {
+) -> (Range<usize>, Arc<str>, Option<super::geom::RowFoldMap>) {
     st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
-    if st.row_text_cache_rev != rev || st.row_text_cache_wrap_cols != wrap_cols {
+    let folds_epoch = st.folds_epoch;
+    let inlays_epoch = st.inlays_epoch;
+    if st.row_text_cache_rev != rev
+        || st.row_text_cache_wrap_cols != wrap_cols
+        || st.row_text_cache_folds_epoch != folds_epoch
+        || st.row_text_cache_inlays_epoch != inlays_epoch
+    {
         st.row_text_cache_rev = rev;
         st.row_text_cache_wrap_cols = wrap_cols;
+        st.row_text_cache_folds_epoch = folds_epoch;
+        st.row_text_cache_inlays_epoch = inlays_epoch;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
@@ -521,23 +595,192 @@ pub(super) fn cached_row_text_with_range(
         *last_used = tick;
         st.row_text_cache_queue.push_back((row, tick));
         st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
-        return (text.range.clone(), Arc::clone(&text.text));
+        return (
+            text.range.clone(),
+            Arc::clone(&text.text),
+            text.fold_map.clone(),
+        );
     }
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
     let range = st.display_map.display_row_byte_range(&st.buffer, row);
     let range_for_return = range.clone();
-    let text: Arc<str> = st
-        .buffer
-        .slice_to_string(range.clone())
-        .unwrap_or_default()
-        .into();
+    let base: String = st.buffer.slice_to_string(range.clone()).unwrap_or_default();
+
+    let (text, fold_map) = if st.preedit.is_none() {
+        let line = st.display_map.display_row_line(row);
+        let folds = st.line_folds.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
+        let inlays = st.line_inlays.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);
+
+        if folds.is_empty() && inlays.is_empty() {
+            (Arc::<str>::from(base), None)
+        } else {
+            // Fold/inlay spans are line-local. Validate against the full logical line, then
+            // translate to row-local offsets within the current wrapped slice.
+            let line_start = st.buffer.line_start(line).unwrap_or(range.start);
+            let row_start_in_line = range.start.saturating_sub(line_start);
+            let row_end_in_line = range.end.saturating_sub(line_start).max(row_start_in_line);
+
+            let line_text_owned = st.buffer.line_text(line).unwrap_or_default();
+            let line_text = line_text_owned.as_str();
+            if fret_code_editor_view::validate_fold_spans(line_text, folds).is_err()
+                || fret_code_editor_view::validate_inlay_spans(line_text, inlays).is_err()
+            {
+                (Arc::<str>::from(base), None)
+            } else {
+                let mut row_folds: Vec<FoldSpan> = Vec::new();
+                for fold in folds.iter() {
+                    let start = fold.range.start.min(line_text.len());
+                    let end = fold.range.end.min(line_text.len()).max(start);
+                    if start < row_start_in_line || start >= row_end_in_line {
+                        continue;
+                    }
+                    let local_start = start.saturating_sub(row_start_in_line).min(base.len());
+                    let local_end = end
+                        .min(row_end_in_line)
+                        .saturating_sub(row_start_in_line)
+                        .min(base.len())
+                        .max(local_start);
+                    if local_start >= local_end {
+                        continue;
+                    }
+                    row_folds.push(FoldSpan {
+                        range: local_start..local_end,
+                        placeholder: Arc::clone(&fold.placeholder),
+                    });
+                }
+
+                let mut row_inlays: Vec<InlaySpan> = Vec::new();
+                for inlay in inlays.iter() {
+                    let byte = inlay.byte.min(line_text.len());
+                    if byte < row_start_in_line || byte >= row_end_in_line {
+                        continue;
+                    }
+                    let inside_fold = folds.iter().any(|f| {
+                        let start = f.range.start.min(line_text.len());
+                        let end = f.range.end.min(line_text.len()).max(start);
+                        start < byte && byte < end
+                    });
+                    if inside_fold {
+                        continue;
+                    }
+                    let local = byte.saturating_sub(row_start_in_line).min(base.len());
+                    row_inlays.push(InlaySpan {
+                        byte: local,
+                        text: Arc::clone(&inlay.text),
+                    });
+                }
+
+                if row_folds.is_empty() && row_inlays.is_empty() {
+                    (Arc::<str>::from(base), None)
+                } else {
+                    // Materialize fold placeholders and injected inlays into a single display string.
+                    // Inlays whose insertion point lands inside a folded range are skipped.
+                    let mut removed = 0usize;
+                    let mut added = 0usize;
+                    for span in row_folds.iter() {
+                        removed =
+                            removed.saturating_add(span.range.end.saturating_sub(span.range.start));
+                        added = added.saturating_add(span.placeholder.len());
+                    }
+                    for span in row_inlays.iter() {
+                        added = added.saturating_add(span.text.len());
+                    }
+
+                    let cap = base
+                        .len()
+                        .saturating_sub(removed)
+                        .saturating_add(added)
+                        .max(1);
+                    let mut out = String::with_capacity(cap);
+
+                    let mut spans = Vec::<super::geom::RowFoldSpan>::new();
+                    let mut cursor = 0usize;
+                    let mut display_cursor = 0usize;
+                    let mut fold_idx = 0usize;
+                    let mut inlay_idx = 0usize;
+
+                    while cursor < base.len()
+                        || fold_idx < row_folds.len()
+                        || inlay_idx < row_inlays.len()
+                    {
+                        while inlay_idx < row_inlays.len() && row_inlays[inlay_idx].byte < cursor {
+                            // Inlays inside a folded span are skipped by advancing past the fold jump.
+                            inlay_idx = inlay_idx.saturating_add(1);
+                        }
+
+                        let next_fold = row_folds.get(fold_idx).map(|s| s.range.start);
+                        let next_inlay = row_inlays.get(inlay_idx).map(|s| s.byte);
+                        let next = match (next_fold, next_inlay) {
+                            (Some(a), Some(b)) => a.min(b),
+                            (Some(a), None) => a,
+                            (None, Some(b)) => b,
+                            (None, None) => base.len(),
+                        }
+                        .min(base.len());
+
+                        if cursor < next {
+                            out.push_str(&base[cursor..next]);
+                            let delta = next.saturating_sub(cursor);
+                            cursor = next;
+                            display_cursor = display_cursor.saturating_add(delta);
+                            continue;
+                        }
+
+                        while let Some(inlay) = row_inlays.get(inlay_idx)
+                            && inlay.byte == cursor
+                        {
+                            let start = display_cursor;
+                            let len = inlay.text.len();
+                            out.push_str(inlay.text.as_ref());
+                            spans.push(super::geom::RowFoldSpan {
+                                buffer_range: cursor..cursor,
+                                display_range: start..start.saturating_add(len),
+                            });
+                            display_cursor = display_cursor.saturating_add(len);
+                            inlay_idx = inlay_idx.saturating_add(1);
+                        }
+
+                        if let Some(fold) = row_folds.get(fold_idx)
+                            && fold.range.start == cursor
+                        {
+                            let start = display_cursor;
+                            let len = fold.placeholder.len();
+                            out.push_str(fold.placeholder.as_ref());
+                            spans.push(super::geom::RowFoldSpan {
+                                buffer_range: fold.range.clone(),
+                                display_range: start..start.saturating_add(len),
+                            });
+                            display_cursor = display_cursor.saturating_add(len);
+                            cursor = fold.range.end.min(base.len()).max(fold.range.start);
+                            fold_idx = fold_idx.saturating_add(1);
+                            continue;
+                        }
+
+                        if cursor >= base.len() {
+                            break;
+                        }
+
+                        // If we reach here, we failed to make progress (should be unreachable after validation).
+                        break;
+                    }
+
+                    let map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
+                    (Arc::<str>::from(out), map)
+                }
+            }
+        }
+    } else {
+        (Arc::<str>::from(base), None)
+    };
+
     st.row_text_cache.insert(
         row,
         (
             RowTextCacheEntry {
                 text: Arc::clone(&text),
                 range,
+                fold_map: fold_map.clone(),
             },
             tick,
         ),
@@ -558,7 +801,7 @@ pub(super) fn cached_row_text_with_range(
         }
     }
 
-    (range_for_return, text)
+    (range_for_return, text, fold_map)
 }
 
 pub(super) fn materialize_preedit_rich_text(

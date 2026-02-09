@@ -41,6 +41,9 @@
     "debugging": [
       "fret-diag-workflow"
     ],
+    "release": [
+      "fret-release-check-and-publish"
+    ],
     "performance": [
       "fret-perf-workflow"
     ],
@@ -170,6 +173,16 @@
       "capture_bundle",
       "capture_screenshot",
       "FRET_DIAG"
+    ],
+    "release": [
+      "release-plz",
+      "release-pr",
+      "cargo publish",
+      "crates.io",
+      "version_group",
+      "CARGO_REGISTRY_TOKEN",
+      "trusted publishing",
+      "publish dry-run"
     ],
     "perf": [
       "perf",

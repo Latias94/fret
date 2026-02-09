@@ -60,7 +60,7 @@ pub(super) fn preview_data_table(
         .variant(shadcn::AlertVariant::Default)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        .test_id(test_id);
         section_card(cx, title, alert_content)
     };
 

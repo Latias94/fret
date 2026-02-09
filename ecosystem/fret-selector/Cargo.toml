@@ -8,12 +8,13 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Derived state selector utilities for Fret apps and components."
 
 [features]
 default = []
 ui = ["dep:fret-runtime", "dep:fret-ui"]
 
 [dependencies]
-fret-runtime = { path = "../../crates/fret-runtime", optional = true }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 tracing.workspace = true

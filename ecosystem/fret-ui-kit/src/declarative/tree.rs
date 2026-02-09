@@ -175,10 +175,9 @@ pub fn tree_view_with_renderer<H: UiHost>(
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
-    let TreeState { selected, expanded } =
-        cx.watch_model(&state).paint().cloned().unwrap_or_default();
+    let TreeState { selected, expanded } = cx.watch_model(&state).paint().cloned_or_default();
 
-    let items_value = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let items_value = cx.watch_model(&items).layout().cloned_or_default();
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);
@@ -374,10 +373,9 @@ where
     let items_revision = cx.app.models().revision(&items).unwrap_or(0);
     let state_revision = cx.app.models().revision(&state).unwrap_or(0);
 
-    let TreeState { selected, expanded } =
-        cx.watch_model(&state).paint().cloned().unwrap_or_default();
+    let TreeState { selected, expanded } = cx.watch_model(&state).paint().cloned_or_default();
 
-    let items_value = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let items_value = cx.watch_model(&items).layout().cloned_or_default();
 
     let theme = Theme::global(&*cx.app);
     let (list_bg, border, row_hover, row_active) = resolve_list_colors(theme);

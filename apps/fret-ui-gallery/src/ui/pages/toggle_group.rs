@@ -65,7 +65,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             icon_item(cx, "underline", "Toggle underline"),
         ])
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-group-demo"));
+        .test_id("ui-gallery-toggle-group-demo");
     let demo = {
         let body = centered(cx, demo_group);
         section(cx, "Demo", body)
@@ -79,9 +79,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             text_item(cx, "right", "Right"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-toggle-group-outline"),
-        );
+        .test_id("ui-gallery-toggle-group-outline");
     let outline = {
         let body = centered(cx, outline_group);
         section(cx, "Outline", body)
@@ -130,7 +128,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ]
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-group-size"))
+        .test_id("ui-gallery-toggle-group-size")
     };
     let size = {
         let body = centered(cx, size_row);
@@ -148,9 +146,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             text_item(cx, "right", "Right"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-toggle-group-spacing"),
-        );
+        .test_id("ui-gallery-toggle-group-spacing");
     let spacing = {
         let body = centered(cx, spacing_group);
         section(cx, "Spacing", body)
@@ -165,9 +161,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             icon_item(cx, "underline", "Toggle underline"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-toggle-group-vertical"),
-        );
+        .test_id("ui-gallery-toggle-group-vertical");
     let vertical = {
         let body = centered(cx, vertical_group);
         section(cx, "Vertical", body)
@@ -182,9 +176,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             icon_item(cx, "underline", "Toggle underline"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-toggle-group-disabled"),
-        );
+        .test_id("ui-gallery-toggle-group-disabled");
     let disabled = {
         let body = centered(cx, disabled_group);
         section(cx, "Disabled", body)
@@ -204,7 +196,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .into_element(cx)
         },
     )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toggle-group-rtl"));
+    .test_id("ui-gallery-toggle-group-rtl");
     let rtl = {
         let body = centered(cx, rtl_group);
         section(cx, "RTL", body)
@@ -233,9 +225,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-toggle-group-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-toggle-group-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -55,6 +55,7 @@ so the default authoring story lives in ecosystem crates.
   - Typed UI → app routing (dynamic per-item actions): `fret-kit::mvu::MessageRouter<M>`
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+- Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`
   - Persistence (sqlite/sqlx): `docs/integrating-sqlite-and-sqlx.md`

@@ -107,6 +107,17 @@ pub fn apply_collapsible_trigger_controls(
     trigger_a11y::apply_trigger_controls(trigger, Some(content_element))
 }
 
+/// Stamps Radix-like trigger relationships:
+/// - `expanded` mirrors `aria-expanded`.
+/// - `controls_element` mirrors `aria-controls` (by element id).
+pub fn apply_collapsible_trigger_controls_expanded(
+    trigger: AnyElement,
+    content_element: GlobalElementId,
+    open: bool,
+) -> AnyElement {
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(open), Some(content_element))
+}
+
 /// Read the last cached open height for a collapsible content subtree.
 ///
 /// This is a Radix-aligned outcome for Collapsible/Accordion height animations: Radix measures the
@@ -280,6 +291,32 @@ mod tests {
             let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
                 panic!("expected pressable");
             };
+            assert_eq!(a11y.controls_element, Some(content.0));
+        });
+    }
+
+    #[test]
+    fn apply_collapsible_trigger_controls_expanded_sets_expanded_and_controls() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let content = GlobalElementId(0xbeef);
+            let trigger = apply_collapsible_trigger_controls_expanded(trigger, content, true);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.expanded, Some(true));
             assert_eq!(a11y.controls_element, Some(content.0));
         });
     }

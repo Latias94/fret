@@ -252,14 +252,14 @@ Two viable strategies:
 **A) Put `db_epoch` in the query key (simplest, but creates more cache entries):**
 
 ```rust
-let epoch = cx.watch_model(&db_epoch).paint().copied().unwrap_or(0);
+let epoch = cx.watch_model(&db_epoch).paint().copied_or_default();
 let key = QueryKey::<Vec<TodoRow>>::new("my_app.db.todos.v1", &epoch);
 ```
 
 **B) Keep the key stable and invalidate on epoch change (preferred for hot paths):**
 
 ```rust
-let epoch = cx.watch_model(&db_epoch).paint().copied().unwrap_or(0);
+let epoch = cx.watch_model(&db_epoch).paint().copied_or_default();
 cx.with_state(|| 0u64, |last_epoch| {
     if *last_epoch != epoch {
         *last_epoch = epoch;

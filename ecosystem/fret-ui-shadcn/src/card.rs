@@ -296,7 +296,7 @@ impl CardAction {
 mod tests {
     use super::*;
 
-    use fret_ui::element::{ContainerProps, SemanticsDecoration, SemanticsProps};
+    use fret_ui::element::{ContainerProps, SemanticsProps};
     use fret_ui::elements::GlobalElementId;
 
     #[test]
@@ -306,7 +306,7 @@ mod tests {
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .attach_semantics(SemanticsDecoration::default().test_id(CARD_ACTION_TEST_ID));
+        .test_id(CARD_ACTION_TEST_ID);
 
         assert!(is_card_action_marker(&el));
     }
@@ -332,7 +332,7 @@ mod tests {
             ElementKind::Container(ContainerProps::default()),
             Vec::new(),
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("not-a-card-action"));
+        .test_id("not-a-card-action");
 
         assert!(!is_card_action_marker(&el));
     }

@@ -5,6 +5,14 @@ description: Build beautiful, editor-grade apps with Fret by applying shadcn-sty
 
 # Fret UI/UX guidelines (make it look good)
 
+## When to use
+
+Use this skill when:
+
+- You’re designing a new screen (settings, dashboard, inspector, workspace shell).
+- The UI “works” but feels messy, inconsistent, or visually noisy.
+- You want editor-grade usability: keyboard-first, focus-visible, predictable layering.
+
 This skill is about **app-level UI composition** and **visual hierarchy**. For theme/tokens, use:
 
 - `fret-design-system-styles` (baseline preset + `ThemeConfig` overrides)
@@ -23,7 +31,7 @@ For concrete component/app recipes, use:
 
 If the user has no preference: default to **dark + compact editor** and iterate.
 
-## Golden path (what to do by default)
+## Quick start (golden path)
 
 - Prefer `use fret_ui_shadcn::prelude::*;` for UI code to stay on the shadcn-aligned path.
 - Apply a baseline shadcn preset early (e.g., New York v4) and express “look” via **token overrides**.
@@ -48,6 +56,13 @@ Use the generator to get a `ThemeConfig` patch:
 python scripts/stylegen.py --suggest "dark compact hud editor"
 python scripts/stylegen.py --style editor-compact > theme_overrides.json
 ```
+
+## Workflow
+
+1. Pick the target surface type and density (editor shells usually want compact).
+2. Apply a baseline theme preset + small token overrides (avoid per-component magic numbers).
+3. Compose screens using a small set of repeatable patterns (workspace shell, inspector, toolbars).
+4. Add stable `test_id` to interactive affordances and keep one repro script for any tricky interaction.
 
 ## Visual hierarchy playbook
 
@@ -111,7 +126,7 @@ Use docking only when users need to rearrange panes:
 - Group actions (primary vs secondary) and separate groups with a subtle separator.
 - Prefer icons + tooltips for dense editor controls, but keep at least the primary actions labeled somewhere.
 
-## Anti-patterns (what makes UIs look amateur)
+## Common pitfalls
 
 - Many different radii/shadow styles across screens.
 - 7+ different padding values on one page.
@@ -119,9 +134,14 @@ Use docking only when users need to rearrange panes:
 - Relying on hover-only UI for essential actions.
 - Inconsistent focus ring thickness/offset across controls.
 
-## References (Fret)
+## Evidence anchors
 
 - Theme/tokens: `fret-design-system-styles`
 - Layout/styling primitives: `fret-layout-and-style`
 - Overlays/focus: `fret-overlays-and-focus`
 - Recipes + parity: `fret-shadcn-app-recipes`, `fret-shadcn-source-alignment`
+
+## Related skills
+
+- `fret-design-system-styles` (pick a baseline + generate `ThemeConfig` patches)
+- `fret-shadcn-app-recipes` (concrete component composition patterns)

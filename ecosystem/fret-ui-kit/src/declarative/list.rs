@@ -218,7 +218,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let selected = match &selection {
-        Some(m) => cx.watch_model(m).copied().unwrap_or(None),
+        Some(m) => cx.watch_model(m).copied_or(None),
         None => None,
     };
 
@@ -367,7 +367,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     let selected = match &selection {
-        Some(m) => cx.watch_model(m).copied().unwrap_or(None),
+        Some(m) => cx.watch_model(m).copied_or(None),
         None => None,
     };
 
@@ -513,7 +513,7 @@ pub fn list_from_strings<H: UiHost + 'static>(
     size: Size,
     on_select: impl Fn(usize) -> Option<CommandId> + 'static,
 ) -> AnyElement {
-    let values = cx.watch_model(&items).layout().cloned().unwrap_or_default();
+    let values = cx.watch_model(&items).layout().cloned_or_default();
     let values = Arc::new(values);
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());

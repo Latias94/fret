@@ -213,12 +213,10 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-drawer-demo-content"),
-                    )
+                    .test_id("ui-gallery-drawer-demo-content")
                 },
             )
-            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-demo"));
+            .test_id("ui-gallery-drawer-demo");
 
         section_card(cx, "Demo", drawer)
     };
@@ -369,7 +367,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .w_full()
         .items_center()
         .into_element(cx)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-sides"));
+        .test_id("ui-gallery-drawer-sides");
 
         section_card(cx, "Sides", buttons)
     };
@@ -507,14 +505,12 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                             .into_element(cx),
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-drawer-rtl-content"),
-                        )
+                        .test_id("ui-gallery-drawer-rtl-content")
                     },
                 )
             },
         )
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-rtl"));
+        .test_id("ui-gallery-drawer-rtl");
 
         section_card(cx, "RTL", drawer)
     };
@@ -541,8 +537,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             ]
         },
     );
-    let component_panel = shell(cx, component_stack)
-        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-drawer-component"));
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-drawer-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -10,6 +10,8 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
+# MSRV policy: keep this aligned with the minimum Rust version required
+# by the core GPU stack (currently wgpu 28).
 rust-version = "1.92"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 license = "MIT OR Apache-2.0"

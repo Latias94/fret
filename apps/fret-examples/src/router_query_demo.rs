@@ -53,6 +53,8 @@ pub fn run() -> anyhow::Result<()> {
     })?
     .with_main_window("router_query_demo", (680.0, 420.0))
     .init_app(|app| {
+        fret_router_ui::register_router_commands(app.commands_mut());
+        fret_app::install_command_default_keybindings_into_keymap(app);
         shadcn::shadcn_themes::apply_shadcn_new_york_v4(
             app,
             shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -178,19 +180,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     let nav_state = cx
         .watch_model(nav_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
     let page_state = cx
         .watch_model(page_handle.model())
         .layout()
-        .cloned()
-        .unwrap_or_else(QueryState::<PageData>::default);
+        .cloned_or_else(QueryState::<PageData>::default);
 
     let prefetch_log = cx
         .watch_model(&st.prefetch_log)
         .layout()
-        .cloned()
-        .unwrap_or_default();
+        .cloned_or_default();
 
     let status_badge = |cx: &mut ElementContext<'_, App>, status: QueryStatus| {
         let label = match status {
@@ -382,9 +381,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                         "hover intents: <nonempty>",
                     )
                 };
-                ui::raw_text(cx, label)
-                    .into_element(cx)
-                    .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+                ui::raw_text(cx, label).into_element(cx).test_id(test_id)
             },
             RouterOutlet::new(snapshot_model.clone())
                 .test_id("router-query-demo-outlet-status")
@@ -523,7 +520,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
     .h_full()
     .into_element(cx);
 
-    vec![page].into()
+    page.into()
 }
 
 fn on_command(
@@ -534,6 +531,11 @@ fn on_command(
     st: &mut RouterQueryDemoState,
     cmd: &CommandId,
 ) {
+    if let Ok(true) = st.router.handle_router_command(app, cmd) {
+        app.request_redraw(window);
+        return;
+    }
+
     let Some(msg) = st.msg_router.try_take(cmd) else {
         return;
     };

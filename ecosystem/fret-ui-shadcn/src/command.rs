@@ -41,6 +41,8 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use crate::layout as shadcn_layout;
 use crate::{Dialog, DialogContent, ScrollArea};
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CommandCatalogOptions {
     /// When `true`, commands that fail their `when` gating are excluded from the palette instead of
@@ -64,6 +66,8 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
+        router_can_back: false,
+        router_can_forward: false,
         dispatch_phase: InputDispatchPhase::Bubble,
     }
 }
@@ -2319,6 +2323,8 @@ pub struct CommandDialog {
     wrap: bool,
     close_on_select: bool,
     empty_text: Arc<str>,
+    on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
 }
 
 impl std::fmt::Debug for CommandDialog {
@@ -2332,6 +2338,11 @@ impl std::fmt::Debug for CommandDialog {
             .field("wrap", &self.wrap)
             .field("close_on_select", &self.close_on_select)
             .field("empty_text", &self.empty_text.as_ref())
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_change_complete",
+                &self.on_open_change_complete.is_some(),
+            )
             .finish()
     }
 }
@@ -2351,6 +2362,8 @@ impl CommandDialog {
             wrap: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -2387,6 +2400,8 @@ impl CommandDialog {
             wrap: true,
             close_on_select: true,
             empty_text: Arc::from("No results."),
+            on_open_change: None,
+            on_open_change_complete: None,
         }
     }
 
@@ -2426,6 +2441,21 @@ impl CommandDialog {
         self
     }
 
+    /// Called when the dialog open state changes (Base UI `onOpenChange`).
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -2441,80 +2471,85 @@ impl CommandDialog {
         let wrap = self.wrap;
         let close_on_select = self.close_on_select;
         let empty_text = self.empty_text;
+        let on_open_change = self.on_open_change;
+        let on_open_change_complete = self.on_open_change_complete;
 
-        Dialog::new(open).into_element(cx, trigger, move |cx| {
-            // shadcn/ui v4: command dialog list is `max-h-[300px]` and is allowed to overflow the
-            // viewport (the web implementation does not clamp it to the viewport height).
-            let list_h = Px(300.0);
+        Dialog::new(open)
+            .on_open_change(on_open_change)
+            .on_open_change_complete(on_open_change_complete)
+            .into_element(cx, trigger, move |cx| {
+                // shadcn/ui v4: command dialog list is `max-h-[300px]` and is allowed to overflow the
+                // viewport (the web implementation does not clamp it to the viewport height).
+                let list_h = Px(300.0);
 
-            let entries = if close_on_select {
-                let close_action: fret_ui::action::OnActivate = Arc::new({
-                    let open_model = open_model.clone();
-                    let query_model = query_model.clone();
-                    move |host, action_cx, _reason| {
-                        let _ = host.models_mut().update(&open_model, |v| *v = false);
-                        let _ = host.models_mut().update(&query_model, |v| v.clear());
-                        host.request_redraw(action_cx.window);
-                    }
-                });
+                let entries = if close_on_select {
+                    let close_action: fret_ui::action::OnActivate = Arc::new({
+                        let open_model = open_model.clone();
+                        let query_model = query_model.clone();
+                        move |host, action_cx, _reason| {
+                            let _ = host.models_mut().update(&open_model, |v| *v = false);
+                            let _ = host.models_mut().update(&query_model, |v| v.clear());
+                            host.request_redraw(action_cx.window);
+                        }
+                    });
 
-                entries
-                    .into_iter()
-                    .map(|entry| match entry {
-                        CommandEntry::Item(mut item) => {
-                            item.on_select = Some(match item.on_select.take() {
-                                Some(prev) => {
-                                    let close_action = close_action.clone();
-                                    Arc::new(move |host, cx, reason| {
-                                        prev(host, cx, reason);
-                                        close_action(host, cx, reason);
+                    entries
+                        .into_iter()
+                        .map(|entry| match entry {
+                            CommandEntry::Item(mut item) => {
+                                item.on_select = Some(match item.on_select.take() {
+                                    Some(prev) => {
+                                        let close_action = close_action.clone();
+                                        Arc::new(move |host, cx, reason| {
+                                            prev(host, cx, reason);
+                                            close_action(host, cx, reason);
+                                        })
+                                    }
+                                    None => close_action.clone(),
+                                });
+                                CommandEntry::Item(item)
+                            }
+                            CommandEntry::Group(mut group) => {
+                                group.items = group
+                                    .items
+                                    .into_iter()
+                                    .map(|mut item| {
+                                        item.on_select = Some(match item.on_select.take() {
+                                            Some(prev) => {
+                                                let close_action = close_action.clone();
+                                                Arc::new(move |host, cx, reason| {
+                                                    prev(host, cx, reason);
+                                                    close_action(host, cx, reason);
+                                                })
+                                            }
+                                            None => close_action.clone(),
+                                        });
+                                        item
                                     })
-                                }
-                                None => close_action.clone(),
-                            });
-                            CommandEntry::Item(item)
-                        }
-                        CommandEntry::Group(mut group) => {
-                            group.items = group
-                                .items
-                                .into_iter()
-                                .map(|mut item| {
-                                    item.on_select = Some(match item.on_select.take() {
-                                        Some(prev) => {
-                                            let close_action = close_action.clone();
-                                            Arc::new(move |host, cx, reason| {
-                                                prev(host, cx, reason);
-                                                close_action(host, cx, reason);
-                                            })
-                                        }
-                                        None => close_action.clone(),
-                                    });
-                                    item
-                                })
-                                .collect();
-                            CommandEntry::Group(group)
-                        }
-                        CommandEntry::Separator(sep) => CommandEntry::Separator(sep),
-                    })
-                    .collect()
-            } else {
-                entries
-            };
+                                    .collect();
+                                CommandEntry::Group(group)
+                            }
+                            CommandEntry::Separator(sep) => CommandEntry::Separator(sep),
+                        })
+                        .collect()
+                } else {
+                    entries
+                };
 
-            let palette = CommandPalette::new(query, Vec::new())
-                .command_dialog_defaults()
-                .entries(entries)
-                .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
-                .disabled(disabled)
-                .wrap(wrap)
-                .empty_text(empty_text)
-                .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
-                .into_element(cx);
+                let palette = CommandPalette::new(query, Vec::new())
+                    .command_dialog_defaults()
+                    .entries(entries)
+                    .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
+                    .disabled(disabled)
+                    .wrap(wrap)
+                    .empty_text(empty_text)
+                    .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
+                    .into_element(cx);
 
-            DialogContent::new(vec![palette])
-                .refine_style(ChromeRefinement::default().p(Space::N0))
-                .into_element(cx)
-        })
+                DialogContent::new(vec![palette])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .into_element(cx)
+            })
     }
 }
 
@@ -2654,6 +2689,20 @@ mod tests {
             assert_eq!(dialog.open, open);
             assert_eq!(dialog.query, query);
         });
+    }
+
+    #[test]
+    fn command_dialog_open_change_builders_set_handlers() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+
+        let dialog = CommandDialog::new(open, query, Vec::new())
+            .on_open_change(Some(Arc::new(|_open| {})))
+            .on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(dialog.on_open_change.is_some());
+        assert!(dialog.on_open_change_complete.is_some());
     }
 
     #[test]

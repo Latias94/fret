@@ -587,6 +587,7 @@ impl OverlayController {
                         trigger,
                         open,
                         present: request.presence.present,
+                        on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
                 );
@@ -769,6 +770,7 @@ impl OverlayController {
     ///
     /// This is the generalized form of `fade_presence*` and is useful for driving multiple
     /// properties (opacity/scale/translation) with a shared open/close timeline.
+    #[track_caller]
     pub fn transition<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -778,6 +780,7 @@ impl OverlayController {
     }
 
     /// Drive a general transition timeline with separate open/close durations.
+    #[track_caller]
     pub fn transition_with_durations<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -796,6 +799,7 @@ impl OverlayController {
     ///
     /// This enables CSS-style easing (e.g. cubic-bezier) while staying deterministic and
     /// renderer-agnostic.
+    #[track_caller]
     pub fn transition_with_durations_and_easing<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -812,6 +816,7 @@ impl OverlayController {
         )
     }
 
+    #[track_caller]
     pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         open: bool,
@@ -863,6 +868,7 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::CommandId;
     use fret_runtime::Effect;
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, PressableProps};
     use std::sync::Arc;
 
@@ -1533,5 +1539,37 @@ mod tests {
         };
         dispatch_keydown_and_apply_commands(&mut ui, &mut app, &mut services, KeyCode::Tab, mods);
         assert_eq!(ui.focus(), Some(modal_b_node));
+    }
+
+    #[test]
+    fn transition_wrapper_keeps_independent_state_per_call_site() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let (a, b) = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(200.0), Px(120.0)),
+            ),
+            "overlay-transition-wrapper-independence",
+            |cx| {
+                let a = OverlayController::transition_with_durations(cx, true, 6, 6);
+                let b = OverlayController::transition_with_durations(cx, false, 6, 6);
+                (a, b)
+            },
+        );
+
+        assert!(a.present);
+        assert!(a.animating);
+        assert!(a.progress > 0.0 && a.progress < 1.0);
+
+        assert!(!b.present);
+        assert!(!b.animating);
+        assert_eq!(b.progress, 0.0);
     }
 }

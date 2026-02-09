@@ -44,6 +44,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Escape dismiss is supported (shared dismissible root).
 - Pass: Overlay click-to-dismiss is **disabled by default** (Radix/shadcn safety behavior).
+- Pass: Open lifecycle callbacks are available via `AlertDialog::on_open_change` and
+  `AlertDialog::on_open_change_complete` (Base UI `onOpenChange` + `onOpenChangeComplete`).
 
 ### Focus behavior (safety defaults)
 
@@ -61,6 +63,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn alert_dialog::tests`
+- Contract test: `alert_dialog_open_change_events_emit_change_and_complete_after_settle`
+- Contract test: `alert_dialog_open_change_events_complete_without_animation`
 - Shadcn Web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_alert_dialog_demo_panel_chrome_matches`).
 - Shadcn Web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`

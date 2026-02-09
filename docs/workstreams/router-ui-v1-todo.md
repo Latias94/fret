@@ -69,3 +69,6 @@ Status legend:
 - `[x]` Add `fretboard diag` scripts for basic navigation flows:
   - `tools/diag-scripts/router-query-demo-basic-nav.json`
   - `tools/diag-scripts/router-query-demo-back-forward.json`
+- `[x]` Register recommended router commands (optional):
+  - `router.back`
+  - `router.forward`

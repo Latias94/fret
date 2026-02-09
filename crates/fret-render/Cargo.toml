@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
+description = "Public rendering facade for Fret, re-exporting render contracts and integrations."
 
 [dependencies]
-fret-render-wgpu = { path = "../fret-render-wgpu" }
+fret-render-wgpu = { version = "0.1.0", path = "../fret-render-wgpu" }
