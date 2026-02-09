@@ -4,8 +4,7 @@
 //! MotionScheme `{FastSpatial, FastEffects}` springs and scales from `0.8 -> 1.0` while fading
 //! from `0.0 -> 1.0`.
 
-use fret_ui::Theme;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
@@ -24,7 +23,6 @@ pub struct OverlayOpenCloseMotion {
 
 pub fn drive_overlay_open_close_motion<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     open: bool,
     close_grace_frames: Option<u64>,
 ) -> OverlayOpenCloseMotion {
@@ -48,8 +46,13 @@ pub fn drive_overlay_open_close_motion<H: UiHost>(
         OVERLAY_CLOSED_ALPHA
     };
 
-    let scale_spec = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial);
-    let alpha_spec = sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects);
+    let (scale_spec, alpha_spec) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastSpatial),
+            sys_spring_in_scope(&*cx, theme, MotionSchemeKey::FastEffects),
+        )
+    };
 
     // Compose's `spring()` for Float uses a visibility threshold that is notably larger than
     // 1e-3. Keep overlay mount/unmount decisions stable by snapping close-to-target values.

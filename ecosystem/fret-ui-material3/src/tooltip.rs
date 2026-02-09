@@ -422,7 +422,7 @@ fn tooltip_policy_root<H: UiHost>(
         });
 
         let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
-        let motion = drive_overlay_open_close_motion(cx, &theme, update.open, close_grace_frames);
+        let motion = drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
 
         let overlay_presence = OverlayPresence {
             present: motion.present,
@@ -961,7 +961,7 @@ impl PlainTooltip {
 
             let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
             let motion =
-                drive_overlay_open_close_motion(cx, &theme, update.open, close_grace_frames);
+                drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
 
             let overlay_presence = OverlayPresence {
                 present: motion.present,
