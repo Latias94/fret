@@ -51,7 +51,9 @@ Landed perf gates (in-tree):
 
 - `tools/diag-scripts/extras-marquee-steady.json`
 - `tools/perf/diag_extras_marquee_gate.sh`
+- `tools/perf/diag_extras_marquee_gate.ps1`
 - `docs/workstreams/perf-baselines/policies/extras-marquee-steady.v1.json`
+- `docs/workstreams/perf-baselines/extras-marquee-steady.windows-rtx4090.v1.json`
 
 ## Candidate components (staged)
 
