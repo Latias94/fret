@@ -10,6 +10,24 @@ If you are new to the project, still start from `docs/README.md`.
 - `docs/archive/backlog/ui-kit-gap.md`
 - Review-driven TODOs (not necessarily user-facing limitations yet): `docs/todo-tracker.md`
 
+### Container-query-driven responsive variants (temporary approximation)
+
+Current behavior:
+
+- Some shadcn-aligned "responsive" variants that are container-query-driven upstream are currently
+  approximated using **viewport-width breakpoints** in Fret component code.
+
+Impact:
+
+- In docking/panel-heavy layouts, responsive behavior can drift because panel width is not the same
+  as window width.
+
+Plan:
+
+- Track and migrate these recipes to the container query mechanism defined in ADR 1170:
+  - ADR: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+  - Workstream: `docs/workstreams/container-queries-v1.md`
+
 ## Common Diagnostics
 
 ### `WARN fret_ui::elements: unkeyed element list order changed`

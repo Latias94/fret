@@ -18,6 +18,16 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/workspace-crate-boundaries-v1.md`
   - `docs/workstreams/workspace-crate-boundaries-v1-todo.md`
 
+## P0 - Adaptive layout (container queries)
+
+- Lock and implement frame-lagged container queries so responsive recipes adapt to **panel width**
+  (docking/editor reality), not only viewport width.
+  - ADR: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
+  - Workstream:
+    - `docs/workstreams/container-queries-v1.md`
+    - `docs/workstreams/container-queries-v1-todo.md`
+    - `docs/workstreams/container-queries-v1-milestones.md`
+
 ## P1 - Authoring surfaces (imui convergence)
 
 - Track the fearless v2 consolidation of immediate-style authoring in:

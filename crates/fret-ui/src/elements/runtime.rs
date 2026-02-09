@@ -16,6 +16,7 @@ use crate::element::AnyElement;
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
+use super::hash::stable_hash;
 
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone)]
@@ -160,6 +161,12 @@ pub struct WindowElementState {
     pub(super) observed_models_next: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
+    pub(super) observed_layout_queries_rendered:
+        HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
+    pub(super) observed_layout_queries_next:
+        HashMap<GlobalElementId, Vec<(GlobalElementId, Invalidation)>>,
+    layout_query_region_revisions: HashMap<GlobalElementId, u64>,
+    layout_query_regions_changed_this_frame: HashSet<GlobalElementId>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
     scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
@@ -212,6 +219,9 @@ pub struct NodeEntryRootOverwrite {
     pub line: u32,
     pub column: u32,
 }
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct LayoutQueryRegionMarker;
 
 impl WindowElementState {
     pub(crate) fn element_children_vec_pool_reuses(&self) -> u32 {
@@ -353,6 +363,12 @@ impl WindowElementState {
             &mut self.observed_globals_next,
         );
         self.observed_globals_next.clear();
+        std::mem::swap(
+            &mut self.observed_layout_queries_rendered,
+            &mut self.observed_layout_queries_next,
+        );
+        self.observed_layout_queries_next.clear();
+        self.layout_query_regions_changed_this_frame.clear();
 
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
         // caching:
@@ -445,6 +461,48 @@ impl WindowElementState {
     pub(crate) fn has_state<S: Any>(&self, element: GlobalElementId) -> bool {
         let key = (element, TypeId::of::<S>());
         self.state_any_ref(&key).is_some()
+    }
+
+    pub(crate) fn layout_query_region_revision(&self, element: GlobalElementId) -> u64 {
+        self.layout_query_region_revisions
+            .get(&element)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    pub(crate) fn layout_query_deps_fingerprint_rendered(&self, root: GlobalElementId) -> u64 {
+        self.layout_query_deps_fingerprint_from_list(
+            self.observed_layout_queries_rendered.get(&root),
+        )
+    }
+
+    pub(crate) fn layout_query_deps_fingerprint_next(&self, root: GlobalElementId) -> u64 {
+        self.layout_query_deps_fingerprint_from_list(self.observed_layout_queries_next.get(&root))
+    }
+
+    fn layout_query_deps_fingerprint_from_list(
+        &self,
+        deps: Option<&Vec<(GlobalElementId, Invalidation)>>,
+    ) -> u64 {
+        let Some(deps) = deps else {
+            return 0;
+        };
+        if deps.is_empty() {
+            return 0;
+        }
+
+        let mut entries: Vec<(u64, u64, u8)> = deps
+            .iter()
+            .map(|(region, inv)| {
+                (
+                    region.0,
+                    self.layout_query_region_revision(*region),
+                    *inv as u8,
+                )
+            })
+            .collect();
+        entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.2.cmp(&b.2)));
+        stable_hash(&entries)
     }
 
     pub(super) fn take_state_box(
@@ -596,6 +654,20 @@ impl WindowElementState {
             return;
         };
         self.observed_globals_next.insert(element, list.clone());
+    }
+
+    pub(crate) fn touch_observed_layout_queries_for_element_if_recorded(
+        &mut self,
+        element: GlobalElementId,
+    ) {
+        if self.observed_layout_queries_next.contains_key(&element) {
+            return;
+        }
+        let Some(list) = self.observed_layout_queries_rendered.get(&element) else {
+            return;
+        };
+        self.observed_layout_queries_next
+            .insert(element, list.clone());
     }
 
     pub(crate) fn mark_view_cache_reuse_root(&mut self, root: GlobalElementId) {
@@ -910,6 +982,35 @@ impl WindowElementState {
 
     pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
         self.cur_bounds.insert(element, bounds);
+
+        if !self.has_state::<LayoutQueryRegionMarker>(element) {
+            return;
+        }
+        if self
+            .layout_query_regions_changed_this_frame
+            .contains(&element)
+        {
+            return;
+        }
+
+        // Container queries are primarily sensitive to container size. Ignore origin changes to
+        // avoid rebuild storms when regions move due to reflow or scrolling.
+        const EPS_PX: f32 = 0.5;
+        let changed = match self.prev_bounds.get(&element).copied() {
+            None => true,
+            Some(prev) => {
+                (prev.size.width.0 - bounds.size.width.0).abs() > EPS_PX
+                    || (prev.size.height.0 - bounds.size.height.0).abs() > EPS_PX
+            }
+        };
+
+        if changed {
+            self.layout_query_region_revisions
+                .entry(element)
+                .and_modify(|v| *v = v.saturating_add(1))
+                .or_insert(1);
+            self.layout_query_regions_changed_this_frame.insert(element);
+        }
     }
 
     pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {

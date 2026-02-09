@@ -22,17 +22,19 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps,
-    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
-    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
-    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
-    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
+    GridProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutQueryRegionProps,
+    LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
+    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
+    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions, VirtualListProps,
+    VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
+use super::runtime::LayoutQueryRegionMarker;
 use super::{ContinuousFrames, ElementRuntime, GlobalElementId, WindowElementState, global_root};
 
 pub struct ElementContext<'a, H: UiHost> {
@@ -466,6 +468,38 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         list.push((global, invalidation));
     }
 
+    pub fn observe_layout_query_region(
+        &mut self,
+        region: GlobalElementId,
+        invalidation: Invalidation,
+    ) {
+        let id = self
+            .window_state
+            .current_view_cache_root()
+            .unwrap_or_else(|| self.root_id());
+        let list = self
+            .window_state
+            .observed_layout_queries_next
+            .entry(id)
+            .or_default();
+        if list
+            .iter()
+            .any(|(r, inv)| *r == region && *inv == invalidation)
+        {
+            return;
+        }
+        list.push((region, invalidation));
+    }
+
+    pub fn layout_query_bounds(
+        &mut self,
+        region: GlobalElementId,
+        invalidation: Invalidation,
+    ) -> Option<Rect> {
+        self.observe_layout_query_region(region, invalidation);
+        self.last_bounds_for_element(region)
+    }
+
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
@@ -710,7 +744,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .global::<WindowMetricsService>()
                 .and_then(|svc| svc.scale_factor(cx.window))
                 .unwrap_or(1.0);
-            let key = stable_hash(&(theme_revision, scale_factor.to_bits(), props.cache_key));
+
+            let rendered_query_fingerprint =
+                cx.window_state.layout_query_deps_fingerprint_rendered(id);
+            let base_key = (theme_revision, scale_factor.to_bits(), props.cache_key);
+            let key = stable_hash(&(base_key, rendered_query_fingerprint));
 
             let key_matches = if should_reuse {
                 let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
@@ -731,17 +769,52 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .touch_observed_models_for_element_if_recorded(id);
                 cx.window_state
                     .touch_observed_globals_for_element_if_recorded(id);
+                cx.window_state
+                    .touch_observed_layout_queries_for_element_if_recorded(id);
                 Vec::new()
             } else {
-                cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
                 let built = f(cx);
                 let children = cx.collect_children(built);
                 cx.window_state.end_view_cache_scope(id);
+
+                let next_query_fingerprint = cx.window_state.layout_query_deps_fingerprint_next(id);
+                let key = stable_hash(&(base_key, next_query_fingerprint));
+                cx.window_state.set_view_cache_key(id, key);
                 children
             };
             cx.new_any_element(id, ElementKind::ViewCache(props), children)
         })
+    }
+
+    #[track_caller]
+    pub fn layout_query_region_with_id<I>(
+        &mut self,
+        props: LayoutQueryRegionProps,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.with_state_for(id, LayoutQueryRegionMarker::default, |_marker| ());
+            let built = f(cx, id);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::LayoutQueryRegion(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn layout_query_region<I>(
+        &mut self,
+        props: LayoutQueryRegionProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.layout_query_region_with_id(props, |cx, _id| f(cx))
     }
 
     #[track_caller]

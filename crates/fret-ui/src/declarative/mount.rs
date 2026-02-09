@@ -1298,6 +1298,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::SemanticFlex(p) => ElementInstance::SemanticFlex(p),
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
+        ElementKind::LayoutQueryRegion(p) => ElementInstance::LayoutQueryRegion(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
