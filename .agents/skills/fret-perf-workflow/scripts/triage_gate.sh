@@ -92,16 +92,16 @@ for attempt_dir in $attempt_dirs; do
   for script in $scripts; do
     script_name="$(basename "$script")"
     worst_bundle="$(
-      jq -r --arg script_name "$script_name" '
+      jq -r --arg script_suffix "$script" '
         .rows[]
-        | select(.script | endswith($script_name))
+        | select(.script | endswith($script_suffix))
         | (.runs | max_by(.top_total_time_us) | .bundle)
       ' <<<"$payload" 2>/dev/null || true
     )"
     worst_total="$(
-      jq -r --arg script_name "$script_name" '
+      jq -r --arg script_suffix "$script" '
         .rows[]
-        | select(.script | endswith($script_name))
+        | select(.script | endswith($script_suffix))
         | (.runs | max_by(.top_total_time_us) | .top_total_time_us)
       ' <<<"$payload" 2>/dev/null || true
     )"
@@ -113,4 +113,3 @@ for attempt_dir in $attempt_dirs; do
   done
   echo
 done
-

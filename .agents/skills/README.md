@@ -33,6 +33,20 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - Skills point to **public upstream docs and source URLs** by default.
 - Some developer checkouts may include optional pinned snapshots under `repo-ref/` for quick local diffs; this folder is not necessarily present on GitHub checkouts of this repo.
 
+## Validate skills (agentskills spec)
+
+This repo vendors the Agent Skills reference implementation under `repo-ref/agentskills/skills-ref`.
+
+Example (macOS/Linux, using `uv`):
+
+```bash
+cd repo-ref/agentskills/skills-ref
+uv sync
+source .venv/bin/activate
+skills-ref validate ../../../.agents/skills/fret-diag-workflow
+skills-ref validate ../../../.agents/skills/fret-perf-workflow
+```
+
 ## Skill map (what to use when)
 
 - Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`

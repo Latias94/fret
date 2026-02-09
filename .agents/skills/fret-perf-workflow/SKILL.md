@@ -105,6 +105,10 @@ This reports:
 - which script/metric exceeded thresholds, and
 - the worst bundle for each failing script (by `top_total_time_us`).
 
+Note:
+- `diag perf --json` still prints the JSON payload even when perf thresholds fail (the process exits non-zero, but
+  stdout contains the payload), so the helper can resolve worst bundles for failing attempts.
+
 1. Identify the failing script/metric.
    - `<out-dir>/check.perf_thresholds.json`
    - For gate scripts: `<out-dir>/attempt-N/check.perf_thresholds.json`
