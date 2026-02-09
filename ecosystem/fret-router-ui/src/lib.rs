@@ -22,18 +22,8 @@ use fret_runtime::{
 };
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::AnyElement;
-use fret_ui::element::{PressableProps, SemanticsDecoration};
+use fret_ui::element::PressableProps;
 use fret_ui::{ElementContext, Invalidation};
-
-trait AnyElementTestIdExt {
-    fn test_id(self, test_id: impl Into<Arc<str>>) -> AnyElement;
-}
-
-impl AnyElementTestIdExt for AnyElement {
-    fn test_id(self, test_id: impl Into<Arc<str>>) -> AnyElement {
-        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct RouterUiSnapshot<R> {

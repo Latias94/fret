@@ -2421,7 +2421,7 @@ impl SidebarMenuBadge {
 
         let mut badge = shadcn_layout::container_hstack_centered(cx, props, Space::N0, vec![text]);
         if let Some(test_id) = self.test_id {
-            badge = badge.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+            badge = badge.test_id(test_id);
         }
         badge
     }
@@ -2531,7 +2531,7 @@ impl SidebarMenuSkeleton {
 
         let mut node = shadcn_layout::container_hstack_centered(cx, props, Space::N2, out);
         if let Some(test_id) = self.test_id {
-            node = node.attach_semantics(SemanticsDecoration::default().test_id(test_id));
+            node = node.test_id(test_id);
         }
         node
     }

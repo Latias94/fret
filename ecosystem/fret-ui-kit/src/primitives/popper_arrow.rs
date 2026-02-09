@@ -18,7 +18,6 @@ use fret_ui::overlay_placement::{AnchoredPanelLayout, Side};
 use fret_ui::{ElementContext, UiHost};
 use std::sync::Arc;
 
-use crate::declarative::AnyElementSemanticsExt as _;
 use crate::primitives::popper;
 
 #[derive(Debug, Clone, Copy)]
