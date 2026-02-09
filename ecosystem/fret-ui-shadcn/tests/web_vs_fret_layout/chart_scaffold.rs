@@ -1,3 +1,6 @@
+use super::chart::{
+    web_find_chart_container, web_find_chart_curve, web_find_chart_grid, web_find_chart_x_axis,
+};
 use super::*;
 
 #[derive(Debug, Clone, Deserialize)]
