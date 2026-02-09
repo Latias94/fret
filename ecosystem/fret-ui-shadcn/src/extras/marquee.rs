@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Point, Px, SemanticsRole, Transform2D};
-use fret_ui::element::{AnyElement, VisualTransformProps};
+use fret_ui::element::{AnyElement, HoverRegionProps, VisualTransformProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::stack;
@@ -24,6 +24,10 @@ pub struct Marquee {
     direction: MarqueeDirection,
     /// Scroll speed in pixels per frame (`0` disables animation).
     speed_px_per_frame: Px,
+    /// Pause continuous motion while hovered.
+    ///
+    /// This is `false` by default to keep Marquee purely frame-driven unless explicitly enabled.
+    pause_on_hover: bool,
     /// Optional cycle width for wrapping (one full track width, not including `track_gap`).
     ///
     /// Notes:
@@ -53,6 +57,7 @@ impl Marquee {
             items: items.into_iter().map(Into::into).collect(),
             direction: MarqueeDirection::default(),
             speed_px_per_frame: Px(0.5),
+            pause_on_hover: false,
             cycle_width_px: None,
             track_gap: Space::N4,
             item_gap: Space::N2,
@@ -71,6 +76,11 @@ impl Marquee {
     /// Scroll speed in pixels per frame (`0` disables animation).
     pub fn speed_px_per_frame(mut self, speed: Px) -> Self {
         self.speed_px_per_frame = speed;
+        self
+    }
+
+    pub fn pause_on_hover(mut self, pause: bool) -> Self {
+        self.pause_on_hover = pause;
         self
     }
 
@@ -115,12 +125,16 @@ impl Marquee {
             let theme = Theme::global(&*cx.app).clone();
 
             let speed = self.speed_px_per_frame;
-            let animating = speed.0.abs() > 0.0;
-            scheduling::set_continuous_frames(cx, animating);
+            let pause_on_hover = self.pause_on_hover;
+            let marquee_id = cx.root_id();
 
             let items = self.items;
             let item_gap = self.item_gap;
             let track_gap = self.track_gap;
+            let direction = self.direction;
+            let cycle_width_px = self.cycle_width_px;
+            let chrome = self.chrome;
+            let layout = self.layout;
 
             let track0 = cx.named("track0", |cx| build_track(cx, &items, item_gap));
 
@@ -135,56 +149,104 @@ impl Marquee {
                 |_cx| vec![track0, track1],
             );
 
-            let translate_x = if animating {
-                let raw = cx.app.frame_id().0 as f32 * speed.0;
-                let base = self.cycle_width_px.unwrap_or_else(|| cx.bounds.size.width);
-                let gap_px = MetricRef::space(track_gap).resolve(&theme);
-                let cycle = base.0.max(0.0) + gap_px.0.max(0.0);
-                if cycle > 0.0 {
-                    raw.rem_euclid(cycle)
-                } else {
-                    raw
-                }
-            } else {
-                0.0
-            };
+            let test_id = self
+                .test_id
+                .unwrap_or_else(|| Arc::<str>::from("shadcn-extras.marquee"));
+            let a11y_label = self
+                .a11y_label
+                .unwrap_or_else(|| Arc::<str>::from("Marquee"));
 
-            let translate_x = match self.direction {
-                MarqueeDirection::Left => -translate_x,
-                MarqueeDirection::Right => translate_x,
+            #[derive(Default)]
+            struct MarqueePhaseState {
+                phase_px: f32,
+                last_frame: u64,
+            }
+
+            let theme_for_inner = theme.clone();
+            let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
+                let animating = speed.0.abs() > 0.0 && !paused;
+                scheduling::set_continuous_frames(cx, animating);
+
+                let frame = cx.app.frame_id().0;
+                let phase = cx.with_state_for(marquee_id, MarqueePhaseState::default, |st| {
+                    if st.last_frame == 0 {
+                        // Align with the previous `frame_id * speed` behavior by counting the
+                        // first observed frame as a single tick.
+                        st.last_frame = frame.saturating_sub(1);
+                    }
+                    let delta = frame.saturating_sub(st.last_frame);
+                    st.last_frame = frame;
+
+                    if speed.0.abs() <= 0.0 {
+                        st.phase_px = 0.0;
+                        return st.phase_px;
+                    }
+
+                    if paused {
+                        return st.phase_px;
+                    }
+
+                    st.phase_px += (delta as f32) * speed.0;
+                    st.phase_px
+                });
+
+                let translate_x = if speed.0.abs() > 0.0 {
+                    let base = cycle_width_px.unwrap_or_else(|| cx.bounds.size.width);
+                    let gap_px = MetricRef::space(track_gap).resolve(&theme_for_inner);
+                    let cycle = base.0.max(0.0) + gap_px.0.max(0.0);
+                    if cycle > 0.0 {
+                        phase.rem_euclid(cycle)
+                    } else {
+                        phase
+                    }
+                } else {
+                    0.0
+                };
+
+                let translate_x = match direction {
+                    MarqueeDirection::Left => -translate_x,
+                    MarqueeDirection::Right => translate_x,
+                };
+
+                let transform = Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
+                let inner_layout =
+                    decl_style::layout_style(&theme_for_inner, LayoutRefinement::default());
+                cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: inner_layout,
+                        transform,
+                    },
+                    move |_cx| vec![track_row],
+                )
             };
 
             let mut props = decl_style::container_props(
                 &theme,
-                ChromeRefinement::default().merge(self.chrome),
+                ChromeRefinement::default().merge(chrome),
                 LayoutRefinement::default()
                     .w_full()
                     .overflow_hidden()
-                    .merge(self.layout),
+                    .merge(layout),
             );
             props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-            let transform = Transform2D::translation(Point::new(Px(translate_x), Px(0.0)));
-            let layout = decl_style::layout_style(&theme, LayoutRefinement::default());
-            let inner = cx
-                .visual_transform_props(VisualTransformProps { layout, transform }, move |_cx| {
-                    vec![track_row]
-                });
+            let root = cx.container(props, move |cx| {
+                let inner = if pause_on_hover {
+                    cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+                        vec![build_inner(cx, hovered)]
+                    })
+                } else {
+                    build_inner(cx, false)
+                };
 
-            let root = cx.container(props, move |_cx| vec![inner]);
+                vec![inner]
+            });
 
-            let test_id = self
-                .test_id
-                .unwrap_or_else(|| Arc::<str>::from("shadcn-extras.marquee"));
             let root = attach_test_id(root, test_id);
-
             root.attach_semantics(
                 fret_ui::element::SemanticsDecoration::default()
                     .role(SemanticsRole::Group)
-                    .label(
-                        self.a11y_label
-                            .unwrap_or_else(|| Arc::<str>::from("Marquee")),
-                    ),
+                    .label(a11y_label),
             )
         })
     }
