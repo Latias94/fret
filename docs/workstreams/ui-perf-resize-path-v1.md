@@ -34,6 +34,12 @@ changing.
 Reference:
 - `crates/fret-launch/src/runner/desktop/app_handler.rs` (`pending_surface_resize` applied on `RedrawRequested`)
 
+Note:
+- Today we coalesce *surface reconfigure* and *bounds used for layout* to once-per-frame, but we still deliver a
+  `WindowResized` event each time we apply the pending resize. Unlike GPUI’s `set_frame_size` guard (`old_size == new_size`),
+  we do not currently keep an explicit “last delivered (quantized) logical size” to drop no-op resize deliveries.
+  - This is likely a small win, but it also reduces “float noise” churn for higher-level code that reads window metrics.
+
 ### 2) Layout engine solves are multi-root (window root + viewport roots)
 
 In steady resize probes we observe:
@@ -135,6 +141,7 @@ On macOS (Cocoa / layer-backed view):
   - `setLayerContentsRedrawPolicy: NSViewLayerContentsRedrawDuringViewResize`
 - Size changes flow through `set_frame_size`:
   - updates the renderer drawable size, then calls the registered `resize_callback`.
+  - importantly: it early-returns when the new size matches the old size.
 - Actual redraw work is still driven by the frame pump:
   - `display_layer` calls `request_frame_callback` (and GPUI also has a display link `step` path).
 

@@ -44,6 +44,10 @@ Conventions:
   - [ ] Explain why `top_layout_engine_solves` is typically > 1 in resize probes, and decide which roots should be
     solved separately vs batched.
     - Background: `docs/workstreams/ui-perf-resize-path-v1.md`
+  - [ ] Runner no-op resize drop (GPUI parity): track last delivered quantized logical size and skip delivering
+    `Event::WindowResized` when unchanged.
+    - Rationale: reduce float-noise churn in window-metrics consumers; align with GPUI `set_frame_size` early-return.
+    - Reference: `docs/workstreams/ui-perf-resize-path-v1.md` (runner coalescing + GPUI note).
   - [x] Harden the `ui-resize-probes` gate against rare tail outliers by running multiple attempts and requiring a
     strict majority pass (keeps the gate strict, but reduces single-run flake).
     - Gate runner: `tools/perf/diag_resize_probes_gate.sh --attempts 3`
