@@ -367,6 +367,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `crates/fret-ui/src/scroll/mod.rs`
     - `crates/fret-ui/src/virtual_list/mod.rs`
 
+- [x] BU-FR-ui-028 Reduce “god test file” risk in `crates/fret-ui` declarative layout tests by splitting `layout.rs` into submodules.
+  - Target: `crates/fret-ui/src/declarative/tests/layout.rs`
+  - Gate: `cargo nextest run -p fret-ui`
+  - Evidence:
+    - `crates/fret-ui/src/declarative/tests/layout.rs`
+    - `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`
+    - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+
 ## M3 — Renderer closure
 
 - [x] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
