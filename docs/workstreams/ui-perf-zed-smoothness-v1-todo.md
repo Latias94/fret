@@ -100,12 +100,13 @@ Conventions:
 - [ ] **P0.6 Declarative “setter idempotency” contract**: eliminate per-frame cache reset footguns.
   - Motivation: declarative element trees will call `handle.set_*` during render; setters must be no-ops when values are unchanged.
   - Evidence: editor resize drag fix (commit `1778ba563`) was a ~2.6× win by making `set_language` idempotent.
-  - [ ] Audit code-editor `CodeEditorHandle::set_*` methods that can be called from render and clear caches/epochs.
+  - [x] Audit + fix code-editor `CodeEditorHandle::set_*` methods that can be called from render and clear caches/epochs.
     - Gate: `ui-code-editor-resize-probes` must remain PASS.
+    - Evidence: `set_language` idempotent (commit `1778ba563`), `set_line_folds`/`set_line_inlays` idempotent (commit `007006b28`).
   - [ ] Audit other “handle-style” surfaces used from render (markdown editor, docking, viewport tooling) for the same pattern.
     - Deliverable: list of audited setters + commit references in the perf log.
-  - [ ] Add at least one regression test per high-risk surface.
-    - Example: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`).
+  - [x] Add at least one regression test per high-risk surface.
+    - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`).
   - [ ] Add a short guidelines note (or ADR addendum) describing the contract and common pitfalls (cache resets, epoch bumps, `OnceLock` env reads, etc.).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
