@@ -7028,8 +7028,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
             }
         };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -7354,8 +7353,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -7379,17 +7377,17 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(420.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let area_layout = LayoutRefinement::default().w_full().max_w(Px(320.0));
@@ -7533,8 +7531,6 @@ fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     pages::preview_kbd(cx)
 }
 fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -7557,17 +7553,17 @@ fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -7826,8 +7822,6 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -7850,17 +7844,17 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -7956,8 +7950,12 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let badge = {
-        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
-        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+        let (secondary_fg, outline_fg) = cx.with_theme(|theme| {
+            (
+                ColorRef::Color(theme.color_required("secondary-foreground")),
+                ColorRef::Color(theme.color_required("foreground")),
+            )
+        });
 
         let row = stack::hstack(
             cx,
@@ -8222,7 +8220,7 @@ fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let outline_fg = ColorRef::Color(theme.color_required("foreground"));
     let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
 
@@ -8616,7 +8614,7 @@ fn preview_calendar(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::calendar::DateRangeSelection;
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let today = time::OffsetDateTime::now_utc().date();
 
     #[derive(Default, Clone)]
@@ -9450,8 +9448,6 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         rtl_selected: Option<Model<Arc<str>>>,
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -9474,14 +9470,14 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 LayoutRefinement::default().w_full(),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let state = cx.with_state(SidebarModels::default, |st| st.clone());
@@ -10008,7 +10004,6 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use fret_ui::Theme;
     use fret_ui_kit::primitives::direction as direction_prim;
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
@@ -10181,8 +10176,7 @@ fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     });
 
     let invalid = cx.keyed("ui_gallery.radio_group.invalid", |cx| {
-        let theme = Theme::global(&*cx.app).clone();
-        let destructive = theme.color_required("destructive");
+        let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
         let group = shadcn::RadioGroup::uncontrolled(Some("email"))
             .a11y_label("Notification Preferences")
@@ -10715,8 +10709,6 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
         rtl_username: Option<Model<String>>,
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -10739,14 +10731,14 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let state = cx.with_state(SheetModels::default, |st| st.clone());
@@ -11163,18 +11155,20 @@ fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
-    let theme = fret_ui::Theme::global(&*cx.app).clone();
-
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::ButtonVariant,
                label: &'static str| {
-        let theme = theme.clone();
+        let (hover_container, hover_label) = cx.with_theme(|theme| {
+            (
+                theme.color_required("md.sys.color.tertiary-container"),
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            )
+        });
+
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
-                let hover_container = theme.color_required("md.sys.color.tertiary-container");
-                let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
                 let hover_style = material3::ButtonStyle::default()
                     .container_background(WidgetStateProperty::new(None).when(
                         WidgetStates::HOVERED,
@@ -11820,8 +11814,6 @@ fn preview_material3_chip(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let last_action_for_activate = last_action.clone();
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action_for_activate, |v| {
@@ -11829,8 +11821,12 @@ fn preview_material3_chip(
         });
     });
 
-    let hover_container = theme.color_required("md.sys.color.tertiary-container");
-    let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+    let (hover_container, hover_label) = cx.with_theme(|theme| {
+        (
+            theme.color_required("md.sys.color.tertiary-container"),
+            theme.color_required("md.sys.color.on-tertiary-container"),
+        )
+    });
     let accent = fret_core::Color {
         r: 0.9,
         g: 0.2,
@@ -12125,21 +12121,21 @@ fn preview_material3_card(
     use fret_ui::element::{ContainerProps, Length, TextProps};
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action, |v| {
             *v = Arc::<str>::from("material3.card.activated");
         });
     });
 
-    let body_style = theme
-        .text_style_by_key("md.sys.typescale.body-medium")
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-    let body_color = theme.color_required("md.sys.color.on-surface");
-
-    let hover_container = theme.color_required("md.sys.color.tertiary-container");
-    let hover_outline = theme.color_required("md.sys.color.tertiary");
+    let (body_style, body_color, hover_container, hover_outline) = cx.with_theme(|theme| {
+        let body_style = theme
+            .text_style_by_key("md.sys.typescale.body-medium")
+            .unwrap_or_else(|| fret_core::TextStyle::default());
+        let body_color = theme.color_required("md.sys.color.on-surface");
+        let hover_container = theme.color_required("md.sys.color.tertiary-container");
+        let hover_outline = theme.color_required("md.sys.color.tertiary");
+        (body_style, body_color, hover_container, hover_outline)
+    });
 
     let override_style = material3::CardStyle::default()
         .container_background(WidgetStateProperty::new(None).when(
