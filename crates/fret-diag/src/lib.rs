@@ -3558,6 +3558,7 @@ See: `docs/tracy.md`.\n";
                     || ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
+                    || ui_gallery_script_wheel_scroll_hit_changes_test_id(&src).is_some()
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
                 let is_gc_liveness_script =
@@ -3625,13 +3626,16 @@ See: `docs/tracy.md`.\n";
                     let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
                         .then_some("ui-gallery-ai-transcript-row-0")
                         .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_components_gallery_wheel_scroll_hit_changes_test_id =
-                        is_components_gallery_file_tree_suite
-                            .then_some("components-gallery-file-tree-root")
+                    let suite_wheel_scroll_hit_changes_test_id =
+                        ui_gallery_script_wheel_scroll_hit_changes_test_id(&src)
                             .or_else(|| {
-                                (is_components_gallery_table_suite
-                                    || is_components_gallery_table_keep_alive_suite)
-                                    .then_some("components-gallery-table-root")
+                                is_components_gallery_file_tree_suite
+                                    .then_some("components-gallery-file-tree-root")
+                                    .or_else(|| {
+                                        (is_components_gallery_table_suite
+                                            || is_components_gallery_table_keep_alive_suite)
+                                            .then_some("components-gallery-table-root")
+                                    })
                             })
                             .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
                     let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
@@ -3992,7 +3996,7 @@ See: `docs/tracy.md`.\n";
                             .or(suite_wheel_scroll_test_id),
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
-                            .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
+                            .or(suite_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
                         check_chart_sampling_window_shifts_min
                             .or(suite_chart_sampling_window_shifts_min),
@@ -7329,7 +7333,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 43] {
+fn ui_gallery_suite_scripts() -> [&'static str; 44] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -7351,6 +7355,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 43] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-geom-fallback-baseline.json",
         "tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json",
+        "tools/diag-scripts/ui-gallery-code-view-torture-wheel-scroll-hit-changes.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-read-only-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-read-only-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-toggle-stability-baseline.json",
@@ -7537,6 +7542,19 @@ fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static st
             Some("ui-gallery-code-editor-torture-root")
         }
         "ui-gallery-code-view-scroll-refresh-pixels-changed.json" => {
+            Some("ui-gallery-code-view-root")
+        }
+        _ => None,
+    }
+}
+
+fn ui_gallery_script_wheel_scroll_hit_changes_test_id(script: &Path) -> Option<&'static str> {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return None;
+    };
+
+    match name {
+        "ui-gallery-code-view-torture-wheel-scroll-hit-changes.json" => {
             Some("ui-gallery-code-view-root")
         }
         _ => None,
