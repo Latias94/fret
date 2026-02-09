@@ -77,6 +77,9 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, dropdown-menu demo overlay placement):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_demo.rs` (`web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures`)
+  - Evidence (fixture-driven slice, menubar demo overlay placement):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_menubar_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar.rs` (`web_vs_fret_menubar_demo_cases_match_web_fixtures`)
   - Evidence (fixture-driven slice, layout trigger heights):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_trigger_height_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_trigger_heights_match_web_fixtures`)
