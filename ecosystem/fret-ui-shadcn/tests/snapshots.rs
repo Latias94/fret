@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, Corners, Edges, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
     PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-    TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle, Transform2D, UvRect,
+    TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
@@ -502,6 +502,47 @@ fn snapshot_tabs_default() {
             fret_ui_shadcn::Tabs::uncontrolled(Some("alpha"))
                 .items(items)
                 .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_announcement_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(560.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_announcement_default", bounds, |cx| {
+        vec![
+            fret_ui_shadcn::extras::Announcement::new([
+                fret_ui_shadcn::extras::AnnouncementTag::new("New").into_element(cx),
+                fret_ui_shadcn::extras::AnnouncementTitle::new([cx.text("Announcement")])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    });
+}
+
+#[test]
+fn snapshot_extras_banner_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(720.0), Px(180.0)),
+    );
+    snapshot_for_root("extras_banner_default", bounds, |cx| {
+        let icon =
+            fret_ui_kit::declarative::icon::icon(cx, fret_icons::IconId::new_static("lucide.info"));
+        vec![
+            fret_ui_shadcn::extras::Banner::new([
+                fret_ui_shadcn::extras::BannerIcon::new(icon).into_element(cx),
+                fret_ui_shadcn::extras::BannerTitle::new("A new version is available.")
+                    .into_element(cx),
+                fret_ui_shadcn::extras::BannerAction::new("Upgrade").into_element(cx),
+                fret_ui_shadcn::extras::BannerClose::new().into_element(cx),
+            ])
+            .inset(true)
+            .into_element(cx),
         ]
     });
 }
