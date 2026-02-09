@@ -85,6 +85,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs` (`web_vs_fret_select_cases_match_web_fixtures`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select.rs` (keeps procedural “underlay scroll re-anchor” test)
+  - Evidence (fixture-driven slice, overlay chrome select chrome + option states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/select/fixtures.rs` (`web_vs_fret_select_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/select.rs`
   - Evidence (fixture-driven slice, context-menu demo overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu/fixtures.rs` (`web_vs_fret_context_menu_demo_cases_match_web_fixtures`)
@@ -664,3 +668,4 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_radio_group_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_dialog_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_select_cases_v1.json`
