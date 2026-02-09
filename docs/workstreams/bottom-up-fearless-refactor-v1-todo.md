@@ -127,6 +127,14 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_button_group_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/button_group/fixtures.rs` (`web_vs_fret_button_group_cases_match_web_fixtures`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/button_group.rs`
+  - Evidence (fixture-driven slice, mode-toggle menu metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_mode_toggle_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/mode_toggle/fixtures.rs` (`web_vs_fret_mode_toggle_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/mode_toggle.rs`
+  - Evidence (fixture-driven slice, item-dropdown overlay placement + item metrics):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_item_dropdown_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/item_dropdown/fixtures.rs` (`web_vs_fret_item_dropdown_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/item_dropdown.rs`
   - Evidence (fixture-driven slice, misc overlays overlay placement + chrome insets):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs` (`web_vs_fret_misc_overlays_cases_match_web_fixtures`)
@@ -644,6 +652,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_combobox_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_breadcrumb_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_button_group_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_mode_toggle_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_item_dropdown_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_navigation_menu_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_misc_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_calendar_cases_v1.json`
