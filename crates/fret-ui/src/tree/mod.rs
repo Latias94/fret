@@ -3562,7 +3562,9 @@ impl<H: UiHost> UiTree<H> {
             let small_step = self
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
-                    dw.0.abs() <= 16.0 && dh.0.abs() <= 1.0 && (dw.0 != 0.0 || dh.0 != 0.0)
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
                 });
             if !small_step {
                 return width;
@@ -3593,7 +3595,9 @@ impl<H: UiHost> UiTree<H> {
             && self
                 .interactive_resize_last_bounds_delta
                 .is_some_and(|(dw, dh)| {
-                    dw.0.abs() <= 16.0 && dh.0.abs() <= 1.0 && (dw.0 != 0.0 || dh.0 != 0.0)
+                    dw.0.abs() <= f32::from(text_wrap_width_small_step_max_dw_px())
+                        && dh.0.abs() <= 1.0
+                        && (dw.0 != 0.0 || dh.0 != 0.0)
                 })
     }
 
@@ -7562,6 +7566,21 @@ fn text_wrap_width_small_step_bucket_px() -> u8 {
             .and_then(|v| v.parse::<u8>().ok())
             .unwrap_or(32)
             .min(64)
+    })
+}
+
+fn text_wrap_width_small_step_max_dw_px() -> u8 {
+    static MAX_DW: OnceLock<u8> = OnceLock::new();
+    *MAX_DW.get_or_init(|| {
+        // Default: 64px. This defines what “small-step” means for the default interactive-resize
+        // wrap-width bucketing. Increasing this makes the bucketing kick in at higher live-resize
+        // speeds, at the cost of less accurate wrapping while the user is dragging.
+        std::env::var("FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX")
+            .ok()
+            .and_then(|v| v.parse::<u8>().ok())
+            .unwrap_or(64)
+            .max(1)
+            .min(255)
     })
 }
 
