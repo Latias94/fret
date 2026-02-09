@@ -10,12 +10,14 @@ If you are new to the project, still start from `docs/README.md`.
 - `docs/archive/backlog/ui-kit-gap.md`
 - Review-driven TODOs (not necessarily user-facing limitations yet): `docs/todo-tracker.md`
 
-### Container-query-driven responsive variants (temporary approximation)
+### Container-query-driven responsive variants
 
 Current behavior:
 
-- Some shadcn-aligned "responsive" variants that are container-query-driven upstream are currently
-  approximated using **viewport-width breakpoints** in Fret component code.
+- The initial set of shadcn-aligned "responsive" variants that are container-query-driven upstream
+  now use Fret's **container query** mechanism (ADR 1170).
+- Remaining viewport-width breakpoints in recipe code should be treated as **device-level**
+  behavior (e.g. "mobile vs desktop"), not as a substitute for container queries.
 
 Impact:
 
@@ -24,7 +26,7 @@ Impact:
 
 Plan:
 
-- Track and migrate these recipes to the container query mechanism defined in ADR 1170:
+- Keep new responsive additions on the container query path defined in ADR 1170:
   - ADR: `docs/adr/1170-container-queries-and-frame-lagged-layout-queries-v1.md`
   - Workstream: `docs/workstreams/container-queries-v1.md`
 
