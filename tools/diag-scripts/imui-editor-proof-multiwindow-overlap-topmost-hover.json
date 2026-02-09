@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "window": "focused",
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof-dock" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "imui-editor-proof.tab-drag-anchor" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "imui-editor-proof.tab-drag-anchor" },
+      "delta_x": 0.0,
+      "delta_y": 240.0,
+      "steps": 28
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_bundle",
+      "label": "imui-editor-proof-multiwindow-overlap-topmost-hover"
+    }
+  ]
+}
