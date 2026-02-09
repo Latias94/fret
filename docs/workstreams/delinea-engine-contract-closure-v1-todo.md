@@ -43,6 +43,8 @@ Regression gates:
 
 - [x] DEL-ENG1-tests-020 Add a headless regression test for multi-grid: window writes + marks counts are stable.
 - [x] DEL-ENG1-tests-021 Add a retained multi-grid demo with a concrete P0 checklist.
+- [x] DEL-ENG1-contract-004 Define link event contracts for axisPointer/cursor sync (ADR 1172).
+- [x] DEL-ENG1-contract-005 Define link event contracts for domain window sync (ADR 1173).
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 

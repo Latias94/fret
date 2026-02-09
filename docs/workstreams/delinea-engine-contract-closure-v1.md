@@ -23,6 +23,8 @@ The remaining “hard-to-change” gaps are **engine-level contracts**, not UI p
 3. **Incremental data mutation semantics** (append/update boundaries + cache invalidation rules).
 4. **A stable participation/output contract** that downstream consumers can rely on (marks, hit test, axisPointer,
    tooltips, brush export, virtualization).
+5. **Stable linking contracts** for cross-chart coordination (cursor/axisPointer + domain windows), so hosts can build
+   dashboard-grade synchronization without UI-specific hacks (ADRs 1172/1173).
 
 This workstream tracks those closures as a sequence of milestones with explicit “done” gates (tests + demos).
 

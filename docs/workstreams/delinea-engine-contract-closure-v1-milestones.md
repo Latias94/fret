@@ -44,6 +44,11 @@ Acceptance criteria:
 
 Status: In progress (engine + retained adapter landed; global controllers landed; brush+link scaffolds landed; remaining: broader linking semantics beyond brush X exports).
 
+Linking follow-ups (now tracked as contracts-first):
+
+- ADR 1172: axisPointer/cursor link events (crosshair sync).
+- ADR 1173: domain window link events (sync zoom/pan).
+
 ## M2 — Transform lineage contract (derived datasets/columns)
 
 Scope:
