@@ -71,6 +71,10 @@ What to do:
   - `python3 tools/windows/build-fret-demo-bins.py` (recommended).
 - If needed, override via `CARGO_BUILD_JOBS` or increase the system page file.
 
+## Rendering Artifacts (Notes)
+
+- Pixelate backdrop clear-colored holes: [`docs/known-issues/effects_pixelate_holes.md`](known-issues/effects_pixelate_holes.md)
+
 ## Platform Limitations (Current)
 
 ### External OS file drag & drop on macOS (winit)

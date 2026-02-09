@@ -1,6 +1,6 @@
 # UI Diagnostics / Inspector TODO
 
-Status: living (tracked in `feat/diag-inspect-roadmap`)
+Status: living (workstream roadmap)
 
 This file tracks the next iteration of Fret's GPUI/Zed-style inspector workflow:
 

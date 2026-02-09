@@ -28,7 +28,7 @@ Related ADRs:
 
 - ADR 0174: `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR 0033 (Semantics/a11y): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
-- Roadmap/TODO: `targets/ui-diagnostics-inspector-todo.md`
+- Roadmap/TODO: `docs/workstreams/ui-diagnostics-inspector-todo.md`
 
 Implementation pointers (where the code lives today):
 
