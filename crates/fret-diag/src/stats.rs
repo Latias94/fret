@@ -13951,6 +13951,325 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_s
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for baseline (inlays off, caret=2)
+    // 1: waiting for inlays applied (fixture=true, line0_present=true, caret=2)
+    // 2: waiting for caret to move right across the inlay (caret=3)
+    // 3: waiting for caret to move left back to baseline (caret=2)
+    // 4: success
+    let mut state: u8 = 0;
+
+    let mut baseline_rev: u64 = 0;
+    let mut baseline_len: u64 = 0;
+
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let enabled = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !enabled {
+                continue;
+            }
+
+            let wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if wrap_cols.is_some() {
+                continue;
+            }
+
+            let preedit_active = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if preedit_active {
+                continue;
+            }
+
+            let folds_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if folds_fixture {
+                continue;
+            }
+
+            let inlays_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("inlays_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let inlay_present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("inlays"))
+                .and_then(|v| v.get("line0_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let rev = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let anchor = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("anchor"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let collapsed = anchor == caret;
+
+            match state {
+                0 => {
+                    if inlays_fixture || inlay_present || !collapsed || caret != 2 || len != 5 {
+                        // Keep scanning until we observe the baseline caret position with inlays off.
+                    } else {
+                        baseline_rev = rev;
+                        baseline_len = len;
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if rev != baseline_rev || len != baseline_len {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "inlays_applied",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                            },
+                        }));
+                        state = 4;
+                        break;
+                    }
+
+                    if inlays_fixture && inlay_present && collapsed && caret == 2 {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if !(inlays_fixture && inlay_present) {
+                        // Wait until the inlay is applied.
+                    } else if rev != baseline_rev || len != baseline_len {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "move_right",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                            },
+                        }));
+                        state = 4;
+                        break;
+                    } else if collapsed && caret == 3 {
+                        state = 3;
+                    }
+                }
+                3 => {
+                    if !(inlays_fixture && inlay_present) {
+                        // Wait until the inlay is applied.
+                    } else if rev != baseline_rev || len != baseline_len {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "move_left",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                            },
+                        }));
+                        state = 4;
+                        break;
+                    } else if inlays_fixture && inlay_present && collapsed && caret == 2 {
+                        state = 4;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "soft_wrap_cols": wrap_cols,
+                "folds_fixture": folds_fixture,
+                "inlays_fixture": inlays_fixture,
+                "line0_inlay_present": inlay_present,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "selection": { "anchor": anchor, "caret": caret },
+                "state": state,
+            }));
+        }
+        if state == 4 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir
+        .join("check.ui_gallery_markdown_editor_source_inlays_caret_navigation_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_markdown_editor_source_inlays_caret_navigation_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "baseline": {
+            "buffer_revision": baseline_rev,
+            "text_len_bytes": baseline_len,
+            "expected_caret": 2,
+        },
+        "violation": violation,
+        "last_observed": last_observed,
+        "expected_sequence": [
+            { "inlays_fixture": false, "line0_inlay_present": false, "caret": 2 },
+            { "inlays_fixture": true, "line0_inlay_present": true, "caret": 2 },
+            { "inlays_fixture": true, "line0_inlay_present": true, "caret": 3 },
+            { "inlays_fixture": true, "line0_inlay_present": true, "caret": 2 }
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery markdown editor inlays caret-navigation gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if let Some(violation) = violation {
+        return Err(format!(
+            "ui-gallery markdown editor inlays caret-navigation gate failed (buffer mutated)\n  bundle: {}\n  evidence: {}\n  violation: {}",
+            bundle_path.display(),
+            evidence_path.display(),
+            violation
+        ));
+    }
+
+    if state == 4 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery markdown editor inlays caret-navigation gate failed (expected caret to move across the inlay without mutating buffer)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
     bundle_path: &Path,
     warmup_frames: u64,

@@ -284,6 +284,7 @@ Diagnostics gates (baseline set; add more as needed):
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json` (captures A/B/C for toggle-stability)
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json`
 

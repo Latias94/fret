@@ -354,6 +354,10 @@ Markdown Editor v0”).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`.
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds`).
   - Flag: `--check-ui-gallery-markdown-editor-source-folds-clamp-selection-out-of-folds`.
+- [x] Add an inlays caret-navigation regression for the Markdown editor fixture (ADR 0200).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-caret-navigation-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable`).
+  - Flag: `--check-ui-gallery-markdown-editor-source-inlays-caret-navigation-stable`.
 
 ### M10.3 — IME bridge seam validation (native + web)
 
