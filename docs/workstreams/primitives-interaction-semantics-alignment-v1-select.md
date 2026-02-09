@@ -24,10 +24,12 @@ Workstream:
 
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/select.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/select.rs`
+  - Explicit knobs: `SelectMousePolicies`, `SelectMouseUpSelectionGatePolicy`
 
 Scripted repros / bundles (timeline-style):
 
 - `tools/diag-scripts/ui-gallery-shadcn-select-commit.json`
+- `tools/diag-scripts/ui-gallery-select-commit-and-label-update.json`
 - `tools/diag-scripts/ui-gallery-select-wheel-scroll.json`
 - `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json`
 
@@ -79,8 +81,8 @@ Mark each item with one of:
 - [ ] `I` ListboxPolicy: highlight navigation + typeahead + scroll-into-view.
 - [ ] `I` SelectionCommitPolicy: enter/click commit + close-on-commit semantics.
 - [ ] `I` Make anti-misclick knobs explicit (instead of ad-hoc recipe wiring):
-  - [ ] `I` `pointer_up_guard` (Radix default)
-  - [ ] `-` `mouse_up_selection_gate` (optional)
+  - [x] `I` `pointer_up_guard` (Radix default)
+  - [x] `I` `mouse_up_selection_gate` (optional)
   - [ ] `-` `cancel_open_on_mouseup_outside` (optional)
 
 ### Focus
@@ -131,4 +133,3 @@ Mark each item with one of:
 
 - The primitive already contains significant Radix-shaped behavior and tests; the main gap is making
   Base UI style “stronger anti-misclick” behaviors explicit as opt-in policies, not recipe hacks.
-
