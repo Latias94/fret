@@ -1057,39 +1057,61 @@ impl CodeEditor {
 
                                 let prev = prev_stats.get();
                                 prev_stats.set(stats);
-                             let delta = CodeEditorCacheStats {
-                                 row_text_get_calls: stats
-                                     .row_text_get_calls
-                                     .saturating_sub(prev.row_text_get_calls),
-                                 row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
-                                 row_text_misses: stats
-                                     .row_text_misses
-                                     .saturating_sub(prev.row_text_misses),
-                                 row_text_evictions: stats
-                                     .row_text_evictions
-                                     .saturating_sub(prev.row_text_evictions),
-                                 row_text_resets: stats
-                                     .row_text_resets
-                                     .saturating_sub(prev.row_text_resets),
-                                 geom_pointer_hit_test_fallbacks: stats
-                                     .geom_pointer_hit_test_fallbacks
-                                     .saturating_sub(prev.geom_pointer_hit_test_fallbacks),
-                                 geom_caret_rect_fallbacks: stats
-                                     .geom_caret_rect_fallbacks
-                                     .saturating_sub(prev.geom_caret_rect_fallbacks),
-                                 geom_vertical_move_fallbacks: stats
-                                     .geom_vertical_move_fallbacks
-                                     .saturating_sub(prev.geom_vertical_move_fallbacks),
-                                 syntax_get_calls: stats
-                                     .syntax_get_calls
-                                     .saturating_sub(prev.syntax_get_calls),
-                                 syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
-                                 syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
-                                 syntax_evictions: stats
-                                     .syntax_evictions
-                                     .saturating_sub(prev.syntax_evictions),
-                                 syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
-                             };
+	                                let delta = CodeEditorCacheStats {
+	                                    row_text_get_calls: stats
+	                                        .row_text_get_calls
+	                                        .saturating_sub(prev.row_text_get_calls),
+	                                    row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
+	                                    row_text_misses: stats
+	                                        .row_text_misses
+	                                        .saturating_sub(prev.row_text_misses),
+	                                    row_text_evictions: stats
+	                                        .row_text_evictions
+	                                        .saturating_sub(prev.row_text_evictions),
+	                                    row_text_resets: stats
+	                                        .row_text_resets
+	                                        .saturating_sub(prev.row_text_resets),
+
+	                                    #[cfg(feature = "syntax")]
+	                                    row_rich_get_calls: stats
+	                                        .row_rich_get_calls
+	                                        .saturating_sub(prev.row_rich_get_calls),
+	                                    #[cfg(feature = "syntax")]
+	                                    row_rich_hits: stats.row_rich_hits.saturating_sub(prev.row_rich_hits),
+	                                    #[cfg(feature = "syntax")]
+	                                    row_rich_misses: stats
+	                                        .row_rich_misses
+	                                        .saturating_sub(prev.row_rich_misses),
+	                                    #[cfg(feature = "syntax")]
+	                                    row_rich_evictions: stats
+	                                        .row_rich_evictions
+	                                        .saturating_sub(prev.row_rich_evictions),
+	                                    #[cfg(feature = "syntax")]
+	                                    row_rich_resets: stats
+	                                        .row_rich_resets
+	                                        .saturating_sub(prev.row_rich_resets),
+
+	                                    geom_pointer_hit_test_fallbacks: stats
+	                                        .geom_pointer_hit_test_fallbacks
+	                                        .saturating_sub(prev.geom_pointer_hit_test_fallbacks),
+	                                    geom_caret_rect_fallbacks: stats
+	                                        .geom_caret_rect_fallbacks
+	                                        .saturating_sub(prev.geom_caret_rect_fallbacks),
+	                                    geom_vertical_move_fallbacks: stats
+	                                        .geom_vertical_move_fallbacks
+	                                        .saturating_sub(prev.geom_vertical_move_fallbacks),
+	                                    syntax_get_calls: stats
+	                                        .syntax_get_calls
+	                                        .saturating_sub(prev.syntax_get_calls),
+	                                    syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
+	                                    syntax_misses: stats
+	                                        .syntax_misses
+	                                        .saturating_sub(prev.syntax_misses),
+	                                    syntax_evictions: stats
+	                                        .syntax_evictions
+	                                        .saturating_sub(prev.syntax_evictions),
+	                                    syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
+	                                };
                                 (
                                     stats,
                                     delta,

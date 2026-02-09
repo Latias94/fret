@@ -146,8 +146,10 @@ pub(super) fn paint_row(
                     .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start));
                 let seg_end_in_line = seg_start_in_line.saturating_add(line.len());
 
-                let theme = painter.theme();
-                let theme_revision = theme.revision();
+                let theme_revision = {
+                    let theme = painter.theme();
+                    theme.revision()
+                };
 
                 st.row_rich_cache_tick = st.row_rich_cache_tick.saturating_add(1);
                 let tick = st.row_rich_cache_tick;
@@ -211,8 +213,10 @@ pub(super) fn paint_row(
                             merged.push(span);
                         }
 
-                        let rich =
-                            materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref());
+                        let rich = {
+                            let theme = painter.theme();
+                            materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
+                        };
                         st.row_rich_cache.insert(
                             row,
                             (
