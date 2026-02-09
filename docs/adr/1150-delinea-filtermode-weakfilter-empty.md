@@ -72,12 +72,18 @@ This matches ECharts `filter` (selectRange / filterSelf).
 
 ECharts intent: do not drop data that may be needed to preserve continuity when multiple dimensions are involved.
 
-Contract in `delinea` (future-facing, multi-dimensional):
+Contract in `delinea`:
 
-- When filtering is applied across multiple dimensions, keep rows that have values on both “sides” of the window
-  across the participating dimensions (ECharts’ “leftOut && rightOut” logic).
-- For the current v1 encoding model (single `x` field per series), `WeakFilter` is treated as equivalent to
-  `Filter` until we introduce multi-dimensional axis filtering / multi-field encodes.
+- **1D (X-only) semantics (v1 baseline):** `WeakFilter` is treated as equivalent to `Filter`.
+  - This keeps the option surface stable while we iterate on multi-dimensional parity.
+- **Multi-dimensional semantics (v1 subset, size-capped):** when a series has both an active X filter and an
+  active Y filter, and both dimensions are configured as `WeakFilter`, the engine may materialize an
+  indices-backed selection under `WorkBudget` to express a joint participation contract.
+  - This is currently implemented as an **intersection-style** indices carrier (not full ECharts `leftOut/rightOut`
+    continuity rules yet).
+  - Materialization is gated by series kind (cartesian, non-stacked) and view-size caps to keep v1 bounded.
+  - If the indices carrier is pending or skipped (budget/cap), the engine falls back to the window/mask carriers
+    for marks + sampling.
 
 #### `FilterMode::Empty`
 
@@ -118,7 +124,21 @@ We will implement these modes without materializing new columns:
 
 ## Follow-ups
 
-- Validate `FilterMode::{WeakFilter,Empty}` semantics across both X and Y dataZoom, including view-size cap behavior.
+- Validate `FilterMode::{WeakFilter,Empty}` semantics across both X and Y dataZoom, including size-cap behavior.
 - Extend `Empty` parity to stacked series (and define the row/index stability contract for stacked value sampling).
-- Define a single “filter processor” stage that owns ordering-sensitive composition (X-before-Y) and outputs a unified
-  participation contract (selection + masks) consumable by marks, hit-test, tooltip, and brush export.
+- Expand multi-dimensional `WeakFilter` from the current v1 subset (intersection indices carrier) toward ECharts-class
+  continuity rules (`leftOut && rightOut`) and document the resulting segment-break contract for line-family marks.
+
+## Amendments
+
+- 2026-01-13 (ECharts replica workstream): v1 gained a size-capped multi-dimensional `WeakFilter` subset via
+  budgeted indices materialization in the filter processor step plan (`XYWeakFilter -> ... -> YIndices`).
+  This should be treated as an optimization carrier and an intermediate contract on the path to full parity.
+
+## Evidence (implementation anchors)
+
+- Filter step plan + ordering: `ecosystem/delinea/src/engine/stages/filter_processor.rs`
+- Budgeted indices views: `ecosystem/delinea/src/transform_graph/data_view.rs`
+- Indices application and size caps: `ecosystem/delinea/src/transform/data_zoom_y.rs`,
+  `ecosystem/delinea/src/transform_graph/y_indices.rs`
+- Unified participation contract consumers: `ecosystem/delinea/src/engine/mod.rs` (marks + axisPointer + brush export)
