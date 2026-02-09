@@ -326,7 +326,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `rowsById`/cell inventory semantics and avoid drift when custom `getRowId` is used.
   - Remaining: broaden the schema with more column/header/cell inventories (keep versioning strict) as additional
     UI consumers require them.
-- [ ] HTP-core-041 Expand core snapshot inventories as new consumers require them (strict schema versioning).
+- [x] HTP-core-041 Establish a strict process for expanding core snapshot inventories (strict schema versioning).
   - Goal: keep UI consumers from re-implementing traversal/sizing/policy logic and drifting.
   - Rule: every schema expansion must bump `schema_version` and be fixture-gated.
   - Current “must-have” consumer inventories are already in the snapshot (and parity-gated):
@@ -335,7 +335,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - header sizing (group headers): `getSize/getStart`,
     - column capabilities (pin/resize/hide/visibility),
     - stable header groups + cell inventories keyed by TanStack `RowId`.
-  - Process:
+  - Process (apply when new consumers require more):
     1) add new fields to the snapshot schema (bump `schema_version`),
     2) update the fixture extractor to emit the new inventories,
     3) add/extend a parity gate that asserts the new field matches upstream,
