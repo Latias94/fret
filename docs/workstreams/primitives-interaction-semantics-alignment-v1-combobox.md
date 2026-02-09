@@ -26,6 +26,10 @@ Workstream:
   - `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
 - shadcn recipe (currently owns key semantics): `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - Headless helpers already used: `ecosystem/fret-ui-kit/src/headless/mod.rs` (`cmdk_selection`, `cmdk_score`)
+  - Policy highlights now in `fret-ui-kit::primitives::combobox`:
+    - `SelectionCommitPolicy` + `commit_selection_on_activate`
+    - `ClearQueryOnCloseState` + `should_clear_query_on_close`
+    - `set_open_change_reason_on_activate` / `set_open_change_reason_on_dismiss_request`
 
 Scripted repros / bundles:
 
@@ -104,7 +108,7 @@ Invariants (examples):
 
 - [ ] `I` Existing recipe tests cover at least: value-change gating and close-transition pointer behavior.
 - [x] `I` Add primitive-level unit tests once extracted to `fret-ui-kit::primitives::combobox`.
-- [ ] `I` Keep at least one diag script gating a multi-step commit flow.
+- [x] `I` Keep at least one diag script gating a multi-step commit flow.
 
 ---
 
