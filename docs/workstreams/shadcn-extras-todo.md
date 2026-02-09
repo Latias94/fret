@@ -32,6 +32,9 @@ Landed snapshot gates (in-tree):
 - `extras_avatar_stack_overflow_default.json`
 - `extras_banner_default.json`
 - `extras_marquee_default.json`
+- `extras_marquee_right_default.json`
+- `extras_marquee_static_default.json`
+- `extras_marquee_cycle_width_default.json`
 - `extras_rating_default.json`
 - `extras_ticker_default.json`
 - `extras_tags_default.json`
