@@ -558,6 +558,11 @@ When completing an item, prefer leaving 1–3 evidence anchors:
       - `ecosystem/fret-ui-kit/src/window_overlays/tests/hover.rs`
       - `ecosystem/fret-ui-kit/src/window_overlays/tests/pointer_capture.rs`
       - `ecosystem/fret-ui-kit/src/window_overlays/tests/viewport_capture.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/cached_requests.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/dismissible_popover.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/modal.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/non_modal_overlay.rs`
+      - `ecosystem/fret-ui-kit/src/window_overlays/tests/dock_drag.rs`
       - `ecosystem/fret-ui-kit/src/window_overlays/tests/fixtures/tooltip_observers.json`
 
 - [x] BU-FR-eco-045 Reduce “god test file” risk in `fret-docking` by splitting `dock/tests.rs` into focused submodules.
