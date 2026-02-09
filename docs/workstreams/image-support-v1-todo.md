@@ -99,7 +99,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M5 — Video fast paths (capability-gated)
 
-- [~] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
+- [x] IMG-video-500 Audit streaming update perf on desktop + wasm and record a baseline.
   - References: ADR 0123/0124/0126.
   - Desktop (Windows-local):
     - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
@@ -107,7 +107,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`
     - Command:
       - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json --repeat 5 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json --perf-baseline-headroom-pct 20 --dir target/fret-diag-perf/ui-gallery-image-object-fit.windows-local.v1 --launch -- cargo run -p fret-ui-gallery --release`
-  - WASM: TODO (record a baseline once the web perf workflow is stable for this suite).
+  - WASM (web-local):
+    - Export bundles:
+      - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
+      - `.fret/diag/exports/<exported_unix_ms>/bundle.json`
+    - Baseline:
+      - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
   - Note: `--perf-baseline-seed` / `--perf-baseline-seed-preset` are currently rejected by `fret-diag` (even though `fretboard help` mentions them), so this baseline uses the default seeding behavior.
   - WASM progress:
     - Web build compiles: `cargo build -p fret-ui-gallery-web --target wasm32-unknown-unknown`
@@ -118,6 +123,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `tools/diag-scripts/ui-gallery-image-object-fit-perf-steady.json`
     - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.windows-local.v1.json`
     - `docs/workstreams/perf-baselines/policies/ui-gallery-image-object-fit.v1.json`
+  - Evidence anchors (WASM):
+    - `docs/workstreams/perf-baselines/ui-gallery-image-object-fit.web-local.v1.json`
 
 - [ ] IMG-video-510 Decide the next capability-gated step for “external texture import”.
   - Must not leak backend handles into `fret-ui`.
