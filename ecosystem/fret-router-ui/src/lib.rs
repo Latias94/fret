@@ -25,6 +25,16 @@ use fret_ui::element::AnyElement;
 use fret_ui::element::{PressableProps, SemanticsDecoration};
 use fret_ui::{ElementContext, Invalidation};
 
+trait AnyElementTestIdExt {
+    fn test_id(self, test_id: impl Into<Arc<str>>) -> AnyElement;
+}
+
+impl AnyElementTestIdExt for AnyElement {
+    fn test_id(self, test_id: impl Into<Arc<str>>) -> AnyElement {
+        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RouterUiSnapshot<R> {
     pub location: RouteLocation,
@@ -510,8 +520,7 @@ pub fn router_outlet_with_test_id<R>(
 where
     R: Clone + 'static,
 {
-    router_outlet(cx, snapshot, render)
-        .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    router_outlet(cx, snapshot, render).test_id(test_id)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -553,7 +562,7 @@ where
     ) -> AnyElement {
         let elem = router_outlet(cx, &self.snapshot, render);
         match self.test_id {
-            Some(test_id) => elem.attach_semantics(SemanticsDecoration::default().test_id(test_id)),
+            Some(test_id) => elem.test_id(test_id),
             None => elem,
         }
     }
