@@ -73,6 +73,9 @@ Recent editor-class wins (evidence lives in the perf log):
   (commit `81159325`).
 - Post-merge editor regression fix: `paint_time_us p95 ~30ms → ~0.7ms` by eliminating allocator churn
   (per-row `Theme` clone) in syntax paint (commit `0d8ad27ac`).
+- Code editor resize drag smoothness: `top_total_time_us ~42ms → ~16ms` by making `CodeEditorHandle::set_language(...)`
+  idempotent (avoid per-frame syntax/rich cache resets), guided by in-bundle Canvas phase attribution (commits
+  `f664ead2d`, `1778ba563`).
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
