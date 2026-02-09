@@ -166,6 +166,7 @@ struct ChartLayout {
 pub struct ChartCanvas {
     engine: ChartCanvasEngine,
     grid_override: Option<delinea::GridId>,
+    mode: ChartCanvasMode,
     style: ChartStyle,
     style_source: ChartStyleSource,
     last_theme_revision: u64,
@@ -217,6 +218,30 @@ type SharedChartEngine = Rc<RefCell<ChartEngine>>;
 enum ChartCanvasEngine {
     Owned(ChartEngine),
     Shared(SharedChartEngine),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ChartCanvasMode {
+    /// Normal single-surface chart canvas (owned engine).
+    Full,
+    /// A per-grid view into a shared engine (multi-grid).
+    GridView,
+    /// A global controller surface for a shared engine (multi-grid): legend + tooltip overlays.
+    Overlay,
+}
+
+impl ChartCanvasMode {
+    fn renders_legend(self) -> bool {
+        matches!(self, Self::Full | Self::Overlay)
+    }
+
+    fn renders_overlays(self) -> bool {
+        matches!(self, Self::Full | Self::Overlay)
+    }
+
+    fn renders_axes(self) -> bool {
+        matches!(self, Self::Full | Self::GridView)
+    }
 }
 
 enum ChartEngineReadGuard<'a> {
@@ -308,6 +333,13 @@ impl ChartCanvas {
     pub fn new_grid_view(engine: SharedChartEngine, grid: delinea::GridId) -> Self {
         let mut out = Self::new_with_engine(ChartCanvasEngine::Shared(engine));
         out.grid_override = Some(grid);
+        out.mode = ChartCanvasMode::GridView;
+        out
+    }
+
+    pub fn new_overlay(engine: SharedChartEngine) -> Self {
+        let mut out = Self::new_with_engine(ChartCanvasEngine::Shared(engine));
+        out.mode = ChartCanvasMode::Overlay;
         out
     }
 
@@ -315,6 +347,7 @@ impl ChartCanvas {
         Self {
             engine,
             grid_override: None,
+            mode: ChartCanvasMode::Full,
             style: ChartStyle::default(),
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
@@ -717,6 +750,560 @@ impl ChartCanvas {
                 PatchMode::Merge,
             )
         });
+    }
+
+    fn axis_pointer_plot_rect(&self, axis_pointer: &delinea::engine::AxisPointerOutput) -> Rect {
+        if self.grid_override.is_some() {
+            return self.last_layout.plot;
+        }
+
+        if let Some(grid) = axis_pointer.grid {
+            return self
+                .with_engine(|engine| engine.output().plot_viewports_by_grid.get(&grid).copied())
+                .unwrap_or(self.last_layout.plot);
+        }
+
+        self.last_layout.plot
+    }
+
+    fn paint_overlay_only<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let theme = Theme::global(&*cx.app);
+        let style_changed = self.sync_style_from_theme(theme);
+        if style_changed || self.last_bounds != cx.bounds {
+            self.last_bounds = cx.bounds;
+            self.last_layout = self.compute_layout(cx.bounds);
+        }
+
+        self.tooltip_text.begin_frame();
+        self.legend_text.begin_frame();
+
+        let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
+        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
+            self.with_engine(|engine| engine.output().axis_pointer.clone())
+        } else {
+            None
+        };
+
+        let mut axis_pointer_label_rect: Option<Rect> = None;
+
+        if let Some(axis_pointer) = axis_pointer.as_ref() {
+            let pos = axis_pointer.crosshair_px;
+            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
+            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
+            let shadow_order = DrawOrder(self.style.draw_order.0.saturating_add(8_999));
+
+            let (axis_pointer_type, axis_pointer_label_enabled, axis_pointer_label_template) = self
+                .with_engine(|engine| {
+                    let spec = engine.model().axis_pointer.as_ref();
+                    let axis_pointer_type = spec.map(|p| p.pointer_type).unwrap_or_default();
+                    let axis_pointer_label_enabled = spec.is_some_and(|p| p.label.show);
+                    let axis_pointer_label_template = spec
+                        .map(|p| p.label.template.clone())
+                        .unwrap_or_else(|| "{value}".to_string());
+                    (
+                        axis_pointer_type,
+                        axis_pointer_label_enabled,
+                        axis_pointer_label_template,
+                    )
+                });
+            let axis_pointer_label_template = axis_pointer_label_template.as_str();
+
+            let plot = self.axis_pointer_plot_rect(axis_pointer);
+            let crosshair_w = self.style.crosshair_width.0.max(1.0);
+
+            let x = pos
+                .x
+                .0
+                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0);
+            let y = pos
+                .y
+                .0
+                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
+
+            let (draw_x, draw_y) = match &axis_pointer.tooltip {
+                delinea::TooltipOutput::Axis(axis) => match axis.axis_kind {
+                    delinea::AxisKind::X => (true, false),
+                    delinea::AxisKind::Y => (false, true),
+                },
+                delinea::TooltipOutput::Item(_) => (true, true),
+            };
+
+            let shadow = matches!(&axis_pointer.tooltip, delinea::TooltipOutput::Axis(_))
+                && axis_pointer_type == delinea::AxisPointerType::Shadow;
+
+            if shadow {
+                if let Some(rect) = axis_pointer.shadow_rect_px {
+                    let color = Color {
+                        a: 0.08,
+                        ..self.style.selection_fill
+                    };
+                    cx.scene.push(SceneOp::Quad {
+                        order: shadow_order,
+                        rect,
+                        background: color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            } else if draw_x {
+                cx.scene.push(SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                        Size::new(Px(crosshair_w), plot.size.height),
+                    ),
+                    background: self.style.crosshair_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+            if !shadow && draw_y {
+                cx.scene.push(SceneOp::Quad {
+                    order: overlay_order,
+                    rect: Rect::new(
+                        Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                        Size::new(plot.size.width, Px(crosshair_w)),
+                    ),
+                    background: self.style.crosshair_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            if axis_pointer_label_enabled {
+                let pad_x = 6.0f32;
+                let pad_y = 3.0f32;
+                let text_style = TextStyle {
+                    size: Px(11.0),
+                    weight: FontWeight::MEDIUM,
+                    ..TextStyle::default()
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let rect_union = |a: Rect, b: Rect| {
+                    let x0 = a.origin.x.0.min(b.origin.x.0);
+                    let y0 = a.origin.y.0.min(b.origin.y.0);
+                    let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
+                    let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
+                    Rect::new(
+                        Point::new(Px(x0), Px(y0)),
+                        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+                    )
+                };
+
+                let mut draw_label = |axis_kind: delinea::AxisKind,
+                                      axis_id: delinea::AxisId,
+                                      axis_value: f64| {
+                    let default_tooltip_spec = delinea::TooltipSpecV1::default();
+                    let (axis_window, axis_name, missing_value) = self.with_engine(|engine| {
+                        let axis_window = engine
+                            .output()
+                            .axis_windows
+                            .get(&axis_id)
+                            .copied()
+                            .unwrap_or_default();
+                        let axis_name = engine
+                            .model()
+                            .axes
+                            .get(&axis_id)
+                            .and_then(|a| a.name.as_deref())
+                            .unwrap_or("")
+                            .to_string();
+                        let missing_value = engine
+                            .model()
+                            .tooltip
+                            .as_ref()
+                            .map(|t| t.missing_value.clone())
+                            .unwrap_or_else(|| default_tooltip_spec.missing_value.clone());
+                        (axis_window, axis_name, missing_value)
+                    });
+                    let value_text = if axis_value.is_finite() {
+                        self.with_engine(|engine| {
+                            delinea::engine::axis::format_value_for(
+                                engine.model(),
+                                axis_id,
+                                axis_window,
+                                axis_value,
+                            )
+                        })
+                    } else {
+                        missing_value
+                    };
+
+                    let label_text = if axis_pointer_label_template == "{value}" {
+                        value_text
+                    } else {
+                        axis_pointer_label_template
+                            .replace("{value}", &value_text)
+                            .replace("{axis_name}", &axis_name)
+                    };
+
+                    let prepared = self.tooltip_text.prepare(
+                        cx.services,
+                        &label_text,
+                        &text_style,
+                        constraints,
+                    );
+                    let blob = prepared.blob;
+                    let metrics = prepared.metrics;
+
+                    let w = (metrics.size.width.0 + 2.0 * pad_x).max(1.0);
+                    let h = (metrics.size.height.0 + 2.0 * pad_y).max(1.0);
+
+                    let rect = match axis_kind {
+                        delinea::AxisKind::X => {
+                            let box_x = (x - 0.5 * w)
+                                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0 - w);
+                            Rect::new(
+                                Point::new(Px(box_x), Px(plot.origin.y.0 + plot.size.height.0)),
+                                Size::new(Px(w), Px(h)),
+                            )
+                        }
+                        delinea::AxisKind::Y => {
+                            let box_y = (y - 0.5 * h)
+                                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0 - h);
+                            Rect::new(
+                                Point::new(Px(plot.origin.x.0 - w), Px(box_y)),
+                                Size::new(Px(w), Px(h)),
+                            )
+                        }
+                    };
+
+                    let kind_key: u32 = match axis_kind {
+                        delinea::AxisKind::X => 0,
+                        delinea::AxisKind::Y => 1,
+                    };
+                    let label_order = DrawOrder(
+                        self.style
+                            .draw_order
+                            .0
+                            .saturating_add(9_020 + kind_key.saturating_mul(4)),
+                    );
+                    cx.scene.push(SceneOp::Quad {
+                        order: label_order,
+                        rect,
+                        background: self.style.tooltip_background,
+                        border: Edges::all(self.style.tooltip_border_width),
+                        border_color: self.style.tooltip_border_color,
+                        corner_radii: Corners::all(Px(4.0)),
+                    });
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(label_order.0.saturating_add(1)),
+                        origin: Point::new(
+                            Px(rect.origin.x.0 + pad_x),
+                            Px(rect.origin.y.0 + pad_y),
+                        ),
+                        text: blob,
+                        color: self.style.tooltip_text_color,
+                    });
+
+                    axis_pointer_label_rect = Some(match axis_pointer_label_rect {
+                        Some(old) => rect_union(old, rect),
+                        None => rect,
+                    });
+                };
+
+                match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(axis) => {
+                        draw_label(axis.axis_kind, axis.axis, axis.axis_value);
+                    }
+                    delinea::TooltipOutput::Item(item) => {
+                        draw_label(delinea::AxisKind::X, item.x_axis, item.x_value);
+                        draw_label(delinea::AxisKind::Y, item.y_axis, item.y_value);
+                    }
+                };
+            }
+
+            if !shadow {
+                if let Some(hit) = axis_pointer.hit {
+                    let r = self.style.hover_point_size.0.max(1.0);
+                    cx.scene.push(SceneOp::Quad {
+                        order: point_order,
+                        rect: Rect::new(
+                            Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                            Size::new(Px(2.0 * r), Px(2.0 * r)),
+                        ),
+                        background: self.style.hover_point_color,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            }
+        }
+
+        if self.mode.renders_legend() {
+            self.draw_legend(cx);
+        }
+
+        if let Some(axis_pointer) = axis_pointer {
+            let tooltip_lines = self.with_engine(|engine| {
+                self.tooltip_formatter.format_axis_pointer(
+                    engine,
+                    &engine.output().axis_windows,
+                    &axis_pointer,
+                )
+            });
+            if !tooltip_lines.is_empty() {
+                let text_style = TextStyle {
+                    size: Px(12.0),
+                    weight: FontWeight::NORMAL,
+                    ..TextStyle::default()
+                };
+                let mut header_text_style = text_style.clone();
+                header_text_style.weight = FontWeight::BOLD;
+                let mut value_text_style = text_style.clone();
+                value_text_style.weight = FontWeight::MEDIUM;
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: effective_scale_factor(cx.scale_factor, 1.0),
+                };
+
+                let pad = self.style.tooltip_padding;
+                let swatch_w = self.style.tooltip_marker_size.0.max(0.0);
+                let swatch_gap = self.style.tooltip_marker_gap.0.max(0.0);
+                let col_gap = self.style.tooltip_column_gap.0.max(0.0);
+                let reserve_swatch =
+                    swatch_w > 0.0 && tooltip_lines.iter().any(|l| l.source_series.is_some());
+                let swatch_space = if reserve_swatch {
+                    (swatch_w + swatch_gap).max(0.0)
+                } else {
+                    0.0
+                };
+
+                enum TooltipLineLayout {
+                    Single {
+                        blob: TextBlobId,
+                        metrics: fret_core::TextMetrics,
+                    },
+                    Columns {
+                        left_blob: TextBlobId,
+                        left_metrics: fret_core::TextMetrics,
+                        right_blob: TextBlobId,
+                        right_metrics: fret_core::TextMetrics,
+                    },
+                }
+
+                struct PreparedTooltipLine {
+                    source_series: Option<delinea::SeriesId>,
+                    is_missing: bool,
+                    layout: TooltipLineLayout,
+                }
+
+                let mut prepared_lines = Vec::with_capacity(tooltip_lines.len());
+                let mut max_left_w = 0.0f32;
+                let mut max_right_w = 0.0f32;
+                let mut max_single_w = 0.0f32;
+                let mut total_h = 0.0f32;
+
+                for line in &tooltip_lines {
+                    let label_style = if line.kind == crate::TooltipTextLineKind::AxisHeader {
+                        &header_text_style
+                    } else {
+                        &text_style
+                    };
+                    let value_style = if line.value_emphasis
+                        && line.kind != crate::TooltipTextLineKind::AxisHeader
+                    {
+                        &value_text_style
+                    } else {
+                        &text_style
+                    };
+
+                    if let Some((left, right)) = line.columns.as_ref() {
+                        let prepared_left =
+                            self.tooltip_text
+                                .prepare(cx.services, left, label_style, constraints);
+                        let left_blob = prepared_left.blob;
+                        let left_metrics = prepared_left.metrics;
+                        max_left_w = max_left_w.max(left_metrics.size.width.0);
+
+                        let prepared_right =
+                            self.tooltip_text
+                                .prepare(cx.services, right, value_style, constraints);
+                        let right_blob = prepared_right.blob;
+                        let right_metrics = prepared_right.metrics;
+                        max_right_w = max_right_w.max(right_metrics.size.width.0);
+
+                        let line_height = left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0);
+                        total_h += line_height;
+                        prepared_lines.push(PreparedTooltipLine {
+                            source_series: line.source_series,
+                            is_missing: line.is_missing,
+                            layout: TooltipLineLayout::Columns {
+                                left_blob,
+                                left_metrics,
+                                right_blob,
+                                right_metrics,
+                            },
+                        });
+                    } else {
+                        let prepared = self.tooltip_text.prepare(
+                            cx.services,
+                            &line.text,
+                            label_style,
+                            constraints,
+                        );
+                        let blob = prepared.blob;
+                        let metrics = prepared.metrics;
+                        max_single_w = max_single_w.max(metrics.size.width.0);
+                        total_h += metrics.size.height.0.max(1.0);
+                        prepared_lines.push(PreparedTooltipLine {
+                            source_series: line.source_series,
+                            is_missing: line.is_missing,
+                            layout: TooltipLineLayout::Single { blob, metrics },
+                        });
+                    }
+                }
+
+                let mut w = 1.0f32;
+                if max_left_w > 0.0 || max_right_w > 0.0 {
+                    w = w.max(max_left_w + col_gap + max_right_w);
+                }
+                w = w.max(max_single_w);
+                w = (w + swatch_space + pad.left.0 + pad.right.0).max(1.0);
+                let h = (total_h + pad.top.0 + pad.bottom.0).max(1.0);
+
+                let bounds = self.last_layout.bounds;
+                let anchor = match &axis_pointer.tooltip {
+                    delinea::TooltipOutput::Axis(_) => axis_pointer.crosshair_px,
+                    delinea::TooltipOutput::Item(_) => axis_pointer
+                        .hit
+                        .map(|h| h.point_px)
+                        .unwrap_or(axis_pointer.crosshair_px),
+                };
+
+                let offset = 10.0f32;
+                let tooltip_rect = crate::tooltip_layout::place_tooltip_rect(
+                    bounds,
+                    anchor,
+                    Size::new(Px(w), Px(h)),
+                    offset,
+                    axis_pointer_label_rect,
+                );
+                let tip_x = tooltip_rect.origin.x.0;
+                let tip_y = tooltip_rect.origin.y.0;
+
+                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
+                cx.scene.push(SceneOp::Quad {
+                    order: tooltip_order,
+                    rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
+                    background: self.style.tooltip_background,
+                    border: Edges::all(self.style.tooltip_border_width),
+                    border_color: self.style.tooltip_border_color,
+                    corner_radii: Corners::all(self.style.tooltip_corner_radius),
+                });
+
+                let mut y = tip_y + pad.top.0;
+                let missing_text_color = Color {
+                    a: (self.style.tooltip_text_color.a * 0.55).clamp(0.0, 1.0),
+                    ..self.style.tooltip_text_color
+                };
+                for (i, line) in prepared_lines.into_iter().enumerate() {
+                    let order_base = tooltip_order
+                        .0
+                        .saturating_add(1 + (i as u32).saturating_mul(3));
+                    let swatch_x = tip_x + pad.left.0;
+                    let text_x0 = swatch_x + swatch_space;
+
+                    let side = self.style.tooltip_marker_size.0.max(0.0);
+                    let line_height = match &line.layout {
+                        TooltipLineLayout::Single { metrics, .. } => metrics.size.height.0.max(1.0),
+                        TooltipLineLayout::Columns {
+                            left_metrics,
+                            right_metrics,
+                            ..
+                        } => left_metrics
+                            .size
+                            .height
+                            .0
+                            .max(right_metrics.size.height.0)
+                            .max(1.0),
+                    };
+                    if side > 0.0
+                        && reserve_swatch
+                        && let Some(series) = line.source_series
+                    {
+                        let marker_y = y + (line_height - side) * 0.5;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(order_base),
+                            rect: Rect::new(
+                                Point::new(Px(swatch_x), Px(marker_y)),
+                                Size::new(Px(side), Px(side)),
+                            ),
+                            background: self.series_color(series),
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(side * 0.5)),
+                        });
+                    }
+
+                    match line.layout {
+                        TooltipLineLayout::Single { blob, .. } => {
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(1)),
+                                origin: Point::new(Px(text_x0), Px(y)),
+                                text: blob,
+                                color: if line.is_missing {
+                                    missing_text_color
+                                } else {
+                                    self.style.tooltip_text_color
+                                },
+                            });
+                        }
+                        TooltipLineLayout::Columns {
+                            left_blob,
+                            right_blob,
+                            ..
+                        } => {
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(1)),
+                                origin: Point::new(Px(text_x0), Px(y)),
+                                text: left_blob,
+                                color: self.style.tooltip_text_color,
+                            });
+                            let value_x = text_x0 + max_left_w + col_gap;
+                            let value_color = if line.is_missing {
+                                missing_text_color
+                            } else {
+                                self.style.tooltip_text_color
+                            };
+                            cx.scene.push(SceneOp::Text {
+                                order: DrawOrder(order_base.saturating_add(2)),
+                                origin: Point::new(Px(value_x), Px(y)),
+                                text: right_blob,
+                                color: value_color,
+                            });
+                        }
+                    }
+
+                    y += line_height;
+                }
+            }
+        }
+
+        let t = self.text_cache_prune;
+        if t.max_entries > 0 && t.max_age_frames > 0 {
+            self.tooltip_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+            self.legend_text
+                .prune(cx.services, t.max_age_frames, t.max_entries);
+        }
     }
 
     fn primary_axes(&self) -> Option<(delinea::AxisId, delinea::AxisId)> {
@@ -2812,6 +3399,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         self.force_uncached_paint.then_some(Transform2D::IDENTITY)
     }
 
+    fn hit_test(&self, _bounds: Rect, position: Point) -> bool {
+        if self.mode != ChartCanvasMode::Overlay {
+            return true;
+        }
+        self.legend_panel_rect
+            .is_some_and(|rect| rect.contains(position))
+    }
+
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
             Event::KeyDown { key, modifiers, .. } => {
@@ -4153,11 +4748,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.last_bounds = cx.bounds;
         self.last_layout = self.compute_layout(cx.bounds);
-        self.sync_viewport(self.last_layout.plot);
+        if self.mode != ChartCanvasMode::Overlay {
+            self.sync_viewport(self.last_layout.plot);
+        }
         cx.available
     }
 
     fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        if self.mode == ChartCanvasMode::Overlay {
+            return;
+        }
+
         let mut measurer = NullTextMeasurer::default();
 
         // P0: run the engine synchronously, but allow multiple internal steps per frame so that
@@ -4198,6 +4799,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        if self.mode == ChartCanvasMode::Overlay {
+            self.paint_overlay_only(cx);
+            return;
+        }
+
         let theme = Theme::global(&*cx.app);
         let style_changed = self.sync_style_from_theme(theme);
         if style_changed {
@@ -4830,19 +5436,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
-        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
-            self.with_engine(|engine| engine.output().axis_pointer.clone())
-                .and_then(|axis_pointer| {
-                    if let Some(grid) = self.grid_override
-                        && axis_pointer.grid != Some(grid)
-                    {
-                        return None;
-                    }
-                    Some(axis_pointer)
-                })
-        } else {
-            None
-        };
+        let axis_pointer =
+            if self.mode.renders_overlays() && interaction_idle && self.legend_hover.is_none() {
+                self.with_engine(|engine| engine.output().axis_pointer.clone())
+                    .and_then(|axis_pointer| {
+                        if let Some(grid) = self.grid_override
+                            && axis_pointer.grid != Some(grid)
+                        {
+                            return None;
+                        }
+                        Some(axis_pointer)
+                    })
+            } else {
+                None
+            };
         let mut axis_pointer_label_rect: Option<Rect> = None;
 
         if let Some(axis_pointer) = axis_pointer.as_ref() {
@@ -4867,7 +5474,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 });
             let axis_pointer_label_template = axis_pointer_label_template.as_str();
 
-            let plot = self.last_layout.plot;
+            let plot = self.axis_pointer_plot_rect(axis_pointer);
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
 
             let x = pos
@@ -5314,7 +5921,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 )
             });
             if tooltip_lines.is_empty() {
-                self.draw_axes(cx);
+                if self.mode.renders_axes() {
+                    self.draw_axes(cx);
+                }
                 return;
             }
 
@@ -5579,7 +6188,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             }
         }
 
-        self.draw_axes(cx);
+        if self.mode.renders_axes() {
+            self.draw_axes(cx);
+        }
 
         // Conservative hygiene: long-lived charts should not grow text caches unbounded.
         let t = self.text_cache_prune;

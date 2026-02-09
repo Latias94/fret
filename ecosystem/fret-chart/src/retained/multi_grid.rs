@@ -81,6 +81,33 @@ impl<H: UiHost> Widget<H> for UniformGrid {
     }
 }
 
+/// A minimal retained container that lays out all children to fill the same bounds.
+///
+/// Child order defines paint/input stacking (last child is on top).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FillStack;
+
+impl FillStack {
+    pub fn create_node<H: UiHost>(ui: &mut UiTree<H>) -> NodeId {
+        ui.create_node_retained(Self)
+    }
+}
+
+impl<H: UiHost> Widget<H> for FillStack {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let is_final = cx.pass_kind == LayoutPassKind::Final;
+        let rect = cx.bounds;
+        for child in cx.children.iter().copied() {
+            if is_final {
+                let _ = cx.layout_viewport_root(child, rect);
+            } else {
+                let _ = cx.layout_in(child, rect);
+            }
+        }
+        cx.available
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MultiGridChartCanvasNodes {
     pub root: NodeId,
@@ -140,10 +167,16 @@ pub fn create_multi_grid_chart_canvas_nodes<H: UiHost>(
         canvases.push((grid, node));
     }
 
-    let root = UniformGrid::create_node(ui, layout);
+    let grid_root = UniformGrid::create_node(ui, layout);
     for (_, node) in &canvases {
-        ui.add_child(root, *node);
+        ui.add_child(grid_root, *node);
     }
+
+    let overlay = ChartCanvas::create_node(ui, ChartCanvas::new_overlay(engine.clone()));
+
+    let root = FillStack::create_node(ui);
+    ui.add_child(root, grid_root);
+    ui.add_child(root, overlay);
 
     Ok(MultiGridChartCanvasNodes { root, canvases })
 }
