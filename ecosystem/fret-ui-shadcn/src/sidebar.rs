@@ -1243,8 +1243,6 @@ impl SidebarRail {
         let collapsible = surface_ctx.map(|ctx| ctx.collapsible).unwrap_or_default();
         let variant = surface_ctx.map(|ctx| ctx.variant).unwrap_or_default();
 
-        let theme = Theme::global(&*cx.app).clone();
-
         let rail_layout = {
             let mut layout = LayoutRefinement::default()
                 .absolute()
