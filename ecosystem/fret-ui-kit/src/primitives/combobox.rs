@@ -7,7 +7,8 @@
 
 use std::sync::Arc;
 
-use fret_ui::action::DismissReason;
+use crate::prelude::Model;
+use fret_ui::action::{DismissReason, OnActivate, OnDismissRequest};
 
 /// Open-change reasons aligned with Base UI combobox semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +28,18 @@ pub fn open_change_reason_from_dismiss_reason(reason: DismissReason) -> Combobox
         DismissReason::FocusOutside => ComboboxOpenChangeReason::FocusOut,
         DismissReason::Scroll => ComboboxOpenChangeReason::None,
     }
+}
+
+/// A small listbox policy helper: clear the query when transitioning from open -> closed.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ClearQueryOnCloseState {
+    was_open: bool,
+}
+
+pub fn should_clear_query_on_close(state: &mut ClearQueryOnCloseState, open: bool) -> bool {
+    let should_clear = state.was_open && !open;
+    state.was_open = open;
+    should_clear
 }
 
 /// Tracks open-change callbacks so we can emit:
@@ -93,6 +106,82 @@ pub fn value_change_event<T: Clone + PartialEq>(
 pub type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 pub type OnOpenChangeWithReason =
     Arc<dyn Fn(bool, ComboboxOpenChangeReason) + Send + Sync + 'static>;
+
+/// A selection-commit policy for Combobox (Base UI shaped, Fret semantics).
+#[derive(Debug, Clone, Copy)]
+pub struct SelectionCommitPolicy {
+    /// If the user selects the already-selected item again, clear the value (`None`).
+    pub toggle_selected_to_none: bool,
+    /// Close the listbox after committing a selection.
+    pub close_on_commit: bool,
+    /// Clear the query after committing.
+    pub clear_query_on_commit: bool,
+}
+
+impl Default for SelectionCommitPolicy {
+    fn default() -> Self {
+        Self {
+            toggle_selected_to_none: true,
+            close_on_commit: true,
+            clear_query_on_commit: true,
+        }
+    }
+}
+
+pub fn set_open_change_reason_on_activate(
+    open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
+    reason: ComboboxOpenChangeReason,
+) -> OnActivate {
+    Arc::new(move |host, action_cx, _activate_reason| {
+        let _ = host
+            .models_mut()
+            .update(&open_change_reason, |v| *v = Some(reason));
+        host.request_redraw(action_cx.window);
+    })
+}
+
+pub fn set_open_change_reason_on_dismiss_request(
+    open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
+) -> OnDismissRequest {
+    Arc::new(move |host, action_cx, req| {
+        let reason = open_change_reason_from_dismiss_reason(req.reason);
+        let _ = host
+            .models_mut()
+            .update(&open_change_reason, |v| *v = Some(reason));
+        host.request_redraw(action_cx.window);
+    })
+}
+
+pub fn commit_selection_on_activate<T: Clone + PartialEq + 'static>(
+    policy: SelectionCommitPolicy,
+    value: Model<Option<T>>,
+    open: Model<bool>,
+    query: Model<String>,
+    open_change_reason: Model<Option<ComboboxOpenChangeReason>>,
+    selected_value: T,
+) -> OnActivate {
+    Arc::new(move |host, action_cx, _activate_reason| {
+        let _ = host.models_mut().update(&value, |v| {
+            if policy.toggle_selected_to_none
+                && v.as_ref().is_some_and(|cur| cur == &selected_value)
+            {
+                *v = None;
+            } else {
+                *v = Some(selected_value.clone());
+            }
+        });
+        let _ = host.models_mut().update(&open_change_reason, |v| {
+            *v = Some(ComboboxOpenChangeReason::ItemPress);
+        });
+        if policy.close_on_commit {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+        }
+        if policy.clear_query_on_commit {
+            let _ = host.models_mut().update(&query, |v| v.clear());
+        }
+        host.request_redraw(action_cx.window);
+    })
+}
 
 #[cfg(test)]
 mod tests {
@@ -168,5 +257,16 @@ mod tests {
 
         let changed = value_change_event(&mut state, None);
         assert_eq!(changed, Some(None));
+    }
+
+    #[test]
+    fn should_clear_query_on_close_emits_only_on_open_to_closed() {
+        let mut state = ClearQueryOnCloseState::default();
+
+        assert_eq!(should_clear_query_on_close(&mut state, false), false);
+        assert_eq!(should_clear_query_on_close(&mut state, true), false);
+        assert_eq!(should_clear_query_on_close(&mut state, true), false);
+        assert_eq!(should_clear_query_on_close(&mut state, false), true);
+        assert_eq!(should_clear_query_on_close(&mut state, false), false);
     }
 }

@@ -34,6 +34,7 @@ pub mod table;
 pub mod text;
 pub mod transition;
 pub mod tree;
+pub mod viewport_queries;
 pub mod viewport_surface;
 pub mod visually_hidden;
 pub mod windowed_rows_surface;
@@ -47,6 +48,10 @@ pub use container_queries::{
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 pub use semantics::AnyElementSemanticsExt;
+pub use viewport_queries::tailwind as viewport_tailwind;
+pub use viewport_queries::{
+    ViewportQueryHysteresis, viewport_breakpoints, viewport_width_at_least,
+};
 
 #[cfg(test)]
 mod padding_semantics_tests;

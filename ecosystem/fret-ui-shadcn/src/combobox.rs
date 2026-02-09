@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -104,7 +104,7 @@ impl ComboboxItem {
 struct ComboboxState {
     query: Option<Model<String>>,
     open_change_reason: Option<Model<Option<ComboboxOpenChangeReason>>>,
-    was_open: bool,
+    clear_query_on_close: kit_combobox::ClearQueryOnCloseState,
 }
 
 pub use kit_combobox::ComboboxOpenChangeReason;
@@ -130,6 +130,7 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_with_reason: Option<OnOpenChangeWithReason>,
@@ -149,7 +150,7 @@ impl Combobox {
             test_id_prefix: None,
             width: None,
             responsive: false,
-            responsive_device_md_breakpoint: crate::breakpoints::device::MD,
+            responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
@@ -159,6 +160,7 @@ impl Combobox {
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
+            selection_commit_policy: kit_combobox::SelectionCommitPolicy::default(),
             on_value_change: None,
             on_open_change: None,
             on_open_change_with_reason: None,
@@ -268,6 +270,11 @@ impl Combobox {
         self
     }
 
+    pub fn selection_commit_policy(mut self, policy: kit_combobox::SelectionCommitPolicy) -> Self {
+        self.selection_commit_policy = policy;
+        self
+    }
+
     /// Called when selected value changes (Base UI `onValueChange`).
     pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
         self.on_value_change = on_value_change;
@@ -331,6 +338,7 @@ impl Combobox {
             self.responsive_device_md_breakpoint,
             self.search_enabled,
             self.consume_outside_pointer_events,
+            self.selection_commit_policy,
             self.on_value_change,
             self.on_open_change,
             self.on_open_change_with_reason,
@@ -372,9 +380,10 @@ pub fn combobox<H: UiHost>(
         disabled,
         a11y_label,
         false,
-        crate::breakpoints::device::MD,
+        fret_ui_kit::declarative::viewport_tailwind::MD,
         search_enabled,
         consume_outside_pointer_events,
+        kit_combobox::SelectionCommitPolicy::default(),
         None,
         None,
         None,
@@ -403,6 +412,7 @@ fn combobox_with_patch<H: UiHost>(
     responsive_device_md_breakpoint: Px,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
     on_open_change_with_reason: Option<OnOpenChangeWithReason>,
@@ -473,12 +483,10 @@ fn combobox_with_patch<H: UiHost>(
             }
         };
 
-        let was_open = cx.with_state(ComboboxState::default, |st| {
-            let prev = st.was_open;
-            st.was_open = is_open;
-            prev
+        let should_clear_query = cx.with_state(ComboboxState::default, |st| {
+            kit_combobox::should_clear_query_on_close(&mut st.clear_query_on_close, is_open)
         });
-        if was_open && !is_open {
+        if should_clear_query {
             let _ = cx.app.models_mut().update(&query_model, |v| v.clear());
         }
 
@@ -596,21 +604,22 @@ fn combobox_with_patch<H: UiHost>(
 
         // Device-level responsiveness: shadcn's "responsive combobox" uses Drawer on mobile.
         // This is a viewport breakpoint by design (not a container query).
-        if responsive && cx.bounds.size.width < responsive_device_md_breakpoint {
+        let is_desktop = fret_ui_kit::declarative::viewport_width_at_least(
+            cx,
+            Invalidation::Layout,
+            responsive_device_md_breakpoint,
+            fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+        );
+        if responsive && !is_desktop {
             let open_change_reason_model_for_trigger = open_change_reason_model.clone();
             let open_change_reason_model_for_content = open_change_reason_model.clone();
             let test_id_prefix_for_content = test_id_prefix.clone();
             return Drawer::new(open.clone())
-                .on_dismiss_request(Some(Arc::new({
-                    let open_change_reason_model = open_change_reason_model.clone();
-                    move |host, _cx, req| {
-                        let reason =
-                            kit_combobox::open_change_reason_from_dismiss_reason(req.reason);
-                        let _ = host
-                            .models_mut()
-                            .update(&open_change_reason_model, |v| *v = Some(reason));
-                    }
-                })))
+                .on_dismiss_request(Some(
+                    kit_combobox::set_open_change_reason_on_dismiss_request(
+                        open_change_reason_model.clone(),
+                    ),
+                ))
                 .into_element(
                     cx,
                     move |cx| {
@@ -640,16 +649,12 @@ fn combobox_with_patch<H: UiHost>(
                             let border = border_ref.resolve(&theme_for_trigger);
                             let icon_fg = alpha_mul(fg, 0.5);
 
-                            let open_change_reason_model = open_change_reason_model.clone();
-                            cx.pressable_add_on_activate(Arc::new(
-                                move |host, action_cx, _reason| {
-                                    let _ =
-                                        host.models_mut().update(&open_change_reason_model, |v| {
-                                            *v = Some(ComboboxOpenChangeReason::TriggerPress)
-                                        });
-                                    host.request_redraw(action_cx.window);
-                                },
-                            ));
+                            cx.pressable_add_on_activate(
+                                kit_combobox::set_open_change_reason_on_activate(
+                                    open_change_reason_model.clone(),
+                                    ComboboxOpenChangeReason::TriggerPress,
+                                ),
+                            );
                             cx.pressable_toggle_bool(&open_for_trigger);
 
                             let props = PressableProps {
@@ -763,30 +768,14 @@ fn combobox_with_patch<H: UiHost>(
                                 let open_change_reason_model_for_select =
                                     open_change_reason_model.clone();
                                 let value_for_select = item.value.clone();
-                                let on_select: fret_ui::action::OnActivate =
-                                    Arc::new(move |host, action_cx, _reason| {
-                                        let _ = host.models_mut().update(&model_for_select, |v| {
-                                            if v.as_ref().is_some_and(|cur| {
-                                                cur.as_ref() == value_for_select.as_ref()
-                                            }) {
-                                                *v = None;
-                                            } else {
-                                                *v = Some(value_for_select.clone());
-                                            }
-                                        });
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&open_change_reason_model_for_select, |v| {
-                                                *v = Some(ComboboxOpenChangeReason::ItemPress)
-                                            });
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&open_for_select, |v| *v = false);
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&query_for_select, |v| v.clear());
-                                        host.request_redraw(action_cx.window);
-                                    });
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select,
+                                    open_for_select,
+                                    query_for_select,
+                                    open_change_reason_model_for_select,
+                                    value_for_select,
+                                );
 
                                 let mut cmd_item = CommandItem::new(item.label.clone())
                                     .value(item.value.clone())
@@ -841,30 +830,14 @@ fn combobox_with_patch<H: UiHost>(
                                 let open_change_reason_model_for_select =
                                     open_change_reason_model.clone();
                                 let value_for_select = item.value.clone();
-                                let on_select: fret_ui::action::OnActivate =
-                                    Arc::new(move |host, action_cx, _reason| {
-                                        let _ = host.models_mut().update(&model_for_select, |v| {
-                                            if v.as_ref().is_some_and(|cur| {
-                                                cur.as_ref() == value_for_select.as_ref()
-                                            }) {
-                                                *v = None;
-                                            } else {
-                                                *v = Some(value_for_select.clone());
-                                            }
-                                        });
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&open_change_reason_model_for_select, |v| {
-                                                *v = Some(ComboboxOpenChangeReason::ItemPress)
-                                            });
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&open_for_select, |v| *v = false);
-                                        let _ = host
-                                            .models_mut()
-                                            .update(&query_for_select, |v| v.clear());
-                                        host.request_redraw(action_cx.window);
-                                    });
+                                let on_select = kit_combobox::commit_selection_on_activate(
+                                    selection_commit_policy,
+                                    model_for_select,
+                                    open_for_select,
+                                    query_for_select,
+                                    open_change_reason_model_for_select,
+                                    value_for_select,
+                                );
 
                                 let label_text = item.label.clone();
                                 let label_style = item_text_style.clone();
@@ -937,15 +910,11 @@ fn combobox_with_patch<H: UiHost>(
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
-            .on_dismiss_request(Some(Arc::new({
-                let open_change_reason_model = open_change_reason_model.clone();
-                move |host, _cx, req| {
-                    let reason = kit_combobox::open_change_reason_from_dismiss_reason(req.reason);
-                    let _ = host
-                        .models_mut()
-                        .update(&open_change_reason_model, |v| *v = Some(reason));
-                }
-            })))
+            .on_dismiss_request(Some(
+                kit_combobox::set_open_change_reason_on_dismiss_request(
+                    open_change_reason_model.clone(),
+                ),
+            ))
             .into_element_with_anchor(
                 cx,
                 move |cx| {
@@ -975,13 +944,12 @@ fn combobox_with_patch<H: UiHost>(
                         let border = border_ref.resolve(&theme_for_trigger);
                         let icon_fg = alpha_mul(fg, 0.5);
 
-                        let open_change_reason_model = open_change_reason_model.clone();
-                        cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
-                            let _ = host.models_mut().update(&open_change_reason_model, |v| {
-                                *v = Some(ComboboxOpenChangeReason::TriggerPress)
-                            });
-                            host.request_redraw(action_cx.window);
-                        }));
+                        cx.pressable_add_on_activate(
+                            kit_combobox::set_open_change_reason_on_activate(
+                                open_change_reason_model.clone(),
+                                ComboboxOpenChangeReason::TriggerPress,
+                            ),
+                        );
                         cx.pressable_toggle_bool(&open_for_trigger);
 
                         let props = PressableProps {
@@ -1093,28 +1061,14 @@ fn combobox_with_patch<H: UiHost>(
                             let open_change_reason_model_for_select =
                                 open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&open_change_reason_model_for_select, |v| {
-                                            *v = Some(ComboboxOpenChangeReason::ItemPress)
-                                        });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
+                            let on_select = kit_combobox::commit_selection_on_activate(
+                                selection_commit_policy,
+                                model_for_select,
+                                open_for_select,
+                                query_for_select,
+                                open_change_reason_model_for_select,
+                                value_for_select,
+                            );
 
                             let mut cmd_item = CommandItem::new(item.label.clone())
                                 .value(item.value.clone())
@@ -1168,28 +1122,14 @@ fn combobox_with_patch<H: UiHost>(
                             let open_change_reason_model_for_select =
                                 open_change_reason_model.clone();
                             let value_for_select = item.value.clone();
-                            let on_select: fret_ui::action::OnActivate =
-                                Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&model_for_select, |v| {
-                                        if v.as_ref().is_some_and(|cur| {
-                                            cur.as_ref() == value_for_select.as_ref()
-                                        }) {
-                                            *v = None;
-                                        } else {
-                                            *v = Some(value_for_select.clone());
-                                        }
-                                    });
-                                    let _ = host
-                                        .models_mut()
-                                        .update(&open_change_reason_model_for_select, |v| {
-                                            *v = Some(ComboboxOpenChangeReason::ItemPress)
-                                        });
-                                    let _ =
-                                        host.models_mut().update(&open_for_select, |v| *v = false);
-                                    let _ =
-                                        host.models_mut().update(&query_for_select, |v| v.clear());
-                                    host.request_redraw(action_cx.window);
-                                });
+                            let on_select = kit_combobox::commit_selection_on_activate(
+                                selection_commit_policy,
+                                model_for_select,
+                                open_for_select,
+                                query_for_select,
+                                open_change_reason_model_for_select,
+                                value_for_select,
+                            );
 
                             let label_text = item.label.clone();
                             let label_style = item_text_style.clone();

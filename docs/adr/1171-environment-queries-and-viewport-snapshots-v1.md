@@ -1,6 +1,6 @@
 # ADR 1171: Environment Queries and Viewport Snapshots (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -128,4 +128,3 @@ Workstream tracking:
 - `docs/workstreams/environment-queries-v1.md`
 - `docs/workstreams/environment-queries-v1-milestones.md`
 - `docs/workstreams/environment-queries-v1-todo.md`
-

@@ -8,3 +8,7 @@ pub use super::container_queries::{
 pub use super::global_watch::GlobalWatchExt;
 pub use super::model_watch::ModelWatchExt;
 pub use super::semantics::AnyElementSemanticsExt;
+pub use super::viewport_queries::tailwind as viewport_tailwind;
+pub use super::viewport_queries::{
+    ViewportQueryHysteresis, viewport_breakpoints, viewport_width_at_least,
+};
