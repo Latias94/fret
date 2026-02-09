@@ -81,9 +81,11 @@ ColumnDef keys referenced by upstream feature implementations:
 ## Next execution plan (functional parity first)
 
 - Step 1: Close the non-option capability inventory (`HTP-cap-010`) so consumers don't drift (`HTP-base-004` is done).
-- Step 2: Extend core snapshot introspection so UI consumers stop re-implementing traversal/policy logic
-  (`HTP-core-040` remaining scope, consumer-driven).
-- Step 3: Add follow-up memo/perf guardrails only when new pipelines (e.g. grouped rebuild-each-frame) need them.
+- Step 2: Close remaining “observable internal” obligations that can affect user-visible behavior:
+  auto-reset queue coalescing semantics and global faceting surfaces.
+- Step 3: Keep expanding core snapshot introspection only when new UI consumers require it
+  (strict schema versioning; avoid consumer-side recompute drift).
+- Step 4: Add follow-up memo/perf guardrails only when new pipelines (e.g. grouped rebuild-each-frame) need them.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
@@ -96,8 +98,8 @@ P0 (core behavior parity, highest user-visible risk):
 P1 (capability breadth parity):
 
 - Cleared: `HTP-id-014/015`, `HTP-filt-090/100`, `HTP-state-020` are fixture-gated.
-- Remaining: `HTP-core-040` core snapshot introspection breadth (so UI consumers do not drift by
-  re-implementing traversal / inventory helpers).
+- Remaining: auto-reset queue coalescing semantics (cross-feature) and global faceting instance surfaces
+  (so consumers are not blocked when they rely on upstream surfaces).
 
 P2 (engineering guardrails for sustained parity):
 
@@ -276,7 +278,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-headless/src/table/cells.rs`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
-- [~] HTP-core-040 Define a stable, JSON-serializable 鈥渃ore model鈥?snapshot (columns/headers/rows/cells).
+- [x] HTP-core-040 Define a stable, JSON-serializable 鈥渃ore model鈥?snapshot (columns/headers/rows/cells).
   - Done (parity-gated): initial core snapshot schema (column tree + leaf sets + header groups + row ids + cell ids).
     - Evidence: `ecosystem/fret-ui-headless/src/table/core_model.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::core_model_snapshot`)
@@ -325,6 +327,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `rowsById`/cell inventory semantics and avoid drift when custom `getRowId` is used.
   - Remaining: broaden the schema with more column/header/cell inventories (keep versioning strict) as additional
     UI consumers require them.
+- [ ] HTP-core-041 Expand core snapshot inventories as new consumers require them (strict schema versioning).
+  - Goal: keep UI consumers from re-implementing traversal/sizing/policy logic and drifting.
+  - Rule: every schema expansion must bump `schema_version` and be fixture-gated.
 - [x] HTP-core-050 Expose header inventories (flat/leaf/footer) with pin-family variants.
   - Covered (TanStack): `getFlatHeaders`, `getLeafHeaders`, `getFooterGroups` and left/center/right variants.
   - Fret mapping: snapshot-friendly header lists + footer groups as reversed header groups.
@@ -738,6 +743,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `autoResetPageIndex=true`.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset_data_updates.json`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_data_updates_parity.rs`
+- [x] HTP-page-042 Close remaining auto-reset queue coalescing semantics (cross-feature, single-pass).
+  - Goal: ensure `table._queue(cb)`-style coalescing has identical observable outcomes when multiple features
+    schedule auto-resets within the same “render pass” (registration order, dedupe rules, flush timing).
+  - Done (parity-gated, explicit internal scheduling): a dedicated fixture case calls upstream
+    `table._autoResetPageIndex/_autoResetExpanded` multiple times per pass and asserts register-first +
+    coalesced flush semantics across two passes.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset_queue.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_queue_parity.rs`
+    - Generator: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`--case auto_reset_queue`)
 - [x] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).
@@ -1003,6 +1017,14 @@ Next UI parity targets (capability, not exact DOM behavior):
   - Notes:
     - `GlobalFaceting` unique/minmax are empty/null with TanStack鈥檚 built-in helpers because
       `__global__` is not a real column (upstream warns; fixture captures this).
+- [x] HTP-face-020 Add first-class “global faceting” capability surfaces (consumer-unblocking).
+  - Goal: avoid being weaker when consumers rely on `getGlobalFaceted*` instance surfaces (even if built-ins
+    often return empty/null without a real `__global__` column).
+  - Done: add engine-owned global faceting surfaces with consumer-provided overrides (row model + unique values + min/max).
+    - Engine: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::{global_faceted_row_model,global_faceted_unique_values,global_faceted_min_max_u64}` + builder overrides)
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` (snapshot: `faceting_global_custom_cpu`)
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs`
+    - Generator: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__globalFaceting` marker)
 
 ---
 

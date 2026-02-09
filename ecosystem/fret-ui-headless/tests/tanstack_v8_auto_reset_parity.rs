@@ -75,12 +75,12 @@ fn snapshot_row_model<'a, TData>(
     let root = model
         .root_rows()
         .iter()
-        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .filter_map(|&i| model.row(i).map(|r| r.id.as_str().to_string()))
         .collect();
     let flat = model
         .flat_rows()
         .iter()
-        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .filter_map(|&i| model.row(i).map(|r| r.id.as_str().to_string()))
         .collect();
     RowModelSnapshot { root, flat }
 }
@@ -117,6 +117,7 @@ fn tanstack_v8_auto_reset_parity() {
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("status")
             .sort_value_by(|row: &FixtureRow| tanstack_value_str(&row.status))
+            .facet_str_by(|row: &FixtureRow| row.status.as_str())
             .sorting_fn_auto()
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("cpu")
@@ -245,8 +246,8 @@ fn tanstack_v8_auto_reset_parity() {
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .build();
 
-            // TanStack: multiple derived-model memos may queue `_autoResetPageIndex()` within a
-            // single render pass. We call it multiple times and rely on the queue to coalesce.
+            // TanStack: multiple derived-model memos may queue `_autoReset*()` within a single render
+            // pass. We call them multiple times and rely on the queue to coalesce.
             auto_reset.begin_render_pass();
             auto_reset.auto_reset_page_index(&table_post);
             auto_reset.auto_reset_page_index(&table_post);

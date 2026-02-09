@@ -212,6 +212,12 @@ type GetGroupedRowModelFn<'a, TData> = Arc<
         ) -> super::GroupedRowModel
         + 'a,
 >;
+type GetGlobalFacetedRowModelFn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> RowModel<'a, TData> + 'a>;
+type GetGlobalFacetedUniqueValuesFn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> super::FacetCounts + 'a>;
+type GetGlobalFacetedMinMaxU64Fn<'a, TData> =
+    Arc<dyn Fn(&Table<'a, TData>) -> Option<(u64, u64)> + 'a>;
 
 pub struct TableBuilder<'a, TData> {
     data: &'a [TData],
@@ -231,6 +237,9 @@ pub struct TableBuilder<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    get_global_faceted_row_model: Option<GetGlobalFacetedRowModelFn<'a, TData>>,
+    get_global_faceted_unique_values: Option<GetGlobalFacetedUniqueValuesFn<'a, TData>>,
+    get_global_faceted_min_max_u64: Option<GetGlobalFacetedMinMaxU64Fn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
     sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
@@ -261,6 +270,9 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_id: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            get_global_faceted_row_model: None,
+            get_global_faceted_unique_values: None,
+            get_global_faceted_min_max_u64: None,
             filtered_row_model_override_pre_filtered: false,
             sorted_row_model_override_pre_sorted: false,
             expanded_row_model_override_pre_expanded: false,
@@ -538,6 +550,33 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Override the "global faceted row model" surface (TanStack `getGlobalFacetedRowModel`).
+    pub fn get_global_faceted_row_model(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> RowModel<'a, TData> + 'a,
+    ) -> Self {
+        self.get_global_faceted_row_model = Some(Arc::new(f));
+        self
+    }
+
+    /// Override the "global faceted unique values" surface (TanStack `getGlobalFacetedUniqueValues`).
+    pub fn get_global_faceted_unique_values(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> super::FacetCounts + 'a,
+    ) -> Self {
+        self.get_global_faceted_unique_values = Some(Arc::new(f));
+        self
+    }
+
+    /// Override the "global faceted min/max" surface (TanStack `getGlobalFacetedMinMaxValues`).
+    pub fn get_global_faceted_min_max_u64(
+        mut self,
+        f: impl Fn(&Table<'a, TData>) -> Option<(u64, u64)> + 'a,
+    ) -> Self {
+        self.get_global_faceted_min_max_u64 = Some(Arc::new(f));
+        self
+    }
+
     /// Register a named aggregation function (TanStack `options.aggregationFns` equivalent).
     pub fn aggregation_fn(
         mut self,
@@ -578,6 +617,9 @@ pub struct Table<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    get_global_faceted_row_model: Option<GetGlobalFacetedRowModelFn<'a, TData>>,
+    get_global_faceted_unique_values: Option<GetGlobalFacetedUniqueValuesFn<'a, TData>>,
+    get_global_faceted_min_max_u64: Option<GetGlobalFacetedMinMaxU64Fn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
     sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
@@ -607,6 +649,9 @@ pub struct Table<'a, TData> {
     faceted_unique_values_by_column: OnceCell<Vec<OnceCell<super::FacetCounts>>>,
     faceted_unique_labels_by_column: OnceCell<Vec<OnceCell<super::FacetLabels<'a>>>>,
     faceted_min_max_u64_by_column: OnceCell<Vec<OnceCell<Option<(u64, u64)>>>>,
+    global_faceted_row_model: OnceCell<RowModel<'a, TData>>,
+    global_faceted_unique_values: OnceCell<super::FacetCounts>,
+    global_faceted_min_max_u64: OnceCell<Option<(u64, u64)>>,
 }
 
 fn rebuild_flat_rows_from_roots_including_duplicates<TData>(row_model: &mut RowModel<'_, TData>) {
@@ -687,6 +732,9 @@ impl<'a, TData> Table<'a, TData> {
             get_row_id: builder.get_row_id,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            get_global_faceted_row_model: builder.get_global_faceted_row_model,
+            get_global_faceted_unique_values: builder.get_global_faceted_unique_values,
+            get_global_faceted_min_max_u64: builder.get_global_faceted_min_max_u64,
             filtered_row_model_override_pre_filtered: builder
                 .filtered_row_model_override_pre_filtered,
             sorted_row_model_override_pre_sorted: builder.sorted_row_model_override_pre_sorted,
@@ -717,6 +765,9 @@ impl<'a, TData> Table<'a, TData> {
             faceted_unique_values_by_column: OnceCell::new(),
             faceted_unique_labels_by_column: OnceCell::new(),
             faceted_min_max_u64_by_column: OnceCell::new(),
+            global_faceted_row_model: OnceCell::new(),
+            global_faceted_unique_values: OnceCell::new(),
+            global_faceted_min_max_u64: OnceCell::new(),
         }
     }
 
@@ -4442,6 +4493,49 @@ impl<'a, TData> Table<'a, TData> {
                 .unwrap_or_else(|| self.row_model());
             super::faceted_min_max_u64(model, column)
         })
+    }
+
+    /// TanStack-aligned: `table.getGlobalFacetedRowModel()`.
+    ///
+    /// Notes:
+    /// - Matches upstream behavior by returning `pre_filtered_row_model()` when `manualFiltering=true`.
+    /// - When no override is provided, this defaults to `filtered_row_model()` (which already
+    ///   respects `manualFiltering`).
+    pub fn global_faceted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_filtering {
+            return self.pre_filtered_row_model();
+        }
+
+        let Some(get) = self.get_global_faceted_row_model.as_ref() else {
+            return self.filtered_row_model();
+        };
+
+        self.global_faceted_row_model.get_or_init(|| get(self))
+    }
+
+    /// TanStack-aligned: `table.getGlobalFacetedUniqueValues()`.
+    ///
+    /// Notes:
+    /// - Upstream does **not** gate this by `manualFiltering`; only the row model surface is gated.
+    pub fn global_faceted_unique_values(&self) -> &super::FacetCounts {
+        if let Some(get) = self.get_global_faceted_unique_values.as_ref() {
+            return self.global_faceted_unique_values.get_or_init(|| get(self));
+        }
+
+        self.global_faceted_unique_values
+            .get_or_init(super::FacetCounts::new)
+    }
+
+    /// TanStack-aligned: `table.getGlobalFacetedMinMaxValues()` (u64-only mapping).
+    ///
+    /// Notes:
+    /// - Upstream does **not** gate this by `manualFiltering`; only the row model surface is gated.
+    pub fn global_faceted_min_max_u64(&self) -> Option<(u64, u64)> {
+        if let Some(get) = self.get_global_faceted_min_max_u64.as_ref() {
+            return *self.global_faceted_min_max_u64.get_or_init(|| get(self));
+        }
+
+        *self.global_faceted_min_max_u64.get_or_init(|| None)
     }
 }
 

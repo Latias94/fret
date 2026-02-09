@@ -7,6 +7,7 @@ type CaseId =
   | "demo_process"
   | "auto_reset"
   | "auto_reset_data_updates"
+  | "auto_reset_queue"
   | "resets"
   | "pagination"
   | "sort_undefined"
@@ -60,6 +61,8 @@ type SnapshotId =
   | "auto_reset_data_updates_identity_change_manual_pagination_true_no_reset"
   | "auto_reset_data_updates_identity_change_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
   | "auto_reset_data_updates_identity_change_auto_reset_all_false_disables"
+  | "auto_reset_queue_register_first_no_reset"
+  | "auto_reset_queue_second_pass_resets_coalesced"
   | "resets_reset_sorting_restores_initial"
   | "resets_reset_sorting_default_true_clears"
   | "resets_reset_column_filters_restores_initial"
@@ -190,6 +193,7 @@ type SnapshotId =
   | "selection_enable_row_selection_fn_odd_ids_toggle_all_rows_selects_selectable"
   | "selection_enable_row_selection_fn_odd_ids_toggle_row_unselectable_noop"
   | "faceting_baseline"
+  | "faceting_global_custom_cpu"
   | "faceting_cpu_own_filter_ignored"
   | "faceting_cpu_other_filter_applied"
   | "faceting_manual_filtering_bypasses"
@@ -410,6 +414,8 @@ type TanStackOptions = {
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
   filterFnsMode?: "custom_text_case_sensitive"
   globalFilterFn?: "auto" | string
+  // Fixture-only: remap `__global__` faceting to a concrete column id for a non-empty global surface.
+  __globalFaceting?: "cpu"
   // Fixture-only: simulate controlled state hooks that ignore the updater.
   __onColumnSizingChange?: "noop"
   __onColumnSizingInfoChange?: "noop"
@@ -1126,6 +1132,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "demo_process" &&
         v !== "auto_reset" &&
         v !== "auto_reset_data_updates" &&
+        v !== "auto_reset_queue" &&
         v !== "resets" &&
         v !== "pagination" &&
         v !== "sort_undefined" &&
@@ -1161,7 +1168,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|resets|pagination|sort_undefined|sorting_fns|sorting_edge_cases|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|auto_reset_data_updates|auto_reset_queue|resets|pagination|sort_undefined|sorting_fns|sorting_edge_cases|filtering_fns|headers_cells|headers_inventory_deep|visibility_ordering|pinning|pinning_tree|pinning_grouped_rows|column_pinning|faceting|column_sizing|column_sizing_interactions|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1392,6 +1399,7 @@ async function main(): Promise<void> {
     case_id === "demo_process" ||
     case_id === "auto_reset" ||
     case_id === "auto_reset_data_updates" ||
+    case_id === "auto_reset_queue" ||
     case_id === "resets" ||
     case_id === "pagination" ||
     case_id === "state_shapes" ||
@@ -2218,11 +2226,23 @@ async function main(): Promise<void> {
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
       ...(case_id === "faceting"
-        ? {
-            getFacetedRowModel: tableCore.getFacetedRowModel(),
-            getFacetedUniqueValues: tableCore.getFacetedUniqueValues(),
-            getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
-          }
+        ? (() => {
+            const baseRowModel = tableCore.getFacetedRowModel()
+            const baseUnique = tableCore.getFacetedUniqueValues()
+            const baseMinMax = tableCore.getFacetedMinMaxValues()
+            const remap = (columnId: string) => {
+              if (options.__globalFaceting === "cpu" && columnId === "__global__") {
+                return "cpu"
+              }
+              return columnId
+            }
+            return {
+              getFacetedRowModel: (t: any, columnId: string) => baseRowModel(t, remap(columnId)),
+              getFacetedUniqueValues: (t: any, columnId: string) =>
+                baseUnique(t, remap(columnId)),
+              getFacetedMinMaxValues: (t: any, columnId: string) => baseMinMax(t, remap(columnId)),
+            }
+          })()
         : {}),
       ...(case_id === "grouping" ||
       case_id === "grouping_aggregation_fns" ||
@@ -3732,6 +3752,8 @@ function snapshotColumnPinning(
         col.setFilterValue(action.value)
       } else if (action.type === "setGlobalFilterValue") {
         table.setGlobalFilter(action.value)
+      } else if (action.type === "setGrouping") {
+        table.setGrouping(action.grouping)
       } else if (action.type === "setData") {
         currentData = action.data
         table.setOptions((old: any) => ({ ...old, data: currentData }))
@@ -4188,6 +4210,74 @@ function snapshotColumnPinning(
         [{ type: "setData", data: identityChange }],
       ),
     ]
+  } else if (case_id === "auto_reset_queue") {
+    const options: TanStackOptions = {
+      ...defaultOptions,
+      initialState: {
+        pagination: { pageIndex: 0, pageSize: 2 },
+        expanded: {},
+      },
+    }
+
+    const state: TanStackState = {
+      pagination: { pageIndex: 1, pageSize: 2 },
+      expanded: true,
+    }
+
+    const mkQueueSnapshot = async (id: SnapshotId, passes: number) => {
+      const currentData = data as unknown[]
+      const { table, currentState } = buildTable(options, state, currentData)
+      const anyTable = table as any
+
+      if (typeof anyTable._autoResetPageIndex !== "function") {
+        throw new Error("Missing internal table._autoResetPageIndex")
+      }
+      if (typeof anyTable._autoResetExpanded !== "function") {
+        throw new Error("Missing internal table._autoResetExpanded")
+      }
+
+      for (let pass = 0; pass < passes; pass++) {
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetPageIndex()
+        anyTable._autoResetExpanded()
+        anyTable._autoResetExpanded()
+        anyTable._autoResetExpanded()
+
+        // Flush the microtask queue to run `table._queue` callbacks (including the reset itself).
+        await Promise.resolve()
+        await Promise.resolve()
+      }
+
+      return {
+        id,
+        options,
+        state,
+        passes,
+        expect: {
+          next_state: {
+            sorting: currentState.sorting ?? [],
+            columnFilters: currentState.columnFilters ?? [],
+            globalFilter: currentState.globalFilter,
+            pagination: currentState.pagination,
+            grouping: currentState.grouping ?? [],
+            expanded: currentState.expanded,
+            rowPinning: currentState.rowPinning,
+            rowSelection: currentState.rowSelection ?? {},
+            columnVisibility: currentState.columnVisibility,
+            columnSizing: currentState.columnSizing ?? {},
+            columnSizingInfo: currentState.columnSizingInfo,
+            columnPinning: currentState.columnPinning,
+            columnOrder: currentState.columnOrder,
+          },
+        },
+      }
+    }
+
+    snapshots = [
+      await mkQueueSnapshot("auto_reset_queue_register_first_no_reset", 1),
+      await mkQueueSnapshot("auto_reset_queue_second_pass_resets_coalesced", 2),
+    ] as any
   } else if (case_id === "resets") {
     const options: TanStackOptions = defaultOptions
 
@@ -6358,6 +6448,7 @@ function snapshotColumnPinning(
 
     snapshots = [
       mk("faceting_baseline", {}, {}),
+      mk("faceting_global_custom_cpu", { __globalFaceting: "cpu" }, {}),
       mk(
         "faceting_cpu_own_filter_ignored",
         {},
