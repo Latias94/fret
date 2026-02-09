@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Rect, Scene, SemanticsRole,
+    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
 };
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
@@ -726,6 +726,7 @@ impl UiDiagnosticsService {
         let is_v2_intent_step = matches!(
             &step,
             UiActionStepV2::EnsureVisible { .. }
+                | UiActionStepV2::ClickStable { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
@@ -1469,6 +1470,98 @@ impl UiDiagnosticsService {
                 } else {
                     force_dump_label = Some(format!(
                         "script-step-{step_index:04}-ensure_visible-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::ClickStable {
+                target,
+                button,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::ClickStable(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            // Keep the most recent parameters in case the script file was edited in-place.
+                            state.stable_frames = stable_frames;
+                            state.max_move_px = max_move_px;
+                            state.button = button;
+                            state
+                        }
+                        _ => V2ClickStableState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            stable_frames,
+                            max_move_px,
+                            button,
+                            stable_count: 0,
+                            last_center: None,
+                        },
+                    };
+
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+                        let center = Point::new(Px(center.x.0.round()), Px(center.y.0.round()));
+                        let within = state.last_center.is_some_and(|prev| {
+                            (center.x.0 - prev.x.0).abs() <= state.max_move_px
+                                && (center.y.0 - prev.y.0).abs() <= state.max_move_px
+                        });
+                        if within {
+                            state.stable_count = state.stable_count.saturating_add(1);
+                        } else {
+                            state.stable_count = 1;
+                        }
+                        state.last_center = Some(center);
+
+                        if state.stable_count >= state.stable_frames.max(1) {
+                            output.events.extend(click_events(center, state.button, 1));
+                            active.v2_step_state = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-click_stable"));
+                            }
+                        } else if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                            active.v2_step_state = Some(V2StepState::ClickStable(state));
+                            output.request_redraw = true;
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::ClickStable(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
                     ));
                     stop_script = true;
                     failure_reason = Some("no_semantics_snapshot".to_string());
@@ -2966,6 +3059,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
 
     match step {
         UiActionStepV2::Click { .. }
+        | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
@@ -3593,6 +3687,22 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_click_count")]
         click_count: u8,
     },
+    /// Click a target only after its bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for virtualized lists or scroll regions where a target's measured bounds can
+    /// jump across frames (estimate -> measured, inertia settle), causing clicks to land at stale
+    /// positions when using a single-frame snapshot.
+    ClickStable {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     ResetDiagnostics,
     MovePointer {
         target: UiSelectorV1,
@@ -3798,6 +3908,14 @@ fn default_drag_steps() -> u32 {
 
 fn default_click_count() -> u8 {
     1
+}
+
+fn default_click_stable_frames() -> u32 {
+    2
+}
+
+fn default_click_stable_max_move_px() -> f32 {
+    1.0
 }
 
 fn default_move_frames_per_step() -> u32 {
@@ -4149,6 +4267,7 @@ impl PendingScript {
 
 #[derive(Debug, Clone)]
 enum V2StepState {
+    ClickStable(V2ClickStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -4157,6 +4276,17 @@ enum V2StepState {
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_frames: u32,
+    max_move_px: f32,
+    button: UiMouseButtonV1,
+    stable_count: u32,
+    last_center: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
