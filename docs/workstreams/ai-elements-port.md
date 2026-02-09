@@ -75,6 +75,7 @@ an interactive chat demo:
   conversation/message parts for app composition.
 - `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
 - `Artifact`: AI Elements-aligned artifact container surface (header + actions + scrollable content).
+- `Shimmer`: AI Elements-aligned animated text shimmer surface (`duration` + `spread`).
 - `FileTree`: AI Elements-aligned nested file tree surface (small trees; per-row actions; no virtualization yet).
 - `CodeBlock` + `Snippet`: AI Elements-aligned code artifact surfaces (copy feedback + header slots).
 - `Commit`: AI Elements-aligned commit disclosure surface (copy button + file list rows).
@@ -94,6 +95,8 @@ an interactive chat demo:
     - `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
   - `AI artifact (demo)` (`ai_artifact_demo`): `Artifact` demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
+  - `AI shimmer (demo)` (`ai_shimmer_demo`): `Shimmer` demo + gate:
+    - `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
   - `AI file tree (demo)` (`ai_file_tree_demo`): nested file tree demo + gate:
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json`
     - `tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json`
@@ -562,10 +565,10 @@ Legend:
 | `code-block.tsx` | `fret-ui-ai` + `fret-code-view` | `ecosystem/fret-markdown` + `ecosystem/fret-code-view` | Partial | Code fences render via markdown; copy/expand/download actions need slots. |
 | `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Done | Inline copyable surface + copy feedback + UI Gallery demo + diag gate. |
 | `file-tree.tsx` | `fret-ui-ai` + `fret-ui-kit` | `ecosystem/fret-ui-ai/src/elements/file_tree.rs` | Done | Nested file tree surface (small trees) + per-row actions + UI Gallery demo + diag gates; future: virtualized outline path via UI Kit tree recipes. |
-| `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Defer | Needs “artifact” data model + viewer surfaces (markdown/code/file tree). |
+| `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Done | Artifact container surface (header + actions + scrollable content) + UI Gallery demo + diag gate. |
 | `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Defer | Depends on image decode/asset pipeline policy. |
 | `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Defer | Depends on audio backend + buffering policy. |
-| `shimmer.tsx` | `fret-ui-shadcn` | `ecosystem/fret-ui-shadcn` skeleton/loading recipes | Defer | Prefer reusing existing shadcn skeleton/loading surfaces. |
+| `shimmer.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/shimmer.rs` | Done | Animated text shimmer surface (`duration` + `spread`) + UI Gallery demo + diag gate. |
 | `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestion.rs` | Defer | Only implement if an app uses suggestions. |
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |

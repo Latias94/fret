@@ -60,7 +60,7 @@ Status legend:
 | `confirmation` | Not started | `fret-ui-ai` | Likely maps to shadcn alert/dialog. |
 | `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
 | `plan` | Not started | `fret-ui-ai` | Optional; depends on product needs. |
-| `shimmer` | Not started | `fret-ui-ai` | Can likely reuse `fret-ui-shadcn::Skeleton`. |
+| `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
 | `task` | Not started | `fret-ui-ai` | Optional; depends on “agent/task” UIs. |
 
 ### Code
@@ -131,6 +131,10 @@ Existing gates (UI Gallery `ai_chat_demo`):
 Existing gates (UI Gallery `ai_artifact_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-artifact-demo-close-toggle.json`
+
+Existing gates (UI Gallery `ai_shimmer_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-shimmer-demo-pixels-changed.json`
 
 Existing gates (UI Gallery `ai_code_block_demo`):
 

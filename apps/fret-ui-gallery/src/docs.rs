@@ -611,6 +611,31 @@ use fret_ui_ai::{Artifact, ArtifactHeader, ArtifactContent, ArtifactAction, Arti
 ```
 "#;
 
+pub(crate) const DOC_AI_SHIMMER_DEMO: &str = r#"
+## AI shimmer (demo)
+
+This page demonstrates the AI Elements-aligned `Shimmer` surface in `fret-ui-ai`.
+
+Upstream uses a CSS background-clip + gradient animation. In Fret, we approximate the same outcome
+by painting a base text run and an overlaid clipped `Canvas` “erase band”:
+
+- the base text is `muted-foreground`,
+- a moving “erase” band is colored with `background`.
+
+It exists to validate:
+
+- `duration` / `spread` knobs,
+- continuous frame scheduling while the shimmer is visible,
+- inline-sizing expectations (upstream renders as `inline-block`; avoid cross-axis stretch when demoing),
+- stable `test_id` anchors for screenshot-backed automation checks.
+"#;
+
+pub(crate) const USAGE_AI_SHIMMER_DEMO: &str = r#"
+```rust
+use fret_ui_ai::Shimmer;
+```
+"#;
+
 pub(crate) const DOC_AI_FILE_TREE_DEMO: &str = r#"
 ## AI file tree (demo)
 

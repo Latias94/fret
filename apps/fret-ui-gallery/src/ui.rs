@@ -706,6 +706,7 @@ fn page_preview(
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
+        PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
@@ -17880,6 +17881,52 @@ fn preview_ai_artifact_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) ->
                 out.push(artifact);
             }
             out
+        },
+    )]
+}
+
+fn preview_ai_shimmer_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    let default = ui_ai::Shimmer::new("Loading…")
+        .test_id("ui-ai-shimmer-root")
+        .into_element(cx);
+
+    let fast = ui_ai::Shimmer::new("Fast (duration=1s)")
+        .duration_secs(1.0)
+        .test_id("ui-ai-shimmer-fast")
+        .into_element(cx);
+
+    let slow_wide = ui_ai::Shimmer::new("Slow + wide (duration=4s, spread=4)")
+        .duration_secs(4.0)
+        .spread(4.0)
+        .test_id("ui-ai-shimmer-slow-wide")
+        .into_element(cx);
+
+    let long = ui_ai::Shimmer::new(
+        "Generating a longer response… please wait while the model streams output.",
+    )
+    .duration_secs(2.0)
+    .spread(2.0)
+    .test_id("ui-ai-shimmer-long")
+    .refine_layout(LayoutRefinement::default().min_w_0())
+    .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items_start()
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Shimmer (AI Elements)"),
+                default,
+                fast,
+                slow_wide,
+                long,
+            ]
         },
     )]
 }

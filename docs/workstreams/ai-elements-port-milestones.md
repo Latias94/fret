@@ -87,6 +87,7 @@ Notes:
 - `FileTree` v0 is ported (nested, non-virtual) with a UI Gallery demo + diag gates (`ui-gallery-ai-file-tree-demo-toggle.json`, `ui-gallery-ai-file-tree-demo-actions.json`).
 - `CodeBlock` / `Snippet` v0 are ported with a UI Gallery demo + diag gate (`ui-gallery-ai-code-block-demo-copy.json`).
 - `Artifact` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-artifact-demo-close-toggle.json`).
+- `Shimmer` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-shimmer-demo-pixels-changed.json`).
 - `Commit` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-commit-demo-copy.json`).
 - `StackTrace` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-stack-trace-demo-copy.json`).
 - `TestResults` v0 is ported with a UI Gallery demo + diag gate (`ui-gallery-ai-test-results-demo-toggle.json`).

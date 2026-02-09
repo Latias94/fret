@@ -87,7 +87,7 @@ pub use elements::{
     SchemaDisplayDescription, SchemaDisplayExample, SchemaDisplayHeader, SchemaDisplayMethod,
     SchemaDisplayParameter, SchemaDisplayParameters, SchemaDisplayPath, SchemaDisplayProperty,
     SchemaDisplayRequest, SchemaDisplayResponse, SchemaParameter, SchemaParameterLocation,
-    SchemaProperty, Snippet, SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock,
+    SchemaProperty, Shimmer, Snippet, SnippetCopyButton, SnippetInput, SnippetText, SourcesBlock,
     StackFrame, StackTrace, StackTraceCopyButton, StackTraceFrames, Test, TestError,
     TestErrorMessage, TestErrorStack, TestResults, TestResultsContent, TestResultsDuration,
     TestResultsHeader, TestResultsProgress, TestResultsSummary, TestResultsSummaryData,
