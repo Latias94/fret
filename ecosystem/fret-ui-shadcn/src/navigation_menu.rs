@@ -97,6 +97,31 @@ fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
 const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct NavigationMenuValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn navigation_menu_value_change_event(
+    state: &mut NavigationMenuValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
+        return None;
+    }
+
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
+    }
+
+    None
+}
 
 #[derive(Default)]
 struct NavigationMenuOpenChangeCallbackState {
@@ -569,6 +594,7 @@ pub struct NavigationMenu {
     layout: LayoutRefinement,
     style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
+    on_value_change: Option<OnValueChange>,
     on_open_change_complete: Option<OnOpenChange>,
 }
 
@@ -582,6 +608,7 @@ impl std::fmt::Debug for NavigationMenu {
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
+            .field("on_value_change", &self.on_value_change.is_some())
             .field(
                 "on_open_change_complete",
                 &self.on_open_change_complete.is_some(),
@@ -603,6 +630,7 @@ impl NavigationMenu {
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
             on_open_change_complete: None,
         }
     }
@@ -619,6 +647,7 @@ impl NavigationMenu {
             layout: LayoutRefinement::default(),
             style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
+            on_value_change: None,
             on_open_change_complete: None,
         }
     }
@@ -720,6 +749,12 @@ impl NavigationMenu {
         self
     }
 
+    /// Called when selected value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
     pub fn on_open_change_complete(
         mut self,
@@ -740,6 +775,7 @@ impl NavigationMenu {
         let layout = self.layout;
         let style = self.style;
         let cfg = self.config;
+        let on_value_change = self.on_value_change;
         let on_open_change_complete = self.on_open_change_complete;
 
         let value_model =
@@ -848,6 +884,15 @@ impl NavigationMenu {
 
             let selected: Option<Arc<str>> =
                 cx.watch_model(&value_model).layout().cloned().flatten();
+            if let Some(handler) = on_value_change.as_ref() {
+                let changed = cx.with_state(
+                    NavigationMenuValueChangeCallbackState::default,
+                    |state| navigation_menu_value_change_event(state, selected.clone()),
+                );
+                if let Some(value) = changed {
+                    handler(value);
+                }
+            }
             let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
                 root_id,
                 || Arc::new(Mutex::new(SafeCorridorState::default())),
@@ -1999,6 +2044,48 @@ mod tests {
         let menu = NavigationMenu::new(model).on_open_change_complete(Some(Arc::new(|_open| {})));
 
         assert!(menu.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let menu = NavigationMenu::new(model).on_value_change(Some(Arc::new(|_value| {})));
+
+        assert!(menu.on_value_change.is_some());
+    }
+
+    #[test]
+    fn navigation_menu_value_change_event_emits_only_on_state_change() {
+        let mut state = NavigationMenuValueChangeCallbackState::default();
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, None);
+
+        let changed =
+            navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("components")
+        );
+
+        let changed =
+            navigation_menu_value_change_event(&mut state, Some(Arc::from("components")));
+        assert_eq!(changed, None);
+
+        let changed =
+            navigation_menu_value_change_event(&mut state, Some(Arc::from("docs")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("docs")
+        );
+
+        let changed = navigation_menu_value_change_event(&mut state, None);
+        assert_eq!(changed, Some(None));
     }
 
     #[test]

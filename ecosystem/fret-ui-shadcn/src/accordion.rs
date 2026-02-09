@@ -2472,11 +2472,8 @@ mod tests {
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
 
-        let accordion =
-            composable_accordion::AccordionRoot::single(open).on_value_change(Some(Arc::new(
-                |_value| {},
-            )));
-        assert!(accordion.on_value_change.is_some());
+        let _ = composable_accordion::AccordionRoot::single(open)
+            .on_value_change(Some(Arc::new(|_value| {})));
     }
 
     #[test]

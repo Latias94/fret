@@ -94,26 +94,60 @@ struct ComboboxState {
 }
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 
 #[derive(Default)]
 struct ComboboxOpenChangeCallbackState {
     initialized: bool,
     last_open: bool,
+    pending_complete: Option<bool>,
 }
 
-fn combobox_open_change_event(
+fn combobox_open_change_events(
     state: &mut ComboboxOpenChangeCallbackState,
     open: bool,
-) -> Option<bool> {
+    present: bool,
+    animating: bool,
+) -> (Option<bool>, Option<bool>) {
+    let mut changed = None;
+    let mut completed = None;
+
     if !state.initialized {
         state.initialized = true;
         state.last_open = open;
+    } else if state.last_open != open {
+        state.last_open = open;
+        state.pending_complete = Some(open);
+        changed = Some(open);
+    }
+
+    if state.pending_complete == Some(open) && present == open && !animating {
+        state.pending_complete = None;
+        completed = Some(open);
+    }
+
+    (changed, completed)
+}
+
+#[derive(Default)]
+struct ComboboxValueChangeCallbackState {
+    initialized: bool,
+    last_value: Option<Arc<str>>,
+}
+
+fn combobox_value_change_event(
+    state: &mut ComboboxValueChangeCallbackState,
+    value: Option<Arc<str>>,
+) -> Option<Option<Arc<str>>> {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_value = value;
         return None;
     }
 
-    if state.last_open != open {
-        state.last_open = open;
-        return Some(open);
+    if state.last_value != value {
+        state.last_value = value.clone();
+        return Some(value);
     }
 
     None
@@ -134,7 +168,9 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     style: ComboboxStyle,
@@ -158,7 +194,9 @@ impl Combobox {
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
+            on_value_change: None,
             on_open_change: None,
+            on_open_change_complete: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             style: ComboboxStyle::default(),
@@ -250,9 +288,24 @@ impl Combobox {
         self
     }
 
+    /// Called when selected value changes (Base UI `onValueChange`).
+    pub fn on_value_change(mut self, on_value_change: Option<OnValueChange>) -> Self {
+        self.on_value_change = on_value_change;
+        self
+    }
+
     /// Called when the open state changes (Base UI `onOpenChange`).
     pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
         self.on_open_change = on_open_change;
+        self
+    }
+
+    /// Called when open/close transition settles (Base UI `onOpenChangeComplete`).
+    pub fn on_open_change_complete(
+        mut self,
+        on_open_change_complete: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_change_complete = on_open_change_complete;
         self
     }
 
@@ -287,7 +340,9 @@ impl Combobox {
             self.responsive,
             self.search_enabled,
             self.consume_outside_pointer_events,
+            self.on_value_change,
             self.on_open_change,
+            self.on_open_change_complete,
             self.chrome,
             self.layout,
             self.style,
@@ -327,6 +382,8 @@ pub fn combobox<H: UiHost>(
         search_enabled,
         consume_outside_pointer_events,
         None,
+        None,
+        None,
         ChromeRefinement::default(),
         LayoutRefinement::default(),
         ComboboxStyle::default(),
@@ -349,7 +406,9 @@ fn combobox_with_patch<H: UiHost>(
     responsive: bool,
     search_enabled: bool,
     consume_outside_pointer_events: bool,
+    on_value_change: Option<OnValueChange>,
     on_open_change: Option<OnOpenChange>,
+    on_open_change_complete: Option<OnOpenChange>,
     chrome_patch: ChromeRefinement,
     layout_patch: LayoutRefinement,
     style_override: ComboboxStyle,
@@ -357,11 +416,24 @@ fn combobox_with_patch<H: UiHost>(
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+        if let Some(handler) = on_value_change.as_ref() {
+            let value_change =
+                cx.with_state(ComboboxValueChangeCallbackState::default, |state| {
+                    combobox_value_change_event(state, selected.clone())
+                });
+            if let Some(value) = value_change {
+                handler(value);
+            }
+        }
         let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
-        let open_change = cx.with_state(ComboboxOpenChangeCallbackState::default, |state| {
-            combobox_open_change_event(state, is_open)
-        });
+        let (open_change, open_change_complete) =
+            cx.with_state(ComboboxOpenChangeCallbackState::default, |state| {
+                combobox_open_change_events(state, is_open, is_open, false)
+            });
         if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
+            handler(open);
+        }
+        if let (Some(open), Some(handler)) = (open_change_complete, on_open_change_complete.as_ref()) {
             handler(open);
         }
 
@@ -1368,20 +1440,93 @@ mod tests {
     }
 
     #[test]
-    fn combobox_open_change_event_emits_only_on_state_change() {
+    fn combobox_open_change_complete_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox =
+            Combobox::new(value, open).on_open_change_complete(Some(Arc::new(|_open| {})));
+
+        assert!(combobox.on_open_change_complete.is_some());
+    }
+
+    #[test]
+    fn combobox_on_value_change_builder_sets_handler() {
+        let mut app = App::new();
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let combobox = Combobox::new(value, open).on_value_change(Some(Arc::new(|_value| {})));
+
+        assert!(combobox.on_value_change.is_some());
+    }
+
+    #[test]
+    fn combobox_open_change_events_emit_change_and_complete_after_settle() {
         let mut state = ComboboxOpenChangeCallbackState::default();
 
-        let changed = combobox_open_change_event(&mut state, false);
+        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
         assert_eq!(changed, None);
+        assert_eq!(completed, None);
 
-        let changed = combobox_open_change_event(&mut state, true);
+        let (changed, completed) = combobox_open_change_events(&mut state, true, true, true);
         assert_eq!(changed, Some(true));
+        assert_eq!(completed, None);
 
-        let changed = combobox_open_change_event(&mut state, true);
+        let (changed, completed) = combobox_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(true));
+
+        let (changed, completed) = combobox_open_change_events(&mut state, false, true, true);
+        assert_eq!(changed, Some(false));
+        assert_eq!(completed, None);
+
+        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, None);
+        assert_eq!(completed, Some(false));
+    }
+
+    #[test]
+    fn combobox_open_change_events_complete_without_animation() {
+        let mut state = ComboboxOpenChangeCallbackState::default();
+
+        let _ = combobox_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = combobox_open_change_events(&mut state, true, true, false);
+        assert_eq!(changed, Some(true));
+        assert_eq!(completed, Some(true));
+
+        let (changed, completed) = combobox_open_change_events(&mut state, false, false, false);
+        assert_eq!(changed, Some(false));
+        assert_eq!(completed, Some(false));
+    }
+
+    #[test]
+    fn combobox_value_change_event_emits_only_on_state_change() {
+        let mut state = ComboboxValueChangeCallbackState::default();
+
+        let changed = combobox_value_change_event(&mut state, None);
         assert_eq!(changed, None);
 
-        let changed = combobox_open_change_event(&mut state, false);
-        assert_eq!(changed, Some(false));
+        let changed = combobox_value_change_event(&mut state, Some(Arc::from("beta")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("beta")
+        );
+
+        let changed = combobox_value_change_event(&mut state, Some(Arc::from("beta")));
+        assert_eq!(changed, None);
+
+        let changed = combobox_value_change_event(&mut state, Some(Arc::from("alpha")));
+        assert_eq!(
+            changed
+                .as_ref()
+                .and_then(|v| v.as_ref().map(|s| s.as_ref())),
+            Some("alpha")
+        );
+
+        let changed = combobox_value_change_event(&mut state, None);
+        assert_eq!(changed, Some(None));
     }
 
     #[test]
