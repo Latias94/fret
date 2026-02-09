@@ -524,7 +524,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let normalized_menu_bar = menu_bar.clone().normalized();
     let group = cx.root_id();
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let border = theme.color_required("color.panel.border");
     let bg = theme.color_required("color.panel.background");
 
