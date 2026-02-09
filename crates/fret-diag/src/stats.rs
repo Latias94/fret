@@ -13149,6 +13149,494 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_u
     Ok(())
 }
 
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for baseline snapshot (folds A)
+    // 1: waiting for folds to toggle to B (folds != A)
+    // 2: waiting for folds to return to A
+    // 3: success
+    let mut state: u8 = 0;
+
+    let mut baseline_folds: Option<bool> = None;
+    let mut baseline_rev: u64 = 0;
+    let mut baseline_len: u64 = 0;
+    let mut baseline_caret: u64 = 0;
+
+    let mut toggled_folds: Option<bool> = None;
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let enabled = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !enabled {
+                continue;
+            }
+
+            let wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if wrap_cols.is_some() {
+                continue;
+            }
+
+            let folds_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let rev = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            match state {
+                0 => {
+                    baseline_folds = Some(folds_fixture);
+                    baseline_rev = rev;
+                    baseline_len = len;
+                    baseline_caret = caret;
+                    state = 1;
+                }
+                1 if Some(folds_fixture) != baseline_folds => {
+                    toggled_folds = Some(folds_fixture);
+                    if rev != baseline_rev || len != baseline_len || caret != baseline_caret {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "toggled",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                                "caret": baseline_caret,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "caret": caret,
+                            },
+                            "folds_fixture": { "baseline": baseline_folds, "observed": folds_fixture },
+                        }));
+                        state = 3;
+                        break;
+                    }
+                    state = 2;
+                }
+                2 if Some(folds_fixture) == baseline_folds => {
+                    if rev != baseline_rev || len != baseline_len || caret != baseline_caret {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "returned",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                                "caret": baseline_caret,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "caret": caret,
+                            },
+                            "folds_fixture": { "baseline": baseline_folds, "observed": folds_fixture },
+                        }));
+                        state = 3;
+                        break;
+                    }
+                    state = 3;
+                    break;
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "soft_wrap_cols": wrap_cols,
+                "folds_fixture": folds_fixture,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "caret": caret,
+                "state": state,
+            }));
+        }
+        if state == 3 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_markdown_editor_source_folds_toggle_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_markdown_editor_source_folds_toggle_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "baseline": {
+            "folds_fixture": baseline_folds,
+            "buffer_revision": baseline_rev,
+            "text_len_bytes": baseline_len,
+            "caret": baseline_caret,
+        },
+        "toggled_folds_fixture": toggled_folds,
+        "violation": violation,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery markdown editor folds toggle gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 && violation.is_none() && toggled_folds.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery markdown editor folds toggle gate failed (expected: folds_fixture toggles and returns without changing buffer_revision/text_len_bytes/caret)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for baseline snapshot (inlays A)
+    // 1: waiting for inlays to toggle to B (inlays != A)
+    // 2: waiting for inlays to return to A
+    // 3: success
+    let mut state: u8 = 0;
+
+    let mut baseline_inlays: Option<bool> = None;
+    let mut baseline_rev: u64 = 0;
+    let mut baseline_len: u64 = 0;
+    let mut baseline_caret: u64 = 0;
+
+    let mut toggled_inlays: Option<bool> = None;
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let enabled = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !enabled {
+                continue;
+            }
+
+            let wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if wrap_cols.is_some() {
+                continue;
+            }
+
+            let inlays_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("inlays_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let rev = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            match state {
+                0 => {
+                    baseline_inlays = Some(inlays_fixture);
+                    baseline_rev = rev;
+                    baseline_len = len;
+                    baseline_caret = caret;
+                    state = 1;
+                }
+                1 if Some(inlays_fixture) != baseline_inlays => {
+                    toggled_inlays = Some(inlays_fixture);
+                    if rev != baseline_rev || len != baseline_len || caret != baseline_caret {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "toggled",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                                "caret": baseline_caret,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "caret": caret,
+                            },
+                            "inlays_fixture": { "baseline": baseline_inlays, "observed": inlays_fixture },
+                        }));
+                        state = 3;
+                        break;
+                    }
+                    state = 2;
+                }
+                2 if Some(inlays_fixture) == baseline_inlays => {
+                    if rev != baseline_rev || len != baseline_len || caret != baseline_caret {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "returned",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                                "caret": baseline_caret,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                                "caret": caret,
+                            },
+                            "inlays_fixture": { "baseline": baseline_inlays, "observed": inlays_fixture },
+                        }));
+                        state = 3;
+                        break;
+                    }
+                    state = 3;
+                    break;
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "soft_wrap_cols": wrap_cols,
+                "inlays_fixture": inlays_fixture,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "caret": caret,
+                "state": state,
+            }));
+        }
+        if state == 3 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_markdown_editor_source_inlays_toggle_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_markdown_editor_source_inlays_toggle_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "baseline": {
+            "inlays_fixture": baseline_inlays,
+            "buffer_revision": baseline_rev,
+            "text_len_bytes": baseline_len,
+            "caret": baseline_caret,
+        },
+        "toggled_inlays_fixture": toggled_inlays,
+        "violation": violation,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery markdown editor inlays toggle gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 && violation.is_none() && toggled_inlays.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery markdown editor inlays toggle gate failed (expected: inlays_fixture toggles and returns without changing buffer_revision/text_len_bytes/caret)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
     bundle_path: &Path,
     warmup_frames: u64,

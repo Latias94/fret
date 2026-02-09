@@ -59,9 +59,11 @@ use stats::{
     check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present,
     check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable,
     check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
     check_bundle_for_ui_gallery_markdown_editor_source_inlays_present,
     check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable,
     check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click,
     check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
@@ -159,11 +161,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool =
         false;
+    let mut check_ui_gallery_markdown_editor_source_folds_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_folds_placeholder_present: bool = false;
     let mut check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: bool =
         false;
     let mut check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: bool =
         false;
+    let mut check_ui_gallery_markdown_editor_source_inlays_toggle_stable: bool = false;
     let mut check_ui_gallery_markdown_editor_source_inlays_present: bool = false;
     let mut check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: bool = false;
     let mut check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: bool =
@@ -716,6 +720,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     true;
                 i += 1;
             }
+            "--check-ui-gallery-markdown-editor-source-folds-toggle-stable" => {
+                check_ui_gallery_markdown_editor_source_folds_toggle_stable = true;
+                i += 1;
+            }
             "--check-ui-gallery-markdown-editor-source-folds-placeholder-present" => {
                 check_ui_gallery_markdown_editor_source_folds_placeholder_present = true;
                 i += 1;
@@ -730,6 +738,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             {
                 check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
                     true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-inlays-toggle-stable" => {
+                check_ui_gallery_markdown_editor_source_inlays_toggle_stable = true;
                 i += 1;
             }
             "--check-ui-gallery-markdown-editor-source-inlays-present" => {
@@ -1695,9 +1707,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_a11y_composition
                     || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
                     || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+                    || check_ui_gallery_markdown_editor_source_folds_toggle_stable
                     || check_ui_gallery_markdown_editor_source_folds_placeholder_present
                     || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
                     || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                    || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
                     || check_ui_gallery_markdown_editor_source_inlays_present
                     || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
                     || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
@@ -1777,9 +1791,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_present,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
                         check_ui_gallery_markdown_editor_source_inlays_present,
                         check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
                         check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
@@ -2121,9 +2137,11 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_a11y_composition
                         || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
                         || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+                        || check_ui_gallery_markdown_editor_source_folds_toggle_stable
                         || check_ui_gallery_markdown_editor_source_folds_placeholder_present
                         || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
                         || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                        || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
                         || check_ui_gallery_markdown_editor_source_inlays_present
                         || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
                         || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
@@ -2202,9 +2220,11 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_a11y_composition,
                             check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                             check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                            check_ui_gallery_markdown_editor_source_folds_toggle_stable,
                             check_ui_gallery_markdown_editor_source_folds_placeholder_present,
                             check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
                             check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                            check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
                             check_ui_gallery_markdown_editor_source_inlays_present,
                             check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
                             check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
@@ -3513,11 +3533,13 @@ See: `docs/tracy.md`.\n";
                         &src,
                     )
                     || ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
                         &src,
                     )
                     || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
                     || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
@@ -3747,6 +3769,10 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable =
                         ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
+                    let suite_ui_gallery_markdown_editor_source_folds_toggle_stable =
+                        ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(
+                            &src,
+                        ) && !check_ui_gallery_markdown_editor_source_folds_toggle_stable;
                     let suite_ui_gallery_markdown_editor_source_folds_placeholder_present =
                         ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_folds_placeholder_present;
@@ -3756,6 +3782,10 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
                         ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
+                    let suite_ui_gallery_markdown_editor_source_inlays_toggle_stable =
+                        ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(
+                            &src,
+                        ) && !check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
                     let suite_ui_gallery_markdown_editor_source_inlays_present =
                         ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_inlays_present;
@@ -3893,12 +3923,16 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
                             || suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                        check_ui_gallery_markdown_editor_source_folds_toggle_stable
+                            || suite_ui_gallery_markdown_editor_source_folds_toggle_stable,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_present
                             || suite_ui_gallery_markdown_editor_source_folds_placeholder_present,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
                             || suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
                         check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
                             || suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_markdown_editor_source_inlays_toggle_stable
+                            || suite_ui_gallery_markdown_editor_source_inlays_toggle_stable,
                         check_ui_gallery_markdown_editor_source_inlays_present
                             || suite_ui_gallery_markdown_editor_source_inlays_present,
                         check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
@@ -7635,6 +7669,19 @@ fn ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection
     )
 }
 
+fn ui_gallery_script_requires_markdown_editor_source_folds_toggle_stable_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-folds-placeholder-baseline.json"
+    )
+}
+
 fn ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
     script: &Path,
 ) -> bool {
@@ -7675,6 +7722,19 @@ fn ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_un
 }
 
 fn ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-inlays-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_inlays_toggle_stable_gate(
+    script: &Path,
+) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
     };
@@ -8084,9 +8144,11 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool,
+    check_ui_gallery_markdown_editor_source_folds_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_folds_placeholder_present: bool,
     check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: bool,
     check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: bool,
+    check_ui_gallery_markdown_editor_source_inlays_toggle_stable: bool,
     check_ui_gallery_markdown_editor_source_inlays_present: bool,
     check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: bool,
     check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: bool,
@@ -8300,6 +8362,12 @@ fn apply_post_run_checks(
             warmup_frames,
         )?;
     }
+    if check_ui_gallery_markdown_editor_source_folds_toggle_stable {
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
     if check_ui_gallery_markdown_editor_source_folds_placeholder_present {
         check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present(
             bundle_path,
@@ -8314,6 +8382,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit {
         check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_inlays_toggle_stable {
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable(
             bundle_path,
             warmup_frames,
         )?;
@@ -9173,6 +9247,8 @@ mod tests {
         check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_json,
         check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap_json,
         check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits_json,
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable_json,
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable_json,
         check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click_json,
         check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits_json,
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_json,
@@ -12529,6 +12605,320 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("soft-wrap toggle gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_folds_toggle_gate_passes_on_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": true,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_markdown_editor_folds_toggle_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_folds_toggle_gate_fails_when_rev_changes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": true,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 3,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "folds_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 3,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_markdown_editor_folds_toggle_gate_fails");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_stable_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("folds toggle gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_inlays_toggle_gate_passes_on_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": true,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_markdown_editor_inlays_toggle_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_markdown_editor_inlays_toggle_gate_fails_when_caret_moves() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 5 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": true,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 6 }
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "selected_page": "markdown_editor_source",
+                                "code_editor": {
+                                    "soft_wrap_cols": null,
+                                    "inlays_fixture": false,
+                                    "markdown_editor_source": {
+                                        "interaction": { "enabled": true, "editable": true },
+                                        "buffer_revision": 2,
+                                        "text_len_bytes": 10,
+                                        "selection": { "caret": 6 }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_markdown_editor_inlays_toggle_gate_fails");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("inlays toggle gate failed"));
     }
 
     #[test]

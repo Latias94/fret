@@ -44,11 +44,20 @@
     { "type": "wait_frames", "n": 4 },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-inlays-set-off" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-folds-set-on" } },
-    { "type": "wait_frames", "n": 8 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-folds-set-off" } },
+    { "type": "wait_frames", "n": 4 },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-viewport" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_bundle", "label": "ui-gallery-markdown-editor-source-folds-placeholder" }
+    { "type": "press_key", "key": "home", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-markdown-editor-source-folds-placeholder-baseline-a" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-folds-set-on" } },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "ui-gallery-markdown-editor-source-folds-placeholder-baseline-b" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-folds-set-off" } },
+    { "type": "wait_frames", "n": 8 },
+    { "type": "capture_bundle", "label": "ui-gallery-markdown-editor-source-folds-placeholder-baseline-c" }
   ]
 }
-
