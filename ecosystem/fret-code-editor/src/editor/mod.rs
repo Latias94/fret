@@ -1180,7 +1180,7 @@ impl CodeEditor {
                                     }
                                     did = input::redo(&mut st);
                                 }
-                                "text.select_all" => {
+                                "text.select_all" | "edit.select_all" => {
                                     if !st.interaction.selectable {
                                         return true;
                                     }
@@ -1193,14 +1193,14 @@ impl CodeEditor {
                                     st.undo_group = None;
                                     did = true;
                                 }
-                                "text.copy" => {
+                                "text.copy" | "edit.copy" => {
                                     if !st.interaction.selectable {
                                         return true;
                                     }
                                     input::copy_selection(host, &st);
                                     did = true;
                                 }
-                                "text.cut" => {
+                                "text.cut" | "edit.cut" => {
                                     if !st.interaction.editable {
                                         return true;
                                     }
@@ -1208,7 +1208,7 @@ impl CodeEditor {
                                         did = true;
                                     }
                                 }
-                                "text.paste" => {
+                                "text.paste" | "edit.paste" => {
                                     if !st.interaction.editable {
                                         return true;
                                     }
@@ -1262,6 +1262,31 @@ impl CodeEditor {
                             true
                         },
                     ),
+                );
+
+                let avail_state = editor_state.clone();
+                cx.command_on_command_availability_for(
+                    region_id,
+                    Arc::new(move |_host, acx, command| {
+                        if !acx.focus_in_subtree {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+
+                        let st = avail_state.borrow();
+                        if !st.interaction.enabled || !st.interaction.focusable {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+
+                        match command.as_str() {
+                            "text.select_all" | "edit.select_all" => {
+                                if !st.interaction.selectable || st.buffer.len_bytes() == 0 {
+                                    return fret_ui::CommandAvailability::Blocked;
+                                }
+                                fret_ui::CommandAvailability::Available
+                            }
+                            _ => fret_ui::CommandAvailability::NotHandled,
+                        }
+                    }),
                 );
 
                 let on_pointer_down_state = editor_state.clone();

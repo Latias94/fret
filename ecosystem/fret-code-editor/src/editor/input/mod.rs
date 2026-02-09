@@ -179,6 +179,16 @@ pub(super) fn handle_key_down(
     let cell_w_px = cell_w.get();
 
     match key {
+        KeyCode::KeyA if ctrl_or_meta => {
+            st.set_preedit(None);
+            let end = st.buffer.len_bytes();
+            st.selection = Selection {
+                anchor: 0,
+                focus: end,
+            };
+            st.caret_preferred_x = None;
+            st.undo_group = None;
+        }
         KeyCode::ArrowLeft => {
             if meta {
                 move_caret_home_end(&mut st, true, false, shift);
