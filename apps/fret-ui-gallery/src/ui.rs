@@ -3600,6 +3600,13 @@ fn preview_code_editor_torture(
         last_inlays.set(Some(inlays_enabled));
     }
 
+    let allow_decorations_under_preedit =
+        cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
+    if handle.allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
+        handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
+    }
+
     let header_handle = handle.clone();
     let header = stack::vstack(
         cx,
@@ -3709,6 +3716,37 @@ fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-off",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit.set(false);
+                                    header_handle_controls.set_allow_decorations_under_inline_preedit(false);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: on")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-on",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit.set(true);
+                                    header_handle_controls.set_allow_decorations_under_inline_preedit(true);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            cx.text(if allow_decorations_under_preedit_enabled {
+                                "Preedit decorations: on"
+                            } else {
+                                "Preedit decorations: off"
+                            }),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")
                                 .a11y_label("Toggle fold fixture on line 0")

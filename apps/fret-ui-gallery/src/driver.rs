@@ -3473,6 +3473,8 @@ pub fn build_app() -> App {
                             let caret = selection.caret().min(text.len()) as u64;
                             let stats = handle.cache_stats();
                             let preedit_active = handle.preedit_active();
+                            let allow_decorations_under_inline_preedit =
+                                handle.allow_decorations_under_inline_preedit();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
                             let fold_placeholder_present = handle
@@ -3485,6 +3487,7 @@ pub fn build_app() -> App {
                                 "schema_version": 1,
                                 "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                                 "preedit_active": preedit_active,
+                                "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,
@@ -3493,7 +3496,7 @@ pub fn build_app() -> App {
                                 },
                                 "buffer_revision": buffer_revision,
                                 "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
-                                "inlays": { "enabled": inlays, "line0_present": inlay_present },
+                                "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
                                 "text_len_bytes": text.len() as u64,
                                 "selection": { "anchor": anchor, "caret": caret },
                                 "cache_stats": {

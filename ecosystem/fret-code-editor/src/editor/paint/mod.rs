@@ -613,7 +613,9 @@ pub(super) fn cached_row_text_with_range(
     let range_for_return = range.clone();
     let base: String = st.buffer.slice_to_string(range.clone()).unwrap_or_default();
 
-    let suppress_decorations = st.preedit.is_some() && st.display_wrap_cols.is_some();
+    let suppress_decorations = st.preedit.is_some()
+        && st.display_wrap_cols.is_some()
+        && !st.allow_decorations_under_inline_preedit;
     let (text, fold_map) = if !suppress_decorations {
         let line = st.display_map.display_row_line(row);
         let folds = st.line_folds.get(&line).map(|v| v.as_ref()).unwrap_or(&[]);

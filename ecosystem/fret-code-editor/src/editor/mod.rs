@@ -306,6 +306,7 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    allow_decorations_under_inline_preedit: bool,
     interaction: CodeEditorInteractionOptions,
     region_id: Option<fret_ui::GlobalElementId>,
     text_boundary_mode_override: Option<TextBoundaryMode>,
@@ -376,13 +377,17 @@ impl CodeEditorState {
     fn refresh_display_map(&mut self) {
         // ADR 0200 / ADR 0203:
         //
-        // v1: inline IME preedit is modeled as a paint-time injection. This means we cannot allow
-        // wrap-driven row breaking to depend on the preedit string, so in wrapped mode we keep the
-        // conservative behavior and suppress fold placeholders / inlays while preedit is active.
+        // v1 baseline: inline IME preedit is modeled as a paint-time injection. This means we
+        // cannot allow wrap-driven row breaking to depend on the preedit string, so by default we
+        // suppress fold placeholders / inlays while preedit is active in wrapped mode.
         //
-        // Unwrapped mode is safe to compose at the paint/hit-test layer (no row-breaking), so we
-        // keep folds/inlays enabled even while preedit is active.
-        let suppress_decorations = self.preedit.is_some() && self.display_wrap_cols.is_some();
+        // Staging: downstream consumers (and the UI Gallery harness) can opt into keeping
+        // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
+        // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
+        // composed DisplayMap (ADR 0203).
+        let suppress_decorations = self.preedit.is_some()
+            && self.display_wrap_cols.is_some()
+            && !self.allow_decorations_under_inline_preedit;
         self.display_map = if suppress_decorations {
             DisplayMap::new(&self.buffer, self.display_wrap_cols)
         } else {
@@ -400,6 +405,14 @@ impl CodeEditorState {
             return;
         }
         self.preedit = preedit;
+        self.refresh_display_map();
+    }
+
+    fn set_allow_decorations_under_inline_preedit(&mut self, allowed: bool) {
+        if self.allow_decorations_under_inline_preedit == allowed {
+            return;
+        }
+        self.allow_decorations_under_inline_preedit = allowed;
         self.refresh_display_map();
     }
 
@@ -440,6 +453,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                allow_decorations_under_inline_preedit: false,
                 interaction: CodeEditorInteractionOptions::default(),
                 region_id: None,
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
@@ -555,6 +569,16 @@ impl CodeEditorHandle {
 
     pub fn preedit_active(&self) -> bool {
         self.state.borrow().preedit.is_some()
+    }
+
+    pub fn allow_decorations_under_inline_preedit(&self) -> bool {
+        self.state.borrow().allow_decorations_under_inline_preedit
+    }
+
+    pub fn set_allow_decorations_under_inline_preedit(&self, allowed: bool) {
+        self.state
+            .borrow_mut()
+            .set_allow_decorations_under_inline_preedit(allowed);
     }
 
     pub fn region_id(&self) -> Option<fret_ui::GlobalElementId> {
