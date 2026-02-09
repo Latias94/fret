@@ -76,7 +76,7 @@ Legend:
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
 | `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | Rust test + perf note |
-| `Marquee` / `Ticker` | `repo-ref/kibo/packages/marquee`, `.../ticker` (MIT) | continuous frames lease | scripted + perf gate |
+| `Marquee` / `Ticker` | `repo-ref/kibo/packages/marquee`, `.../ticker` (MIT) | continuous frames lease | scripted + perf note (perf gate later if needed) |
 
 ## Per-component checklist (copy/paste into PRs)
 

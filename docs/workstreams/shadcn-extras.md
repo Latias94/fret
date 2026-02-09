@@ -98,6 +98,22 @@ Recommended minimum gates for scheduling-heavy extras:
 - Add a short perf note (or a `fretboard diag perf` gate) when the animation is expected to be
   long-lived or scene-op heavy.
 
+### Perf notes (current M3 components)
+
+These notes are intentionally qualitative (cheap to maintain). If/when we see regressions, add a
+`fretboard diag perf` gate to pin the numbers.
+
+- `RelativeTime` (auto-updating):
+  - Uses continuous frames only when uncontrolled (component-owned clock). Controlled clocks must
+    not self-drive frames.
+  - Keep paint work stable across frames (time changes should not allocate large new strings per
+    frame).
+- `Marquee`:
+  - Uses continuous frames by design and should only update via a transform (avoid per-frame
+    layout changes).
+  - Do not measure element bounds during declarative render; use `cx.bounds` or accept
+    `cycle_width_px` overrides for seamless looping.
+
 ## Component template (recommended baseline)
 
 Use this template to keep extras consistent and reviewable:
