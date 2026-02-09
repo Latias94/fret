@@ -3557,10 +3557,13 @@ impl<H: UiHost> UiTree<H> {
             // where we want accurate layout and can accept the one-off cost.
             //
             // The env knob still takes precedence; this is only a default for the common
-            // "drag jitter" class.
+            // "drag jitter" class. Treat small-step as symmetric (back-and-forth resizes should
+            // keep the same policy/caches enabled).
             let small_step = self
                 .interactive_resize_last_bounds_delta
-                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0);
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= 16.0 && dh.0.abs() <= 1.0 && (dw.0 != 0.0 || dh.0 != 0.0)
+                });
             if !small_step {
                 return width;
             }
@@ -3589,7 +3592,9 @@ impl<H: UiHost> UiTree<H> {
         self.interactive_resize_active()
             && self
                 .interactive_resize_last_bounds_delta
-                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0)
+                .is_some_and(|(dw, dh)| {
+                    dw.0.abs() <= 16.0 && dh.0.abs() <= 1.0 && (dw.0 != 0.0 || dh.0 != 0.0)
+                })
     }
 
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
