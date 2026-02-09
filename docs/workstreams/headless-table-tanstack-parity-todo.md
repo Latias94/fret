@@ -942,9 +942,11 @@ Next UI parity targets (capability, not exact DOM behavior):
         - [x] HTP-ui-dt-032 Gate that the control updates `TableState.column_pinning` deterministically.
           - Gallery: `apps/fret-ui-gallery/src/ui.rs` adds a stable pinning status row (`Pinning: ...`) for assertions.
           - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json`.
-        - [ ] HTP-ui-dt-033 Optional: gate that pinned columns remain visible during horizontal scroll.
+        - [x] HTP-ui-dt-033 Gate that pinned columns remain visible during horizontal scroll.
+          - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json`.
       - Gates:
         - `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json`
+        - `tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json`
     - [x] HTP-ui-dt-040 Column visibility dropdown (docs-style checkbox menu).
       - Evidence:
         - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` wires `TableState.column_visibility`)

@@ -95,6 +95,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_reset_filters() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_sticky_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json"
