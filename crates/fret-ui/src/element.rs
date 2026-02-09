@@ -75,6 +75,15 @@ pub enum ElementKind {
     /// This is intended to support editor-grade "peek through" surfaces (ImGui-style
     /// `NoMouseInputs`) without making the subtree inert for keyboard navigation.
     HitTestGate(HitTestGateProps),
+    /// A transparent wrapper that gates focus traversal for a subtree without affecting pointer
+    /// hit-testing or semantics.
+    ///
+    /// When `traverse == false`, the subtree remains present for layout/paint and pointer
+    /// hit-testing, but focus traversal will not recurse into the subtree.
+    ///
+    /// This is intended to support editor-grade "disabled but hoverable" surfaces (e.g. tooltips
+    /// over disabled items) without requiring authors to restructure hit-testing.
+    FocusTraversalGate(FocusTraversalGateProps),
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0119).
     EffectLayer(EffectLayerProps),
@@ -627,6 +636,25 @@ impl Default for HitTestGateProps {
     }
 }
 
+/// Gate focus traversal for a subtree without affecting pointer hit-testing.
+///
+/// This is intentionally narrower than `InteractivityGateProps`: it does not change whether the
+/// subtree participates in pointer hit-testing or semantics snapshots.
+#[derive(Debug, Clone, Copy)]
+pub struct FocusTraversalGateProps {
+    pub layout: LayoutStyle,
+    pub traverse: bool,
+}
+
+impl Default for FocusTraversalGateProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            traverse: true,
+        }
+    }
+}
+
 /// A paint-only opacity group wrapper (ADR 0019).
 ///
 /// This is intentionally layout-only + paint-only: it does not imply semantics beyond its
@@ -933,6 +961,14 @@ pub struct PressableA11y {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PressableState {
     pub hovered: bool,
+    pub hovered_raw: bool,
+    /// Pointer-hover signal that ignores modal/popup barrier gating.
+    ///
+    /// When a modal barrier is active (e.g. a popup that blocks underlay input), the UI runtime
+    /// suppresses underlay hit-testing and hover for blocked layers. This flag is populated from a
+    /// best-effort underlay hit-test performed only when the pointer is not currently over any
+    /// active (non-blocked) layer.
+    pub hovered_raw_below_barrier: bool,
     pub pressed: bool,
     pub focused: bool,
 }

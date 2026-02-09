@@ -551,6 +551,11 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.hit_test_children = hit_test;
     }
 
+    fn sync_focus_traversal_gate(&mut self, traverse: bool) {
+        self.hit_testable = false;
+        self.focus_traversal_children = traverse;
+    }
+
     fn is_focusable(&self) -> bool {
         self.is_focusable
     }

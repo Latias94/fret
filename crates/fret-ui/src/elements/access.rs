@@ -107,16 +107,6 @@ pub(crate) fn clear_timer_target<H: UiHost>(app: &mut H, window: AppWindowId, to
     });
 }
 
-pub(crate) fn timer_has_target<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-    token: TimerToken,
-) -> bool {
-    app.global::<ElementRuntime>()
-        .and_then(|runtime| runtime.for_window(window))
-        .is_some_and(|st| st.timer_targets.contains_key(&token))
-}
-
 pub(crate) fn record_transient_event<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -157,6 +147,50 @@ pub(crate) fn update_hovered_pressable<H: UiHost>(
         let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
         let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
         st.hovered_pressable = next;
+        (prev, prev_node, next, next_node)
+    })
+}
+
+pub(crate) fn update_hovered_pressable_raw<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_pressable_raw;
+        if prev == next {
+            return (None, None, None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_pressable_raw = next;
+        (prev, prev_node, next, next_node)
+    })
+}
+
+pub(crate) fn update_hovered_pressable_raw_below_barrier<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<GlobalElementId>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_pressable_raw_below_barrier;
+        if prev == next {
+            return (None, None, None, None);
+        }
+        let prev_node = prev.and_then(|id| st.node_entry(id).map(|e| e.node));
+        let next_node = next.and_then(|id| st.node_entry(id).map(|e| e.node));
+        st.hovered_pressable_raw_below_barrier = next;
         (prev, prev_node, next, next_node)
     })
 }

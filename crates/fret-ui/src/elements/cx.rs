@@ -22,12 +22,12 @@ use crate::action::{
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, EffectLayerProps, ElementKind, FlexProps,
-    GridProps, HitTestGateProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutStyle,
-    OpacityProps, PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps,
-    RowProps, ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps,
-    StackProps, StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps,
-    ViewportSurfaceProps, VirtualListOptions, VirtualListProps, VirtualListState,
-    VisualTransformProps,
+    FocusTraversalGateProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
+    InteractivityGateProps, LayoutStyle, OpacityProps, PointerRegionProps, PressableProps,
+    PressableState, ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps,
+    SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps,
+    TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions,
+    VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -1042,6 +1042,41 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn focus_traversal_gate<I>(
+        &mut self,
+        traverse: bool,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.focus_traversal_gate_props(
+            FocusTraversalGateProps {
+                traverse,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn focus_traversal_gate_props<I>(
+        &mut self,
+        props: FocusTraversalGateProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::FocusTraversalGate(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn pressable<I>(
         &mut self,
         props: PressableProps,
@@ -1053,6 +1088,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1061,6 +1099,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1082,6 +1122,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1090,6 +1133,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },
@@ -1111,6 +1156,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_pressable == Some(id);
+            let hovered_raw = cx.window_state.hovered_pressable_raw == Some(id);
+            let hovered_raw_below_barrier =
+                cx.window_state.hovered_pressable_raw_below_barrier == Some(id);
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
@@ -1120,6 +1168,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 cx,
                 PressableState {
                     hovered,
+                    hovered_raw,
+                    hovered_raw_below_barrier,
                     pressed,
                     focused,
                 },

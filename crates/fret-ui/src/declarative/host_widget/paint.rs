@@ -146,6 +146,13 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            ElementInstance::FocusTraversalGate(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::InteractivityGate(props) => {
                 if !props.present {
                     return;

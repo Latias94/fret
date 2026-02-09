@@ -196,6 +196,9 @@ impl ElementHostWidget {
             ElementInstance::HitTestGate(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::FocusTraversalGate(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::VisualTransform(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

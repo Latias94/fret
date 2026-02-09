@@ -194,16 +194,98 @@ impl<H: UiHost> UiTree<H> {
         window: AppWindowId,
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
+        hit_for_hover_below_barrier: Option<NodeId>,
         invalidation_visited: &mut HashMap<NodeId, u8>,
         needs_redraw: &mut bool,
     ) {
-        let hovered_pressable: Option<crate::elements::GlobalElementId> =
+        let hovered_pressable_raw: Option<crate::elements::GlobalElementId> =
             declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover;
                 while let Some(id) = node {
                     if let Some(record) = window_frame.instances.get(id)
                         && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (prev_raw_element, prev_raw_node, next_raw_element, next_raw_node) =
+            crate::elements::update_hovered_pressable_raw(app, window, hovered_pressable_raw);
+        if prev_raw_node.is_some() || next_raw_node.is_some() {
+            *needs_redraw = true;
+            if let Some(node) = prev_raw_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_raw_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        let hovered_pressable_raw_below_barrier: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover_below_barrier;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(id)
+                        && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (_prev_element, prev_node, _next_element, next_node) =
+            crate::elements::update_hovered_pressable_raw_below_barrier(
+                app,
+                window,
+                hovered_pressable_raw_below_barrier,
+            );
+        if prev_node.is_some() || next_node.is_some() {
+            *needs_redraw = true;
+            if let Some(node) = prev_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        let hovered_pressable: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(id)
+                        && matches!(
+                            &record.instance,
+                            declarative::ElementInstance::Pressable(p) if p.enabled
+                        )
                     {
                         return Some(record.element);
                     }
@@ -256,6 +338,27 @@ impl<H: UiHost> UiTree<H> {
             && next_node.is_some()
         {
             Self::run_pressable_hover_hook(app, window, element, true);
+        }
+
+        // `pressable_on_hover_change` hooks are driven by the enabled-hovered pressable to match
+        // the default interaction model. For immediate-mode parity, some callers want raw pointer
+        // hover (e.g. `AllowWhenDisabled`) to still schedule timers. If the raw-hover target is
+        // different from the enabled-hover target, also emit hover-change hooks for the raw-hover
+        // edge.
+        for (element, node, is_hovered) in [
+            (prev_raw_element, prev_raw_node, false),
+            (next_raw_element, next_raw_node, true),
+        ] {
+            let Some(element) = element else {
+                continue;
+            };
+            if node.is_none() {
+                continue;
+            }
+            if Some(element) == prev_element || Some(element) == next_element {
+                continue;
+            }
+            Self::run_pressable_hover_hook(app, window, element, is_hovered);
         }
 
         let hovered_hover_region: Option<crate::elements::GlobalElementId> =
@@ -1490,6 +1593,7 @@ impl<H: UiHost> UiTree<H> {
             // - optionally suppress hit-tested pointer dispatch for underlay layers depending on
             //   the occlusion mode.
             let mut hit_for_hover = hit;
+            let mut hit_is_below_occlusion = false;
             if captured.is_none()
                 && let Some((occlusion_layer, occlusion)) =
                     self.topmost_pointer_occlusion_layer(barrier_root)
@@ -1503,7 +1607,7 @@ impl<H: UiHost> UiTree<H> {
                     .and_then(|hit| self.node_layer(hit))
                     .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
 
-                let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
+                hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
                     (Some(oz), Some(hz), Some(_)) => hz < oz,
                     (Some(_), None, Some(_)) => true,
                     (Some(_), _, None) => true,
@@ -1522,6 +1626,46 @@ impl<H: UiHost> UiTree<H> {
                     };
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
+                    }
+                }
+            }
+
+            let mut hit_for_hover_below_barrier: Option<NodeId> = None;
+            if captured.is_none() {
+                // ImGui-style `AllowWhenBlockedByPopup` wants the underlay hovered target even when
+                // modal/popup policy suppresses hover via pointer occlusion or modal barriers.
+                //
+                // - If pointer occlusion suppressed hover, the underlying hit is still `hit`.
+                // - If a modal barrier gated active hit-testing (no hit in active layers), probe
+                //   all layers to find the underlay target.
+                if hit_is_below_occlusion {
+                    hit_for_hover_below_barrier = hit;
+                } else {
+                    let hit_is_barrier_surface = hit.is_some_and(|hit| {
+                        declarative::with_window_frame(app, window, |window_frame| {
+                            let window_frame = window_frame?;
+                            let record = window_frame.instances.get(hit)?;
+                            Some(matches!(
+                                record.instance,
+                                declarative::ElementInstance::DismissibleLayer(_)
+                                    | declarative::ElementInstance::PointerRegion(_)
+                            ))
+                        })
+                        .unwrap_or(false)
+                    });
+
+                    if barrier_root.is_some() && (hit.is_none() || hit_is_barrier_surface) {
+                        let mut roots_all: Vec<NodeId> = Vec::new();
+                        for &layer_id in self.layer_order.iter().rev() {
+                            let Some(layer) = self.layers.get(layer_id) else {
+                                continue;
+                            };
+                            if !layer.visible || !layer.hit_testable {
+                                continue;
+                            }
+                            roots_all.push(layer.root);
+                        }
+                        hit_for_hover_below_barrier = self.hit_test_layers_cached(&roots_all, pos);
                     }
                 }
             }
@@ -1596,6 +1740,7 @@ impl<H: UiHost> UiTree<H> {
                     window,
                     hit_for_hover,
                     hit,
+                    hit_for_hover_below_barrier,
                     &mut invalidation_visited,
                     &mut needs_redraw,
                 );
@@ -2675,6 +2820,41 @@ impl<H: UiHost> UiTree<H> {
                 Self::run_pressable_hover_hook(app, window, element, false);
             }
 
+            let (prev_raw_element, prev_raw_node, _next_element, _next_node) =
+                crate::elements::update_hovered_pressable_raw(app, window, None);
+            if prev_raw_node.is_some() {
+                needs_redraw = true;
+                if let Some(node) = prev_raw_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
+
+            if let Some(element) = prev_raw_element
+                && prev_raw_node.is_some()
+                && Some(element) != prev_element
+            {
+                Self::run_pressable_hover_hook(app, window, element, false);
+            }
+
+            let (_prev_element, prev_node, _next_element, _next_node) =
+                crate::elements::update_hovered_pressable_raw_below_barrier(app, window, None);
+            if prev_node.is_some() {
+                needs_redraw = true;
+                if let Some(node) = prev_node {
+                    self.mark_invalidation_dedup_with_source(
+                        node,
+                        Invalidation::Paint,
+                        &mut invalidation_visited,
+                        UiDebugInvalidationSource::Hover,
+                    );
+                }
+            }
+
             let (_prev_element, prev_node, _next_element, _next_node) =
                 crate::elements::update_hovered_hover_region(app, window, None);
             if prev_node.is_some() {
@@ -2783,6 +2963,7 @@ impl<H: UiHost> UiTree<H> {
             let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
 
             let mut hit_for_hover = hit;
+            let mut hit_is_below_occlusion = false;
             if let Some((occlusion_layer, occlusion)) =
                 self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
@@ -2794,7 +2975,7 @@ impl<H: UiHost> UiTree<H> {
                 let hit_layer_z = hit
                     .and_then(|hit| self.node_layer(hit))
                     .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
-                let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
+                hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
                     (Some(oz), Some(hz), Some(_)) => hz < oz,
                     (Some(_), None, Some(_)) => true,
                     (Some(_), _, None) => true,
@@ -2805,11 +2986,45 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
+            let hit_for_hover_below_barrier = {
+                let mut below: Option<NodeId> = None;
+                let hit_is_barrier_surface = hit.is_some_and(|hit| {
+                    declarative::with_window_frame(app, window, |window_frame| {
+                        let window_frame = window_frame?;
+                        let record = window_frame.instances.get(hit)?;
+                        Some(matches!(
+                            record.instance,
+                            declarative::ElementInstance::DismissibleLayer(_)
+                                | declarative::ElementInstance::PointerRegion(_)
+                        ))
+                    })
+                    .unwrap_or(false)
+                });
+
+                if hit_is_below_occlusion {
+                    below = hit;
+                } else if barrier_root.is_some() && (hit.is_none() || hit_is_barrier_surface) {
+                    let mut roots_all: Vec<NodeId> = Vec::new();
+                    for &layer_id in self.layer_order.iter().rev() {
+                        let Some(layer) = self.layers.get(layer_id) else {
+                            continue;
+                        };
+                        if !layer.visible || !layer.hit_testable {
+                            continue;
+                        }
+                        roots_all.push(layer.root);
+                    }
+                    below = self.hit_test_layers_cached(&roots_all, *position);
+                }
+                below
+            };
+
             self.update_hover_state_from_hit(
                 app,
                 window,
                 hit_for_hover,
                 hit,
+                hit_for_hover_below_barrier,
                 &mut invalidation_visited,
                 &mut needs_redraw,
             );

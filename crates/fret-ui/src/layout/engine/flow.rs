@@ -297,6 +297,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::HitTestGate(_)
+            | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
@@ -522,6 +523,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             | ElementInstance::FocusScope(_)
             | ElementInstance::InteractivityGate(_)
             | ElementInstance::HitTestGate(_)
+            | ElementInstance::FocusTraversalGate(_)
             | ElementInstance::PointerRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::WheelRegion(_)
@@ -891,6 +893,9 @@ fn passthrough_wrapper_child<H: UiHost>(
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
         ElementInstance::HitTestGate(_) => {
+            Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
+        }
+        ElementInstance::FocusTraversalGate(_) => {
             Some((child, ParentLayoutKind::PassthroughOverlayNoStretch))
         }
         ElementInstance::Pressable(_) => Some((child, ParentLayoutKind::PassthroughOverlayStretch)),

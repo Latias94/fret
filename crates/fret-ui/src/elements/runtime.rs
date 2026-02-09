@@ -177,6 +177,8 @@ pub struct WindowElementState {
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw: Option<GlobalElementId>,
+    pub(super) hovered_pressable_raw_below_barrier: Option<GlobalElementId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
     continuous_frames: Arc<AtomicUsize>,
@@ -887,6 +889,16 @@ impl WindowElementState {
             && !is_live_this_frame(id)
         {
             self.hovered_pressable = None;
+        }
+        if let Some(id) = self.hovered_pressable_raw
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable_raw = None;
+        }
+        if let Some(id) = self.hovered_pressable_raw_below_barrier
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable_raw_below_barrier = None;
         }
         if let Some(id) = self.pressed_pressable
             && !is_live_this_frame(id)

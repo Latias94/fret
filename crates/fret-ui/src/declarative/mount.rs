@@ -1300,6 +1300,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
         ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::HitTestGate(p) => ElementInstance::HitTestGate(p),
+        ElementKind::FocusTraversalGate(p) => ElementInstance::FocusTraversalGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
         ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),
@@ -1363,6 +1364,10 @@ fn mount_element<H: UiHost + 'static>(
         ElementInstance::HitTestGate(p) => Some(p.hit_test),
         _ => None,
     };
+    let focus_traversal_gate_state = match &instance {
+        ElementInstance::FocusTraversalGate(p) => Some(p.traverse),
+        _ => None,
+    };
     let use_barrier_set_children = matches!(
         &instance,
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
@@ -1390,6 +1395,9 @@ fn mount_element<H: UiHost + 'static>(
     }
     if let Some(hit_test) = hit_test_gate_state {
         ui.sync_hit_test_gate_widget(node, hit_test);
+    }
+    if let Some(traverse) = focus_traversal_gate_state {
+        ui.sync_focus_traversal_gate_widget(node, traverse);
     }
     let inserted = window_frame
         .instances
@@ -1977,6 +1985,12 @@ fn declarative_instance_change_mask(
         (ElementInstance::HitTestGate(a), ElementInstance::HitTestGate(b)) => {
             if a.hit_test != b.hit_test {
                 hit_test_changed = true;
+            }
+        }
+        (ElementInstance::FocusTraversalGate(a), ElementInstance::FocusTraversalGate(b)) => {
+            if a.traverse != b.traverse {
+                layout_changed = true;
+                paint_changed = true;
             }
         }
         (ElementInstance::Opacity(a), ElementInstance::Opacity(b)) => {
