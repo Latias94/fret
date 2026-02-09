@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "dropdown-menu-checkboxes.overlay_placement",
+      "web_name": "dropdown-menu-checkboxes",
+      "recipe": "overlay_placement"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.vp375x240.overlay_placement",
+      "web_name": "dropdown-menu-checkboxes.vp375x240",
+      "recipe": "overlay_placement"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.checkbox_indicator_slot_inset",
+      "web_name": "dropdown-menu-checkboxes",
+      "recipe": "checkbox_indicator_slot_inset"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.vp375x240.checkbox_indicator_slot_inset",
+      "web_name": "dropdown-menu-checkboxes.vp375x240",
+      "recipe": "checkbox_indicator_slot_inset"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.menu_content_insets",
+      "web_name": "dropdown-menu-checkboxes",
+      "recipe": "menu_content_insets"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.vp375x240.menu_content_insets",
+      "web_name": "dropdown-menu-checkboxes.vp375x240",
+      "recipe": "menu_content_insets"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.menu_item_height",
+      "web_name": "dropdown-menu-checkboxes",
+      "recipe": "menu_item_height"
+    },
+    {
+      "id": "dropdown-menu-checkboxes.vp375x240.menu_item_height",
+      "web_name": "dropdown-menu-checkboxes.vp375x240",
+      "recipe": "menu_item_height"
+    }
+  ]
+}
+
