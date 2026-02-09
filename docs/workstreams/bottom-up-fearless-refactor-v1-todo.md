@@ -38,15 +38,32 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Goal: move scenario matrices/expected values to `goldens/*.json` (or a dedicated fixtures directory) and keep a thin Rust harness.
   - Interim (compile-speed): gate web-golden-backed conformance behind a feature so the default inner loop stays cheap.
   - Evidence (module split):
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/avatar.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/chart.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/collapsible.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/button.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/breadcrumb.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/typography.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/dashboard.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/item.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/pagination.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/progress.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/select.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sonner.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/tabs.rs`
   - Evidence (fixture-driven slice):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_sonner_open_toast_rect_matches_web_fixtures`)
