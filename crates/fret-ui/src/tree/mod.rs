@@ -3585,6 +3585,13 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(crate) fn interactive_resize_is_small_step(&self) -> bool {
+        self.interactive_resize_active()
+            && self
+                .interactive_resize_last_bounds_delta
+                .is_some_and(|(dw, dh)| dh.0 <= 1.0 && dw.0 > 0.0 && dw.0 <= 16.0)
+    }
+
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
         self.nodes.contains_key(node)
     }

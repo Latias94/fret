@@ -18,12 +18,13 @@ fn interactive_resize_text_width_cache_entries() -> usize {
         // resize. This can reduce `Text::prepare` churn when the user drags back-and-forth across
         // a small number of wrap-width buckets (the common "resize jitter" class).
         //
-        // Default: off (0) until we have enough evidence that this is broadly beneficial across
-        // apps. Try 3/4 for editor-class pages.
+        // Default: keep 1 previous width (2 entries total). This keeps the memory cost bounded
+        // (and ephemeral: the cache is released once interactive resize ends) while addressing
+        // the most common "toggle across two buckets" case.
         std::env::var("FRET_UI_INTERACTIVE_RESIZE_TEXT_WIDTH_CACHE_ENTRIES")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(0)
+            .unwrap_or(2)
             .min(8)
     })
 }
