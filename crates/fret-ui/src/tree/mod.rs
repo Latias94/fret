@@ -3299,11 +3299,15 @@ impl<H: UiHost> UiTree<H> {
         layout_definite: bool,
     ) {
         if let Some(n) = self.nodes.get_mut(node) {
-            n.view_cache = ViewCacheFlags {
+            let next = ViewCacheFlags {
                 enabled,
                 contained_layout,
                 layout_definite,
             };
+            if n.view_cache == next {
+                return;
+            }
+            n.view_cache = next;
         }
     }
 
