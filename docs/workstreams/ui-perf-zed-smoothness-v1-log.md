@@ -8317,3 +8317,9 @@ Notes:
   - `Text::prepare` churn (blob reuse / atlas churn), or
   - non-text renderer churn (uploads, intermediate pool allocations/evictions), or
   - an unintended “cold cache” effect from the detached run protocol.
+
+Quick attribution (attempt-1 worst bundle via `diag stats --sort time --top 1`):
+- Worst frame: `total=41576us`, `paint=39619us`, `paint_text_prepare=5101us`, `layout=1903us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` (ElementHostWidget) `paint_time_us=33670us`
+  (`scene_ops_delta=581`), i.e. the vast majority of the hitch is inside the Canvas/widget paint path rather than
+  cache replay or layout.
