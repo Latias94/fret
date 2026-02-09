@@ -61,7 +61,7 @@ ADR anchor:
 
 - [x] `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`: responsive footer layout now tracks the
   dialog's committed container width.
-- [ ] `ecosystem/fret-ui-shadcn/src/calendar*.rs`: audit which responsive branches should follow
-  container width (panels) vs viewport width (device-size).
+- [x] `ecosystem/fret-ui-shadcn/src/calendar*.rs`: multi-month layout now follows container width
+  (panels), not viewport width.
 - [x] `ecosystem/fret-ui-shadcn/src/empty.rs`: padding/layout should follow container width, not
   viewport width.
