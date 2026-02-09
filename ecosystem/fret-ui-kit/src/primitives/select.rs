@@ -290,6 +290,53 @@ pub const SELECT_MOUSE_UP_SELECTED_DELAY_MS: u64 = 400;
 /// When a selected option exists, this delay is shorter than `SELECT_MOUSE_UP_SELECTED_DELAY_MS`.
 pub const SELECT_MOUSE_UP_UNSELECTED_DELAY_MS: u64 = 200;
 
+/// Select mouse interaction policy knobs.
+///
+/// These are intended to make the "anti-misclick" semantics explicit, while keeping Radix-shaped
+/// defaults:
+/// - pointer-up suppression after opening on trigger mouse `pointerdown` (Radix)
+/// - delayed mouse-up selection commit gating (Base UI style; optional)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMousePolicies {
+    /// When `true`, install the Radix-style pointer-up suppression outcome after opening on mouse
+    /// `pointerdown` (the "pointer up guard").
+    pub pointer_up_guard: bool,
+
+    /// When `Some`, delay mouse-up commits after opening to avoid accidental selection when the
+    /// release lands over an option row (Base UI style).
+    pub mouse_up_selection_gate: Option<SelectMouseUpSelectionGatePolicy>,
+}
+
+impl Default for SelectMousePolicies {
+    fn default() -> Self {
+        Self {
+            pointer_up_guard: true,
+            mouse_up_selection_gate: Some(SelectMouseUpSelectionGatePolicy::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SelectMouseUpSelectionGatePolicy {
+    pub selected_delay: Duration,
+    pub unselected_delay_when_has_selected: Duration,
+    pub unselected_delay_when_no_selected: Duration,
+}
+
+impl Default for SelectMouseUpSelectionGatePolicy {
+    fn default() -> Self {
+        Self {
+            selected_delay: Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            unselected_delay_when_has_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_UNSELECTED_DELAY_MS,
+            ),
+            unselected_delay_when_no_selected: Duration::from_millis(
+                SELECT_MOUSE_UP_SELECTED_DELAY_MS,
+            ),
+        }
+    }
+}
+
 /// Timer-driven mouse-up commit gate for select item rows.
 ///
 /// Mirrors Base UI's delayed `onMouseUp` selection policy:
@@ -334,25 +381,40 @@ impl SelectMouseUpSelectionGateState {
         window: AppWindowId,
         has_selected_item_in_list: bool,
     ) {
+        self.arm_on_open_with_policy(
+            host,
+            window,
+            has_selected_item_in_list,
+            SelectMouseUpSelectionGatePolicy::default(),
+        );
+    }
+
+    pub fn arm_on_open_with_policy(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        has_selected_item_in_list: bool,
+        policy: SelectMouseUpSelectionGatePolicy,
+    ) {
         self.allow_selected_mouse_up = false;
         self.allow_unselected_mouse_up = false;
 
-        let unselected_delay_ms = if has_selected_item_in_list {
-            SELECT_MOUSE_UP_UNSELECTED_DELAY_MS
+        let unselected_delay = if has_selected_item_in_list {
+            policy.unselected_delay_when_has_selected
         } else {
-            SELECT_MOUSE_UP_SELECTED_DELAY_MS
+            policy.unselected_delay_when_no_selected
         };
 
         Self::arm_timer(
             host,
             window,
-            Duration::from_millis(unselected_delay_ms),
+            unselected_delay,
             &mut self.unselected_delay_token,
         );
         Self::arm_timer(
             host,
             window,
-            Duration::from_millis(SELECT_MOUSE_UP_SELECTED_DELAY_MS),
+            policy.selected_delay,
             &mut self.selected_delay_token,
         );
     }
