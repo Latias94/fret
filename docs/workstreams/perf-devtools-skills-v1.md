@@ -29,11 +29,14 @@ Repo-local skills live under `.agents/skills/`.
   correctness regressions.
 - `fret-perf-workflow`: run perf suites, maintain baselines, run majority-gated resize probes, and record
   commit-addressable evidence in the perf log.
+- `fret-perf-attribution`: explain tail hitches from worst bundles, separate CPU vs GPU, and pick the next profiler
+  (CPU stacks, allocations, GPU capture).
 
 Design intent:
 
 - `fret-diag-workflow` owns “make it reproducible”.
 - `fret-perf-workflow` owns “make it measurable and enforceable”.
+- `fret-perf-attribution` owns “make it explainable and actionable”.
 
 ---
 
@@ -55,9 +58,9 @@ Observed friction points:
 
 ## 2) Proposed improvements (skills + tooling)
 
-### 2.1 Extend `fret-perf-workflow` with “attribution recipes”
+### 2.1 Keep attribution playbooks comprehensive (and lightweight)
 
-Add a dedicated section (and optional helper scripts) covering:
+Ensure `fret-perf-attribution` stays up to date with a small, cross-platform set of recipes covering:
 
 - CPU stack profiling:
   - macOS: Instruments Time Profiler (preferred for resize/scroll hitches).
@@ -84,13 +87,13 @@ Codify a default audit step for declarative render loops:
 
 This turns a high-impact, easy-to-miss footgun into a standard part of perf triage.
 
-### 2.3 Consider a new skill: `fret-perf-attribution`
+### 2.3 Discoverability and “one command” loops
 
-If `fret-perf-workflow` becomes too large, split out a dedicated attribution skill that focuses on:
+Focus on making the happy path obvious:
 
-- reading bundles (`diag stats`, renderer churn counters),
-- deciding what to measure next,
-- using external profilers and integrating evidence back into workstreams logs.
+- `fret-diag-workflow`: “make a minimal repro script and get a bundle”.
+- `fret-perf-workflow`: “turn it into a gate + baseline + log entry”.
+- `fret-perf-attribution`: “explain the worst frame and choose the next profiler”.
 
 ---
 
@@ -102,6 +105,10 @@ If `fret-perf-workflow` becomes too large, split out a dedicated attribution ski
 - Ensure every skill cross-links to:
   - the canonical docs it relies on,
   - the “handoff” skills (diag ↔ perf).
+  - Evidence (example run):
+    - `repo-ref/agentskills/skills-ref/.venv313/bin/skills-ref validate ../../../.agents/skills/fret-diag-workflow`
+    - `repo-ref/agentskills/skills-ref/.venv313/bin/skills-ref validate ../../../.agents/skills/fret-perf-workflow`
+    - `repo-ref/agentskills/skills-ref/.venv313/bin/skills-ref validate ../../../.agents/skills/fret-perf-attribution`
 
 ### M1: Attribution playbooks (repeatable)
 
@@ -140,6 +147,10 @@ This workstream should stay evidence-linked:
     - `.agents/skills/fret-perf-workflow/SKILL.md`
   - Change: add copy/paste “resize fast path” + document how to append gate attempts into the perf log.
   - Evidence: commit `ea13d4015`.
+- Validated the core diag/perf skills against the Agent Skills reference validator:
+  - Validator: `repo-ref/agentskills/skills-ref`
+  - Skills: `fret-diag-workflow`, `fret-perf-workflow`, `fret-perf-attribution`
+  - Evidence: run on `2026-02-09` (commands listed in M0).
 - Stabilized a flaky steady-suite navigation script (so perf gating does not fail due to `wait_until_timeout`):
   - Scripts:
     - `tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json`

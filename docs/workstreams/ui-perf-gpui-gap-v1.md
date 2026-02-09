@@ -179,6 +179,8 @@ Baseline fact (quick reference):
        low-value entries.
    - Fret stopgap (default-on for jitter-class interactive resize):
      - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_BUCKET_PX` (default: `32`; set `0`/`1` to disable).
+     - `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (default: `64`; widens the “small-step” class so bucketing
+       applies under common per-frame drag deltas; commit `53aa6534a`).
      - Applies only for small-step resizes (e.g. `drag-jitter`), and only while interactive resize is active.
      - Small-step detection is symmetric (back-and-forth drags keep the same policy/caches enabled).
        - Implementation: `perf(fret-ui): treat small-step resize symmetrically` (commit `0de40863f`).
