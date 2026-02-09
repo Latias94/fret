@@ -6,6 +6,8 @@ Last updated: 2026-02-09
 Recent changes (2026-02-09):
 
 - Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0200).
+- Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0200).
+- UI Gallery: expose the fold fixture span in `app_snapshot` and add a deterministic “Caret: in fold” fixture control for diag scripts.
 
 Recent changes (2026-02-08):
 
@@ -278,6 +280,7 @@ Diagnostics gates (baseline set; add more as needed):
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json`
 - Fold/inlay decoration sanity (ADR 0200; present under wrap; suppressed under inline preedit):
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json` (captures A/B/C for toggle-stability)
+  - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json`
   - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json` (captures A/B/C for toggle-stability)

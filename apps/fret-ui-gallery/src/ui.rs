@@ -4030,79 +4030,115 @@ fn preview_markdown_editor_source(
                         ]
                     },
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
-                        let set_folds_on = folds.clone();
-                        let set_folds_off = folds.clone();
-                        let set_inlays_on = inlays.clone();
-                        let set_inlays_off = inlays.clone();
+                {
+                    let folds_caret_handle = header_handle.clone();
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| {
+                            let set_folds_on = folds.clone();
+                            let set_folds_off = folds.clone();
+                            let set_inlays_on = inlays.clone();
+                            let set_inlays_off = inlays.clone();
+                            let caret_handle = folds_caret_handle.clone();
 
-                        vec![
-                            shadcn::Switch::new(folds.clone())
-                                .test_id("ui-gallery-markdown-editor-folds")
-                                .a11y_label("Toggle fold fixture on line 0")
-                                .into_element(cx),
-                            shadcn::Button::new("Folds: off")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id("ui-gallery-markdown-editor-folds-set-off")
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    let _ =
-                                        host.models_mut().update(&set_folds_off, |v| *v = false);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
-                            shadcn::Button::new("Folds: on")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id("ui-gallery-markdown-editor-folds-set-on")
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&set_folds_on, |v| *v = true);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
-                            cx.text(if folds_enabled {
-                                "Folds: fixture"
-                            } else {
-                                "Folds: off"
-                            }),
-                            shadcn::Switch::new(inlays.clone())
-                                .test_id("ui-gallery-markdown-editor-inlays")
-                                .a11y_label("Toggle inlay fixture on line 0")
-                                .into_element(cx),
-                            shadcn::Button::new("Inlays: off")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id("ui-gallery-markdown-editor-inlays-set-off")
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    let _ =
-                                        host.models_mut().update(&set_inlays_off, |v| *v = false);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
-                            shadcn::Button::new("Inlays: on")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id("ui-gallery-markdown-editor-inlays-set-on")
-                                .on_activate(Arc::new(move |host, action_cx, _reason| {
-                                    let _ = host.models_mut().update(&set_inlays_on, |v| *v = true);
-                                    host.notify(action_cx);
-                                    host.request_redraw(action_cx.window);
-                                }))
-                                .into_element(cx),
-                            cx.text(if inlays_enabled {
-                                "Inlays: fixture"
-                            } else {
-                                "Inlays: off"
-                            }),
-                        ]
-                    },
-                ),
+                            vec![
+                                shadcn::Switch::new(folds.clone())
+                                    .test_id("ui-gallery-markdown-editor-folds")
+                                    .a11y_label("Toggle fold fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_folds_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_folds_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Caret: in fold")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-caret-inside")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        if !caret_handle.interaction().enabled {
+                                            return;
+                                        }
+
+                                        let Some(byte) = caret_handle.with_buffer(|b| {
+                                            let line = b.line_text(0)?;
+                                            let line_range = b.line_byte_range(0)?;
+                                            let start =
+                                                line.find("Editor").unwrap_or(2).min(line.len());
+                                            let end = line.len();
+                                            if start + 1 >= end {
+                                                return None;
+                                            }
+                                            Some(line_range.start.saturating_add(start + 1))
+                                        }) else {
+                                            return;
+                                        };
+
+                                        caret_handle.set_caret(byte);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if folds_enabled {
+                                    "Folds: fixture"
+                                } else {
+                                    "Folds: off"
+                                }),
+                                shadcn::Switch::new(inlays.clone())
+                                    .test_id("ui-gallery-markdown-editor-inlays")
+                                    .a11y_label("Toggle inlay fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_inlays_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_inlays_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if inlays_enabled {
+                                    "Inlays: fixture"
+                                } else {
+                                    "Inlays: off"
+                                }),
+                            ]
+                        },
+                    )
+                },
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),

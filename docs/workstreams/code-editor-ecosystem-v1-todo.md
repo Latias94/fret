@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 This is the checkbox tracker companion to:
 
@@ -350,6 +350,10 @@ Markdown Editor v0”).
     - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json`.
     - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json`.
   - Gates: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_*folds*`, `check_bundle_for_ui_gallery_markdown_editor_source_*inlays*`).
+- [x] Add a folds clamp-selection regression for the Markdown editor fixture (ADR 0200).
+  - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-clamp-selection-baseline.json`.
+  - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds`).
+  - Flag: `--check-ui-gallery-markdown-editor-source-folds-clamp-selection-out-of-folds`.
 
 ### M10.3 — IME bridge seam validation (native + web)
 

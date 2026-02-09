@@ -13393,6 +13393,320 @@ pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_toggle_st
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    // 0: waiting for baseline snapshot (folds off; caret inside fold span)
+    // 1: waiting for folds on (caret clamped to fold start; buffer unchanged)
+    // 2: success
+    let mut state: u8 = 0;
+
+    let mut baseline_rev: u64 = 0;
+    let mut baseline_len: u64 = 0;
+    let mut baseline_caret: u64 = 0;
+
+    let mut fold_span_start: u64 = 0;
+    let mut fold_span_end: u64 = 0;
+
+    let mut clamp_observed: Option<serde_json::Value> = None;
+    let mut violation: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "markdown_editor_source" {
+                continue;
+            }
+
+            let enabled = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("interaction"))
+                .and_then(|v| v.get("enabled"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if !enabled {
+                continue;
+            }
+
+            let wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            if wrap_cols.is_some() {
+                continue;
+            }
+
+            let preedit_active = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("preedit_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if preedit_active {
+                continue;
+            }
+
+            let folds_fixture = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("folds_fixture"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let fold_span = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("folds"))
+                .and_then(|v| v.get("fixture_span_line0"));
+            let placeholder_present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("folds"))
+                .and_then(|v| v.get("line0_placeholder_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let span_start = fold_span
+                .and_then(|v| v.get("start"))
+                .and_then(|v| v.as_u64());
+            let span_end = fold_span
+                .and_then(|v| v.get("end"))
+                .and_then(|v| v.as_u64());
+
+            let rev = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("buffer_revision"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let len = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("markdown_editor_source"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let inside_fold = match (span_start, span_end) {
+                (Some(start), Some(end)) if start < end => caret > start && caret < end,
+                _ => false,
+            };
+
+            match state {
+                0 => {
+                    if folds_fixture {
+                        continue;
+                    }
+                    let Some(start) = span_start else {
+                        continue;
+                    };
+                    let Some(end) = span_end else {
+                        continue;
+                    };
+                    if start >= end || !inside_fold {
+                        continue;
+                    }
+
+                    fold_span_start = start;
+                    fold_span_end = end;
+                    baseline_rev = rev;
+                    baseline_len = len;
+                    baseline_caret = caret;
+                    state = 1;
+                }
+                1 if folds_fixture => {
+                    // The UI Gallery model toggle (`folds_fixture`) may be observed before the view
+                    // updates have propagated to the decorated line text. Gate only once the
+                    // placeholder is visible, which implies decorations are applied.
+                    if !placeholder_present {
+                        continue;
+                    }
+
+                    if rev != baseline_rev || len != baseline_len {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "folds_on",
+                            "expected": {
+                                "buffer_revision": baseline_rev,
+                                "text_len_bytes": baseline_len,
+                            },
+                            "observed": {
+                                "buffer_revision": rev,
+                                "text_len_bytes": len,
+                            },
+                            "caret": caret,
+                            "fold_span_line0": { "start": fold_span_start, "end": fold_span_end },
+                        }));
+                        state = 2;
+                        break;
+                    }
+
+                    if caret == fold_span_start
+                        && !(caret > fold_span_start && caret < fold_span_end)
+                    {
+                        clamp_observed = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "buffer_revision": rev,
+                            "text_len_bytes": len,
+                            "caret": caret,
+                            "fold_span_line0": { "start": fold_span_start, "end": fold_span_end },
+                        }));
+                        state = 2;
+                        break;
+                    }
+
+                    if caret > fold_span_start && caret < fold_span_end {
+                        violation = Some(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "phase": "folds_on",
+                            "expected": {
+                                "clamped_caret": fold_span_start,
+                                "caret_not_inside_fold_span": true,
+                            },
+                            "observed": {
+                                "caret": caret,
+                                "caret_inside_fold_span": true,
+                            },
+                            "fold_span_line0": { "start": fold_span_start, "end": fold_span_end },
+                        }));
+                        state = 2;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "soft_wrap_cols": wrap_cols,
+                "folds_fixture": folds_fixture,
+                "preedit_active": preedit_active,
+                "line0_placeholder_present": placeholder_present,
+                "buffer_revision": rev,
+                "text_len_bytes": len,
+                "caret": caret,
+                "fold_span_line0": {
+                    "start": span_start,
+                    "end": span_end,
+                },
+                "state": state,
+            }));
+        }
+        if state == 2 {
+            break;
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir
+        .join("check.ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "state": state,
+        "baseline": {
+            "buffer_revision": baseline_rev,
+            "text_len_bytes": baseline_len,
+            "caret": baseline_caret,
+            "fold_span_line0": { "start": fold_span_start, "end": fold_span_end },
+        },
+        "clamp_observed": clamp_observed,
+        "violation": violation,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery markdown editor folds clamp-selection gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 2 && clamp_observed.is_some() && violation.is_none() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery markdown editor folds clamp-selection gate failed (expected: with folds_fixture=false, caret inside fold span; then when folds_fixture=true caret clamps to fold start without mutating buffer)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable(
     bundle_path: &Path,
     warmup_frames: u64,
