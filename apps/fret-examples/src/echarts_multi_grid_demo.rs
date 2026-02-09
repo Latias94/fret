@@ -70,8 +70,8 @@ impl WinitAppDriver for EchartsMultiGridDemoDriver {
         } = context;
 
         if state.root.is_none() {
-            // Intentionally small v1 subset used to validate multi-grid bindings and the current UI
-            // workaround (split into multiple single-viewport charts).
+            // Intentionally small v1 subset used to validate multi-grid bindings:
+            // a single engine instance with per-grid plot viewports and per-grid canvas views.
             let option_json = r#"
 {
   "grid": [{}, {}],

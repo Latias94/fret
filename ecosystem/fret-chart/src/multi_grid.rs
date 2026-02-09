@@ -50,8 +50,11 @@ fn filter_visual_maps_for_series(
 /// This is a pragmatic UI adapter helper for the current v1 rendering stack, which assumes a
 /// single viewport per chart.
 ///
-/// Current (v1): `fret-chart` hosts one `ChartEngine` per grid and lays multiple canvases out in
-/// the UI (see `crate::retained::multi_grid` and `crate::declarative::multi_grid`).
+/// Legacy: this helper exists to support callers that still expect a single-viewport engine per
+/// chart instance (notably the declarative adapter in `crate::declarative::multi_grid`).
+///
+/// Current: the retained adapter uses a single engine instance with per-grid plot viewports (M1),
+/// so it no longer needs to split the spec (see `crate::retained::multi_grid`).
 ///
 /// Target: a single engine instance owns per-grid viewports/layout and emits deterministic per-grid
 /// outputs (workstream milestone M1: `docs/workstreams/delinea-engine-contract-closure-v1.md`).
