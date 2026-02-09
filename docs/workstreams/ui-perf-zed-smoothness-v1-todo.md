@@ -107,7 +107,8 @@ Conventions:
     - Deliverable: list of audited setters + commit references in the perf log.
   - [x] Add at least one regression test per high-risk surface.
     - Evidence: `test(fret-code-editor): cover set_language idempotency` (commit `4847d4f13`) + fold/inlay idempotency tests (commit `007006b28`).
-  - [ ] Add a short guidelines note (or ADR addendum) describing the contract and common pitfalls (cache resets, epoch bumps, `OnceLock` env reads, etc.).
+  - [x] Add a short guidelines note describing the contract and common pitfalls.
+    - Deliverable: `docs/workstreams/ui-perf-setter-idempotency-v1.md` (commit `TBD`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
   - [x] Reduce Word-wrap cost on long paragraphs by shaping once and slicing per-line layouts (plain LTR only).
     - Implementation: `perf(text): shape-once word wrap` (commit `4f2009408`) + default-on for long wraps (commit `10e7d97fc`).
