@@ -8569,3 +8569,18 @@ Commands:
 ```bash
 cargo test -p fret-code-editor
 ```
+
+## 2026-02-09 13:46:46 (commit `007006b28`)
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 007006b28
+tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.007006b28.20260209-134317
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.007006b28.20260209-134317/summary.json`
