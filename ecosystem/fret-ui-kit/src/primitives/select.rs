@@ -20,9 +20,9 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, OnPressablePointerDown,
-    OnPressablePointerUp, PointerDownCx, PointerMoveCx, PointerUpCx, PressablePointerDownResult,
-    PressablePointerUpResult, UiActionHost, UiPointerActionHost,
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
+    PressablePointerDownResult, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
@@ -1176,12 +1176,13 @@ impl SelectContentKeyState {
     pub fn handle_key_down_when_open(
         &mut self,
         host: &mut dyn UiActionHost,
-        window: AppWindowId,
+        action_cx: ActionCx,
         open: &Model<bool>,
         value: &Model<Option<Arc<str>>>,
         values_by_row: &[Option<Arc<str>>],
         labels_by_row: &[Arc<str>],
         disabled_by_row: &[bool],
+        on_value_change: Option<&Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>>,
         key: KeyCode,
         repeat: bool,
         loop_navigation: bool,
@@ -1190,6 +1191,7 @@ impl SelectContentKeyState {
             return false;
         }
 
+        let window = action_cx.window;
         let is_open = host.models_mut().get_copied(open).unwrap_or(false);
         if !is_open {
             return false;
@@ -1240,9 +1242,16 @@ impl SelectContentKeyState {
                     return true;
                 }
                 if let Some(chosen_value) = values_by_row.get(active_row).cloned().flatten() {
-                    let _ = host
-                        .models_mut()
-                        .update(value, |v| *v = Some(chosen_value.clone()));
+                    let before = host.models_mut().read(value, |v| v.clone()).ok().flatten();
+                    let did_change = before.as_deref() != Some(chosen_value.as_ref());
+                    if did_change {
+                        let _ = host
+                            .models_mut()
+                            .update(value, |v| *v = Some(chosen_value.clone()));
+                        if let Some(on_value_change) = on_value_change {
+                            on_value_change(host, action_cx, chosen_value.clone());
+                        }
+                    }
                     let _ = host.models_mut().update(open, |v| *v = false);
                     host.request_redraw(window);
                 }
@@ -1648,8 +1657,10 @@ pub fn select_item_pressable_pointer_handlers_with_mouse_up_gate(
         }
 
         if !had_pointer_down {
-            if select_mouse_open_guard_should_suppress_pointer_up_shared(&mouse_open_guard_for_up, up)
-            {
+            if select_mouse_open_guard_should_suppress_pointer_up_shared(
+                &mouse_open_guard_for_up,
+                up,
+            ) {
                 return PressablePointerUpResult::SkipActivate;
             }
             if let Some(mouse_up_gate) = mouse_up_gate.as_ref() {
@@ -1660,11 +1671,17 @@ pub fn select_item_pressable_pointer_handlers_with_mouse_up_gate(
             }
         }
 
+        let before = host
+            .models_mut()
+            .read(&value_for_up, |v| v.clone())
+            .ok()
+            .flatten();
+        let did_change = before.as_deref() != Some(item_value_for_up.as_ref());
         let _ = host
             .models_mut()
             .update(&value_for_up, |v| *v = Some(item_value_for_up.clone()));
         let _ = host.models_mut().update(&open_for_up, |v| *v = false);
-        if let Some(on_value_change) = on_value_change_for_up.as_ref() {
+        if did_change && let Some(on_value_change) = on_value_change_for_up.as_ref() {
             on_value_change(host, action_cx, item_value_for_up.clone());
         }
         host.request_redraw(action_cx.window);
@@ -2297,12 +2314,16 @@ mod tests {
 
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::ArrowDown,
             false,
             true,
@@ -2326,12 +2347,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Tab,
             false,
             true,
@@ -2359,12 +2384,16 @@ mod tests {
         let mut host = UiActionHostAdapter { app: &mut app };
         assert!(state.handle_key_down_when_open(
             &mut host,
-            window,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
             &open,
             &value,
             &values_by_row,
             &labels_by_row,
             &disabled_by_row,
+            None,
             KeyCode::Enter,
             false,
             true,

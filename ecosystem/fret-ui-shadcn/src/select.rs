@@ -2269,12 +2269,13 @@ fn select_impl<H: UiHost>(
                                                 let before_active = state.content.active_row();
                                                 let handled = state.content.handle_key_down_when_open(
                                                     host,
-                                                    action_cx.window,
+                                                    action_cx,
                                                     &open_for_key,
                                                     &model_for_key,
                                                     values_by_row.as_ref(),
                                                     labels_for_key.as_ref(),
                                                     disabled_for_key.as_ref(),
+                                                    on_value_change_for_overlay_children.as_ref(),
                                                     it.key,
                                                     it.repeat,
                                                     loop_navigation_for_key,
@@ -2567,6 +2568,7 @@ fn select_impl<H: UiHost>(
                                                                                     }
 
                                                                                     if !item_disabled
+                                                                                        && !is_selected
                                                                                         && let Some(
                                                                                             on_value_change,
                                                                                         ) = on_value_change_for_item.clone()
@@ -4076,7 +4078,9 @@ mod tests {
         let banana = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana"))
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
             .expect("banana option node");
         let banana_center = Point::new(
             Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
@@ -4116,6 +4120,144 @@ mod tests {
             app.models().get_copied(&on_value_change_count),
             Some(1),
             "expected exactly one `on_value_change` callback for an item click"
+        );
+    }
+
+    #[test]
+    fn select_clicking_selected_item_does_not_fire_on_value_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+        let on_value_change_count = app.models_mut().insert(0_u32);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("orange", "Orange"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        let on_value_change_count_for_cb = on_value_change_count.clone();
+        let _ = render_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            move |host, _action_cx, _value| {
+                let _ = host
+                    .models_mut()
+                    .update(&on_value_change_count_for_cb, |v| *v = v.saturating_add(1));
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let apple = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Apple"))
+            .expect("apple option node");
+        let apple_center = Point::new(
+            Px(apple.bounds.origin.x.0 + apple.bounds.size.width.0 * 0.5),
+            Px(apple.bounds.origin.y.0 + apple.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: apple_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: apple_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("apple"));
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&on_value_change_count),
+            Some(0),
+            "expected no `on_value_change` callback when selecting the already-selected value"
         );
     }
 
@@ -4212,7 +4354,9 @@ mod tests {
         let banana = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana"))
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
             .expect("banana option node");
         let listbox_id = listbox.id;
         let listbox_bounds = listbox.bounds;
@@ -4292,8 +4436,7 @@ mod tests {
             .find(|n| n.id == listbox_id)
             .expect("listbox node after leave");
         assert_eq!(
-            listbox_after_leave.active_descendant,
-            None,
+            listbox_after_leave.active_descendant, None,
             "expected pointer leave to clear `active_descendant`"
         );
     }
