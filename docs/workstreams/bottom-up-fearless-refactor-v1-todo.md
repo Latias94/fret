@@ -44,6 +44,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/table.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/typography.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/dashboard.rs`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs`
   - Evidence (fixture-driven slice):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_sonner_open_toast_rect_matches_web_fixtures`)
