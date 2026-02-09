@@ -1,4 +1,26 @@
 use super::*;
+use serde::Deserialize;
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SelectFixtureRecipe {
+    ScrollableOverlayPlacement,
+    DemoOverlayPlacement,
+    DemoOpenOptionMetrics,
+    ScrollableListboxOptionInsets,
+    ScrollableListboxOptionHeight,
+    ScrollableListboxHeight,
+    ScrollableScrollButtonHeight,
+    ScrollableViewportInsets,
+    ScrollableListboxWidth,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SelectFixtureCase {
+    id: String,
+    web_name: String,
+    recipe: SelectFixtureRecipe,
+}
 
 #[test]
 fn fret_select_tracks_trigger_when_underlay_scrolls() {
@@ -313,170 +335,84 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
         1.0,
     );
 }
-#[test]
-fn web_vs_fret_select_scrollable_overlay_placement_matches() {
-    assert_overlay_placement_matches(
-        "select-scrollable",
-        Some("listbox"),
-        |cx, open| {
-            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
-            let entries: Vec<SelectEntry> = vec![
-                SelectGroup::new(vec![
-                    SelectLabel::new("North America").into(),
-                    SelectItem::new("est", "Eastern Standard Time (EST)").into(),
-                    SelectItem::new("cst", "Central Standard Time (CST)").into(),
-                    SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
-                    SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
-                    SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
-                    SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Europe & Africa").into(),
-                    SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
-                    SelectItem::new("cet", "Central European Time (CET)").into(),
-                    SelectItem::new("eet", "Eastern European Time (EET)").into(),
-                    SelectItem::new("west", "Western European Summer Time (WEST)").into(),
-                    SelectItem::new("cat", "Central Africa Time (CAT)").into(),
-                    SelectItem::new("eat", "East Africa Time (EAT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Asia").into(),
-                    SelectItem::new("msk", "Moscow Time (MSK)").into(),
-                    SelectItem::new("ist", "India Standard Time (IST)").into(),
-                    SelectItem::new("cst_china", "China Standard Time (CST)").into(),
-                    SelectItem::new("jst", "Japan Standard Time (JST)").into(),
-                    SelectItem::new("kst", "Korea Standard Time (KST)").into(),
-                    SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)")
-                        .into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Australia & Pacific").into(),
-                    SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
-                    SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
-                    SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
-                    SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
-                    SelectItem::new("fjt", "Fiji Time (FJT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("South America").into(),
-                    SelectItem::new("art", "Argentina Time (ART)").into(),
-                    SelectItem::new("bot", "Bolivia Time (BOT)").into(),
-                    SelectItem::new("brt", "Brasilia Time (BRT)").into(),
-                    SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
-                ])
-                .into(),
-            ];
+fn select_demo_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
+    use fret_ui_shadcn::{SelectGroup, SelectItem, SelectLabel};
 
-            fret_ui_shadcn::Select::new(value, open.clone())
-                .a11y_label("Select")
-                .placeholder("Select a timezone")
-                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
-                .entries(entries)
-                .into_element(cx)
-        },
-        SemanticsRole::ComboBox,
-        Some("Select"),
-        SemanticsRole::ListBox,
-    );
+    vec![
+        SelectGroup::new(vec![
+            SelectLabel::new("Fruits").into(),
+            SelectItem::new("apple", "Apple").into(),
+            SelectItem::new("banana", "Banana").into(),
+            SelectItem::new("blueberry", "Blueberry").into(),
+            SelectItem::new("grapes", "Grapes").into(),
+            SelectItem::new("pineapple", "Pineapple").into(),
+        ])
+        .into(),
+    ]
 }
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
-    assert_overlay_placement_matches(
-        "select-scrollable.vp1440x450",
-        Some("listbox"),
-        |cx, open| {
-            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
-            let entries: Vec<SelectEntry> = vec![
-                SelectGroup::new(vec![
-                    SelectLabel::new("North America").into(),
-                    SelectItem::new("est", "Eastern Standard Time (EST)").into(),
-                    SelectItem::new("cst", "Central Standard Time (CST)").into(),
-                    SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
-                    SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
-                    SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
-                    SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Europe & Africa").into(),
-                    SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
-                    SelectItem::new("cet", "Central European Time (CET)").into(),
-                    SelectItem::new("eet", "Eastern European Time (EET)").into(),
-                    SelectItem::new("west", "Western European Summer Time (WEST)").into(),
-                    SelectItem::new("cat", "Central Africa Time (CAT)").into(),
-                    SelectItem::new("eat", "East Africa Time (EAT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Asia").into(),
-                    SelectItem::new("msk", "Moscow Time (MSK)").into(),
-                    SelectItem::new("ist", "India Standard Time (IST)").into(),
-                    SelectItem::new("cst_china", "China Standard Time (CST)").into(),
-                    SelectItem::new("jst", "Japan Standard Time (JST)").into(),
-                    SelectItem::new("kst", "Korea Standard Time (KST)").into(),
-                    SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)")
-                        .into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Australia & Pacific").into(),
-                    SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
-                    SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
-                    SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
-                    SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
-                    SelectItem::new("fjt", "Fiji Time (FJT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("South America").into(),
-                    SelectItem::new("art", "Argentina Time (ART)").into(),
-                    SelectItem::new("bot", "Bolivia Time (BOT)").into(),
-                    SelectItem::new("brt", "Brasilia Time (BRT)").into(),
-                    SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
-                ])
-                .into(),
-            ];
+fn select_scrollable_entries() -> Vec<fret_ui_shadcn::SelectEntry> {
+    use fret_ui_shadcn::{SelectGroup, SelectItem, SelectLabel};
 
-            fret_ui_shadcn::Select::new(value, open.clone())
-                .a11y_label("Select")
-                .placeholder("Select a timezone")
-                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
-                .entries(entries)
-                .into_element(cx)
-        },
-        SemanticsRole::ComboBox,
-        Some("Select"),
-        SemanticsRole::ListBox,
-    );
+    vec![
+        SelectGroup::new(vec![
+            SelectLabel::new("North America").into(),
+            SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+            SelectItem::new("cst", "Central Standard Time (CST)").into(),
+            SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+            SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+            SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+            SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Europe & Africa").into(),
+            SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+            SelectItem::new("cet", "Central European Time (CET)").into(),
+            SelectItem::new("eet", "Eastern European Time (EET)").into(),
+            SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+            SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+            SelectItem::new("eat", "East Africa Time (EAT)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Asia").into(),
+            SelectItem::new("msk", "Moscow Time (MSK)").into(),
+            SelectItem::new("ist", "India Standard Time (IST)").into(),
+            SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+            SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+            SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+            SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Australia & Pacific").into(),
+            SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+            SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+            SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+            SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+            SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("South America").into(),
+            SelectItem::new("art", "Argentina Time (ART)").into(),
+            SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+            SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+            SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+        ])
+        .into(),
+    ]
 }
-#[test]
-fn web_vs_fret_select_demo_overlay_placement_matches() {
+
+fn assert_select_demo_overlay_placement_matches_impl(web_name: &str) {
     assert_overlay_placement_matches(
-        "select-demo",
+        web_name,
         Some("listbox"),
         |cx, open| {
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
-
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            let entries: Vec<SelectEntry> = vec![
-                SelectGroup::new(vec![
-                    SelectLabel::new("Fruits").into(),
-                    SelectItem::new("apple", "Apple").into(),
-                    SelectItem::new("banana", "Banana").into(),
-                    SelectItem::new("blueberry", "Blueberry").into(),
-                    SelectItem::new("grapes", "Grapes").into(),
-                    SelectItem::new("pineapple", "Pineapple").into(),
-                ])
-                .into(),
-            ];
+            let entries = select_demo_entries();
 
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
@@ -490,106 +426,14 @@ fn web_vs_fret_select_demo_overlay_placement_matches() {
         SemanticsRole::ListBox,
     );
 }
-#[test]
-fn web_vs_fret_select_demo_vp375x160_overlay_placement_matches() {
-    assert_overlay_placement_matches(
-        "select-demo.vp375x160",
-        Some("listbox"),
-        |cx, open| {
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
 
-            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            let entries: Vec<SelectEntry> = vec![
-                SelectGroup::new(vec![
-                    SelectLabel::new("Fruits").into(),
-                    SelectItem::new("apple", "Apple").into(),
-                    SelectItem::new("banana", "Banana").into(),
-                    SelectItem::new("blueberry", "Blueberry").into(),
-                    SelectItem::new("grapes", "Grapes").into(),
-                    SelectItem::new("pineapple", "Pineapple").into(),
-                ])
-                .into(),
-            ];
-
-            fret_ui_shadcn::Select::new(value, open.clone())
-                .a11y_label("Select")
-                .placeholder("Select a fruit")
-                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
-                .entries(entries)
-                .into_element(cx)
-        },
-        SemanticsRole::ComboBox,
-        Some("Select"),
-        SemanticsRole::ListBox,
-    );
-}
-#[test]
-fn web_vs_fret_select_demo_open_option_metrics_match() {
-    assert_select_demo_open_option_metrics_match("select-demo");
-}
-#[test]
-fn web_vs_fret_select_demo_vp375x160_open_option_metrics_match() {
-    assert_select_demo_open_option_metrics_match("select-demo.vp375x160");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
+fn assert_select_scrollable_overlay_placement_matches_impl(web_name: &str) {
     assert_overlay_placement_matches(
-        "select-scrollable.vp1440x240",
+        web_name,
         Some("listbox"),
         |cx, open| {
             let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
-
-            let entries: Vec<SelectEntry> = vec![
-                SelectGroup::new(vec![
-                    SelectLabel::new("North America").into(),
-                    SelectItem::new("est", "Eastern Standard Time (EST)").into(),
-                    SelectItem::new("cst", "Central Standard Time (CST)").into(),
-                    SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
-                    SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
-                    SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
-                    SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Europe & Africa").into(),
-                    SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
-                    SelectItem::new("cet", "Central European Time (CET)").into(),
-                    SelectItem::new("eet", "Eastern European Time (EET)").into(),
-                    SelectItem::new("west", "Western European Summer Time (WEST)").into(),
-                    SelectItem::new("cat", "Central Africa Time (CAT)").into(),
-                    SelectItem::new("eat", "East Africa Time (EAT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Asia").into(),
-                    SelectItem::new("msk", "Moscow Time (MSK)").into(),
-                    SelectItem::new("ist", "India Standard Time (IST)").into(),
-                    SelectItem::new("cst_china", "China Standard Time (CST)").into(),
-                    SelectItem::new("jst", "Japan Standard Time (JST)").into(),
-                    SelectItem::new("kst", "Korea Standard Time (KST)").into(),
-                    SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)")
-                        .into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("Australia & Pacific").into(),
-                    SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
-                    SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
-                    SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
-                    SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
-                    SelectItem::new("fjt", "Fiji Time (FJT)").into(),
-                ])
-                .into(),
-                SelectGroup::new(vec![
-                    SelectLabel::new("South America").into(),
-                    SelectItem::new("art", "Argentina Time (ART)").into(),
-                    SelectItem::new("bot", "Bolivia Time (BOT)").into(),
-                    SelectItem::new("brt", "Brasilia Time (BRT)").into(),
-                    SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
-                ])
-                .into(),
-            ];
+            let entries = select_scrollable_entries();
 
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
@@ -603,99 +447,48 @@ fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
         SemanticsRole::ListBox,
     );
 }
+
 #[test]
-fn web_vs_fret_select_scrollable_listbox_option_insets_match() {
-    assert_select_scrollable_listbox_option_insets_match("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_listbox_option_insets_match() {
-    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_insets_match() {
-    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_option_insets_match() {
-    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp375x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_listbox_option_height_matches() {
-    assert_select_scrollable_listbox_option_height_matches("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_listbox_option_height_matches() {
-    assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_height_matches() {
-    assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_option_height_matches() {
-    assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp375x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_listbox_height_matches() {
-    assert_select_scrollable_listbox_height_matches("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_listbox_height_matches() {
-    assert_select_scrollable_listbox_height_matches("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_listbox_height_matches() {
-    assert_select_scrollable_listbox_height_matches("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_height_matches() {
-    assert_select_scrollable_listbox_height_matches("select-scrollable.vp375x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_scroll_button_height_matches() {
-    assert_select_scrollable_scroll_button_height_matches("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_scroll_button_height_matches() {
-    assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_scroll_button_height_matches() {
-    assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_scroll_button_height_matches() {
-    assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp375x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_viewport_insets_match() {
-    assert_select_scrollable_viewport_insets_match("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_viewport_insets_match() {
-    assert_select_scrollable_viewport_insets_match("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_viewport_insets_match() {
-    assert_select_scrollable_viewport_insets_match("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_viewport_insets_match() {
-    assert_select_scrollable_viewport_insets_match("select-scrollable.vp375x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_listbox_width_matches() {
-    assert_select_scrollable_listbox_width_matches("select-scrollable");
-}
-#[test]
-fn web_vs_fret_select_scrollable_small_viewport_listbox_width_matches() {
-    assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x450");
-}
-#[test]
-fn web_vs_fret_select_scrollable_tiny_viewport_listbox_width_matches() {
-    assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x240");
-}
-#[test]
-fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_width_matches() {
-    assert_select_scrollable_listbox_width_matches("select-scrollable.vp375x240");
+fn web_vs_fret_select_cases_match_web_fixtures() {
+    let raw = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/overlay_placement_select_cases_v1.json"
+    ));
+    let suite: FixtureSuite<SelectFixtureCase> =
+        serde_json::from_str(raw).expect("select fixture parse");
+    assert_eq!(suite.schema_version, 1);
+    assert!(!suite.cases.is_empty());
+
+    for case in suite.cases {
+        eprintln!("select case={}", case.id);
+        match case.recipe {
+            SelectFixtureRecipe::ScrollableOverlayPlacement => {
+                assert_select_scrollable_overlay_placement_matches_impl(&case.web_name);
+            }
+            SelectFixtureRecipe::DemoOverlayPlacement => {
+                assert_select_demo_overlay_placement_matches_impl(&case.web_name);
+            }
+            SelectFixtureRecipe::DemoOpenOptionMetrics => {
+                assert_select_demo_open_option_metrics_match(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableListboxOptionInsets => {
+                assert_select_scrollable_listbox_option_insets_match(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableListboxOptionHeight => {
+                assert_select_scrollable_listbox_option_height_matches(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableListboxHeight => {
+                assert_select_scrollable_listbox_height_matches(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableScrollButtonHeight => {
+                assert_select_scrollable_scroll_button_height_matches(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableViewportInsets => {
+                assert_select_scrollable_viewport_insets_match(&case.web_name);
+            }
+            SelectFixtureRecipe::ScrollableListboxWidth => {
+                assert_select_scrollable_listbox_width_matches(&case.web_name);
+            }
+        }
+    }
 }
