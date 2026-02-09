@@ -42,6 +42,7 @@
 //! ```
 
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -95,7 +96,7 @@ pub fn install_default_i18n_backend(app: &mut App) {
     app.set_global(service);
 }
 
-fn default_i18n_lookup() -> Arc<dyn I18nLookup + 'static> {
+fn default_i18n_lookup() -> Rc<dyn I18nLookup + 'static> {
     let mut catalog = FluentCatalog::new();
     catalog
         .add_locale_ftl(
@@ -110,8 +111,8 @@ fn default_i18n_lookup() -> Arc<dyn I18nLookup + 'static> {
         )
         .expect("zh-CN i18n resource must load");
 
-    let lookup = FluentLookup::new(Arc::new(catalog));
-    Arc::new(lookup)
+    let lookup = FluentLookup::new(Rc::new(catalog));
+    Rc::new(lookup)
 }
 
 const DEFAULT_I18N_FTL_EN_US: &str = r#"
