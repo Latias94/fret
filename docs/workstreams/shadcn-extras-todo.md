@@ -35,6 +35,11 @@ Landed snapshot gates (in-tree):
 - `extras_tags_default.json`
 - `extras_relative_time_default.json`
 
+Landed behavior gates (in-tree):
+
+- `ecosystem/fret-ui-shadcn/tests/extras_rating_keyboard.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
+
 ## Candidate components (staged)
 
 Legend:
@@ -64,7 +69,7 @@ Legend:
 
 | Component | Source | Owner split | Gate |
 | --- | --- | --- | --- |
-| `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | scripted + perf note |
+| `RelativeTime` (auto-updating) | `repo-ref/kibo/packages/relative-time` (MIT) | scheduling policy; perf risk | Rust test + perf note |
 | `Marquee` / `Ticker` | `repo-ref/kibo/packages/marquee`, `.../ticker` (MIT) | continuous frames lease | scripted + perf gate |
 
 ## Per-component checklist (copy/paste into PRs)

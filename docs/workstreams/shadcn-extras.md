@@ -145,7 +145,7 @@ Inspired by `repo-ref/kibo` (MIT), adapted to Fret primitives:
 
 ### M3: Scheduling/animation-heavy blocks (defer until authoring patterns are stable)
 
-- `RelativeTime` auto-updating modes (timers)
+- `RelativeTime` auto-updating modes (continuous frames today; switch to timers when available)
 - `Marquee` / `Ticker` style components (continuous frames lease + perf gates)
 
 ## Notes on upstream sources and licensing
