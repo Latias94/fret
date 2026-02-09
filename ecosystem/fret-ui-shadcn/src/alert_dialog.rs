@@ -7,7 +7,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
@@ -199,10 +199,14 @@ impl AlertDialog {
             );
             let (open_change, open_change_complete) =
                 cx.with_state(AlertDialogOpenChangeCallbackState::default, |state| {
-                    alert_dialog_open_change_events(state, is_open, motion.present, motion.animating)
+                    alert_dialog_open_change_events(
+                        state,
+                        is_open,
+                        motion.present,
+                        motion.animating,
+                    )
                 });
-            if let (Some(open), Some(on_open_change)) =
-                (open_change, self.on_open_change.as_ref())
+            if let (Some(open), Some(on_open_change)) = (open_change, self.on_open_change.as_ref())
             {
                 on_open_change(open);
             }
@@ -506,42 +510,63 @@ impl AlertDialogFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui::element::LayoutQueryRegionProps;
         use fret_ui_kit::declarative::stack;
 
-        // Tailwind `sm:` breakpoints apply at the viewport level. Mirror `sm:flex-row` at 640px.
-        let sm_breakpoint = cx.bounds.size.width >= Px(640.0);
+        let children = self.children;
+        fret_ui_kit::declarative::container_query_region_with_id(
+            cx,
+            "shadcn.alert_dialog.footer",
+            LayoutQueryRegionProps::default(),
+            move |cx, region_id| {
+                // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint). In editor-grade Fret
+                // layouts we prefer container queries so the footer tracks the dialog's committed
+                // width (ADR 1170).
+                //
+                // Note: layout queries are frame-lagged; default to the desktop-friendly branch
+                // while the first committed width is not yet known.
+                let sm_breakpoint = fret_ui_kit::declarative::container_width_at_least(
+                    cx,
+                    region_id,
+                    Invalidation::Layout,
+                    true,
+                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::ContainerQueryHysteresis::default(),
+                );
 
-        let props = decl_style::container_props(
-            Theme::global(&*cx.app),
-            ChromeRefinement::default(),
-            LayoutRefinement::default().w_full(),
-        );
+                let props = decl_style::container_props(
+                    Theme::global(&*cx.app),
+                    ChromeRefinement::default(),
+                    LayoutRefinement::default().w_full(),
+                );
 
-        let mut children = self.children;
-        if sm_breakpoint {
-            shadcn_layout::container_hstack(
-                cx,
-                props,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_end()
-                    .items_center(),
-                children,
-            )
-        } else {
-            // Tailwind: `flex-col-reverse gap-2`
-            children.reverse();
-            shadcn_layout::container_vstack(
-                cx,
-                props,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_stretch(),
-                children,
-            )
-        }
+                let mut children = children;
+                if sm_breakpoint {
+                    vec![shadcn_layout::container_hstack(
+                        cx,
+                        props,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .justify_end()
+                            .items_center(),
+                        children,
+                    )]
+                } else {
+                    // Tailwind: `flex-col-reverse gap-2`
+                    children.reverse();
+                    vec![shadcn_layout::container_vstack(
+                        cx,
+                        props,
+                        stack::VStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .items_stretch(),
+                        children,
+                    )]
+                }
+            },
+        )
     }
 }
 
@@ -804,18 +829,15 @@ mod tests {
     fn alert_dialog_open_change_events_emit_change_and_complete_after_settle() {
         let mut state = AlertDialogOpenChangeCallbackState::default();
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, false, false, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, false, false, false);
         assert_eq!(changed, None);
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, true);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, true);
         assert_eq!(changed, Some(true));
         assert_eq!(completed, None);
 
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
         assert_eq!(changed, None);
         assert_eq!(completed, Some(true));
     }
@@ -825,8 +847,7 @@ mod tests {
         let mut state = AlertDialogOpenChangeCallbackState::default();
 
         let _ = alert_dialog_open_change_events(&mut state, false, false, false);
-        let (changed, completed) =
-            alert_dialog_open_change_events(&mut state, true, true, false);
+        let (changed, completed) = alert_dialog_open_change_events(&mut state, true, true, false);
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
