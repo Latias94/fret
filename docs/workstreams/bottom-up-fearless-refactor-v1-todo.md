@@ -117,6 +117,18 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_combobox_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/combobox/fixtures.rs` (`web_vs_fret_combobox_overlay_chrome_cases_match_web_fixtures`)
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/combobox.rs`
+  - Evidence (fixture-driven slice, overlay chrome command-dialog chrome + option states):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog/fixtures.rs` (`web_vs_fret_command_dialog_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs`
+  - Evidence (fixture-driven slice, overlay chrome sheet variants):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_sheet_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sheet/fixtures.rs` (`web_vs_fret_sheet_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sheet.rs`
+  - Evidence (fixture-driven slice, overlay chrome hover-card chrome + surface colors):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card/fixtures.rs` (`web_vs_fret_hover_card_overlay_chrome_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/hover_card.rs`
   - Evidence (fixture-driven slice, context-menu demo overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu/fixtures.rs` (`web_vs_fret_context_menu_demo_cases_match_web_fixtures`)
@@ -704,3 +716,6 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_popover_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_tooltip_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_combobox_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_sheet_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_hover_card_cases_v1.json`
