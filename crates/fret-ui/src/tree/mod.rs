@@ -2992,15 +2992,27 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
-        self.debug_layout_engine_solves
-            .push(UiDebugLayoutEngineSolve {
-                root,
-                solve_time,
-                measure_calls,
-                measure_cache_hits,
-                measure_time,
-                top_measures,
-            });
+        // Keep bundles bounded: barrier layouts may solve many child roots in a single frame.
+        const MAX_LAYOUT_ENGINE_SOLVES: usize = 16;
+        let record = UiDebugLayoutEngineSolve {
+            root,
+            solve_time,
+            measure_calls,
+            measure_cache_hits,
+            measure_time,
+            top_measures,
+        };
+
+        let idx = self
+            .debug_layout_engine_solves
+            .iter()
+            .position(|h| h.solve_time < record.solve_time)
+            .unwrap_or(self.debug_layout_engine_solves.len());
+        self.debug_layout_engine_solves.insert(idx, record);
+        if self.debug_layout_engine_solves.len() > MAX_LAYOUT_ENGINE_SOLVES {
+            self.debug_layout_engine_solves
+                .truncate(MAX_LAYOUT_ENGINE_SOLVES);
+        }
     }
 
     pub fn debug_cache_root_stats(&self) -> Vec<UiDebugCacheRootStats> {
