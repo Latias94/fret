@@ -4546,14 +4546,6 @@ fn default_move_frames_per_step() -> u32 {
     1
 }
 
-fn default_click_stable_frames() -> u32 {
-    2
-}
-
-fn default_click_stable_max_move_px() -> f32 {
-    1.0
-}
-
 fn default_capture_screenshot_timeout_frames() -> u32 {
     300
 }
