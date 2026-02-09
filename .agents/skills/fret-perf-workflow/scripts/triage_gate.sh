@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  .agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir>
+  .agents/skills/fret-perf-workflow/scripts/triage_gate.sh <out-dir> [--all] [--script <script-path-suffix>] [--app-snapshot]
 
 Prints a compact triage summary for perf gate output produced by:
   tools/perf/diag_resize_probes_gate.sh
@@ -13,6 +13,17 @@ It reports:
   - which attempts passed/failed,
   - which script/metric exceeded thresholds,
   - and the worst bundle for each failing script (by top_total_time_us).
+
+Options:
+  --all
+      Also print worst bundles for passing attempts (useful for perf logs).
+
+  --script <script-path-suffix>
+      Filter to scripts whose path ends with the given suffix (e.g. "ui-code-editor-resize-probes.json").
+
+  --app-snapshot
+      For each reported worst bundle, print a small, jq-derived summary of the worst frame's
+      `debug.stats` and (when available) `app_snapshot.code_editor.torture.paint_perf`.
 
 Notes:
   - Gate attempt stdout may include log lines before the JSON payload.
@@ -33,6 +44,40 @@ if [[ -z "$out_dir" || "$out_dir" == "-h" || "$out_dir" == "--help" ]]; then
   usage
   exit 0
 fi
+shift || true
+
+print_all=0
+script_suffix=""
+print_app_snapshot=0
+while [[ "${1:-}" != "" ]]; do
+  case "$1" in
+    --all)
+      print_all=1
+      shift
+      ;;
+    --script)
+      script_suffix="${2:-}"
+      if [[ -z "$script_suffix" ]]; then
+        echo "error: --script requires a suffix (e.g. ui-code-editor-resize-probes.json)" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
+    --app-snapshot)
+      print_app_snapshot=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "error: unknown flag: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 require_cmd jq
 require_cmd awk
@@ -86,6 +131,52 @@ jq -r '.attempt_summaries[] | "\(.attempt_dir)\tpass=\(.pass)\tfailures=\(.check
 
 attempt_dirs="$(jq -r '.attempt_summaries[].attempt_dir' "$summary_json")"
 
+bundle_snapshot_summary() {
+  local bundle_json="$1"
+  if [[ ! -f "$bundle_json" ]]; then
+    return 0
+  fi
+
+  # Prefer the "worst frame" snapshot by total_time_us.
+  jq -r '
+    def snap_total:
+      ((.debug.stats.dispatch_time_us // 0)
+      + (.debug.stats.layout_time_us // 0)
+      + (.debug.stats.prepaint_time_us // 0)
+      + (.debug.stats.paint_time_us // 0));
+    def max_snap: (.windows[0].snapshots | max_by(snap_total));
+    max_snap as $s
+    | "  - max frame: total=\($s | snap_total)us paint=\($s.debug.stats.paint_time_us)us layout=\($s.debug.stats.layout_time_us)us prepaint=\($s.debug.stats.prepaint_time_us)us"
+  ' "$bundle_json" 2>/dev/null || true
+
+  # Optional code-editor paint perf attribution (only present when the app exposes it).
+  jq -r '
+    def snap_total:
+      ((.debug.stats.dispatch_time_us // 0)
+      + (.debug.stats.layout_time_us // 0)
+      + (.debug.stats.prepaint_time_us // 0)
+      + (.debug.stats.paint_time_us // 0));
+    def max_snap: (.windows[0].snapshots | max_by(snap_total));
+    (max_snap.app_snapshot.code_editor.torture.paint_perf // null) as $p
+    | if $p == null then empty
+      else "  - paint_perf: us_total=\($p.us_total)us us_syntax_spans=\($p.us_syntax_spans)us us_text_draw=\($p.us_text_draw)us rows=\($p.rows_painted)"
+      end
+  ' "$bundle_json" 2>/dev/null || true
+
+  jq -r '
+    def snap_total:
+      ((.debug.stats.dispatch_time_us // 0)
+      + (.debug.stats.layout_time_us // 0)
+      + (.debug.stats.prepaint_time_us // 0)
+      + (.debug.stats.paint_time_us // 0));
+    def max_snap: (.windows[0].snapshots | max_by(snap_total));
+    (max_snap.app_snapshot.code_editor.torture.cache_stats // null) as $c
+    | if $c == null then empty
+      else "  - cache_stats: syntax_resets=\($c.syntax_resets) row_rich_hits=\($c.row_rich_hits) row_rich_misses=\($c.row_rich_misses)"
+      end
+  ' "$bundle_json" 2>/dev/null || true
+}
+
 echo
 for attempt_dir in $attempt_dirs; do
   attempt_dir_resolved="$(resolve_attempt_dir "$attempt_dir")"
@@ -96,11 +187,17 @@ for attempt_dir in $attempt_dirs; do
 
   failures_len="$(jq -r '.failures | length' "$check_json" 2>/dev/null || echo "")"
   if [[ -z "$failures_len" || "$failures_len" == "0" ]]; then
-    continue
+    if [[ "$print_all" != "1" ]]; then
+      continue
+    fi
   fi
 
-  echo "== FAIL: $attempt_dir ($failures_len threshold(s)) =="
-  jq -r '.failures[] | "- \(.script) :: \(.metric) actual=\(.actual_us)us threshold=\(.threshold_us)us"' "$check_json"
+  if [[ "$failures_len" == "0" ]]; then
+    echo "== PASS: $attempt_dir =="
+  else
+    echo "== FAIL: $attempt_dir ($failures_len threshold(s)) =="
+    jq -r '.failures[] | "- \(.script) :: \(.metric) actual=\(.actual_us)us threshold=\(.threshold_us)us"' "$check_json"
+  fi
 
   stdout_path="$attempt_dir_resolved/stdout.json"
   if [[ ! -f "$stdout_path" ]]; then
@@ -120,11 +217,17 @@ for attempt_dir in $attempt_dirs; do
     continue
   fi
 
-  # For each failing script, resolve the bundle of the worst run by total time.
-  scripts="$(
-    jq -r '.failures[].script' "$check_json" | awk '!seen[$0]++'
-  )"
+  scripts=""
+  if [[ "$failures_len" != "0" ]]; then
+    scripts="$(jq -r '.failures[].script' "$check_json" | awk '!seen[$0]++')"
+  else
+    scripts="$(jq -r '.rows[].script' <<<"$payload" 2>/dev/null | awk '!seen[$0]++' || true)"
+  fi
+
   for script in $scripts; do
+    if [[ -n "$script_suffix" && "$script" != *"$script_suffix" ]]; then
+      continue
+    fi
     script_name="$(basename "$script")"
     worst_bundle="$(
       jq -r --arg script_suffix "$script" '
@@ -142,6 +245,9 @@ for attempt_dir in $attempt_dirs; do
     )"
     if [[ -n "$worst_bundle" && "$worst_bundle" != "null" ]]; then
       echo "- worst bundle ($script_name): $worst_bundle (top_total_time_us=$worst_total)"
+      if [[ "$print_app_snapshot" == "1" ]]; then
+        bundle_snapshot_summary "$worst_bundle"
+      fi
     else
       echo "- note: could not resolve worst bundle for $script_name"
     fi

@@ -105,6 +105,18 @@ This reports:
 - which script/metric exceeded thresholds, and
 - the worst bundle for each failing script (by `top_total_time_us`).
 
+If you want to capture “best-effort internal attribution” from `app_snapshot` (when available), add:
+
+```bash
+.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag> --app-snapshot
+```
+
+And if you want worst bundles even for passing attempts (useful for logs):
+
+```bash
+.agents/skills/fret-perf-workflow/scripts/triage_gate.sh target/perf-gates/ui-resize-probes.<tag> --all --app-snapshot
+```
+
 Note:
 - `diag perf --json` still prints the JSON payload even when perf thresholds fail (the process exits non-zero, but
   stdout contains the payload), so the helper can resolve worst bundles for failing attempts.
