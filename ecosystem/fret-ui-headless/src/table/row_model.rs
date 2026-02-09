@@ -3221,6 +3221,70 @@ impl<'a, TData> Table<'a, TData> {
             }
         }
 
+        let (left_total_size, center_total_size, right_total_size) = self.pinned_total_sizes();
+
+        let mut column_size: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_start_all: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_start_left: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_start_center: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_start_right: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_all: std::collections::BTreeMap<Arc<str>, f32> =
+            std::collections::BTreeMap::new();
+        let mut column_after_left: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_center: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+        let mut column_after_right: std::collections::BTreeMap<Arc<str>, Option<f32>> =
+            std::collections::BTreeMap::new();
+
+        for col in self.ordered_columns() {
+            let id = col.id.clone();
+            column_size.insert(
+                id.clone(),
+                super::resolved_column_size(&self.state.column_sizing, col),
+            );
+            column_start_all.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::All)
+                    .unwrap_or(0.0),
+            );
+            column_start_left.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Left),
+            );
+            column_start_center.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Center),
+            );
+            column_start_right.insert(
+                id.clone(),
+                self.column_start(id.as_ref(), super::ColumnSizingRegion::Right),
+            );
+
+            column_after_all.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::All)
+                    .unwrap_or(0.0),
+            );
+            column_after_left.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Left),
+            );
+            column_after_center.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Center),
+            );
+            column_after_right.insert(
+                id.clone(),
+                self.column_after(id.as_ref(), super::ColumnSizingRegion::Right),
+            );
+        }
+
         let core = snapshot_row_model_ids(self.core_row_model());
         let row_model = snapshot_row_model_ids(self.row_model());
 
@@ -3237,7 +3301,7 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         super::CoreModelSnapshot {
-            schema_version: 3,
+            schema_version: 4,
             column_tree,
             column_capabilities,
             flat_columns: super::FlatColumnsSnapshot {
@@ -3258,6 +3322,27 @@ impl<'a, TData> Table<'a, TData> {
             header_sizing: super::HeaderSizingSnapshot {
                 size: header_size,
                 start: header_start,
+            },
+            leaf_column_sizing: super::LeafColumnSizingSnapshot {
+                sizing: super::ColumnSizingSnapshot {
+                    total_size: self.total_size(),
+                    left_total_size,
+                    center_total_size,
+                    right_total_size,
+                },
+                size: column_size,
+                start: super::ColumnStartSnapshot {
+                    all: column_start_all,
+                    left: column_start_left,
+                    center: column_start_center,
+                    right: column_start_right,
+                },
+                after: super::ColumnAfterSnapshot {
+                    all: column_after_all,
+                    left: column_after_left,
+                    center: column_after_center,
+                    right: column_after_right,
+                },
             },
             rows: super::CoreRowsSnapshot { core, row_model },
             cells,

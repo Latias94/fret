@@ -779,6 +779,12 @@ type FixtureSnapshot = {
         NonNullable<FixtureSnapshot["expect"]["headers_cells"]>["right_header_groups"]
       >
       header_sizing: NonNullable<FixtureSnapshot["expect"]["header_sizing"]>
+      leaf_column_sizing?: {
+        sizing: NonNullable<FixtureSnapshot["expect"]["column_sizing"]>
+        size: Record<string, number>
+        start: NonNullable<FixtureSnapshot["expect"]["column_start"]>
+        after: NonNullable<FixtureSnapshot["expect"]["column_after"]>
+      }
       rows: {
         core: RowModelSnapshot
         row_model: RowModelSnapshot
@@ -2726,6 +2732,25 @@ function snapshotColumnSizing(table: any): {
       center: after_center,
       right: after_right,
     },
+  }
+}
+
+function snapshotLeafColumnSizing(
+  table: any,
+): NonNullable<NonNullable<FixtureSnapshot["expect"]["core_model"]>["leaf_column_sizing"]> {
+  const { column_sizing, column_start, column_after } = snapshotColumnSizing(table)
+
+  const size: Record<string, number> = {}
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    size[String(col.id)] = Number(col.getSize?.() ?? 0)
+  }
+
+  return {
+    sizing: column_sizing,
+    size,
+    start: column_start,
+    after: column_after,
   }
 }
 
@@ -5205,7 +5230,7 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
-            schema_version: 3,
+            schema_version: 4,
             column_tree: snapshotColumnTree(table.getAllColumns()),
             flat_columns: {
               all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5230,6 +5255,7 @@ function snapshotColumnPinning(
             center_header_groups,
             right_header_groups,
             header_sizing: snapshotHeaderSizing(table),
+            leaf_column_sizing: snapshotLeafColumnSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -5337,7 +5363,7 @@ function snapshotColumnPinning(
             cells,
           },
           core_model: {
-            schema_version: 3,
+            schema_version: 4,
             column_tree: snapshotColumnTree(table.getAllColumns()),
             flat_columns: {
               all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5362,6 +5388,7 @@ function snapshotColumnPinning(
             center_header_groups,
             right_header_groups,
             header_sizing: snapshotHeaderSizing(table),
+            leaf_column_sizing: snapshotLeafColumnSizing(table),
             rows: {
               core: snapshotRowModel(table.getCoreRowModel()),
               row_model: snapshotRowModel(table.getRowModel()),
@@ -5399,7 +5426,7 @@ function snapshotColumnPinning(
       const cells = snapshotCells(table)
 
       return {
-        schema_version: 3,
+        schema_version: 4,
         column_tree: snapshotColumnTree(table.getAllColumns()),
         flat_columns: {
           all: (table.getAllFlatColumns?.() ?? []).map((c: any) => String(c.id)),
@@ -5422,6 +5449,7 @@ function snapshotColumnPinning(
         center_header_groups,
         right_header_groups,
         header_sizing: snapshotHeaderSizing(table),
+        leaf_column_sizing: snapshotLeafColumnSizing(table),
         rows: {
           core: snapshotRowModel(table.getCoreRowModel()),
           row_model: snapshotRowModel(table.getRowModel()),

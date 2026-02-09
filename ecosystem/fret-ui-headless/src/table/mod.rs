@@ -60,8 +60,9 @@ pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};
 pub use core_model::{
-    ColumnCapabilitySnapshot, ColumnNodeSnapshot, CoreModelSnapshot, CoreRowsSnapshot,
-    FlatColumnsSnapshot, HeaderSizingSnapshot, LeafColumnsSnapshot, RowModelIdSnapshot,
+    ColumnAfterSnapshot, ColumnCapabilitySnapshot, ColumnNodeSnapshot, ColumnSizingSnapshot,
+    ColumnStartSnapshot, CoreModelSnapshot, CoreRowsSnapshot, FlatColumnsSnapshot,
+    HeaderSizingSnapshot, LeafColumnSizingSnapshot, LeafColumnsSnapshot, RowModelIdSnapshot,
 };
 pub use faceting::{
     FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,

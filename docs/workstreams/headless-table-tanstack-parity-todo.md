@@ -79,8 +79,8 @@ ColumnDef keys referenced by upstream feature implementations:
 
 - Step 1: Close the non-option capability inventory (`HTP-cap-010`, `HTP-base-004`) so consumers don't drift.
 - Step 2: Extend core snapshot introspection so UI consumers stop re-implementing traversal/policy logic
-  (`HTP-core-040` remaining scope).
-- Step 3: Lift the memo strategy across the full derived model pipeline (TanStack-style deps) (`HTP-memo-010` remaining).
+  (`HTP-core-040` remaining scope, consumer-driven).
+- Step 3: Add follow-up memo/perf guardrails only when new pipelines (e.g. grouped rebuild-each-frame) need them.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
@@ -99,7 +99,7 @@ P1 (capability breadth parity):
 P2 (engineering guardrails for sustained parity):
 
 - HTP-cap-010 + HTP-base-004: full public API inventory and non-option surface tracking.
-- HTP-memo-010 (remaining): lift the memo strategy across the full derived model pipeline (with guardrail tests as we expand).
+- Memo/perf guardrails: rebuild-each-frame ungrouped pipeline is now guarded; track follow-ups only as new pipelines appear.
 
 ---
 
@@ -296,6 +296,15 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
       `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`
+  - Update (parity-gated): bump core snapshot to `schema_version: 4` and add `leaf_column_sizing`
+    inventory keyed by **leaf column id**:
+    `column.getSize/getStart/getAfter` + `table.getTotalSize/getLeftTotalSize/getCenterTotalSize/getRightTotalSize`
+    (all/left/center/right pin-family splits) to avoid UI-side recompute drift.
+    - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_inventory_deep_parity.rs`
+    - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
+      `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
   - Update (parity-gated): flat-column inventories (`table.getAllFlatColumns/getVisibleFlatColumns`)
     are fixture-asserted so consumers can rely on TanStack’s pre-order DFS flattening semantics.
     - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
@@ -993,13 +1002,13 @@ Next UI parity targets (capability, not exact DOM behavior):
 
 ## M7 鈥?Engine memoization parity + perf gates
 
-- [~] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+- [x] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
   - Done (first building block, unit-gated): a TanStack-aligned dependency snapshot + memo cache for
     鈥渇iltered + sorted root row order鈥?
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
     - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
-  - Remaining: lift this pattern across the full derived row model pipeline (core/filtered/sorted/expanded/paginated),
-    plus a stable external cache surface for rebuild-each-frame callers.
+  - Done (ungrouped pipeline): lift this pattern across the full derived row model pipeline
+    (filtered/sorted/expanded/paginated), plus rebuild-each-frame guardrails that assert recompute-count stability.
   - Planned sub-milestones (to keep the work executable and gateable):
     - [x] HTP-memo-011 Cache filtered root row order (dependency-driven; stable external cache).
       - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`

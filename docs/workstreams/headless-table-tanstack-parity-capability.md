@@ -19,7 +19,7 @@ Legend:
 - **Partial**: implemented, but lacks option/edge-case parity coverage.
 - **Missing**: no equivalent capability surface yet.
 
-Last updated: 2026-02-08
+Last updated: 2026-02-09
 
 ---
 
@@ -61,6 +61,7 @@ Mapping conventions:
 | `table.getState()` | `Table::state()` | Aligned | `ecosystem/fret-ui-headless/src/table/row_model.rs` (`state`) |
 | `table.options.renderFallbackValue` | `Table::render_fallback_value()` + `Table::cell_render_value(..)` | Aligned | `render_fallback.json` |
 | `table._queue(cb)` (auto-reset scheduling) | `TanStackAutoResetQueue` (explicit register-first + coalesced auto-reset queue) | Partial | `auto_reset.json` + `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` |
+| `table.getTotalSize()/getLeftTotalSize()/getCenterTotalSize()/getRightTotalSize()` | `CoreModelSnapshot.leaf_column_sizing.sizing.{total_size,left_total_size,center_total_size,right_total_size}` | Aligned | `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json` + `tanstack_v8_headers_cells_parity.rs`, `tanstack_v8_headers_inventory_deep_parity.rs`, `tanstack_v8_visibility_ordering_parity.rs` |
 
 ### Row core surface
 
@@ -81,6 +82,7 @@ Mapping conventions:
 | `column.id/depth/parent/columns` | `CoreModelSnapshot.column_tree` (preferred) + `Table::column_tree()` | Aligned | `headers_inventory_deep.json` |
 | `column.getFlatColumns()` | `CoreModelSnapshot.flat_columns.all` (preferred) + `Table::all_flat_columns()` (table-level equivalent) | Aligned | `visibility_ordering.json` |
 | `column.getLeafColumns()` | `Table::ordered_columns()` (table-level leaf set) | Aligned | `visibility_ordering.json` |
+| `column.getSize()/getStart()/getAfter()` | `CoreModelSnapshot.leaf_column_sizing` inventories keyed by **leaf column id** (`size`, `start`, `after`) | Aligned | `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json` + `tanstack_v8_headers_cells_parity.rs`, `tanstack_v8_headers_inventory_deep_parity.rs`, `tanstack_v8_visibility_ordering_parity.rs` |
 
 ### Header + cell core surface
 
@@ -110,13 +112,18 @@ definition-of-done for `HTP-cap-010` / `HTP-base-004`.
     Update: fold **header sizing** (`header.getSize/getStart`) into the core snapshot as a versioned inventory keyed
     by header id, so UI consumers do not re-compute starts/sizes and drift under pin-family splits.
     Parity gate: `headers_cells.json`, `headers_inventory_deep.json` (`core_model.header_sizing`).
+    Update: fold **leaf column sizing** (`column.getSize/getStart/getAfter` + `table.getTotalSize` pin-family variants)
+    into the core snapshot as a versioned inventory keyed by leaf column id, so UI consumers do not re-compute
+    leaf starts/afters and drift under pin-family splits.
+    Parity gate: `headers_cells.json`, `headers_inventory_deep.json`, `visibility_ordering.json`
+    (`core_model.leaf_column_sizing`, `core_model.schema_version: 4`).
     Remaining: expand the same approach across header/cell capabilities (and decide the minimal row surface).
   - Tracking: `HTP-core-040` (remaining scope) + future `HTP-core-*` follow-ups.
 - **Memo/perf guardrails for rebuild-each-frame**:
   - Closed (initial): a documented + gated integration pattern exists for “rebuild per frame, keep memo cache”
     for the filtered+sorted flat root-row ordering (plus a large-dataset guardrail test).
-  - Remaining: lift the same memo strategy across the full derived model pipeline (filtered/sorted/expanded/paginated).
-  - Tracking: `HTP-memo-010` (remaining scope).
+  - Closed (ungrouped pipeline): rebuild-each-frame guardrails cover filtered/sorted/expanded/paginated row ordering.
+  - Tracking: follow-up only if grouped row model needs the same memo guarantees.
 
 **P1 (should close to match upstream ergonomics without copying the JS API):**
 
@@ -405,14 +412,53 @@ Source of truth:
 
 ---
 
+## Reset + auto-reset (cross-feature obligations)
+
+Source of truth:
+
+- `table-core/src/core/table.ts` (reset wiring)
+- `table-core/src/features/*` (feature-specific `reset*` + `autoReset*` options)
+
+| Upstream API / behavior | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- |
+| `resetSorting(defaultState?)` | `Table::reset_sorting(default_state)` | Aligned | `resets.json` + sorting fixtures |
+| `resetColumnFilters(defaultState?)` | `Table::reset_column_filters(default_state)` | Aligned | `resets.json` + filtering fixtures |
+| `resetGlobalFilter(defaultState?)` | `Table::reset_global_filter(default_state)` | Aligned | `resets.json` + filtering fixtures |
+| `resetGrouping(defaultState?)` | `Table::reset_grouping(default_state)` | Aligned | `resets.json` + `grouping.json` |
+| `resetExpanded(defaultState?)` | `Table::reset_expanded(default_state)` | Aligned | `resets.json` + `expanding.json` |
+| `resetPagination(defaultState?)` / `resetPageIndex` / `resetPageSize` | `Table::{reset_pagination,reset_page_index,reset_page_size}` | Aligned | `resets.json` + `pagination.json` |
+| `resetRowSelection(defaultState?)` | `Table::reset_row_selection(default_state)` | Aligned | `resets.json` + selection fixtures |
+| `resetRowPinning(defaultState?)` | `Table::reset_row_pinning(default_state)` | Aligned | `resets.json` + `pinning.json` |
+| `resetColumnPinning(defaultState?)` | `Table::reset_column_pinning(default_state)` | Aligned | `resets.json` + `column_pinning.json` |
+| `resetColumnVisibility(defaultState?)` | `Table::reset_column_visibility(default_state)` | Aligned | `resets.json` + `visibility_ordering.json` |
+| `resetColumnOrder(defaultState?)` | `Table::reset_column_order(default_state)` | Aligned | `resets.json` + `visibility_ordering.json` |
+| `resetColumnSizing(defaultState?)` / `resetColumnSize(columnId)` | `Table::{reset_column_sizing,reset_column_size}` | Aligned | `resets.json` + `column_sizing.json` |
+| `resetColumnSizingInfo(defaultState?)` | `Table::reset_header_size_info(default_state)` (TanStack `columnSizingInfo` mapping) | Aligned | `resets.json` + `column_sizing.json` |
+| Auto-reset scheduling (`autoResetAll`, `autoResetExpanded`, `autoResetPageIndex`, etc.) | `TanStackAutoResetQueue` + `Table::should_auto_reset_*` gates | Partial | `auto_reset.json` + `ecosystem/fret-ui-headless/src/table/tanstack_auto_reset.rs` |
+
+### Observable internals (underscore-prefixed)
+
+These are not “public API” in the JS sense, but they correspond to user-observable behavior
+(reset coalescing, derived model override wiring, memo/perf drift). We track them explicitly so we
+stay capability-complete without copying the upstream object model.
+
+| Upstream internal | Observable obligation | Fret mapping | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| `table._queue(cb)` | coalesced auto-reset flush semantics across feature triggers | `TanStackAutoResetQueue` (explicit pass-scoped flush) | Partial | `auto_reset.json` |
+| `table._autoResetExpanded` / `table._autoResetPageIndex` | option-driven reset scheduling is *observable* (state transitions) | `Table::{should_auto_reset_expanded,should_auto_reset_page_index}` + queue | Partial | `auto_reset.json`, `grouping.json` snapshots |
+| `memo`-driven derived model caches | rebuild-each-frame callers must not regress into “full recompute per frame” | `TanStackUngroupedRowModelOrderCache` + guardrail recompute-count gates | Aligned (ungrouped) | `tanstack_v8_memo_rebuild_each_frame_*_gate.rs` |
+
+---
+
 ## Open inventory work (next)
 
 This inventory is intentionally incomplete. Next expansions (tracked in `HTP-cap-010` / `HTP-base-004`):
 
 - Header/footer/flat/leaf header inventories under visibility + pinning + nested columns (deep nesting + edge cases).
-  - Next concrete: close `HTP-core-050` with fixture parity for flat/leaf/footer inventories.
 - Fill in missing “column/row instance method” helpers where consumers should not have to reimplement logic (e.g. `getCanFilter`-style gates).
 - Global faceting instance surface (`getGlobalFaceted*`) if/when consumers need it.
+- Classify the appendix inventory into **public** vs **observable internals**, and link each item to a checklist row
+  (or document why it is intentionally not mapped in Fret).
 
 ---
 

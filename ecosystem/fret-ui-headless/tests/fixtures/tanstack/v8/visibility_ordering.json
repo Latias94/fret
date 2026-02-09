@@ -165,7 +165,7 @@
           }
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -349,6 +349,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -590,7 +647,7 @@
           }
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -778,6 +835,63 @@
               "a": 0,
               "b": 0,
               "c": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 100,
+              "center_total_size": 50,
+              "right_total_size": 25
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
             }
           },
           "rows": {
@@ -1024,7 +1138,7 @@
           }
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -1183,6 +1297,63 @@
             "start": {
               "b": 0,
               "c": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 75,
+              "left_total_size": 0,
+              "center_total_size": 50,
+              "right_total_size": 25
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 50,
+                "b": 0,
+                "c": 50
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
             }
           },
           "rows": {
@@ -1417,7 +1588,7 @@
           }
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -1576,6 +1747,63 @@
             "start": {
               "a": 0,
               "c": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 145,
+              "left_total_size": 120,
+              "center_total_size": 0,
+              "right_total_size": 25
+            },
+            "size": {
+              "a": 120,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 120,
+                "c": 120
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
+            },
+            "after": {
+              "all": {
+                "a": 25,
+                "b": 145,
+                "c": 0
+              },
+              "left": {
+                "a": 0,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": null,
+                "b": 0,
+                "c": null
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": 0
+              }
             }
           },
           "rows": {
@@ -1812,7 +2040,7 @@
           }
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -1971,6 +2199,63 @@
             "start": {
               "a": 0,
               "b": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 150,
+              "left_total_size": 100,
+              "center_total_size": 50,
+              "right_total_size": 0
+            },
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "all": {
+                "c": 100,
+                "a": 0,
+                "b": 100
+              },
+              "left": {
+                "c": null,
+                "a": 0,
+                "b": null
+              },
+              "center": {
+                "c": null,
+                "a": null,
+                "b": 0
+              },
+              "right": {
+                "c": 0,
+                "a": null,
+                "b": null
+              }
+            },
+            "after": {
+              "all": {
+                "c": 150,
+                "a": 50,
+                "b": 0
+              },
+              "left": {
+                "c": null,
+                "a": 0,
+                "b": null
+              },
+              "center": {
+                "c": null,
+                "a": null,
+                "b": 0
+              },
+              "right": {
+                "c": 0,
+                "a": null,
+                "b": null
+              }
             }
           },
           "rows": {
@@ -2229,7 +2514,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -2386,6 +2671,63 @@
             "start": {
               "b": 0,
               "c": 50
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 75,
+              "left_total_size": 0,
+              "center_total_size": 75,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 50,
+                "b": 0,
+                "c": 50
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 50,
+                "b": 0,
+                "c": 50
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -2641,7 +2983,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -2825,6 +3167,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -3095,7 +3494,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -3279,6 +3678,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -3551,7 +4007,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -3681,6 +4137,63 @@
             },
             "start": {
               "b": 0
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 50,
+              "left_total_size": 0,
+              "center_total_size": 50,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 0,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 0,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 50,
+                "b": 0,
+                "c": 50
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 50,
+                "b": 0,
+                "c": 50
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -3930,7 +4443,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -4114,6 +4627,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -4390,7 +4960,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -4574,6 +5144,63 @@
               "c": 0,
               "a": 25,
               "b": 125
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "all": {
+                "c": 0,
+                "a": 25,
+                "b": 125
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 0,
+                "a": 25,
+                "b": 125
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
+            },
+            "after": {
+              "all": {
+                "c": 150,
+                "a": 50,
+                "b": 0
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 150,
+                "a": 50,
+                "b": 0
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
             }
           },
           "rows": {
@@ -4847,7 +5474,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -5031,6 +5658,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
@@ -5309,7 +5993,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -5493,6 +6177,63 @@
               "c": 0,
               "a": 25,
               "b": 125
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "all": {
+                "c": 0,
+                "a": 25,
+                "b": 125
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 0,
+                "a": 25,
+                "b": 125
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
+            },
+            "after": {
+              "all": {
+                "c": 150,
+                "a": 50,
+                "b": 0
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 150,
+                "a": 50,
+                "b": 0
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
             }
           },
           "rows": {
@@ -5776,7 +6517,7 @@
           ]
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -5933,6 +6674,63 @@
             "start": {
               "c": 0,
               "b": 25
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 75,
+              "left_total_size": 0,
+              "center_total_size": 75,
+              "right_total_size": 0
+            },
+            "size": {
+              "c": 25,
+              "a": 100,
+              "b": 50
+            },
+            "start": {
+              "all": {
+                "c": 0,
+                "a": 25,
+                "b": 25
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 0,
+                "a": 25,
+                "b": 25
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
+            },
+            "after": {
+              "all": {
+                "c": 50,
+                "a": 75,
+                "b": 0
+              },
+              "left": {
+                "c": null,
+                "a": null,
+                "b": null
+              },
+              "center": {
+                "c": 50,
+                "a": 75,
+                "b": 0
+              },
+              "right": {
+                "c": null,
+                "a": null,
+                "b": null
+              }
             }
           },
           "rows": {
@@ -6188,7 +6986,7 @@
           "columnOrder": []
         },
         "core_model": {
-          "schema_version": 3,
+          "schema_version": 4,
           "column_tree": [
             {
               "id": "a",
@@ -6372,6 +7170,63 @@
               "a": 0,
               "b": 100,
               "c": 150
+            }
+          },
+          "leaf_column_sizing": {
+            "sizing": {
+              "total_size": 175,
+              "left_total_size": 0,
+              "center_total_size": 175,
+              "right_total_size": 0
+            },
+            "size": {
+              "a": 100,
+              "b": 50,
+              "c": 25
+            },
+            "start": {
+              "all": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 0,
+                "b": 100,
+                "c": 150
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
+            },
+            "after": {
+              "all": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "left": {
+                "a": null,
+                "b": null,
+                "c": null
+              },
+              "center": {
+                "a": 75,
+                "b": 25,
+                "c": 0
+              },
+              "right": {
+                "a": null,
+                "b": null,
+                "c": null
+              }
             }
           },
           "rows": {
