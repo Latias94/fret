@@ -6,6 +6,7 @@ description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted
 # Fret diag workflow
 
 If your primary goal is to quantify performance (baselines/gates/logs), use `fret-perf-workflow` instead.
+If your goal is to **explain a hitch** (tail latency) and choose the next profiler/capture, use `fret-perf-attribution`.
 
 ## Quick start
 

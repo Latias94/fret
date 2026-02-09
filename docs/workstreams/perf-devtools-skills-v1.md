@@ -128,3 +128,9 @@ This workstream should stay evidence-linked:
   - what it enables (faster triage, fewer manual steps),
   - one “before/after” example invocation.
 
+### Recent changes
+
+- Added a dedicated hitch attribution skill:
+  - Skill: `.agents/skills/fret-perf-attribution/SKILL.md`
+  - Rationale: keep `fret-perf-workflow` focused on gates/baselines while providing a deeper “tail latency”
+    playbook for CPU vs GPU triage and external profilers.
