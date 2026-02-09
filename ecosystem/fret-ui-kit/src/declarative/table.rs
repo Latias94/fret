@@ -24,11 +24,9 @@ use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
     FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
     PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, SortToggleColumn, Table,
-    TableOptions, TableState, TanStackValue, begin_column_resize, column_size,
-    compute_grouped_u64_aggregations, drag_column_resize, end_column_resize, is_column_visible,
-    is_row_expanded, is_row_selected, is_some_rows_pinned, order_column_refs_for_grouping,
-    order_columns, pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
-    toggle_sorting_state_handler_tanstack,
+    TableOptions, TableState, TanStackValue, begin_column_resize, compute_grouped_u64_aggregations,
+    drag_column_resize, end_column_resize, is_row_expanded, is_row_selected, is_some_rows_pinned,
+    pagination_bounds, sort_grouped_row_indices_in_place, toggle_sorting_state_handler_tanstack,
 };
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
@@ -117,12 +115,6 @@ fn apply_single_sort_toggle(state: &mut TableState, col_id: &ColumnId) {
     state.pagination.page_index = 0;
 }
 
-fn clamp_column_width<TData>(col: &ColumnDef<TData>, props: &TableViewProps, width: f32) -> Px {
-    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
-    let max_w = col.max_size.max(min_w);
-    Px(width.clamp(min_w, max_w))
-}
-
 fn with_table_view_column_constraints<TData>(
     mut col: ColumnDef<TData>,
     props: &TableViewProps,
@@ -138,17 +130,6 @@ fn with_table_view_column_constraints<TData>(
             .collect();
     }
     col
-}
-
-fn resolve_column_width<TData>(
-    col: &ColumnDef<TData>,
-    state: &TableState,
-    props: &TableViewProps,
-) -> Px {
-    let base = column_size(&state.column_sizing, &col.id).unwrap_or(col.size);
-    let base = clamp_column_width(col, props, base);
-
-    base
 }
 
 #[derive(Debug, Clone)]
@@ -2707,18 +2688,68 @@ where
         &[]
     };
 
-    let ordered_columns = order_columns(columns, &state_value.column_order);
-    let ordered_columns = order_column_refs_for_grouping(
-        ordered_columns.as_slice(),
-        grouping,
-        props.grouped_column_mode,
-    );
-    let visible_columns = ordered_columns
-        .into_iter()
-        .filter(|c| is_column_visible(&state_value.column_visibility, &c.id))
-        .collect::<Vec<_>>();
-    let (left_cols, center_cols, right_cols) =
-        split_pinned_columns(visible_columns.as_slice(), &state_value.column_pinning);
+    let empty: &[TData] = &[];
+    let mut sizing_state = state_value.clone();
+    if !props.enable_column_grouping {
+        sizing_state.grouping.clear();
+    }
+
+    let sizing_columns: Vec<ColumnDef<TData>> = columns
+        .iter()
+        .cloned()
+        .map(|c| with_table_view_column_constraints(c, &props))
+        .collect();
+    let mut sizing_options = TableOptions::default();
+    sizing_options.grouped_column_mode = props.grouped_column_mode;
+
+    let sizing_table = Table::builder(empty)
+        .columns(sizing_columns)
+        .state(sizing_state)
+        .options(sizing_options)
+        .build();
+    let core_snapshot = sizing_table.core_model_snapshot();
+
+    let mut column_width_by_id: std::collections::HashMap<ColumnId, Px> =
+        std::collections::HashMap::new();
+    for col in columns {
+        let w = core_snapshot
+            .leaf_column_sizing
+            .size
+            .get(&col.id)
+            .copied()
+            .unwrap_or(col.size);
+        column_width_by_id.insert(col.id.clone(), Px(w));
+    }
+    let column_width_by_id: Arc<std::collections::HashMap<ColumnId, Px>> =
+        Arc::new(column_width_by_id);
+
+    let col_by_id_for_layout: std::collections::HashMap<&str, &ColumnDef<TData>> =
+        columns.iter().map(|c| (c.id.as_ref(), c)).collect();
+
+    let visible_columns: Vec<&ColumnDef<TData>> = core_snapshot
+        .leaf_columns
+        .visible
+        .iter()
+        .filter_map(|id| col_by_id_for_layout.get(id.as_ref()).copied())
+        .collect();
+    let left_cols: Vec<&ColumnDef<TData>> = core_snapshot
+        .leaf_columns
+        .left_visible
+        .iter()
+        .filter_map(|id| col_by_id_for_layout.get(id.as_ref()).copied())
+        .collect();
+    let center_cols: Vec<&ColumnDef<TData>> = core_snapshot
+        .leaf_columns
+        .center_visible
+        .iter()
+        .filter_map(|id| col_by_id_for_layout.get(id.as_ref()).copied())
+        .collect();
+    let right_cols: Vec<&ColumnDef<TData>> = core_snapshot
+        .leaf_columns
+        .right_visible
+        .iter()
+        .filter_map(|id| col_by_id_for_layout.get(id.as_ref()).copied())
+        .collect();
 
     let sorting_key = if grouping.is_empty() {
         state_value.sorting.clone()
@@ -3777,6 +3808,8 @@ where
                                                 |cx: &mut ElementContext<'_, H>,
                                                  cols: &[&ColumnDef<TData>],
                                                  scroll_x: Option<ScrollHandle>| {
+                                                    let column_width_by_id =
+                                                        column_width_by_id.clone();
                                                     let row = stack::hstack(
                                                         cx,
                                                         stack::HStackProps::default()
@@ -3791,11 +3824,10 @@ where
                                                                         &col.id,
                                                                     );
 
-                                                                    let col_w = resolve_column_width(
-                                                                        col,
-                                                                        &state_value,
-                                                                        &props,
-                                                                    );
+                                                                    let col_w = column_width_by_id
+                                                                        .get(&col.id)
+                                                                        .copied()
+                                                                        .unwrap_or(Px(col.size));
 
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)),
@@ -4473,6 +4505,8 @@ where
                                                                              scroll_x: Option<
                                                                                 ScrollHandle,
                                                                             >| {
+                                                                                let column_width_by_id =
+                                                                                    column_width_by_id.clone();
                                                                                 let row = if props
                                                                                     .optimize_paint_order
                                                                                 {
@@ -4492,11 +4526,10 @@ where
                                                                                             let col_widths: Vec<Px> = cols
                                                                                                 .iter()
                                                                                                 .map(|col| {
-                                                                                                    resolve_column_width(
-                                                                                                        col,
-                                                                                                        &state_value,
-                                                                                                        &props,
-                                                                                                    )
+                                                                                                    column_width_by_id
+                                                                                                        .get(&col.id)
+                                                                                                        .copied()
+                                                                                                        .unwrap_or(Px(col.size))
                                                                                                 })
                                                                                                 .collect();
                                                                                             let background_row =
@@ -4664,11 +4697,10 @@ where
                                                                                         |cx| {
                                                                                             cols.iter()
                                                                                                 .map(|col| {
-                                                                                                    let col_w = resolve_column_width(
-                                                                                                        col,
-                                                                                                        &state_value,
-                                                                                                        &props,
-                                                                                                    );
+                                                                                                    let col_w = column_width_by_id
+                                                                                                        .get(&col.id)
+                                                                                                        .copied()
+                                                                                                        .unwrap_or(Px(col.size));
 
                                                                                                     let is_label_target =
                                                                                                         col.id.as_ref()
@@ -5016,6 +5048,8 @@ where
                                                                 |cx: &mut ElementContext<'_, H>,
                                                                  cols: &[&ColumnDef<TData>],
                                                                  scroll_x: Option<ScrollHandle>| {
+                                                                    let column_width_by_id =
+                                                                        column_width_by_id.clone();
                                                                     let row = if props.optimize_paint_order {
                                                                         cx.container(
                                                                             ContainerProps {
@@ -5032,11 +5066,10 @@ where
                                                                                 let col_widths: Vec<Px> = cols
                                                                                     .iter()
                                                                                     .map(|col| {
-                                                                                        resolve_column_width(
-                                                                                            col,
-                                                                                            &state_value,
-                                                                                            &props,
-                                                                                        )
+                                                                                        column_width_by_id
+                                                                                            .get(&col.id)
+                                                                                            .copied()
+                                                                                            .unwrap_or(Px(col.size))
                                                                                     })
                                                                                     .collect();
                                                                                 let background_row = stack::hstack(
@@ -5164,11 +5197,10 @@ where
                                                                                 |cx| {
                                                                                     cols.iter()
                                                                                         .map(|col| {
-                                                                                            let col_w = resolve_column_width(
-                                                                                                col,
-                                                                                                &state_value,
-                                                                                                &props,
-                                                                                            );
+                                                                                            let col_w = column_width_by_id
+                                                                                                .get(&col.id)
+                                                                                                .copied()
+                                                                                                .unwrap_or(Px(col.size));
                                                                                             cx.container(
                                                                                                 ContainerProps {
                                                                                                     padding: Edges::symmetric(

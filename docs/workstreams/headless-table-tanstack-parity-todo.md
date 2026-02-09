@@ -63,21 +63,24 @@ ColumnDef keys referenced by upstream feature implementations:
 - [x] HTP-base-003 Add a 鈥渇eature-by-feature parity matrix鈥?section (one row per upstream feature file).
   - Include: current status, blocking gaps, and evidence anchors (tests/fixtures).
   - Evidence: `docs/workstreams/headless-table-tanstack-parity.md`.
-- [~] HTP-base-004 Extend the upstream inventory to include non-option parity surfaces:
+- [x] HTP-base-004 Extend the upstream inventory to include non-option parity surfaces:
   - column/header/cell/row method inventories (where feasible),
   - state 鈥渞eset鈥?and 鈥渁uto-reset鈥?behavior inventory.
   - In progress: core + pinning inventories are tracked in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
   - Update: added a raw upstream instance member dump (table/column/row/header/cell) as an appendix in
     `docs/workstreams/headless-table-tanstack-parity-capability.md`.
-  - Next: mark public surfaces vs internals, and record which internals are observable obligations
-    (memo/queue/auto-reset) even if we do not mirror the internal mechanism.
+  - Done: expanded the capability doc with:
+    - full checklist tables for `table/column/row/header/cell` public instance surfaces,
+    - a reset/auto-reset inventory section,
+    - and an underscore-prefixed “observable internals” triage (queue/memo/override wiring).
+    - Evidence: `docs/workstreams/headless-table-tanstack-parity-capability.md`.
 
 ---
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Close the non-option capability inventory (`HTP-cap-010`, `HTP-base-004`) so consumers don't drift.
+- Step 1: Close the non-option capability inventory (`HTP-cap-010`) so consumers don't drift (`HTP-base-004` is done).
 - Step 2: Extend core snapshot introspection so UI consumers stop re-implementing traversal/policy logic
   (`HTP-core-040` remaining scope, consumer-driven).
 - Step 3: Add follow-up memo/perf guardrails only when new pipelines (e.g. grouped rebuild-each-frame) need them.
@@ -98,7 +101,7 @@ P1 (capability breadth parity):
 
 P2 (engineering guardrails for sustained parity):
 
-- HTP-cap-010 + HTP-base-004: full public API inventory and non-option surface tracking.
+- HTP-cap-010: full public API inventory and non-option surface tracking (HTP-base-004 is done).
 - Memo/perf guardrails: rebuild-each-frame ungrouped pipeline is now guarded; track follow-ups only as new pipelines appear.
 
 ---
@@ -111,7 +114,7 @@ P2 (engineering guardrails for sustained parity):
 - Milestone D (filter depth/meta parity, done): `HTP-filt-050` + `HTP-filt-060` + `HTP-filt-070` are parity-gated.
 - Milestone E (grouped row-model pipeline parity, done): `HTP-grp-030` closed with fixture-backed pipeline assertions.
 - Milestone F (ID/state hardening, done): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
-- Milestone G (guardrails): close HTP-cap-010 and HTP-base-004 (memo/perf rebuild-each-frame guardrails are done).
+- Milestone G (guardrails): close HTP-cap-010 (HTP-base-004 + memo/perf rebuild-each-frame guardrails are done).
 
 ---
 
@@ -210,7 +213,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
       - Done: row partition APIs now have RowId surfaces (`top_row_ids` / `center_row_ids` / `bottom_row_ids`)
         that resolve grouped ids via the grouped row model.
-      - Remaining: continue the non-option capability inventory workstream (`HTP-base-004`, `HTP-cap-010`).
+      - Remaining: continue the non-option capability inventory workstream (`HTP-cap-010`).
     - [x] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
@@ -305,8 +308,9 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Fixtures: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_inventory_deep.json`,
       `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json`
-    - Consumer evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
-      consumes `Table::core_model_snapshot().leaf_column_sizing` for column widths + pinned visible splits.
+    - Consumer evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`,
+      `table_virtualized_impl`) consumes `CoreModelSnapshot.leaf_column_sizing` (and pinned visible inventories)
+      for column widths + pinned visible splits.
   - Update (parity-gated): flat-column inventories (`table.getAllFlatColumns/getVisibleFlatColumns`)
     are fixture-asserted so consumers can rely on TanStack’s pre-order DFS flattening semantics.
     - Gates: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`,
