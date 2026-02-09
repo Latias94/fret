@@ -250,44 +250,32 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut RouterQueryDemoState) -> View
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateRoot))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-/"),
-                ),
+                .test_id("router-query-demo-btn-/"),
             shadcn::Button::new("/settings")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateSettings))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-/settings"),
-                ),
+                .test_id("router-query-demo-btn-/settings"),
             shadcn::Button::new("/users/42")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::NavigateUser))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-/users-42"),
-                ),
+                .test_id("router-query-demo-btn-/users-42"),
             shadcn::Button::new("Back")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Back))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-back"),
-                ),
+                .test_id("router-query-demo-btn-back"),
             shadcn::Button::new("Forward")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::Forward))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-forward"),
-                ),
+                .test_id("router-query-demo-btn-forward"),
             shadcn::Button::new("Clear log")
                 .variant(shadcn::ButtonVariant::Ghost)
                 .on_click(st.msg_router.cmd(RouterQueryDemoMsg::ClearLog))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("router-query-demo-btn-clear-log"),
-                ),
+                .test_id("router-query-demo-btn-clear-log"),
         ]
     })
     .gap(Space::N2)

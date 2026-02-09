@@ -13,7 +13,7 @@ Apache ECharts distinguishes between:
 `delinea` already has durable, headless view/window semantics via:
 
 - X `dataZoom` filtering/windowing (ADR 1129),
-- Y view windows (mapping-only in v1; ADR 1136),
+- Y view windows (mapping-first in v1; optional indices materialization is size-capped; ADR 1136 + ADR 1150),
 - 2D box zoom as paired view-window writes (ADR 1136),
 - selection/filtering contracts for large data (ADR 1137).
 

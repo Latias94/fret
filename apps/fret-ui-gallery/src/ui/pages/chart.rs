@@ -1,10 +1,13 @@
 use super::super::*;
 
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-    let chart_1 = theme.color_required("chart-1");
-    let chart_2 = theme.color_required("chart-2");
-    let chart_3 = theme.color_required("chart-3");
+    let (chart_1, chart_2, chart_3) = cx.with_theme(|theme| {
+        (
+            theme.color_required("chart-1"),
+            theme.color_required("chart-2"),
+            theme.color_required("chart-3"),
+        )
+    });
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -28,17 +31,17 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =

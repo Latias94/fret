@@ -127,7 +127,13 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
+    let (muted, muted_foreground, destructive) = cx.with_theme(|theme| {
+        (
+            theme.color_required("muted"),
+            theme.color_required("muted-foreground"),
+            theme.color_required("destructive"),
+        )
+    });
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -151,17 +157,17 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(860.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -217,10 +223,8 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                         .group_size(Some(3))
                         .refine_style(
                             ChromeRefinement::default()
-                                .bg(ColorRef::Color(theme.color_required("muted")))
-                                .text_color(ColorRef::Color(
-                                    theme.color_required("muted-foreground"),
-                                )),
+                                .bg(ColorRef::Color(muted))
+                                .text_color(ColorRef::Color(muted_foreground)),
                         )
                         .into_element(cx)
                         .test_id("ui-gallery-input-otp-disabled"),
@@ -283,8 +287,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                         .length(6)
                         .group_size(Some(2))
                         .refine_style(
-                            ChromeRefinement::default()
-                                .border_color(ColorRef::Color(theme.color_required("destructive"))),
+                            ChromeRefinement::default().border_color(ColorRef::Color(destructive)),
                         )
                         .into_element(cx)
                         .test_id("ui-gallery-input-otp-invalid"),

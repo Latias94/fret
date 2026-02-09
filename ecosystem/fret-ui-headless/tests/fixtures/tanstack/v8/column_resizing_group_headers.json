@@ -104,6 +104,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -314,6 +321,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -511,6 +525,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -714,6 +735,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -939,6 +967,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1151,6 +1186,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1274,6 +1316,1293 @@
             "1_c_c": 175,
             "a": 0,
             "b": 116.67,
+            "c": 0,
+            "left_1_ab_a": 0,
+            "right_1_c_c": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_on_change_rtl_move_updates",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onChange",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 0,
+          "center_total_size": 150,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": 10,
+            "startSize": 150,
+            "deltaOffset": -25,
+            "deltaPercentage": -0.16666666666666666,
+            "isResizingColumn": "ab",
+            "columnSizingStart": [
+              [
+                "a",
+                100
+              ],
+              [
+                "b",
+                50
+              ],
+              [
+                "ab",
+                150
+              ]
+            ]
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "center_1_ab_a": 125,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
+            "c": 125,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 125
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_on_change_rtl_end_resets",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onChange",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        },
+        {
+          "type": "columnResizeEnd",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 0,
+          "center_total_size": 150,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "center_1_ab_a": 125,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
+            "c": 125,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 125
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_on_end_rtl_end_writes",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onEnd",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        },
+        {
+          "type": "columnResizeEnd",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 0,
+          "center_total_size": 150,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "center_1_ab_a": 125,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
+            "c": 125,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 125
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_pinned_on_change_rtl_move_updates",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onChange",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "right": [
+            "c"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 125,
+          "center_total_size": 0,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": 0,
+            "b": 83.33,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 41.67,
+            "b": 0,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": 10,
+            "startSize": 150,
+            "deltaOffset": -25,
+            "deltaPercentage": -0.16666666666666666,
+            "isResizingColumn": "ab",
+            "columnSizingStart": [
+              [
+                "a",
+                100
+              ],
+              [
+                "b",
+                50
+              ],
+              [
+                "ab",
+                150
+              ]
+            ]
+          },
+          "columnPinning": {
+            "left": [
+              "a",
+              "b"
+            ],
+            "right": [
+              "c"
+            ]
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "left_1_ab_a": 125,
+            "right_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
+            "c": 0,
+            "left_1_ab_a": 0,
+            "right_1_c_c": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_pinned_on_change_rtl_end_resets",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onChange",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "right": [
+            "c"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        },
+        {
+          "type": "columnResizeEnd",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 125,
+          "center_total_size": 0,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": 0,
+            "b": 83.33,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 41.67,
+            "b": 0,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [
+              "a",
+              "b"
+            ],
+            "right": [
+              "c"
+            ]
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "left_1_ab_a": 125,
+            "right_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
+            "c": 0,
+            "left_1_ab_a": 0,
+            "right_1_c_c": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "group_resize_pinned_on_end_rtl_end_writes",
+      "options": {
+        "enableColumnResizing": true,
+        "columnResizeMode": "onEnd",
+        "columnResizeDirection": "rtl"
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "right": [
+            "c"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "ab",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        },
+        {
+          "type": "columnResizeEnd",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 125,
+          "center_total_size": 0,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 83.33,
+            "c": 125
+          },
+          "left": {
+            "a": 0,
+            "b": 83.33,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 66.67,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 41.67,
+            "b": 0,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {
+            "a": 83.33,
+            "b": 41.67,
+            "ab": 125
+          },
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [
+              "a",
+              "b"
+            ],
+            "right": [
+              "c"
+            ]
+          },
+          "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 125,
+            "1_c_c": 25,
+            "a": 83.33,
+            "b": 41.67,
+            "c": 25,
+            "left_1_ab_a": 125,
+            "right_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 125,
+            "a": 0,
+            "b": 83.33,
             "c": 0,
             "left_1_ab_a": 0,
             "right_1_c_c": 0

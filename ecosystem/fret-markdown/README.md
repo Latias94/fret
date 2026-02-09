@@ -8,6 +8,23 @@ This crate is intentionally “layout-normal”: it renders into regular `AnyEle
 create implicit scroll containers. Scrolling is decided by the host (wrap Markdown inside a scroll
 panel if desired).
 
+## Mermaid
+
+By default, fenced code blocks with language `mermaid` are rendered as SVG via `mermaid-rs-renderer` (headless).
+Rendering runs in the background and is cached via `fret-query`.
+
+- Disable Mermaid rendering:
+
+```toml
+fret-markdown = { path = "...", default-features = false }
+```
+
+- Re-enable Mermaid explicitly:
+
+```toml
+fret-markdown = { path = "...", default-features = false, features = ["mermaid"] }
+```
+
 ## Usage
 
 Use `MarkdownComponents` to customize rendering and policies (links, images, code blocks, etc.).

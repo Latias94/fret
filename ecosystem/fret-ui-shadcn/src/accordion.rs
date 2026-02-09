@@ -481,6 +481,11 @@ pub mod composable {
             }
         }
 
+        #[cfg(test)]
+        pub(super) fn has_on_value_change_handler(&self) -> bool {
+            self.on_value_change.is_some()
+        }
+
         /// Creates an uncontrolled accordion with an optional initial value (Radix `defaultValue`).
         pub fn single_uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
             Self {
@@ -1693,6 +1698,41 @@ mod tests {
         ui.set_root(root);
     }
 
+    fn render_accordion_frame_with_on_value_change(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: fret_runtime::Model<Option<Arc<str>>>,
+        on_value_change: Option<Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static>>,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                let accordion = Accordion::single(open)
+                    .on_value_change(on_value_change.clone())
+                    .items([item_1, item_2])
+                    .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+    }
+
     fn render_accordion_frame_composable(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -2475,7 +2515,7 @@ mod tests {
 
         let accordion = composable_accordion::AccordionRoot::single(open)
             .on_value_change(Some(Arc::new(|_value| {})));
-        assert!(accordion.on_value_change.is_some());
+        assert!(accordion.has_on_value_change_handler());
     }
 
     #[test]
@@ -2489,7 +2529,15 @@ mod tests {
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
         let changed_values: Arc<Mutex<Vec<Vec<Arc<str>>>>> = Arc::new(Mutex::new(Vec::new()));
-        let changed_values_for_handler = changed_values.clone();
+        let on_value_change: Arc<dyn Fn(Vec<Arc<str>>) + Send + Sync + 'static> = Arc::new({
+            let changed_values = changed_values.clone();
+            move |value| {
+                changed_values
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .push(value);
+            }
+        });
 
         let mut services = FakeServices;
         let bounds = Rect::new(
@@ -2520,12 +2568,7 @@ mod tests {
 
                 vec![
                     Accordion::single(open.clone())
-                        .on_value_change(Some(Arc::new(move |value| {
-                            changed_values_for_handler
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner())
-                                .push(value);
-                        })))
+                        .on_value_change(Some(on_value_change.clone()))
                         .items([item_1, item_2])
                         .into_element(cx),
                 ]
@@ -2559,6 +2602,16 @@ mod tests {
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
+        );
+
+        render_accordion_frame_with_on_value_change(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            Some(on_value_change),
         );
 
         let selected = app.models().get_cloned(&open).flatten();

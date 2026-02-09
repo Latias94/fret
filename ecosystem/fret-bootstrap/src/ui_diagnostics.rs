@@ -725,7 +725,8 @@ impl UiDiagnosticsService {
 
         let is_v2_intent_step = matches!(
             &step,
-            UiActionStepV2::EnsureVisible { .. }
+            UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
@@ -1038,6 +1039,7 @@ impl UiDiagnosticsService {
                 target,
                 button,
                 click_count,
+                modifiers,
             } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
@@ -1084,7 +1086,13 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                output.events.extend(click_events(pos, button, click_count));
+                let modifiers = core_modifiers_from_ui(modifiers);
+                output.events.extend(click_events_with_modifiers(
+                    pos,
+                    button,
+                    click_count,
+                    modifiers,
+                ));
 
                 active.wait_until = None;
                 active.screenshot_wait = None;
@@ -1092,6 +1100,496 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-click"));
+                }
+            }
+            UiActionStepV2::ClickStable {
+                target,
+                button,
+                click_count,
+                modifiers,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                // Stable-click: wait for semantics bounds to stop moving before clicking.
+                //
+                // This is intended for virtualization-heavy views where a target's measured bounds
+                // can jump across frames (e.g. estimate -> measured), causing clicks to land at
+                // stale coordinates when using a single-frame snapshot.
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_center: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+
+                            let moved = match state.last_center {
+                                Some(last) => {
+                                    let dx = (center.x.0 - last.x.0).abs();
+                                    let dy = (center.y.0 - last.y.0).abs();
+                                    dx.max(dy)
+                                }
+                                None => 0.0,
+                            };
+
+                            if moved <= max_move_px {
+                                state.stable_count = state.stable_count.saturating_add(1);
+                            } else {
+                                state.stable_count = 1;
+                            }
+                            state.last_center = Some(center);
+
+                            if state.stable_count >= stable_required {
+                                output.events.extend(click_events_with_modifiers(
+                                    center,
+                                    button,
+                                    click_count,
+                                    click_modifiers,
+                                ));
+                                active.wait_until = None;
+                                active.screenshot_wait = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-click_stable-click"
+                                    ));
+                                }
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::ClickStable(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_stable-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+
+                #[cfg(any())]
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_center: None,
+                                resolved_center: None,
+                                logged_no_hit: false,
+                                logged_mismatch: false,
+                            },
+                        };
+
+                        let bounds = node.bounds;
+                        let mut center = state
+                            .resolved_center
+                            .unwrap_or_else(|| center_of_rect(bounds));
+
+                        let target_test_id = node.test_id.as_deref();
+                        let mut hit_snapshot_for_center = UiHitTestSnapshotV1::from_tree(
+                            center,
+                            ui,
+                            element_runtime,
+                            window,
+                            Some(snapshot),
+                        );
+                        let mut seed_hittable = hit_snapshot_for_center
+                            .hit_semantics_actionable_ancestor
+                            .as_ref()
+                            .is_some_and(|hit| {
+                                hit.id == node.id.data().as_ffi()
+                                    || (target_test_id.is_some()
+                                        && hit.test_id.as_deref() == target_test_id)
+                            });
+
+                        let seed_hit = ui.debug_hit_test(center).hit;
+                        let seed_hit_node = seed_hit.map(|n| n.data().as_ffi());
+                        let seed_hit_children_transform =
+                            seed_hit.and_then(|n| ui.debug_node_children_render_transform(n));
+                        let target_debug_bounds = ui.debug_node_bounds(node.id);
+                        let target_visual_bounds = ui.debug_node_visual_bounds(node.id);
+                        if state.resolved_center.is_none() && !seed_hittable {
+                            if let Some(found) = find_hittable_point_for_node(ui, node.id, bounds) {
+                                state.resolved_center = Some(found);
+                                center = found;
+                                hit_snapshot_for_center = UiHitTestSnapshotV1::from_tree(
+                                    center,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                );
+                                seed_hittable = hit_snapshot_for_center
+                                    .hit_semantics_actionable_ancestor
+                                    .as_ref()
+                                    .is_some_and(|hit| {
+                                        hit.id == node.id.data().as_ffi()
+                                            || (target_test_id.is_some()
+                                                && hit.test_id.as_deref() == target_test_id)
+                                    });
+                            } else if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE")
+                                && !state.logged_no_hit
+                            {
+                                state.logged_no_hit = true;
+                                let seed_hit_actionable_test_id = hit_snapshot_for_center
+                                    .hit_semantics_actionable_ancestor
+                                    .as_ref()
+                                    .and_then(|n| n.test_id.as_deref())
+                                    .unwrap_or("<none>");
+                                let mut mapped = center;
+                                let mut blocker_node_id: Option<u64> = None;
+                                let mut blocker_bounds: Option<Rect> = None;
+                                let mut blocker_pos: Option<Point> = None;
+                                let mut blocker_clips_hit_test: Option<bool> = None;
+                                let mut blocker_element: Option<u64> = None;
+                                let mut blocker_element_path: Option<String> = None;
+                                for id in ui.debug_node_path(node.id) {
+                                    if let Some(t) = ui.debug_node_render_transform(id)
+                                        && let Some(inv) = t.inverse()
+                                    {
+                                        mapped = inv.apply_point(mapped);
+                                    }
+
+                                    let bounds_here = ui.debug_node_bounds(id).unwrap_or_default();
+                                    let clips_here =
+                                        ui.debug_node_clips_hit_test(id).unwrap_or(true);
+                                    if clips_here && !bounds_here.contains(mapped) {
+                                        blocker_node_id = Some(id.data().as_ffi());
+                                        blocker_bounds = Some(bounds_here);
+                                        blocker_pos = Some(mapped);
+                                        blocker_clips_hit_test = Some(clips_here);
+                                        if let Some(el) = ui.debug_node_element(id) {
+                                            blocker_element = Some(el.0);
+                                            blocker_element_path = element_runtime.and_then(|rt| {
+                                                rt.debug_path_for_element(window, el)
+                                            });
+                                        }
+                                        break;
+                                    }
+
+                                    if let Some(t) = ui.debug_node_children_render_transform(id)
+                                        && let Some(inv) = t.inverse()
+                                    {
+                                        mapped = inv.apply_point(mapped);
+                                    }
+                                }
+                                tracing::info!(
+                                    step_index,
+                                    target = ?target,
+                                    target_node_id = node.id.data().as_ffi(),
+                                    bounds = ?bounds,
+                                    seed_hit = ?hit_snapshot_for_center.hit,
+                                    seed_hit_element = ?hit_snapshot_for_center.hit_element,
+                                    seed_hit_element_path = ?hit_snapshot_for_center.hit_element_path,
+                                    seed_hit_actionable_test_id,
+                                    target_debug_bounds = ?target_debug_bounds,
+                                    target_visual_bounds = ?target_visual_bounds,
+                                    center_x = center.x.0,
+                                    center_y = center.y.0,
+                                    seed_hit_node,
+                                    seed_hit_children_transform = ?seed_hit_children_transform,
+                                    blocker_node_id,
+                                    blocker_bounds = ?blocker_bounds,
+                                    blocker_pos = ?blocker_pos,
+                                    blocker_clips_hit_test,
+                                    blocker_element,
+                                    blocker_element_path = blocker_element_path.as_deref().unwrap_or("<none>"),
+                                    "diag click_stable could not find hittable point"
+                                );
+                            }
+                        }
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            // While waiting for stability, continuously move the pointer to the
+                            // computed center so scroll/hit-test-only transforms settle before we
+                            // press.
+                            let moved = match state.last_center {
+                                Some(prev) => {
+                                    let dx = center.x.0 - prev.x.0;
+                                    let dy = center.y.0 - prev.y.0;
+                                    (dx * dx + dy * dy).sqrt()
+                                }
+                                None => 0.0,
+                            };
+
+                            if state.last_center.is_none() || moved <= max_move_px {
+                                state.stable_count = state.stable_count.saturating_add(1);
+                            } else {
+                                state.stable_count = 1;
+                            }
+                            state.last_center = Some(center);
+
+                            output.events.push(move_pointer_event(center));
+                            let hit_includes_target = hit_snapshot_for_center
+                                .hit_semantics_actionable_ancestor
+                                .as_ref()
+                                .is_some_and(|hit| {
+                                    hit.id == node.id.data().as_ffi()
+                                        || (target_test_id.is_some()
+                                            && hit.test_id.as_deref() == target_test_id)
+                                });
+
+                            if state.stable_count >= stable_required && hit_includes_target {
+                                if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE") {
+                                    let hit = UiHitTestSnapshotV1::from_tree(
+                                        center,
+                                        ui,
+                                        element_runtime,
+                                        window,
+                                        Some(snapshot),
+                                    );
+                                    let semantics_at_center =
+                                        pick_semantics_node_at(snapshot, ui, center)
+                                            .and_then(|n| n.test_id.as_deref())
+                                            .unwrap_or("<none>");
+                                    let target_node = select_semantics_node(
+                                        snapshot,
+                                        window,
+                                        element_runtime,
+                                        &target,
+                                    );
+                                    let target_node_id = target_node
+                                        .as_ref()
+                                        .map(|n| n.id.data().as_ffi())
+                                        .unwrap_or(0);
+                                    let target_bounds =
+                                        target_node.map(|n| n.bounds).unwrap_or(Rect::default());
+                                    let target_visual_bounds = target_node
+                                        .and_then(|n| ui.debug_node_visual_bounds(n.id))
+                                        .unwrap_or(Rect::default());
+                                    let target_debug_bounds = target_node
+                                        .and_then(|n| ui.debug_node_bounds(n.id))
+                                        .unwrap_or(Rect::default());
+                                    let viewport_node = snapshot.nodes.iter().find(|n| {
+                                        n.test_id.as_deref() == Some("ui-gallery-content-viewport")
+                                    });
+                                    let viewport_node_id =
+                                        viewport_node.map(|n| n.id.data().as_ffi()).unwrap_or(0);
+                                    let viewport_children_transform = viewport_node.and_then(|n| {
+                                        ui.debug_node_children_render_transform(n.id)
+                                    });
+                                    let target_path_contains_viewport = target_node
+                                        .as_ref()
+                                        .map(|n| {
+                                            ui.debug_node_path(n.id)
+                                                .iter()
+                                                .any(|id| id.data().as_ffi() == viewport_node_id)
+                                        })
+                                        .unwrap_or(false);
+                                    let hit_actionable_test_id = hit
+                                        .hit_semantics_actionable_ancestor
+                                        .as_ref()
+                                        .and_then(|n| n.test_id.as_deref())
+                                        .unwrap_or("<none>");
+                                    let hit_path_contains_target_node =
+                                        hit.hit_node_path.contains(&target_node_id);
+                                    let hit_path_contains_sources =
+                                        hit.hit_node_path_nodes.iter().any(|entry| {
+                                            entry.element_path.as_ref().is_some_and(|p| {
+                                                p.contains("sources_block.rs")
+                                                    || p.contains("fret-ui-ai")
+                                                    || p.contains("sources")
+                                            })
+                                        });
+
+                                    // Probe a small grid inside the chosen click bounds. If none of these points
+                                    // ever includes the target node in the hit-test path, the target bounds are
+                                    // likely out-of-sync with the hit-test transform chain (e.g. scroll offsets
+                                    // applied differently between semantics vs hit testing).
+                                    let mut probe_hits_target = 0u8;
+                                    let mut probe_logged_sample = false;
+                                    let min_x = bounds.origin.x.0;
+                                    let min_y = bounds.origin.y.0;
+                                    let max_x = bounds.origin.x.0 + bounds.size.width.0;
+                                    let max_y = bounds.origin.y.0 + bounds.size.height.0;
+                                    let xs = [min_x + 0.5, center.x.0, max_x - 0.5];
+                                    let ys = [min_y + 0.5, center.y.0, max_y - 0.5];
+                                    for (xi, x) in xs.into_iter().enumerate() {
+                                        for (yi, y) in ys.into_iter().enumerate() {
+                                            let p = Point::new(fret_core::Px(x), fret_core::Px(y));
+                                            let Some(hit_node) = ui.debug_hit_test(p).hit else {
+                                                continue;
+                                            };
+                                            let path = ui.debug_node_path(hit_node);
+                                            let includes = path
+                                                .iter()
+                                                .any(|id| id.data().as_ffi() == target_node_id);
+                                            if includes {
+                                                probe_hits_target =
+                                                    probe_hits_target.saturating_add(1);
+                                            }
+                                            if !probe_logged_sample {
+                                                probe_logged_sample = true;
+                                                tracing::info!(
+                                                    step_index,
+                                                    target = ?target,
+                                                    probe_x_index = xi,
+                                                    probe_y_index = yi,
+                                                    probe_x = x,
+                                                    probe_y = y,
+                                                    probe_hit = hit_node.data().as_ffi(),
+                                                    probe_hit_path_contains_target = includes,
+                                                    "diag click_stable probe"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    tracing::info!(
+                                        step_index,
+                                        target = ?target,
+                                        target_node_id,
+                                        target_bounds = ?target_bounds,
+                                        target_visual_bounds = ?target_visual_bounds,
+                                        target_debug_bounds = ?target_debug_bounds,
+                                        viewport_node_id,
+                                        viewport_children_transform = ?viewport_children_transform,
+                                        target_path_contains_viewport,
+                                        inspection_active = ui.inspection_active(),
+                                        x = center.x.0,
+                                        y = center.y.0,
+                                        semantics_at_center,
+                                        hit_actionable_test_id,
+                                        hit_node = ?hit.hit,
+                                        hit_element = ?hit.hit_element,
+                                        hit_element_path = ?hit.hit_element_path,
+                                        hit_ancestor_element = ?hit.hit_ancestor_element,
+                                        hit_ancestor_element_path = ?hit.hit_ancestor_element_path,
+                                        hit_path_contains_target_node,
+                                        hit_path_contains_sources,
+                                        probe_hits_target,
+                                        "diag click_stable resolved hit-test"
+                                    );
+                                }
+                                output.events.extend(click_events_with_modifiers(
+                                    center,
+                                    button,
+                                    click_count,
+                                    click_modifiers,
+                                ));
+                                active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-click_stable"));
+                                }
+                            } else {
+                                if state.stable_count >= stable_required && !hit_includes_target {
+                                    if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE")
+                                        && !state.logged_mismatch
+                                    {
+                                        state.logged_mismatch = true;
+                                        let hit_actionable = hit_snapshot_for_center
+                                            .hit_semantics_actionable_ancestor
+                                            .as_ref();
+                                        tracing::info!(
+                                            step_index,
+                                            target = ?target,
+                                            target_node_id = node.id.data().as_ffi(),
+                                            target_test_id = target_test_id.unwrap_or("<none>"),
+                                            x = center.x.0,
+                                            y = center.y.0,
+                                            hit_actionable_id = hit_actionable.map(|n| n.id).unwrap_or(0),
+                                            hit_actionable_test_id = hit_actionable
+                                                .and_then(|n| n.test_id.as_deref())
+                                                .unwrap_or("<none>"),
+                                            hit_node = ?ui.debug_hit_test(center).hit.map(|n| n.data().as_ffi()),
+                                            "diag click_stable stable-but-mismatch"
+                                        );
+                                    }
+
+                                    // Scroll and other transform-only updates can land after the
+                                    // semantics snapshot used to choose `center`. If the target
+                                    // is not actually hit-testable at this point, keep waiting
+                                    // instead of clicking a stale coordinate.
+                                    state.stable_count = 0;
+                                    state.resolved_center = None;
+                                }
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::ClickStable(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_stable-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::MovePointer { target } => {
@@ -2966,6 +3464,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
 
     match step {
         UiActionStepV2::Click { .. }
+        | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
@@ -3579,6 +4078,8 @@ pub enum UiActionStepV2 {
         button: UiMouseButtonV1,
         #[serde(default = "default_click_count")]
         click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
     },
     ResetDiagnostics,
     MovePointer {
@@ -3643,6 +4144,26 @@ pub enum UiActionStepV2 {
     },
 
     // v2 intent-level steps
+    /// Click a target only after its bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for virtualized lists where a target's measured bounds can jump
+    /// across frames (e.g. estimate -> measured), causing clicks to land at stale
+    /// positions when using a single-frame snapshot.
+    ClickStable {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default = "default_click_count")]
+        click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     EnsureVisible {
         target: UiSelectorV1,
         #[serde(default)]
@@ -3723,6 +4244,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 target,
                 button,
                 click_count,
+                modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
             UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
@@ -3789,6 +4311,14 @@ fn default_click_count() -> u8 {
 
 fn default_move_frames_per_step() -> u32 {
     1
+}
+
+fn default_click_stable_frames() -> u32 {
+    2
+}
+
+fn default_click_stable_max_move_px() -> f32 {
+    1.0
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -4136,6 +4666,7 @@ impl PendingScript {
 
 #[derive(Debug, Clone)]
 enum V2StepState {
+    ClickStable(V2ClickStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -4144,6 +4675,14 @@ enum V2StepState {
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_center: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -9141,8 +9680,16 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
 }
 
 fn click_events(position: Point, button: UiMouseButtonV1, click_count: u8) -> [Event; 3] {
+    click_events_with_modifiers(position, button, click_count, Modifiers::default())
+}
+
+fn click_events_with_modifiers(
+    position: Point,
+    button: UiMouseButtonV1,
+    click_count: u8,
+    modifiers: Modifiers,
+) -> [Event; 3] {
     let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
     let click_count = click_count.max(1);
 
@@ -9358,13 +9905,7 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
 }
 
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
-    let modifiers = Modifiers {
-        shift: modifiers.shift,
-        ctrl: modifiers.ctrl,
-        alt: modifiers.alt,
-        meta: modifiers.meta,
-        ..Modifiers::default()
-    };
+    let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
         key,
         modifiers,
@@ -9374,6 +9915,16 @@ fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> 
     [down, up]
 }
 
+fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
+    let modifiers = modifiers.unwrap_or_default();
+    Modifiers {
+        shift: modifiers.shift,
+        ctrl: modifiers.ctrl,
+        alt: modifiers.alt,
+        meta: modifiers.meta,
+        ..Modifiers::default()
+    }
+}
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {

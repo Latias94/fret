@@ -5,11 +5,27 @@ description: "Run Fret release readiness checks and publish with `release-plz` +
 
 # Fret release check and publish
 
+## When to use
+
+Use this skill when:
+
+- Preparing a release wave (`v0.1+`) and deciding what to publish.
+- Debugging release-plz PR/publish failures.
+- Validating `release-plz.toml` and `.github/workflows/release-plz.yml`.
+
 ## Quick intent
 
 - Keep release scope explicit and conservative.
 - Validate publishability before opening release PRs.
 - Use `release-plz` as the single release automation entry.
+
+## Quick start
+
+1. Decide the publish set in `release-plz.toml` (keep it small).
+2. Run per-crate dry runs: `cargo publish --dry-run -p <crate> --allow-dirty --no-verify`.
+3. Run planning: `release-plz update --config release-plz.toml --allow-dirty --repo-url <repo-url>`.
+
+## Workflow
 
 ## Repository anchors
 
@@ -52,7 +68,7 @@ description: "Run Fret release readiness checks and publish with `release-plz` +
    - Merge release PR to default branch.
    - `release` job publishes crates and creates tags/releases.
 
-## Step 4: Common failures and fixes
+## Common pitfalls
 
 - `all dependencies must have a version requirement specified when publishing`
   - Cause: internal dependency declared as path-only without publishable version requirement.
@@ -83,3 +99,12 @@ description: "Run Fret release readiness checks and publish with `release-plz` +
 - Local dry-run evidence (`cargo publish --dry-run` or `release-plz update`).
 - CI workflow validated (`release-pr` then `release`).
 
+## Evidence anchors (where to look)
+
+- `release-plz.toml`
+- `.github/workflows/release-plz.yml`
+- `docs/release/release-plz-adoption-analysis.md`
+
+## Related skills
+
+- `fret-diag-workflow` (when a release is blocked by a reproducible bug and you need artifacts)

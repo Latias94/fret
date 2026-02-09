@@ -2528,7 +2528,8 @@ impl ContextMenu {
                 ))
             });
             let open_model_id = open.id();
-            let cancel_open = context_menu_cancel_open_shared();
+            let cancel_open: ContextMenuCancelOpenShared =
+                cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());
             let anchor_store_model: Model<HashMap<ModelId, Point>> =
                 menu::context_menu_anchor_store_model(cx.app);
 
@@ -4048,7 +4049,8 @@ mod tests {
             bounds,
             "context-menu-debug-cancel-open",
             |cx| {
-                let shared = context_menu_cancel_open_shared();
+                let shared: ContextMenuCancelOpenShared =
+                    cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());
                 debug_out.set(Some(shared.clone()));
 
                 let theme = Theme::global(&*cx.app).clone();

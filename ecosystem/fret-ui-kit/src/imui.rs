@@ -1984,9 +1984,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer area element id
                 // back to the named scope id so z-order state can track areas by `area_id`.
                 area.id = area_id;
-                let area = area.attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
-                );
+                let area = area.test_id(final_test_id);
 
                 let response = FloatingAreaResponse {
                     id: area_id,
@@ -3532,7 +3530,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.changed = text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);
 
-                let theme = fret_ui::Theme::global(&*cx.app).clone();
                 let mut props = fret_ui::element::TextInputProps::new(model.clone());
                 props.enabled = options.enabled;
                 props.focusable = options.focusable;
@@ -3542,7 +3539,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 props.placeholder = options.placeholder.clone();
                 props.submit_command = options.submit_command.clone();
                 props.cancel_command = options.cancel_command.clone();
-                props.chrome = crate::recipes::input::default_text_input_style(&theme);
+                props.chrome = {
+                    let theme = fret_ui::Theme::global(&*cx.app);
+                    crate::recipes::input::default_text_input_style(theme)
+                };
 
                 let mut element = cx.text_input(props);
                 element.id = id;
@@ -3578,14 +3578,16 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.changed = text_model_changed_for(cx, id, &current);
                 response.core.rect = cx.last_bounds_for_element(id);
 
-                let theme = fret_ui::Theme::global(&*cx.app).clone();
                 let mut props = fret_ui::element::TextAreaProps::new(model.clone());
                 props.enabled = options.enabled;
                 props.focusable = options.focusable;
                 props.a11y_label = options.a11y_label.clone();
                 props.test_id = options.test_id.clone();
                 props.min_height = options.min_height;
-                props.chrome = default_text_area_style_from_theme(&theme);
+                props.chrome = {
+                    let theme = fret_ui::Theme::global(&*cx.app);
+                    default_text_area_style_from_theme(theme)
+                };
 
                 let mut element = cx.text_area(props);
                 element.id = id;
@@ -4867,9 +4869,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer window element
                 // id back to the named scope id so z-order state can track windows by `window_id`.
                 window.id = window_id;
-                window.attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(window_test_id),
-                )
+                window.test_id(window_test_id)
             })
         });
 

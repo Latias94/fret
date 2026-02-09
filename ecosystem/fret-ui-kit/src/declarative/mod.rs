@@ -31,6 +31,7 @@ pub mod stack;
 pub mod style;
 pub mod table;
 pub mod text;
+pub mod theme_access;
 pub mod transition;
 pub mod tree;
 pub mod viewport_surface;
@@ -41,6 +42,7 @@ pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 pub use semantics::AnyElementSemanticsExt;
+pub use theme_access::ElementContextThemeExt;
 
 #[cfg(test)]
 mod padding_semantics_tests;

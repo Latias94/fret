@@ -1382,14 +1382,17 @@ pub fn render<H: UiHost + 'static>(
                     toasts.reverse();
                 }
 
-                let theme = fret_ui::Theme::global(&*cx.app).clone();
-                let margin =
-                    margin_override.unwrap_or_else(|| theme.metric_required("metric.padding.md"));
-                let gap =
-                    gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                let (margin, gap, radius) = {
+                    let theme = fret_ui::Theme::global(&*cx.app);
+                    let margin = margin_override
+                        .unwrap_or_else(|| theme.metric_required("metric.padding.md"));
+                    let gap =
+                        gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                    let radius = theme.metric_required("metric.radius.md");
+                    (margin, gap, radius)
+                };
                 // Match Sonner's default toast padding (`sonner@2.x` uses `padding: 16px`).
                 let toast_padding = Px(16.0);
-                let radius = theme.metric_required("metric.radius.md");
                 let store_for_toasts = store_for_render.clone();
 
                 let mut wrapper_layout = fret_ui::element::LayoutStyle {
@@ -1458,9 +1461,7 @@ pub fn render<H: UiHost + 'static>(
                     },
                     move |cx| {
                         let mut out: Vec<AnyElement> = Vec::with_capacity(toasts.len());
-                        let base_theme = theme.clone();
                         for toast in toasts {
-                            let theme = base_theme.clone();
                             let store = store_for_toasts.clone();
                             let toast_id = toast.id;
                             let open = toast.open;
@@ -1469,48 +1470,54 @@ pub fn render<H: UiHost + 'static>(
                             let settle_from = toast.settle_from;
                             let drag_active = toast.dragging;
 
-                            let bg_default = theme
-                                .color_by_key("popover")
-                                .unwrap_or_else(|| theme.color_required("popover"));
-                            let fg_default = theme
-                                .color_by_key("popover-foreground")
-                                .unwrap_or_else(|| theme.color_required("popover-foreground"));
-                            let (bg, fg) = match toast.variant {
-                                ToastVariant::Default => (bg_default, fg_default),
-                                ToastVariant::Destructive | ToastVariant::Error => (
-                                    theme.color_by_key("destructive").unwrap_or(bg_default),
-                                    theme
-                                        .color_by_key("destructive-foreground")
-                                        .unwrap_or(fg_default),
-                                ),
-                                ToastVariant::Success => (
-                                    theme.color_by_key("success").unwrap_or(bg_default),
-                                    theme
-                                        .color_by_key("success-foreground")
-                                        .unwrap_or(fg_default),
-                                ),
-                                ToastVariant::Info => (
-                                    theme.color_by_key("info").unwrap_or(bg_default),
-                                    theme.color_by_key("info-foreground").unwrap_or(fg_default),
-                                ),
-                                ToastVariant::Warning => (
-                                    theme.color_by_key("warning").unwrap_or(bg_default),
-                                    theme
-                                        .color_by_key("warning-foreground")
-                                        .unwrap_or(fg_default),
-                                ),
-                                ToastVariant::Loading => (bg_default, fg_default),
-                            };
-                            let border_color = theme
-                                .color_by_key("border")
-                                .unwrap_or_else(|| theme.color_required("border"));
-                            let fg_muted = theme
-                                .color_by_key("muted-foreground")
-                                .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                            let (bg, fg, border_color, fg_muted, button_bg) = {
+                                let theme = fret_ui::Theme::global(&*cx.app);
 
-                            let button_bg = theme
-                                .color_by_key("muted")
-                                .unwrap_or_else(|| theme.color_required("muted"));
+                                let bg_default = theme
+                                    .color_by_key("popover")
+                                    .unwrap_or_else(|| theme.color_required("popover"));
+                                let fg_default = theme
+                                    .color_by_key("popover-foreground")
+                                    .unwrap_or_else(|| theme.color_required("popover-foreground"));
+                                let (bg, fg) = match toast.variant {
+                                    ToastVariant::Default => (bg_default, fg_default),
+                                    ToastVariant::Destructive | ToastVariant::Error => (
+                                        theme.color_by_key("destructive").unwrap_or(bg_default),
+                                        theme
+                                            .color_by_key("destructive-foreground")
+                                            .unwrap_or(fg_default),
+                                    ),
+                                    ToastVariant::Success => (
+                                        theme.color_by_key("success").unwrap_or(bg_default),
+                                        theme
+                                            .color_by_key("success-foreground")
+                                            .unwrap_or(fg_default),
+                                    ),
+                                    ToastVariant::Info => (
+                                        theme.color_by_key("info").unwrap_or(bg_default),
+                                        theme.color_by_key("info-foreground").unwrap_or(fg_default),
+                                    ),
+                                    ToastVariant::Warning => (
+                                        theme.color_by_key("warning").unwrap_or(bg_default),
+                                        theme
+                                            .color_by_key("warning-foreground")
+                                            .unwrap_or(fg_default),
+                                    ),
+                                    ToastVariant::Loading => (bg_default, fg_default),
+                                };
+
+                                let border_color = theme
+                                    .color_by_key("border")
+                                    .unwrap_or_else(|| theme.color_required("border"));
+                                let fg_muted = theme
+                                    .color_by_key("muted-foreground")
+                                    .unwrap_or_else(|| theme.color_required("muted-foreground"));
+                                let button_bg = theme
+                                    .color_by_key("muted")
+                                    .unwrap_or_else(|| theme.color_required("muted"));
+
+                                (bg, fg, border_color, fg_muted, button_bg)
+                            };
                             let button_radius = Px(6.0);
                             let button_pad_x = Px(8.0);
                             let button_pad_y = Px(4.0);

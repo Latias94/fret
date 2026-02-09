@@ -42,6 +42,7 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
 - Refactor audits + guardrails: `fret-crate-audits` + `fret-boundary-checks` + `fret-fixture-driven-harnesses`
 - Profile + gate performance (numbers/baselines): `fret-perf-workflow` (resize/scroll/pointer-move probes, baseline selection, perf log evidence)
+- Turn one-off fixes into reusable workflows: `fret-skill-evolution` (update skills + add tests/scripts/gates)
 - Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
 - Prepare and run releases: `fret-release-check-and-publish` (`release-plz` scope, preflight checks, release-pr/release troubleshooting)
 
@@ -67,3 +68,4 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 - `fret-boundary-checks`: Guardrails for crate boundary/portability refactors (layering, module-size drift, crate audit snapshot).
 - `fret-fixture-driven-harnesses`: Convert large test matrices into JSON fixtures + thin harnesses for reviewability and lower merge-conflict risk.
 - `fret-release-check-and-publish`: Release workflow for Fret with `release-plz` + crates.io (scope selection, dry-run checks, CI publish flow, and common failure diagnostics).
+- `fret-skill-evolution`: Capture reusable learnings as skills (standard headings, references/, plus tests/scripts/gates).

@@ -53,7 +53,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> QueryDemoState {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     st.router.clear();
 
     let fail_mode = cx.watch_model(&st.fail_mode).layout().copied_or_default();
