@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "calendar-22.vp375x240.light.panel_size", "web_name": "calendar-22.vp375x240", "theme": "light", "builder": "calendar22", "recipe": "panel_size" },
+    { "id": "calendar-22.vp375x240.dark.panel_size", "web_name": "calendar-22.vp375x240", "theme": "dark", "builder": "calendar22", "recipe": "panel_size" },
+    { "id": "calendar-23.vp375x240.light.panel_size", "web_name": "calendar-23.vp375x240", "theme": "light", "builder": "calendar23", "recipe": "panel_size" },
+    { "id": "calendar-23.vp375x240.dark.panel_size", "web_name": "calendar-23.vp375x240", "theme": "dark", "builder": "calendar23", "recipe": "panel_size" }
+  ]
+}

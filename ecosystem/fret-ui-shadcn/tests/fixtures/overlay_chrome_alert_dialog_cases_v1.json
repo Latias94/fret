@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "alert-dialog-demo.panel_chrome", "web_name": "alert-dialog-demo", "recipe": "panel_chrome" }
+  ]
+}

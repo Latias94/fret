@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "button-group-demo.light.destructive_item_idle_fg", "theme": "light", "recipe": "destructive_item_idle_fg" },
+    { "id": "button-group-demo.dark.destructive_item_idle_fg", "theme": "dark", "recipe": "destructive_item_idle_fg" },
+    { "id": "button-group-demo.light.destructive_focused_item_chrome", "theme": "light", "recipe": "destructive_focused_item_chrome" },
+    { "id": "button-group-demo.dark.destructive_focused_item_chrome", "theme": "dark", "recipe": "destructive_focused_item_chrome" }
+  ]
+}
