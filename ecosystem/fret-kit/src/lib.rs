@@ -73,7 +73,7 @@ pub mod prelude {
         AnyElement, AnyElementIterExt, Elements, HoverRegionProps, Length, SemanticsProps,
         TextProps,
     };
-    pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiTree};
     pub use fret_ui_kit::declarative::AnyElementSemanticsExt;
     pub use fret_ui_kit::declarative::ModelWatchExt;
     #[cfg(not(feature = "shadcn"))]

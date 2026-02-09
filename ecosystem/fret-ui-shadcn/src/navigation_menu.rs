@@ -775,7 +775,6 @@ impl NavigationMenu {
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
-        let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
@@ -1309,7 +1308,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let mut content_size = if viewport_enabled {
+                let content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,

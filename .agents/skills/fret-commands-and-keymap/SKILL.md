@@ -56,6 +56,13 @@ Notes:
 - Prefer `when` gates like `focus.is_text_input == false` for global shortcuts that must not interfere with text editing.
 - Use `platform` filters (`macos` / `windows` / `linux` / `web`) for conventional bindings.
 
+## Workflow
+
+1. Define a stable `CommandId` and register `CommandMeta` (scope + keywords).
+2. Add default bindings in `keymap.json` with explicit `when` gating.
+3. Verify focus-aware routing with a resolution/unit test (and a diag script for end-to-end behavior).
+4. Treat command IDs and `when` expressions as contracts (avoid breaking renames).
+
 ## Common pitfalls
 
 - **Character-based shortcuts** (should be physical key codes; ADR 0018).
@@ -85,3 +92,14 @@ Notes:
   - `crates/fret-runtime/src/menu.rs` (data-only menu model)
   - `crates/fret-app/src/keymap.rs` (layered keymap loading + reverse lookup)
   - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (config watcher + hot reload)
+
+## Evidence anchors
+
+- ADRs: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0021-keymap-file-format.md`, `docs/adr/0022-when-expressions.md`
+- Parsing/resolution: `crates/fret-runtime/src/keymap.rs`
+- Command metadata + routing: `crates/fret-runtime/src/commands.rs`
+
+## Related skills
+
+- `fret-text-input-and-ime` (focus gating so shortcuts don’t break text/IME)
+- `fret-diag-workflow` (scripted repros for “shortcut does the right thing”)

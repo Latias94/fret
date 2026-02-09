@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TableState, TanStackTableOptions,
-    TanStackTableState, TanStackValue,
+    ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TableState, TanStackAutoResetQueue,
+    TanStackTableOptions, TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -42,6 +42,11 @@ enum FixtureAction {
         #[serde(default)]
         multi: bool,
     },
+    #[serde(rename = "setColumnFilterValue")]
+    SetColumnFilterValue {
+        column_id: String,
+        value: serde_json::Value,
+    },
     #[serde(rename = "setGlobalFilterValue")]
     SetGlobalFilterValue { value: serde_json::Value },
 }
@@ -70,12 +75,12 @@ fn snapshot_row_model<'a, TData>(
     let root = model
         .root_rows()
         .iter()
-        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .filter_map(|&i| model.row(i).map(|r| r.id.as_str().to_string()))
         .collect();
     let flat = model
         .flat_rows()
         .iter()
-        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .filter_map(|&i| model.row(i).map(|r| r.id.as_str().to_string()))
         .collect();
     RowModelSnapshot { root, flat }
 }
@@ -112,6 +117,7 @@ fn tanstack_v8_auto_reset_parity() {
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("status")
             .sort_value_by(|row: &FixtureRow| tanstack_value_str(&row.status))
+            .facet_str_by(|row: &FixtureRow| row.status.as_str())
             .sorting_fn_auto()
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("cpu")
@@ -162,10 +168,24 @@ fn tanstack_v8_auto_reset_parity() {
             None => TableState::default(),
         };
 
-        // Simulate a render pass that registers auto-reset behavior (TanStack's `_autoResetPageIndex`
-        // first call registers, later calls may reset). The fixture generator performs an initial
-        // `getRowModel()` call before actions.
-        let mut auto_reset_page_index_registered = true;
+        // Simulate TanStack `_queue` behavior: register-first, then coalesced resets per render pass.
+        // The fixture generator performs an initial `getRowModel()` call before actions.
+        let mut auto_reset = TanStackAutoResetQueue::default();
+        {
+            let table_initial = Table::builder(&data)
+                .columns(columns.clone())
+                .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                .initial_state(initial_state.clone())
+                .state(state.clone())
+                .options(options)
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .build();
+
+            auto_reset.begin_render_pass();
+            auto_reset.auto_reset_page_index(&table_initial);
+            auto_reset.flush(&table_initial, &mut state);
+        }
 
         for action in &snap.actions {
             match action {
@@ -184,32 +204,55 @@ fn tanstack_v8_auto_reset_parity() {
                         .toggled_column_sorting_tanstack(column_id.as_str(), *multi, false)
                         .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
                 }
+                FixtureAction::SetColumnFilterValue { column_id, value } => {
+                    let table_for_action = Table::builder(&data)
+                        .columns(columns.clone())
+                        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                        .initial_state(initial_state.clone())
+                        .state(state.clone())
+                        .options(options)
+                        .global_filter_fn(FilteringFnSpec::Auto)
+                        .build();
+
+                    let updater = table_for_action
+                        .column_filters_updater_set_value(column_id.as_str(), value.clone())
+                        .unwrap_or_else(|| panic!("unknown action column_id: {column_id}"));
+                    state.column_filters = updater.apply(&state.column_filters);
+                }
                 FixtureAction::SetGlobalFilterValue { value } => {
-                    state.global_filter = Some(value.clone());
+                    let table_for_action = Table::builder(&data)
+                        .columns(columns.clone())
+                        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                        .initial_state(initial_state.clone())
+                        .state(state.clone())
+                        .options(options)
+                        .global_filter_fn(FilteringFnSpec::Auto)
+                        .build();
+                    let updater =
+                        table_for_action.global_filter_updater_set_value(Some(value.clone()));
+                    state.global_filter = updater.apply(&state.global_filter);
                 }
             }
 
-            // TanStack: the core/filtered/sorted/grouped row model memo debug callbacks trigger
-            // `_autoResetPageIndex()`. We treat each action as a render pass where derived models
-            // are recomputed once.
-            if auto_reset_page_index_registered {
-                let table_post = Table::builder(&data)
-                    .columns(columns.clone())
-                    .get_row_key(|row, _idx, _parent| RowKey(row.id))
-                    .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
-                    .initial_state(initial_state.clone())
-                    .state(state.clone())
-                    .options(options)
-                    .global_filter_fn(FilteringFnSpec::Auto)
-                    .build();
+            let table_post = Table::builder(&data)
+                .columns(columns.clone())
+                .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+                .initial_state(initial_state.clone())
+                .state(state.clone())
+                .options(options)
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .build();
 
-                if table_post.should_auto_reset_page_index() {
-                    state.pagination = table_post.reset_page_index(false);
-                }
-            } else {
-                // Not expected by this fixture, but keep the behavior explicit.
-                auto_reset_page_index_registered = true;
-            }
+            // TanStack: multiple derived-model memos may queue `_autoReset*()` within a single render
+            // pass. We call them multiple times and rely on the queue to coalesce.
+            auto_reset.begin_render_pass();
+            auto_reset.auto_reset_page_index(&table_post);
+            auto_reset.auto_reset_page_index(&table_post);
+            auto_reset.auto_reset_page_index(&table_post);
+            auto_reset.flush(&table_post, &mut state);
         }
 
         if let Some(expected_next) = snap.expect.next_state.as_ref() {

@@ -153,7 +153,7 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     st.router.clear();
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let draft_value = cx.watch_model(&st.draft).layout().cloned_or_default();
 
@@ -465,7 +465,7 @@ fn filter_chip(
 
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
+    theme: &ThemeSnapshot,
     row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {

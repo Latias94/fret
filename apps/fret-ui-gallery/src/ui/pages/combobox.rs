@@ -254,8 +254,7 @@ pub(super) fn preview_combobox(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -278,18 +277,21 @@ pub(super) fn preview_combobox(
         )
     };
 
+    let container_props =
+        |cx: &mut ElementContext<'_, App>, chrome: ChromeRefinement, layout: LayoutRefinement| {
+            cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
+        };
+
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+        let props = container_props(
+            cx,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .p(Space::N4),
+            LayoutRefinement::default().w_full().max_w(Px(760.0)),
+        );
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -323,13 +325,9 @@ pub(super) fn preview_combobox(
             |cx| {
                 vec![
                     shadcn::typography::muted(cx, format!("Selected: {selected}"))
-                        .attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id(format!("{test_id_prefix}-selected")),
-                        ),
-                    shadcn::typography::muted(cx, format!("Query: {query_text}")).attach_semantics(
-                        SemanticsDecoration::default().test_id(format!("{test_id_prefix}-query")),
-                    ),
+                        .test_id(format!("{test_id_prefix}-selected")),
+                    shadcn::typography::muted(cx, format!("Query: {query_text}"))
+                        .test_id(format!("{test_id_prefix}-query")),
                 ]
             },
         )
@@ -351,9 +349,7 @@ pub(super) fn preview_combobox(
         .query_model(query.clone())
         .items(base_items())
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-demo-trigger"),
-        );
+        .test_id("ui-gallery-combobox-demo-trigger");
     let demo_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -381,9 +377,7 @@ pub(super) fn preview_combobox(
             shadcn::ComboboxItem::new("astro", "Astro (Hybrid)"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-custom-items-trigger"),
-        );
+        .test_id("ui-gallery-combobox-custom-items-trigger");
     let custom_items_top_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -427,9 +421,7 @@ pub(super) fn preview_combobox(
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-basic-trigger"),
-        );
+        .test_id("ui-gallery-combobox-basic-trigger");
     let basic_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -470,9 +462,7 @@ pub(super) fn preview_combobox(
             shadcn::ComboboxItem::new("tool-cargo", "Tools / Cargo"),
         ])
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-groups-trigger"),
-        );
+        .test_id("ui-gallery-combobox-groups-trigger");
     let groups_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -515,9 +505,7 @@ pub(super) fn preview_combobox(
                 .border_color(ColorRef::Color(destructive)),
         )
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-invalid-trigger"),
-        );
+        .test_id("ui-gallery-combobox-invalid-trigger");
     let invalid_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -550,9 +538,7 @@ pub(super) fn preview_combobox(
         .items(base_items())
         .disabled(true)
         .into_element(cx)
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-combobox-disabled-trigger"),
-        );
+        .test_id("ui-gallery-combobox-disabled-trigger");
     let disabled_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -581,10 +567,7 @@ pub(super) fn preview_combobox(
             .query_model(input_group_query.clone())
             .items(base_items())
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default()
-                    .test_id("ui-gallery-combobox-auto-highlight-trigger"),
-            );
+            .test_id("ui-gallery-combobox-auto-highlight-trigger");
     let auto_highlight_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -621,9 +604,7 @@ pub(super) fn preview_combobox(
                 shadcn::ComboboxItem::new("save-all", "Save All"),
             ])
             .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-combobox-input-group-trigger"),
-            );
+            .test_id("ui-gallery-combobox-input-group-trigger");
     let input_group_content = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -637,18 +618,18 @@ pub(super) fn preview_combobox(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     |cx| {
                         vec![
-                            cx.container(
-                                decl_style::container_props(
-                                    &theme,
+                            {
+                                let props = container_props(
+                                    cx,
                                     ChromeRefinement::default()
                                         .border_1()
                                         .rounded(Radius::Sm)
                                         .px(Space::N2)
                                         .py(Space::N1),
                                     LayoutRefinement::default(),
-                                ),
-                                |cx| vec![shadcn::typography::muted(cx, "Cmd")],
-                            ),
+                                );
+                                cx.container(props, |cx| vec![shadcn::typography::muted(cx, "Cmd")])
+                            },
                             input_group_combo,
                         ]
                     },
@@ -679,9 +660,7 @@ pub(super) fn preview_combobox(
                     shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-combobox-rtl-trigger"),
-                )
+                .test_id("ui-gallery-combobox-rtl-trigger")
         },
     );
     let rtl_content = stack::vstack(

@@ -13,6 +13,29 @@ Fret’s design-system surface (`fret-ui-shadcn`) is **token-driven**. The faste
 2) apply small, intentional `ThemeConfig` overrides (density/radius/shadow/ring),
 3) keep per-component magic numbers to a minimum.
 
+## When to use
+
+Use this skill when:
+
+- Picking a baseline theme and making the app look cohesive quickly.
+- Re-skinning an app (density/radius/shadows/rings) without touching every component.
+- Translating “style keywords” into concrete token changes.
+
+## Quick start
+
+1. Pick a baseline preset: `apply_shadcn_new_york_v4(...)`.
+2. Decide 1–2 axes to change first (usually density + ring).
+3. Apply a small `ThemeConfig` patch and validate in the UI gallery/demo you care about.
+
+## Workflow
+
+Use the rest of this doc in order:
+
+1. Collect user-facing inputs (scheme, density, vibe keywords, target surface).
+2. Apply baseline preset.
+3. Apply token overrides for density/radius/shadows/ring.
+4. Only then consider component-level overrides (and keep them rare).
+
 ## Inputs to collect (ask the user)
 
 - **Scheme**: `light` / `dark`
@@ -94,7 +117,7 @@ Notes:
 - Prefer `Space` / `Radius` / `MetricRef` / `ColorRef` and theme tokens over `Px(…)` literals.
 - If you need per-component deviations, expose them via `*Style` overrides (see `docs/shadcn-style-override-patterns.md`).
 
-## References
+## Evidence anchors (where to look)
 
 - Theme preset + seeded metrics: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs`
 - Token semantics and resolution:
@@ -105,3 +128,14 @@ Notes:
   - `docs/adr/0060-shadows-and-elevation.md`
 - Minimal app-side override example:
   - `docs/effects-authoring.md` (“Minimal app-side token override example”)
+
+## Common pitfalls
+
+- Tweaking per-component magic numbers instead of applying a token-level override.
+- Changing many token axes at once (makes it hard to diagnose “what caused the vibe change”).
+- Letting spacing/radius drift across screens (pick a density and stick to it).
+
+## Related skills
+
+- `fret-ui-ux-guidelines` (app-level hierarchy and composition)
+- `fret-layout-and-style` (how tokens apply via `UiBuilder` patches)

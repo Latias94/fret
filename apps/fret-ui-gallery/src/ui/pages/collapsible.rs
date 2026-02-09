@@ -127,8 +127,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -150,18 +148,21 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         )
     };
 
+    let container_props =
+        |cx: &mut ElementContext<'_, App>, chrome: ChromeRefinement, layout: LayoutRefinement| {
+            cx.with_theme(|theme| decl_style::container_props(theme, chrome, layout))
+        };
+
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .border_1()
-                    .rounded(Radius::Md)
-                    .p(Space::N4),
-                LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+        let props = container_props(
+            cx,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .p(Space::N4),
+            LayoutRefinement::default().w_full().max_w(Px(760.0)),
+        );
+        cx.container(props, move |_cx| [body])
     };
 
     let section_card =
@@ -178,17 +179,17 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                                status: &'static str| {
         let details_content = |cx: &mut ElementContext<'_, App>| {
             shadcn::CollapsibleContent::new(vec![
-                cx.container(
-                    decl_style::container_props(
-                        &theme,
+                {
+                    let props = container_props(
+                        cx,
                         ChromeRefinement::default()
                             .border_1()
                             .rounded(Radius::Sm)
                             .px(Space::N4)
                             .py(Space::N2),
                         LayoutRefinement::default().w_full(),
-                    ),
-                    |cx| {
+                    );
+                    cx.container(props, |cx| {
                         vec![stack::hstack(
                             cx,
                             stack::HStackProps::default()
@@ -201,19 +202,19 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                                 ]
                             },
                         )]
-                    },
-                ),
-                cx.container(
-                    decl_style::container_props(
-                        &theme,
+                    })
+                },
+                {
+                    let props = container_props(
+                        cx,
                         ChromeRefinement::default()
                             .border_1()
                             .rounded(Radius::Sm)
                             .px(Space::N4)
                             .py(Space::N2),
                         LayoutRefinement::default().w_full(),
-                    ),
-                    |cx| {
+                    );
+                    cx.container(props, |cx| {
                         vec![stack::hstack(
                             cx,
                             stack::HStackProps::default()
@@ -226,8 +227,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                                 ]
                             },
                         )]
-                    },
-                ),
+                    })
+                },
             ])
             .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
             .into_element(cx)
@@ -270,25 +271,23 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ),
         };
 
-        cx.container(
-            decl_style::container_props(
-                &theme,
-                ChromeRefinement::default().px(Space::N3).py(Space::N2),
-                LayoutRefinement::default().w_full(),
-            ),
-            |cx| {
-                vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between(),
-                        |cx| vec![cx.text(label), cx.text(status)],
-                    ),
-                    collapsible,
-                ]
-            },
-        )
+        let wrapper_props = container_props(
+            cx,
+            ChromeRefinement::default().px(Space::N3).py(Space::N2),
+            LayoutRefinement::default().w_full(),
+        );
+        cx.container(wrapper_props, |cx| {
+            vec![
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between(),
+                    |cx| vec![cx.text(label), cx.text(status)],
+                ),
+                collapsible,
+            ]
+        })
         .test_id(test_id_prefix)
     };
 
@@ -431,9 +430,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element(cx)
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-collapsible-settings"),
-        );
+        .test_id("ui-gallery-collapsible-settings");
 
     let settings_panel = stack::vstack(
         cx,
@@ -550,9 +547,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
             |_cx| vec![components_folder, src_folder, cargo_toml],
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-collapsible-file-tree"),
-        )
+        .test_id("ui-gallery-collapsible-file-tree")
     };
     let file_tree = section_card(cx, "File Tree", file_tree_content);
 
@@ -593,9 +588,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-collapsible-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-collapsible-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -45,6 +45,11 @@ impl AnyElement {
         });
         self
     }
+
+    /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
+    pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
+        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    }
 }
 
 #[derive(Debug, Clone)]

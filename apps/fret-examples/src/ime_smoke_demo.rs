@@ -57,7 +57,7 @@ impl ImeSmokeDriver {
              cx.observe_model(&input_multi, Invalidation::Layout);
              cx.observe_model(&last_ime, Invalidation::Paint);
 
-            let theme = Theme::global(&*cx.app).clone();
+            let theme = Theme::global(&*cx.app).snapshot();
 
             let mut root_layout = LayoutStyle::default();
             root_layout.size.width = Length::Fill;

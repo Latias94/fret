@@ -3061,6 +3061,8 @@ See: `docs/tracy.md`.\n";
             }
 
             let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_overlay_steady_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-overlay-steady";
             let is_ui_gallery_code_editor_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-code-editor";
             let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
@@ -3138,6 +3140,14 @@ See: `docs/tracy.md`.\n";
                             .collect(),
                         Some(BuiltinSuite::UiGallery),
                     )
+                } else if is_ui_gallery_overlay_steady_suite {
+                    (
+                        ui_gallery_overlay_steady_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
                 } else if is_ui_gallery_code_editor_suite {
                     // The code-editor-focused UI Gallery suite also includes the pixels-changed
                     // gate (soft-wrap editing baseline), so screenshots must be enabled.
@@ -3206,6 +3216,60 @@ See: `docs/tracy.md`.\n";
                                     "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
                                 ),
                             ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json",
+                                ),
+                            ),
                         ],
                         Some(BuiltinSuite::UiGallery),
                     )
@@ -3240,6 +3304,24 @@ See: `docs/tracy.md`.\n";
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-table-retained-sort-desc.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
                                 ),
                             ),
                             resolve_path(
@@ -7814,6 +7896,15 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 40] {
         "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline.json",
+    ]
+}
+
+fn ui_gallery_overlay_steady_suite_scripts() -> [&'static str; 4] {
+    [
+        "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+        "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
     ]
 }
 

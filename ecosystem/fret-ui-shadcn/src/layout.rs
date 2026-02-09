@@ -28,7 +28,12 @@ pub(crate) fn container_flow<H: UiHost>(
     props: ContainerProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    container_vstack_gap(cx, props, Space::N0, children)
+    container_vstack(
+        cx,
+        props,
+        stack::VStackProps::default().gap(Space::N0),
+        children,
+    )
 }
 
 pub(crate) fn container_hstack<H: UiHost>(

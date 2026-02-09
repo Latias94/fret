@@ -63,6 +63,13 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 - Call `VirtualListScrollHandle::scroll_to_item(index, strategy)` (or `scroll_to_bottom()`).
 - The request is deferred and consumed by the runtime; avoid reissuing the same request every frame.
 
+## Workflow
+
+1. Make identity stable first (`virtual_list_keyed` + stable keys from data, not indices).
+2. Pick the fastest valid measurement mode (`Fixed` if you can).
+3. Decide when to bump `items_revision` (reorder/key/height meaning changes).
+4. Add one regression gate (scripted repro for state bugs; invariant test for clamping/metrics).
+
 ## Common pitfalls
 
 - **Using the row index as identity** (`key_at: |i| i as u64`) for reorderable data.
@@ -84,9 +91,18 @@ pub fn rows_list<H: UiHost>(cx: &mut ElementContext<'_, H>, rows: &[Row]) -> Any
 - ADRs:
   - `docs/adr/0042-virtualization-and-large-lists.md`
   - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
-- Code entry points:
+
+## Evidence anchors (where to look)
+
+- Runtime:
   - `crates/fret-ui/src/scroll.rs` (`ScrollHandle`, `VirtualListScrollHandle`)
   - `crates/fret-ui/src/virtual_list.rs` (metrics/windowing)
   - `crates/fret-ui/src/elements/cx.rs` (`virtual_list_keyed*` helpers)
+- Ecosystem usage:
   - `ecosystem/fret-ui-shadcn/src/data_table.rs` (real usage)
   - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (virtual list diagnostics surface)
+
+## Related skills
+
+- `fret-diag-workflow` (scripted “reorder + selection stays” gates)
+- `fret-text-input-and-ime` (large documents + caret/selection invariants)
