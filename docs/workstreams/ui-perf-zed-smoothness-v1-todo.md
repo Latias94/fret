@@ -27,6 +27,8 @@ Conventions:
 - [ ] Dev tooling: keep the “perf investigation loop” crisp for contributors (skills + checklists + attribution playbooks).
   - Workstream: `docs/workstreams/perf-devtools-skills-v1.md`
   - Deliverable (initial): expand `fret-perf-workflow` attribution recipes + add a single “worked example”.
+  - Latest:
+    - Added `fret-perf-attribution` skill (tail-hitch playbook): commit `7ea708d2f`.
 
 - [ ] ADR alignment: document and lock down the “interactive resize perf policy” contracts (what is allowed to be
   bucketed/deferred/cached during live resize, and what must remain exact).
