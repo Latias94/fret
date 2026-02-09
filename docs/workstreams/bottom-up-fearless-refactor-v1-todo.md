@@ -79,10 +79,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_demo.rs` (`web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures`)
   - Evidence (fixture-driven slice, menubar demo overlay placement):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_menubar_demo_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar.rs` (`web_vs_fret_menubar_demo_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar/fixtures.rs` (`web_vs_fret_menubar_demo_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/menubar.rs` (keeps procedural “underlay scroll re-anchor” test)
   - Evidence (fixture-driven slice, select overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
-    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select.rs` (`web_vs_fret_select_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs` (`web_vs_fret_select_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select.rs` (keeps procedural “underlay scroll re-anchor” test)
   - Evidence (fixture-driven slice, context-menu demo overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_context_menu_demo_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/context_menu/fixtures.rs` (`web_vs_fret_context_menu_demo_cases_match_web_fixtures`)
