@@ -9061,3 +9061,39 @@ Results (selected attempt-2; us):
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15987 | 22027 | 22027 | 9534 | 2228 | 12204 | 189 |
 | tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json | 15826 | 16083 | 16083 | 9895 | 2230 | 6760 | 207 |
+
+## 2026-02-10 00:18:40 (experiment; not landed)
+
+Change:
+- Attempt: latch the “small-step interactive resize” classification across the whole interactive-resize session so
+  wrap-width bucketing and per-width prepared-blob reuse do not toggle on/off when some resize frames exceed
+  `FRET_UI_TEXT_WRAP_WIDTH_SMALL_STEP_MAX_DW_PX` (i.e. avoid cache thrash on mixed-speed drags).
+
+Status:
+- Reverted after measurement (no clear improvement; selected attempt regressed vs the prior best run).
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+tools/perf/diag_resize_probes_gate.sh \
+  --suite ui-code-editor-resize-probes \
+  --attempts 3 \
+  --out-dir target/perf-samples/ui-code-editor-resize-probes.sticky-smallstep.9d558fb88.20260210-001748
+```
+
+Artifacts:
+- `target/perf-samples/ui-code-editor-resize-probes.sticky-smallstep.9d558fb88.20260210-001748/summary.json`
+
+Results (selected attempt-2; us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 paint | p95 renderer.prepare_text |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-code-editor-window-resize-drag-jitter-steady.json | 11481 | 11858 | 11858 | 2145 | 325 | 10237 | 600 |
+
+Notes:
+- Compared to the prior best run (commit `53aa6534a`), the selected attempt regressed:
+  - `p95 total_time_us`: `11243 -> 11858` (+0.615ms)
+  - `p95 paint_time_us`: `9638 -> 10237` (+0.599ms)
+- `paint_text_prepare_calls` and `paint_text_prepare_time_us` distributions did not materially improve in the
+  selected attempt (still `calls.p95=33` and `reasons_width_changed == calls` on nonzero frames).
