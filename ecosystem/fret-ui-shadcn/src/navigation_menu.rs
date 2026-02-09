@@ -1680,6 +1680,7 @@ impl NavigationMenu {
                                         focusable: false,
                                         focus_ring: None,
                                         focus_ring_bounds: None,
+                                        key_activation: Default::default(),
                                         a11y: PressableA11y::default(),
                                     },
                                     children,

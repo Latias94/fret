@@ -1523,6 +1523,7 @@ pub fn render<H: UiHost + 'static>(
                                         focusable: false,
                                         focus_ring: None,
                                         focus_ring_bounds: None,
+                                        key_activation: Default::default(),
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {
@@ -1593,6 +1594,7 @@ pub fn render<H: UiHost + 'static>(
                                         focusable: false,
                                         focus_ring: None,
                                         focus_ring_bounds: None,
+                                        key_activation: Default::default(),
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {
@@ -1668,6 +1670,7 @@ pub fn render<H: UiHost + 'static>(
                                         focusable: false,
                                         focus_ring: None,
                                         focus_ring_bounds: None,
+                                        key_activation: Default::default(),
                                         a11y: Default::default(),
                                     },
                                     move |cx, st| {

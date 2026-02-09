@@ -5605,6 +5605,94 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
 }
 
 #[test]
+fn pressable_key_activation_enter_only_ignores_space() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let activated = app.models_mut().insert(false);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-on-activate-hook-keyboard-enter-only",
+        |cx| {
+            vec![cx.pressable(
+                {
+                    let mut props = crate::element::PressableProps::default();
+                    props.key_activation = crate::element::PressableKeyActivation::EnterOnly;
+                    props
+                },
+                |cx, _state| {
+                    let activated = activated.clone();
+                    cx.pressable_on_activate(Arc::new(move |host, _cx, reason| {
+                        assert_eq!(reason, ActivateReason::Keyboard);
+                        let _ = host
+                            .models_mut()
+                            .update(&activated, |v: &mut bool| *v = true);
+                    }));
+                    vec![cx.text("activate")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&activated), Some(false));
+
+    let pressable_node = ui.children(root)[0];
+    ui.set_focus(Some(pressable_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Space,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyUp {
+            key: fret_core::KeyCode::Space,
+            modifiers: Modifiers::default(),
+        },
+    );
+
+    assert_eq!(app.models().get_copied(&activated), Some(false));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyUp {
+            key: fret_core::KeyCode::Enter,
+            modifiers: Modifiers::default(),
+        },
+    );
+
+    assert_eq!(app.models().get_copied(&activated), Some(true));
+}
+
+#[test]
 fn dismissible_on_dismiss_request_hook_runs_on_escape() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
