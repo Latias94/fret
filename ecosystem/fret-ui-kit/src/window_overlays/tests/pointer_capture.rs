@@ -240,6 +240,7 @@ fn pointer_capture_hides_hover_overlays_in_same_window() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -292,6 +293,7 @@ fn pointer_capture_hides_hover_overlays_in_same_window() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -340,6 +342,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -391,6 +394,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -438,6 +442,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -733,6 +738,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -880,6 +886,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -949,6 +956,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );

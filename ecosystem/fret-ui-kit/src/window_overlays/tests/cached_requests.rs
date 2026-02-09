@@ -149,6 +149,7 @@ fn cached_hover_overlay_request_is_synthesized_for_short_ttl_when_open_without_r
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );

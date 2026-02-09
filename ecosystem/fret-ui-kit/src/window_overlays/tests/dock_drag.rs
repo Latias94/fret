@@ -374,6 +374,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -404,6 +405,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -488,6 +490,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -528,6 +531,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -590,6 +594,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -630,6 +635,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -690,6 +696,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -730,6 +737,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -828,6 +836,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -858,6 +867,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -943,6 +953,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -983,6 +994,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -1033,6 +1045,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_a,
             open: open_a.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -1073,6 +1086,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             trigger: trigger_b,
             open: open_b.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -1874,6 +1888,7 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -1916,6 +1931,7 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -1947,6 +1963,7 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -2621,6 +2638,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -2677,6 +2695,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -2721,6 +2740,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );
@@ -2752,6 +2772,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             trigger,
             open: open.clone(),
             present: true,
+            on_pointer_move: None,
             children: Vec::new(),
         },
     );

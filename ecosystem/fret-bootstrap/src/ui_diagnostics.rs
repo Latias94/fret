@@ -11148,10 +11148,6 @@ mod tests {
 
     #[test]
     fn hit_test_snapshot_exposes_focus_barrier_root() {
-        let window = AppWindowId::default();
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
         let position = Point::new(Px(1.0), Px(2.0));
         let hit_test = UiDebugHitTest {
             hit: None,
@@ -11161,10 +11157,6 @@ mod tests {
 
         let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
             position,
-            &ui,
-            None,
-            window,
-            None,
             hit_test,
             Some(node_id(11)),
             &[],
