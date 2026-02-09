@@ -156,6 +156,11 @@ impl<'a> CanvasPainter<'a> {
         Self { host, cache }
     }
 
+    /// Current runner-owned frame id for this paint pass.
+    pub fn frame_id(&self) -> u64 {
+        self.cache.frame
+    }
+
     pub fn bounds(&self) -> Rect {
         self.host.bounds()
     }
