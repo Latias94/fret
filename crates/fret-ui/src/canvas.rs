@@ -1246,10 +1246,22 @@ struct TextDraw {
     metrics: TextMetrics,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 enum HostedTextContent {
     Plain(Arc<str>),
     Rich(AttributedText),
+}
+
+impl PartialEq for HostedTextContent {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Plain(a), Self::Plain(b)) => Arc::ptr_eq(a, b) || a.as_ref() == b.as_ref(),
+            (Self::Rich(a), Self::Rich(b)) => {
+                (Arc::ptr_eq(&a.text, &b.text) && Arc::ptr_eq(&a.spans, &b.spans)) || a == b
+            }
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
