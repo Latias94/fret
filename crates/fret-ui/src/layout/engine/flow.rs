@@ -4,7 +4,6 @@ use crate::layout_engine::TaffyLayoutEngine;
 use crate::tree::UiTree;
 use crate::widget::LayoutCx;
 use fret_core::{AppWindowId, NodeId, Px, Rect, Size};
-use std::collections::HashMap;
 use taffy::geometry::{Line as TaffyLine, Rect as TaffyRect, Size as TaffySize};
 use taffy::style::{
     AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap, GridPlacement,
@@ -20,81 +19,6 @@ pub(crate) enum ParentLayoutKind {
     PassthroughOverlayStretch,
     PassthroughOverlayNoStretch,
     Overlay,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LengthKind {
-    Auto,
-    Fill,
-    Px,
-}
-
-impl LengthKind {
-    fn for_length(length: crate::element::Length) -> Self {
-        match length {
-            crate::element::Length::Auto => Self::Auto,
-            crate::element::Length::Fill => Self::Fill,
-            crate::element::Length::Px(_) => Self::Px,
-        }
-    }
-}
-
-#[derive(Default)]
-struct BuildFlowCache {
-    /// Cache for "wrapper chain" analysis used by pass-through wrapper nodes (Semantics,
-    /// FocusScope, Pressable, etc.).
-    ///
-    /// The old implementation scanned down the wrapper chain (up to 32 nodes) for each wrapper,
-    /// which made deep wrapper stacks quadratic in the number of wrappers. This memoization keeps
-    /// it linear per build.
-    wrapper_chain_first_non_auto: HashMap<NodeId, (LengthKind, LengthKind)>,
-}
-
-impl BuildFlowCache {
-    fn wrapper_chain_first_non_auto_for_node<H: UiHost>(
-        &mut self,
-        app: &mut H,
-        tree: &UiTree<H>,
-        window: AppWindowId,
-        node: NodeId,
-        depth: u8,
-    ) -> (LengthKind, LengthKind) {
-        if let Some(v) = self.wrapper_chain_first_non_auto.get(&node) {
-            return *v;
-        }
-
-        // Keep behavior consistent with the previous "for _ in 0..32" scan: if we exceed the
-        // bound, treat the remainder as "no non-auto found".
-        if depth >= 32 {
-            return (LengthKind::Auto, LengthKind::Auto);
-        }
-
-        let style = layout_style_for_node(app, window, node);
-        let width_kind = LengthKind::for_length(style.size.width);
-        let height_kind = LengthKind::for_length(style.size.height);
-
-        let mut out = (width_kind, height_kind);
-        if width_kind == LengthKind::Auto || height_kind == LengthKind::Auto {
-            if let Some((child, _)) = passthrough_wrapper_child(app, tree, window, node) {
-                let (child_width, child_height) = self.wrapper_chain_first_non_auto_for_node(
-                    app,
-                    tree,
-                    window,
-                    child,
-                    depth.saturating_add(1),
-                );
-                if width_kind == LengthKind::Auto {
-                    out.0 = child_width;
-                }
-                if height_kind == LengthKind::Auto {
-                    out.1 = child_height;
-                }
-            }
-        }
-
-        self.wrapper_chain_first_non_auto.insert(node, out);
-        out
-    }
 }
 
 pub(crate) fn layout_children_from_engine_if_solved<H: UiHost>(
@@ -150,6 +74,27 @@ fn apply_container_insets(style: &mut Style, props: &crate::element::ContainerPr
     // subtraction keeps shadcn-style `w-full max-w-*` overlays aligned with web snapshots.
 }
 
+pub(crate) fn build_flow_subtree<H: UiHost>(
+    engine: &mut TaffyLayoutEngine,
+    app: &mut H,
+    tree: &UiTree<H>,
+    window: AppWindowId,
+    scale_factor: f32,
+    parent_kind: ParentLayoutKind,
+    node: NodeId,
+) {
+    build_flow_subtree_impl(
+        engine,
+        app,
+        tree,
+        window,
+        scale_factor,
+        parent_kind,
+        node,
+        None,
+    );
+}
+
 pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     engine: &mut TaffyLayoutEngine,
     app: &mut H,
@@ -159,7 +104,6 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     viewport_root: NodeId,
     viewport_size: Size,
 ) {
-    let mut cache = BuildFlowCache::default();
     build_flow_subtree_impl(
         engine,
         app,
@@ -169,7 +113,6 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
         ParentLayoutKind::Root,
         viewport_root,
         Some(viewport_size),
-        &mut cache,
     );
 }
 
@@ -184,7 +127,6 @@ fn build_flow_subtree_impl<H: UiHost>(
     parent_kind: ParentLayoutKind,
     node: NodeId,
     root_override_size: Option<Size>,
-    cache: &mut BuildFlowCache,
 ) {
     let sf = sanitize_scale_factor(scale_factor);
     let _ = engine.request_layout_node(node);
@@ -214,14 +156,48 @@ fn build_flow_subtree_impl<H: UiHost>(
         // Percent sizing needs a definite containing block. For nested wrapper chains like:
         // `Semantics -> FocusScope -> ... -> Fill`, we must promote the entire chain so the leaf
         // can resolve its `Fill` size (and so the wrappers don't collapse to 0).
-        let (first_non_auto_width, first_non_auto_height) =
-            cache.wrapper_chain_first_non_auto_for_node(app, tree, window, child, 0);
-        let descendant_requests_fill_width =
-            matches!(wrapper_style.size.width, crate::element::Length::Auto)
-                && first_non_auto_width == LengthKind::Fill;
-        let descendant_requests_fill_height =
-            matches!(wrapper_style.size.height, crate::element::Length::Auto)
-                && first_non_auto_height == LengthKind::Fill;
+        let mut descendant_requests_fill_width = false;
+        let mut descendant_requests_fill_height = false;
+        let mut scan_width = matches!(wrapper_style.size.width, crate::element::Length::Auto);
+        let mut scan_height = matches!(wrapper_style.size.height, crate::element::Length::Auto);
+        let mut probe = child;
+        for _ in 0..32 {
+            let probe_style = layout_style_for_node(app, window, probe);
+
+            if scan_width {
+                match probe_style.size.width {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_width = true;
+                        scan_width = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_width = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+            if scan_height {
+                match probe_style.size.height {
+                    crate::element::Length::Fill => {
+                        descendant_requests_fill_height = true;
+                        scan_height = false;
+                    }
+                    crate::element::Length::Px(_) => {
+                        scan_height = false;
+                    }
+                    crate::element::Length::Auto => {}
+                }
+            }
+
+            if !scan_width && !scan_height {
+                break;
+            }
+
+            let Some((next, _)) = passthrough_wrapper_child(app, tree, window, probe) else {
+                break;
+            };
+            probe = next;
+        }
 
         let needs_definite_width = descendant_requests_fill_width
             || matches!(wrapper_style.size.width, crate::element::Length::Fill)
@@ -289,17 +265,7 @@ fn build_flow_subtree_impl<H: UiHost>(
         engine.set_style(node, style);
         engine.set_children(node, &[child]);
         engine.set_measured(node, false);
-        build_flow_subtree_impl(
-            engine,
-            app,
-            tree,
-            window,
-            sf,
-            child_parent_kind,
-            child,
-            None,
-            cache,
-        );
+        build_flow_subtree(engine, app, tree, window, sf, child_parent_kind, child);
         return;
     }
 
@@ -392,7 +358,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, children);
             engine.set_measured(node, false);
             for &child in children {
-                build_flow_subtree_impl(
+                build_flow_subtree(
                     engine,
                     app,
                     tree,
@@ -402,8 +368,6 @@ fn build_flow_subtree_impl<H: UiHost>(
                         direction: props.direction,
                     },
                     child,
-                    None,
-                    cache,
                 );
             }
         }
@@ -445,7 +409,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, children);
             engine.set_measured(node, false);
             for &child in children {
-                build_flow_subtree_impl(
+                build_flow_subtree(
                     engine,
                     app,
                     tree,
@@ -455,8 +419,6 @@ fn build_flow_subtree_impl<H: UiHost>(
                         direction: props.direction,
                     },
                     child,
-                    None,
-                    cache,
                 );
             }
         }
@@ -498,7 +460,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, children);
             engine.set_measured(node, false);
             for &child in children {
-                build_flow_subtree_impl(
+                build_flow_subtree(
                     engine,
                     app,
                     tree,
@@ -508,8 +470,6 @@ fn build_flow_subtree_impl<H: UiHost>(
                         direction: props.direction,
                     },
                     child,
-                    None,
-                    cache,
                 );
             }
         }
@@ -546,17 +506,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, children);
             engine.set_measured(node, false);
             for &child in children {
-                build_flow_subtree_impl(
-                    engine,
-                    app,
-                    tree,
-                    window,
-                    sf,
-                    ParentLayoutKind::Grid,
-                    child,
-                    None,
-                    cache,
-                );
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Grid, child);
             }
         }
         Some(
@@ -650,7 +600,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             engine.set_children(node, children);
             engine.set_measured(node, false);
             for &child in children {
-                build_flow_subtree_impl(
+                build_flow_subtree(
                     engine,
                     app,
                     tree,
@@ -658,8 +608,6 @@ fn build_flow_subtree_impl<H: UiHost>(
                     sf,
                     ParentLayoutKind::Overlay,
                     child,
-                    None,
-                    cache,
                 );
             }
         }
@@ -703,17 +651,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             // mounted subtree across frames (GPUI-aligned request/build phase).
             let children = tree.children_ref(node);
             for &child in children {
-                build_flow_subtree_impl(
-                    engine,
-                    app,
-                    tree,
-                    window,
-                    sf,
-                    ParentLayoutKind::Root,
-                    child,
-                    None,
-                    cache,
-                );
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
             }
         }
         Some(ElementInstance::VirtualList(_) | ElementInstance::ResizablePanelGroup(_)) => {
@@ -735,17 +673,7 @@ fn build_flow_subtree_impl<H: UiHost>(
             // mounted subtree across frames (GPUI-aligned request/build phase).
             let children = tree.children_ref(node);
             for &child in children {
-                build_flow_subtree_impl(
-                    engine,
-                    app,
-                    tree,
-                    window,
-                    sf,
-                    ParentLayoutKind::Root,
-                    child,
-                    None,
-                    cache,
-                );
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
             }
         }
         _ => {
