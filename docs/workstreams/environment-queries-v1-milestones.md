@@ -30,6 +30,11 @@ Definition of done:
   fields from it) during declarative rendering.
 - Observations participate in dependency tracking and invalidation.
 
+Notes:
+
+- This milestone is about the **mechanism seam** and does not require every runner to supply every
+  field. Runners may supply best-effort values and leave optional fields unset until supported.
+
 Evidence:
 
 - Unit tests in `crates/fret-ui` cover:
@@ -75,6 +80,11 @@ Definition of done:
   open hover-only UI).
 - Mobile-shell overlays (Drawer / Sheet) respect safe-area + occlusion insets by default.
 - At least one migration is gated by an automated test or `fretboard diag` script.
+
+“Done means done” checklist:
+
+- A sweep exists for shadcn recipes that still hard-code viewport breakpoints (e.g. `>=768px`), and
+  the remaining occurrences are tracked and burned down.
 
 Recommended first target:
 

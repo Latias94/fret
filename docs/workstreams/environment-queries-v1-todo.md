@@ -35,6 +35,14 @@ ADR anchor:
   - [x] occlusion insets revision + invalidation,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
 
+## Runner plumbing (best-effort field sources)
+
+- [x] Web/wasm runner commits safe-area insets (CSS `env(safe-area-inset-*)`) and viewport occlusion
+  insets (`window.visualViewport`) into the per-window environment snapshot seam.
+  - Evidence: `crates/fret-launch/src/runner/web/render_loop.rs`
+  - Evidence: `crates/fret-ui/src/elements/cx.rs` (commits insets from `WindowMetricsService`)
+  - Evidence: `crates/fret-core/src/window.rs` (`WindowMetricsService` stores optional insets)
+
 ## Policy helpers (`ecosystem/fret-ui-kit`)
 
 - [x] Add environment query helper surface:

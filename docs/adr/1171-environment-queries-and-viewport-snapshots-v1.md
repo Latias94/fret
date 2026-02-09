@@ -116,11 +116,13 @@ The current implementation provides a small set of typed environment query keys 
   - Best-effort: `PointerType::Unknown` is returned until a pointer event is observed for the
     window (native and wasm).
 - `safe_area_insets_logical: Option<Edges>` (key: `SafeAreaInsets`)
-  - Best-effort: currently `None` unless a runner (future mobile) commits safe-area insets for the
-    window.
+  - Best-effort: on web/wasm, the runner commits safe-area insets derived from CSS
+    `env(safe-area-inset-*)` (when supported). On native desktop, this is currently `None` unless a
+    runner commits safe-area insets for the window (future mobile targets).
 - `occlusion_insets_logical: Option<Edges>` (key: `OcclusionInsets`)
-  - Best-effort: currently `None` unless a runner (future mobile) commits viewport occlusion
-    insets (e.g. virtual keyboard) for the window.
+  - Best-effort: on web/wasm, the runner commits viewport occlusion insets derived from
+    `window.visualViewport` (e.g. virtual keyboard / browser UI changes). On native desktop, this is
+    currently `None` unless a runner commits viewport occlusion insets (future mobile targets).
 
 Policy remains in ecosystem crates. `ecosystem/fret-ui-kit` exposes small helpers that derive
 `primary_pointer_can_hover` and `primary_pointer_is_coarse` from `primary_pointer_type` so recipes
