@@ -8,6 +8,7 @@ Recent changes (2026-02-09):
 - Diagnostics: add toggle-stability gates for Markdown editor fold/inlay fixtures to ensure UI decoration toggles cannot mutate the buffer revision/length or move the caret (ADR 0200).
 - Diagnostics: add a folds clamp-selection regression gate for the Markdown source editor fixture (caret inside a folded span clamps to the fold start once the placeholder is visible; buffer revision/length remain unchanged) (ADR 0200).
 - UI Gallery: expose the fold fixture span in `app_snapshot` and add a deterministic “Caret: in fold” fixture control for diag scripts.
+- Diagnostics (web): allow `fretboard diag run` to drive UI diagnostics over DevTools WebSocket for wasm runners, and add a minimal IME bridge attach gate + baseline script (ADR 0195).
 
 Recent changes (2026-02-08):
 
