@@ -2604,10 +2604,10 @@ impl CommandDialog {
                                 *slot = Some(CommandDialogOpenChangeReason::ItemPress);
                             }
                             let _ = host.models_mut().update(&open_model, |v| *v = false);
-                        let _ = host.models_mut().update(&query_model, |v| v.clear());
-                        host.request_redraw(action_cx.window);
-                    }
-                });
+                            let _ = host.models_mut().update(&query_model, |v| v.clear());
+                            host.request_redraw(action_cx.window);
+                        }
+                    });
 
                     entries
                         .into_iter()
