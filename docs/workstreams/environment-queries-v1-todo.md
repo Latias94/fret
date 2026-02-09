@@ -31,6 +31,7 @@ ADR anchor:
   - [x] invalidation on viewport bounds change,
   - [x] view-cache key participation via deps fingerprint,
   - [x] revision tracking for pointer capability keys,
+  - [x] safe-area insets revision + invalidation,
   - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
 
 ## Policy helpers (`ecosystem/fret-ui-kit`)
@@ -38,7 +39,8 @@ ADR anchor:
 - [x] Add environment query helper surface:
   - [x] viewport breakpoint tokens (Tailwind-aligned labels, optional),
   - [x] pointer capability gates (hover vs touch-first),
-  - [ ] reduced-motion preference helpers (if available).
+  - [x] reduced-motion preference helpers (if available),
+  - [x] safe-area insets helpers (future mobile).
 - [x] Add unit tests for hysteresis / non-oscillation where applicable.
 
 ## Ecosystem adoption (initial targets)

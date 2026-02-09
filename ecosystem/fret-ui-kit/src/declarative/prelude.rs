@@ -10,6 +10,8 @@ pub use super::model_watch::ModelWatchExt;
 pub use super::pointer_queries::{
     primary_pointer_can_hover, primary_pointer_is_coarse, primary_pointer_type,
 };
+pub use super::reduced_motion_queries::prefers_reduced_motion;
+pub use super::safe_area_queries::{safe_area_insets, safe_area_insets_or_zero};
 pub use super::semantics::AnyElementSemanticsExt;
 pub use super::theme_access::ElementContextThemeExt;
 pub use super::viewport_queries::tailwind as viewport_tailwind;

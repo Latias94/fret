@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use smallvec::SmallVec;
 
-use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, PointerType, Px, Rect};
+use fret_core::{AppWindowId, Edges, EffectChain, EffectMode, NodeId, PointerType, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
@@ -558,6 +558,11 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     ) -> Option<bool> {
         self.observe_environment_query(EnvironmentQueryKey::PrefersReducedMotion, invalidation);
         self.window_state.committed_prefers_reduced_motion()
+    }
+
+    pub fn environment_safe_area_insets(&mut self, invalidation: Invalidation) -> Option<Edges> {
+        self.observe_environment_query(EnvironmentQueryKey::SafeAreaInsets, invalidation);
+        self.window_state.committed_safe_area_insets()
     }
 
     pub fn environment_primary_pointer_type(&mut self, invalidation: Invalidation) -> PointerType {
