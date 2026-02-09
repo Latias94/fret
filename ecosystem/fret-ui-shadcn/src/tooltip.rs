@@ -161,7 +161,9 @@ fn tooltip_open_change_reason_from_dismiss_reason(
 ) -> TooltipOpenChangeReason {
     match reason {
         fret_ui::action::DismissReason::Escape => TooltipOpenChangeReason::EscapeKey,
-        fret_ui::action::DismissReason::OutsidePress { .. } => TooltipOpenChangeReason::OutsidePress,
+        fret_ui::action::DismissReason::OutsidePress { .. } => {
+            TooltipOpenChangeReason::OutsidePress
+        }
         fret_ui::action::DismissReason::FocusOutside => TooltipOpenChangeReason::FocusOutside,
         fret_ui::action::DismissReason::Scroll => TooltipOpenChangeReason::Scroll,
     }
@@ -889,9 +891,9 @@ impl Tooltip {
                     move |host, acx, down| {
                         if down.pointer_type != PointerType::Touch {
                             let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                            let _ = host
-                                .models_mut()
-                                .update(&close_reason, |v| *v = Some(TooltipOpenChangeReason::TriggerPress));
+                            let _ = host.models_mut().update(&close_reason, |v| {
+                                *v = Some(TooltipOpenChangeReason::TriggerPress)
+                            });
                         }
                         let _ = host
                             .models_mut()
@@ -920,9 +922,9 @@ impl Tooltip {
                     let suppress_focus_open = event_models.suppress_focus_open.clone();
                     move |host, acx, _reason| {
                         let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host
-                            .models_mut()
-                            .update(&close_reason, |v| *v = Some(TooltipOpenChangeReason::TriggerPress));
+                        let _ = host.models_mut().update(&close_reason, |v| {
+                            *v = Some(TooltipOpenChangeReason::TriggerPress)
+                        });
                         let _ = host
                             .models_mut()
                             .update(&suppress_focus_open, |v| *v = true);
@@ -942,9 +944,9 @@ impl Tooltip {
                             return false;
                         }
                         let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host
-                            .models_mut()
-                            .update(&close_reason, |v| *v = Some(TooltipOpenChangeReason::EscapeKey));
+                        let _ = host.models_mut().update(&close_reason, |v| {
+                            *v = Some(TooltipOpenChangeReason::EscapeKey)
+                        });
                         let _ = host
                             .models_mut()
                             .update(&suppress_focus_open, |v| *v = true);
@@ -1018,8 +1020,7 @@ impl Tooltip {
             if let (Some(open), Some(handler)) = (open_change, on_open_change.as_ref()) {
                 handler(open);
             }
-            if let (Some(open), Some(handler)) =
-                (open_change, on_open_change_with_reason.as_ref())
+            if let (Some(open), Some(handler)) = (open_change, on_open_change_with_reason.as_ref())
             {
                 let reason = tooltip_open_change_reason_for_transition(
                     open,
@@ -1203,7 +1204,9 @@ impl Tooltip {
                 move |host, acx, _reason| {
                     let reason = tooltip_open_change_reason_from_dismiss_reason(_reason.reason);
                     let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                    let _ = host.models_mut().update(&close_reason, |v| *v = Some(reason));
+                    let _ = host
+                        .models_mut()
+                        .update(&close_reason, |v| *v = Some(reason));
                     host.request_redraw(acx.window);
                 }
             }));

@@ -1756,8 +1756,8 @@ mod tests {
         let mut app = App::new();
         let model = app.models_mut().insert(None::<Arc<str>>);
 
-        let tabs = Tabs::new(model)
-            .on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
+        let tabs =
+            Tabs::new(model).on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
         assert!(tabs.on_value_change_with_source.is_some());
     }
 
@@ -1766,8 +1766,8 @@ mod tests {
         let mut app = App::new();
         let model = app.models_mut().insert(None::<Arc<str>>);
 
-        let tabs = TabsRoot::new(model)
-            .on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
+        let tabs =
+            TabsRoot::new(model).on_value_change_with_source(Some(Arc::new(|_value, _source| {})));
         assert!(tabs.on_value_change_with_source.is_some());
     }
 
