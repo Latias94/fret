@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_core::{
     AppWindowId, Corners, Edges, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
     PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-    TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle, Transform2D, UvRect,
+    TextConstraints, TextMetrics, TextService, Transform2D, UvRect,
 };
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;

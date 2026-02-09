@@ -128,7 +128,6 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::ResizablePanelGroup(props) => Some(props.layout.flex.grow),
         ElementKind::ViewportSurface(props) => Some(props.layout.flex.grow),
         ElementKind::ViewCache(props) => Some(props.layout.flex.grow),
-        _ => None,
     }
 }
 
