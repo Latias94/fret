@@ -129,7 +129,6 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
     );
 }
 
-
 #[test]
 fn roving_flex_treats_descendant_focus_as_active_item() {
     let mut app = TestHost::new();
@@ -232,7 +231,6 @@ fn roving_flex_treats_descendant_focus_as_active_item() {
     );
 }
 
-
 #[test]
 fn roving_flex_typeahead_hook_can_choose_target_index() {
     let mut app = TestHost::new();
@@ -303,4 +301,3 @@ fn roving_flex_typeahead_hook_can_choose_target_index() {
 
     assert_eq!(ui.focus(), Some(c));
 }
-

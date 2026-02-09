@@ -102,7 +102,6 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
     );
 }
 
-
 #[test]
 fn dismissible_on_dismiss_request_hook_runs_on_escape() {
     let mut app = TestHost::new();
@@ -163,7 +162,6 @@ fn dismissible_on_dismiss_request_hook_runs_on_escape() {
 
     assert_eq!(app.models().get_copied(&dismissed), Some(true));
 }
-
 
 #[test]
 fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
@@ -232,4 +230,3 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
 
     assert_eq!(app.models().get_copied(&dismissed), Some(true));
 }
-

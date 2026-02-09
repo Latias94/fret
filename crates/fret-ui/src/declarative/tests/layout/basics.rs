@@ -85,7 +85,6 @@ fn fill_only_resolves_under_definite_available_space_in_measurement() {
     );
 }
 
-
 #[test]
 fn row_justify_center_and_align_end_positions_children() {
     let mut app = TestHost::new();
@@ -140,7 +139,6 @@ fn row_justify_center_and_align_end_positions_children() {
     assert!((b1.origin.y.0 - 10.0).abs() < 0.01, "y1={:?}", b1.origin.y);
     assert!((b2.origin.y.0 - 10.0).abs() < 0.01, "y2={:?}", b2.origin.y);
 }
-
 
 #[test]
 fn flex_wrap_positions_children_on_multiple_rows() {
@@ -202,7 +200,6 @@ fn flex_wrap_positions_children_on_multiple_rows() {
     assert!((b3.origin.y.0 - 10.0).abs() < 0.01, "y3={:?}", b3.origin.y);
     assert!((b4.origin.y.0 - 20.0).abs() < 0.01, "y4={:?}", b4.origin.y);
 }
-
 
 #[test]
 fn layout_viewport_root_defers_child_layout_until_after_parent() {
@@ -273,7 +270,6 @@ fn layout_viewport_root_defers_child_layout_until_after_parent() {
     assert!((child_bounds.size.width.0 - viewport.size.width.0).abs() < 0.01);
 }
 
-
 #[test]
 fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -339,7 +335,6 @@ fn opacity_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.width.0.abs() < 0.01);
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
-
 
 #[test]
 fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
@@ -409,7 +404,6 @@ fn visual_transform_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.width.0.abs() < 0.01);
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
-
 
 #[test]
 fn wrapper_chain_padding_is_applied_via_engine_rects() {
@@ -506,7 +500,6 @@ fn wrapper_chain_padding_is_applied_via_engine_rects() {
     assert!((outer_bounds.size.height.0 - (10.0 + 6.0 + 2.0)).abs() < 0.01);
 }
 
-
 #[test]
 fn image_paints_image_op() {
     let mut app = TestHost::new();
@@ -549,7 +542,6 @@ fn image_paints_image_op() {
         "expected an Image op for the declarative image element"
     );
 }
-
 
 #[test]
 fn overflow_clip_pushes_clip_rect_for_children() {
@@ -604,7 +596,6 @@ fn overflow_clip_pushes_clip_rect_for_children() {
     );
 }
 
-
 #[test]
 fn overflow_clip_with_corner_radii_pushes_rounded_clip_rect() {
     let mut app = TestHost::new();
@@ -647,7 +638,6 @@ fn overflow_clip_with_corner_radii_pushes_rounded_clip_rect() {
     );
 }
 
-
 #[test]
 fn overflow_visible_does_not_push_clip_rect() {
     let mut app = TestHost::new();
@@ -684,7 +674,6 @@ fn overflow_visible_does_not_push_clip_rect() {
         "expected no clip ops by default"
     );
 }
-
 
 #[test]
 fn fill_respects_max_width_constraint() {
@@ -733,7 +722,6 @@ fn fill_respects_max_width_constraint() {
         .expect("container bounds");
     assert_eq!(rect.size.width, Px(100.0));
 }
-
 
 #[test]
 fn flex_child_margin_affects_layout() {
@@ -796,7 +784,6 @@ fn flex_child_margin_affects_layout() {
     assert_eq!(b_bounds.origin.x, Px(15.0));
 }
 
-
 #[test]
 fn flex_child_auto_margins_center_child() {
     let mut app = TestHost::new();
@@ -854,7 +841,6 @@ fn flex_child_auto_margins_center_child() {
     assert_eq!(a_bounds.origin.x, Px(45.0));
 }
 
-
 #[test]
 fn flex_child_negative_margin_shifts_layout() {
     let mut app = TestHost::new();
@@ -910,7 +896,6 @@ fn flex_child_negative_margin_shifts_layout() {
     assert_eq!(a_bounds.origin.x, Px(0.0));
     assert_eq!(b_bounds.origin.x, Px(5.0));
 }
-
 
 #[test]
 fn grid_places_children_in_columns() {
@@ -974,7 +959,6 @@ fn grid_places_children_in_columns() {
     assert_eq!(b_bounds.size.width, Px(100.0));
 }
 
-
 #[test]
 fn flex_defaults_to_fit_content_under_constraints() {
     let mut app = TestHost::new();
@@ -1025,4 +1009,3 @@ fn flex_defaults_to_fit_content_under_constraints() {
         flex_bounds.size.height
     );
 }
-

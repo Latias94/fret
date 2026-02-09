@@ -48,7 +48,6 @@ fn scroll_intrinsic_viewport_mode_does_not_measure_children() {
     );
 }
 
-
 #[test]
 fn scroll_intrinsic_content_mode_measures_children() {
     use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
@@ -95,7 +94,6 @@ fn scroll_intrinsic_content_mode_measures_children() {
         "expected content-mode scroll intrinsic measurement to measure children"
     );
 }
-
 
 #[test]
 fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
@@ -171,7 +169,6 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
         after.origin.y
     );
 }
-
 
 #[test]
 fn scroll_translation_does_not_force_layout_engine_solves() {
@@ -263,7 +260,6 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
     );
 }
 
-
 #[test]
 fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
     let mut app = TestHost::new();
@@ -324,7 +320,6 @@ fn scroll_axis_both_probe_unbounded_keeps_content_at_least_viewport_width() {
         column_bounds.size.width, bounds.size.width
     );
 }
-
 
 #[test]
 fn scroll_thumb_drag_updates_offset() {
@@ -511,7 +506,6 @@ fn scroll_thumb_drag_updates_offset() {
     );
 }
 
-
 #[test]
 fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
     let mut app = TestHost::new();
@@ -625,7 +619,6 @@ fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
         after.origin.y
     );
 }
-
 
 #[test]
 fn scroll_thumb_drag_updates_offset_horizontal() {
@@ -795,7 +788,6 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
     );
 }
 
-
 #[test]
 fn scroll_rounds_scrollable_extent_up_to_next_pixel() {
     let mut app = TestHost::new();
@@ -859,4 +851,3 @@ fn scroll_rounds_scrollable_extent_up_to_next_pixel() {
         handle.offset().y
     );
 }
-

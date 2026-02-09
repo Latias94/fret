@@ -77,7 +77,6 @@ fn text_input_cut_updates_model_and_availability() {
     );
 }
 
-
 #[test]
 fn text_input_paste_requests_clipboard_text_when_editable() {
     let mut app = TestHost::new();
@@ -125,7 +124,6 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
         "expected text.paste to request ClipboardGetText"
     );
 }
-
 
 #[test]
 fn text_input_key_hooks_can_intercept_navigation_keys() {
@@ -192,7 +190,6 @@ fn text_input_key_hooks_can_intercept_navigation_keys() {
         "expected key hook to run for focused text input"
     );
 }
-
 
 #[test]
 fn text_input_middle_click_pastes_primary_selection_when_enabled() {
@@ -276,7 +273,6 @@ fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     );
 }
 
-
 #[test]
 fn text_input_select_all_is_blocked_when_empty() {
     let mut app = TestHost::new();
@@ -340,7 +336,6 @@ fn text_input_select_all_is_blocked_when_empty() {
     );
 }
 
-
 #[test]
 fn text_input_supports_edit_select_all_and_copy() {
     let mut app = TestHost::new();
@@ -395,7 +390,6 @@ fn text_input_supports_edit_select_all_and_copy() {
         "expected edit.copy to emit ClipboardSetText for the selected text"
     );
 }
-
 
 #[test]
 fn text_input_double_click_respects_window_text_boundary_mode_under_render_transform() {
@@ -507,7 +501,6 @@ fn text_input_double_click_respects_window_text_boundary_mode_under_render_trans
         "Identifier should stop at the apostrophe"
     );
 }
-
 
 #[test]
 fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
@@ -663,7 +656,6 @@ fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offse
     );
 }
 
-
 #[test]
 fn text_input_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
     fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
@@ -792,7 +784,6 @@ fn text_input_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
     );
 }
 
-
 #[test]
 fn text_input_ctrl_backspace_delete_word_respects_window_text_boundary_mode() {
     fn text_after_key(
@@ -901,7 +892,6 @@ fn text_input_ctrl_backspace_delete_word_respects_window_text_boundary_mode() {
         "Identifier should delete only the first identifier segment on Ctrl+Delete"
     );
 }
-
 
 #[test]
 fn text_input_double_click_cancels_ime_preedit() {
@@ -1013,7 +1003,6 @@ fn text_input_double_click_cancels_ime_preedit() {
     assert_eq!(snapshot.text_len_utf16, base_len_utf16);
 }
 
-
 #[test]
 fn text_input_triple_click_selects_logical_line_under_render_transform() {
     let mut app = TestHost::new();
@@ -1111,7 +1100,6 @@ fn text_input_triple_click_selects_logical_line_under_render_transform() {
         "triple click should select the logical line"
     );
 }
-
 
 #[test]
 fn text_input_triple_click_selects_logical_line_under_scroll_offset() {
@@ -1257,7 +1245,6 @@ fn text_input_triple_click_selects_logical_line_under_scroll_offset() {
     );
 }
 
-
 #[test]
 fn text_input_triple_click_cancels_ime_preedit() {
     let mut app = TestHost::new();
@@ -1369,7 +1356,6 @@ fn text_input_triple_click_cancels_ime_preedit() {
     assert_eq!(snapshot.selection_utf16, Some((0, base_len_utf16)));
 }
 
-
 #[test]
 fn text_input_semantics_controls_element_is_exposed() {
     use std::cell::Cell;
@@ -1437,4 +1423,3 @@ fn text_input_semantics_controls_element_is_exposed() {
         "expected combobox to control the listbox"
     );
 }
-

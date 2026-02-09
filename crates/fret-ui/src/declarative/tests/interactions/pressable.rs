@@ -85,7 +85,6 @@ fn pressable_state_reports_focused_when_focused() {
     assert!(focused.get());
 }
 
-
 #[test]
 fn pressable_on_activate_hook_runs_on_pointer_activation() {
     let mut app = TestHost::new();
@@ -162,7 +161,6 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
 
     assert_eq!(app.models().get_copied(&activated), Some(true));
 }
-
 
 #[test]
 fn pressable_clears_pressed_and_releases_capture_on_move_without_buttons() {
@@ -258,7 +256,6 @@ fn pressable_clears_pressed_and_releases_capture_on_move_without_buttons() {
     ));
 }
 
-
 #[test]
 fn pressable_clears_pressed_state_on_pointer_cancel() {
     use std::cell::Cell;
@@ -352,7 +349,6 @@ fn pressable_clears_pressed_state_on_pointer_cancel() {
     ));
 }
 
-
 #[test]
 fn pressable_clears_pressed_state_when_element_is_removed() {
     use std::cell::Cell;
@@ -440,7 +436,6 @@ fn pressable_clears_pressed_state_when_element_is_removed() {
     );
 }
 
-
 #[test]
 fn pressable_on_hover_change_hook_runs_on_pointer_move() {
     let mut app = TestHost::new();
@@ -516,7 +511,6 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
 
     assert_eq!(app.models().get_copied(&hovered), Some(false));
 }
-
 
 #[test]
 fn pressable_on_hover_change_hook_runs_after_wheel_scroll_without_pointer_move() {
@@ -629,7 +623,6 @@ fn pressable_on_hover_change_hook_runs_after_wheel_scroll_without_pointer_move()
     assert_eq!(app.models().get_copied(&hovered), Some(Some(1)));
 }
 
-
 #[test]
 fn pressable_hover_state_ignores_touch_pointer_moves() {
     let mut app = TestHost::new();
@@ -715,7 +708,6 @@ fn pressable_hover_state_ignores_touch_pointer_moves() {
     assert_eq!(app.models().get_copied(&hovered), Some(false));
 }
 
-
 #[test]
 fn pressable_on_activate_hook_runs_on_keyboard_activation() {
     let mut app = TestHost::new();
@@ -779,7 +771,6 @@ fn pressable_on_activate_hook_runs_on_keyboard_activation() {
     assert_eq!(app.models().get_copied(&activated), Some(true));
 }
 
-
 #[test]
 fn pressable_semantics_checked_is_exposed() {
     let mut app = TestHost::new();
@@ -830,4 +821,3 @@ fn pressable_semantics_checked_is_exposed() {
     assert_eq!(node.flags.checked, Some(true));
     assert!(node.actions.invoke, "expected checkbox to be invokable");
 }
-

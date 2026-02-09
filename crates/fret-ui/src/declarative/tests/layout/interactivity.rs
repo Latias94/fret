@@ -84,7 +84,6 @@ fn hover_region_reports_hovered_even_when_child_is_pressable() {
     assert_eq!(ui.children(hover_region_node).len(), 2);
 }
 
-
 #[test]
 fn pressable_keyboard_activation_dispatches_click_command() {
     let mut app = TestHost::new();
@@ -153,7 +152,6 @@ fn pressable_keyboard_activation_dispatches_click_command() {
         "expected click command effect"
     );
 }
-
 
 #[test]
 fn attach_semantics_is_layout_transparent_for_flex_items() {
@@ -249,7 +247,6 @@ fn attach_semantics_is_layout_transparent_for_flex_items() {
     );
 }
 
-
 #[test]
 fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -315,7 +312,6 @@ fn pressable_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.width.0.abs() < 0.01);
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
-
 
 #[test]
 fn hover_region_precomputes_flow_islands_for_multiple_children() {
@@ -396,7 +392,6 @@ fn hover_region_precomputes_flow_islands_for_multiple_children() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn pressable_wraps_multiple_children_in_engine_tree() {
     let mut app = TestHost::new();
@@ -458,7 +453,6 @@ fn pressable_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn pressable_disabled_is_not_focusable() {
     let mut app = TestHost::new();
@@ -494,7 +488,6 @@ fn pressable_disabled_is_not_focusable() {
 
     assert_eq!(ui.first_focusable_descendant(root), None);
 }
-
 
 #[test]
 fn focus_ring_is_focus_visible_only() {
@@ -625,7 +618,6 @@ fn focus_ring_is_focus_visible_only() {
     );
 }
 
-
 #[test]
 fn declarative_elements_can_observe_models_for_invalidation() {
     let mut app = TestHost::new();
@@ -685,7 +677,6 @@ fn declarative_elements_can_observe_models_for_invalidation() {
     let performed2 = ui.debug_stats().layout_nodes_performed;
     assert!(performed2 > 0, "expected model change to trigger relayout");
 }
-
 
 #[test]
 fn model_observation_persists_after_frame_advance_without_render_root() {
@@ -747,7 +738,6 @@ fn model_observation_persists_after_frame_advance_without_render_root() {
         "expected invalidation based on the last recorded observation set"
     );
 }
-
 
 #[test]
 fn pressable_dispatches_click_command_when_released_over_self() {
@@ -849,4 +839,3 @@ fn pressable_dispatches_click_command_when_released_over_self() {
         }),
     );
 }
-

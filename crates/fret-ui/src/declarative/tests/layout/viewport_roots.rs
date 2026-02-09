@@ -74,7 +74,6 @@ fn viewport_rects_do_not_couple_fill_semantics_across_subtrees() {
     assert!((b_b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
 }
 
-
 #[test]
 fn viewport_root_registration_is_recorded_in_layout_all() {
     let mut app = TestHost::new();
@@ -124,7 +123,6 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
     assert!(ui.viewport_roots().contains(&(root_b, viewport_b)));
 }
 
-
 #[test]
 fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() {
     let mut app = TestHost::new();
@@ -168,7 +166,6 @@ fn resizable_panel_group_does_not_register_viewport_roots_during_probe_layout() 
         "expected probe layout to avoid registering viewport roots"
     );
 }
-
 
 #[test]
 fn viewport_root_flush_only_lays_out_invalidated_roots() {
@@ -235,7 +232,6 @@ fn viewport_root_flush_only_lays_out_invalidated_roots() {
     );
 }
 
-
 #[test]
 fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
     let mut app = TestHost::new();
@@ -301,7 +297,6 @@ fn viewport_root_request_build_keeps_engine_nodes_alive_when_skipped() {
     );
 }
 
-
 #[test]
 fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     let mut app = TestHost::new();
@@ -349,7 +344,6 @@ fn resizable_panel_group_viewport_roots_match_panel_bounds() {
     assert!(ui.viewport_roots().contains(&(panel_a, bounds_a)));
     assert!(ui.viewport_roots().contains(&(panel_b, bounds_b)));
 }
-
 
 #[test]
 fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_root() {
@@ -437,7 +431,6 @@ fn viewport_root_registration_is_flushed_when_registered_from_another_viewport_r
     assert!(ui.viewport_roots().contains(&(outer, outer_viewport)));
     assert!(ui.viewport_roots().contains(&(inner, inner_viewport)));
 }
-
 
 #[test]
 fn viewport_root_layout_is_applied_before_overlay_root_layout() {
@@ -538,7 +531,6 @@ fn viewport_root_layout_is_applied_before_overlay_root_layout() {
     );
 }
 
-
 #[test]
 fn viewport_roots_do_not_couple_fill_layout() {
     let mut app = TestHost::new();
@@ -632,7 +624,6 @@ fn viewport_roots_do_not_couple_fill_layout() {
     assert!((b.size.height.0 - viewport_b.size.height.0).abs() < 0.01);
 }
 
-
 #[test]
 fn viewport_root_nested_flow_is_solved_once() {
     struct BaseRegistersViewportRoot {
@@ -722,7 +713,6 @@ fn viewport_root_nested_flow_is_solved_once() {
     );
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
@@ -843,7 +833,6 @@ fn viewport_root_hover_region_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -940,7 +929,6 @@ fn viewport_root_pointer_region_wraps_flow_in_engine_tree() {
     assert!(engine.layout_id_for_node(text).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_pointer_region_wraps_multiple_children_in_engine_tree() {
@@ -1058,7 +1046,6 @@ fn viewport_root_pointer_region_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_pointer_region_absolute_child_fills_region() {
     struct BaseRegistersViewportRoot {
@@ -1150,7 +1137,6 @@ fn viewport_root_pointer_region_absolute_child_fills_region() {
     assert_eq!(barrier_bounds, viewport);
 }
 
-
 #[test]
 fn viewport_root_pressable_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -1233,7 +1219,6 @@ fn viewport_root_pressable_wraps_multiple_children_in_engine_tree() {
     assert!(engine.layout_id_for_node(b).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_semantics_wraps_multiple_children_in_engine_tree() {
@@ -1318,7 +1303,6 @@ fn viewport_root_semantics_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -1402,7 +1386,6 @@ fn viewport_root_focus_scope_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -1481,7 +1464,6 @@ fn viewport_root_opacity_wraps_multiple_children_in_engine_tree() {
     assert!(engine.layout_id_for_node(b).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
@@ -1564,7 +1546,6 @@ fn viewport_root_visual_transform_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -1643,7 +1624,6 @@ fn viewport_root_interactivity_gate_wraps_multiple_children_in_engine_tree() {
     assert!(engine.layout_id_for_node(b).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_container_wraps_multiple_children_in_engine_tree() {
@@ -1728,7 +1708,6 @@ fn viewport_root_container_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_stack_wraps_multiple_children_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -1811,7 +1790,6 @@ fn viewport_root_stack_wraps_multiple_children_in_engine_tree() {
     assert!(engine.layout_id_for_node(b).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_render_transform_passthrough_fill_does_not_collapse() {
@@ -1896,7 +1874,6 @@ fn viewport_root_render_transform_passthrough_fill_does_not_collapse() {
     assert_eq!(region_bounds.origin, viewport.origin);
     assert_eq!(region_bounds.size, viewport.size);
 }
-
 
 #[test]
 fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
@@ -1995,7 +1972,6 @@ fn viewport_root_wheel_region_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill() {
     struct BaseRegistersViewportRoot {
@@ -2093,7 +2069,6 @@ fn viewport_root_auto_wrapper_promotes_fill_when_flow_child_requests_fill() {
     assert!(engine.layout_id_for_node(wrapper).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_wheel_region_wraps_multiple_children_in_engine_tree() {
@@ -2211,7 +2186,6 @@ fn viewport_root_wheel_region_wraps_multiple_children_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn viewport_root_wheel_region_absolute_child_fills_region() {
     struct BaseRegistersViewportRoot {
@@ -2303,7 +2277,6 @@ fn viewport_root_wheel_region_absolute_child_fills_region() {
     assert_eq!(barrier_bounds, viewport);
 }
 
-
 #[test]
 fn viewport_root_roving_flex_is_in_engine_tree() {
     struct BaseRegistersViewportRoot {
@@ -2386,7 +2359,6 @@ fn viewport_root_roving_flex_is_in_engine_tree() {
     assert!(engine.layout_id_for_node(text).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn viewport_root_anchored_wraps_flow_in_engine_tree() {
@@ -2491,7 +2463,6 @@ fn viewport_root_anchored_wraps_flow_in_engine_tree() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     let window = AppWindowId::default();
@@ -2572,7 +2543,6 @@ fn overlay_root_dismissible_layer_precomputes_child_flow_islands() {
     assert!(engine.layout_id_for_node(text).is_some());
     ui.put_layout_engine(engine);
 }
-
 
 #[test]
 fn overlay_root_scroll_precomputes_child_flow_islands() {
@@ -2659,7 +2629,6 @@ fn overlay_root_scroll_precomputes_child_flow_islands() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn fixed_split_registers_viewport_roots_to_avoid_widget_fallback_solves() {
     let mut app = TestHost::new();
@@ -2734,4 +2703,3 @@ fn fixed_split_registers_viewport_roots_to_avoid_widget_fallback_solves() {
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     assert_eq!(ui.debug_stats().layout_engine_widget_fallback_solves, 0);
 }
-

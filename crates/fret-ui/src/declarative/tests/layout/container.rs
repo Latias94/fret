@@ -66,7 +66,6 @@ fn container_does_not_stretch_spacer_child_in_engine_tree() {
     assert!(spacer_bounds.size.height.0.abs() < 0.01);
 }
 
-
 #[test]
 fn container_absolute_inset_positions_child() {
     let mut app = TestHost::new();
@@ -127,7 +126,6 @@ fn container_absolute_inset_positions_child() {
     assert_eq!(badge_bounds.origin.y, Px(0.0));
 }
 
-
 #[test]
 fn container_absolute_negative_inset_offsets_outside_parent() {
     let mut app = TestHost::new();
@@ -181,7 +179,6 @@ fn container_absolute_negative_inset_offsets_outside_parent() {
     assert_eq!(badge_bounds.origin.x, Px(-6.0));
     assert_eq!(badge_bounds.origin.y, Px(-5.0));
 }
-
 
 #[test]
 fn container_applies_padding_and_paints_background() {
@@ -245,7 +242,6 @@ fn container_applies_padding_and_paints_background() {
     }
 }
 
-
 #[test]
 fn container_border_change_invalidates_child_layout() {
     let mut app = TestHost::new();
@@ -297,7 +293,6 @@ fn container_border_change_invalidates_child_layout() {
     }
 }
 
-
 #[test]
 fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
     let mut app = TestHost::new();
@@ -342,7 +337,6 @@ fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
     assert_eq!(outer_bounds.size.width, Px(34.0));
     assert_eq!(outer_bounds.size.height, Px(19.0));
 }
-
 
 #[test]
 fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
@@ -389,7 +383,6 @@ fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
     assert_eq!(ui.debug_stats().layout_engine_solves, 0);
 }
-
 
 #[test]
 fn container_paints_shadow_before_background() {
@@ -472,4 +465,3 @@ fn container_paints_shadow_before_background() {
     assert!(shadow_bounds.size.width.0 > container_bounds.size.width.0);
     assert!(shadow_bounds.size.height.0 > container_bounds.size.height.0);
 }
-

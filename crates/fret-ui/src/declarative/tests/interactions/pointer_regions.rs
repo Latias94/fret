@@ -137,7 +137,6 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
     assert_eq!(app.models().get_copied(&counter), Some(111));
 }
 
-
 #[test]
 fn declarative_pointer_region_pointer_down_runs_when_descendant_pressable_stops_bubble() {
     let mut app = TestHost::new();
@@ -215,7 +214,6 @@ fn declarative_pointer_region_pointer_down_runs_when_descendant_pressable_stops_
 
     assert_eq!(app.models().get_copied(&counter), Some(1));
 }
-
 
 #[test]
 fn declarative_pointer_region_can_handle_pointer_cancel() {
@@ -326,7 +324,6 @@ fn declarative_pointer_region_can_handle_pointer_cancel() {
     assert_eq!(app.models().get_copied(&counter), Some(101));
 }
 
-
 #[test]
 fn declarative_pointer_region_can_handle_wheel() {
     let mut app = TestHost::new();
@@ -391,7 +388,6 @@ fn declarative_pointer_region_can_handle_wheel() {
     assert_eq!(v, 1);
 }
 
-
 #[test]
 fn declarative_pointer_region_can_handle_pinch_gesture() {
     let mut app = TestHost::new();
@@ -455,7 +451,6 @@ fn declarative_pointer_region_can_handle_pinch_gesture() {
     let v = app.models_mut().read(&counter, |v| *v).unwrap_or_default();
     assert_eq!(v, 1);
 }
-
 
 #[test]
 fn declarative_internal_drag_region_can_handle_internal_drag_events() {
@@ -540,7 +535,6 @@ fn declarative_internal_drag_region_can_handle_internal_drag_events() {
     assert_eq!(value, 1);
 }
 
-
 #[test]
 fn declarative_command_availability_hooks_participate_in_dispatch_path_queries() {
     let mut app = TestHost::new();
@@ -599,7 +593,6 @@ fn declarative_command_availability_hooks_participate_in_dispatch_path_queries()
         "expected edit.copy to be unavailable when no dispatch path exists"
     );
 }
-
 
 #[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
@@ -685,4 +678,3 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
 
     assert_eq!(ui.focus(), Some(semantics_node));
 }
-

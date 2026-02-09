@@ -99,7 +99,6 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
     );
 }
 
-
 #[test]
 fn resizable_panel_group_registers_viewport_roots_for_panels() {
     let mut app = TestHost::new();
@@ -194,4 +193,3 @@ fn resizable_panel_group_registers_viewport_roots_for_panels() {
     assert!(engine.layout_id_for_node(panel_b_text).is_some());
     ui.put_layout_engine(engine);
 }
-

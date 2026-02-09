@@ -72,7 +72,6 @@ fn layout_engine_solve_stats_are_per_call_and_bounded_for_two_viewport_roots() {
     assert_eq!(s4, 0, "expected per-call solve stats (not cumulative)");
 }
 
-
 #[test]
 fn probe_layout_does_not_prune_layout_engine_nodes() {
     let mut app = TestHost::new();
@@ -117,7 +116,6 @@ fn probe_layout_does_not_prune_layout_engine_nodes() {
         "expected probe layouts to avoid pruning layout engine nodes"
     );
 }
-
 
 #[test]
 fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
@@ -184,7 +182,6 @@ fn solve_barrier_flow_root_reuses_solved_root_even_after_other_solves() {
         "expected the third precompute to reuse cached solve results"
     );
 }
-
 
 #[test]
 fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
@@ -270,7 +267,6 @@ fn solve_barrier_flow_root_if_needed_skips_translation_only_bounds_changes() {
     let child_bounds = ui.debug_node_bounds(child).expect("child bounds");
     assert!((child_bounds.origin.y.0 - rect_b.origin.y.0).abs() < 0.01);
 }
-
 
 #[test]
 fn layout_engine_v2_scales_px_styles_with_scale_factor() {
@@ -383,7 +379,6 @@ fn layout_engine_v2_scales_px_styles_with_scale_factor() {
     assert_eq!(second_1x, expected_second);
 }
 
-
 #[test]
 fn stack_does_not_stretch_spacer_children_in_engine_tree() {
     struct RegistersViewportRoot {
@@ -457,7 +452,6 @@ fn stack_does_not_stretch_spacer_children_in_engine_tree() {
     assert!(b_bounds.size.height.0.abs() < 0.01);
 }
 
-
 #[test]
 fn positioned_container_precomputes_flow_islands_for_multiple_children() {
     let mut app = TestHost::new();
@@ -525,7 +519,6 @@ fn positioned_container_precomputes_flow_islands_for_multiple_children() {
     ui.put_layout_engine(engine);
 }
 
-
 #[test]
 fn nested_flow_is_solved_once_per_island() {
     let mut app = TestHost::new();
@@ -592,4 +585,3 @@ fn nested_flow_is_solved_once_per_island() {
     );
     ui.put_layout_engine(engine);
 }
-

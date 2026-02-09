@@ -66,7 +66,6 @@ fn text_area_select_all_is_blocked_when_empty() {
     );
 }
 
-
 #[test]
 fn text_area_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
@@ -179,7 +178,6 @@ fn text_area_double_click_respects_window_text_boundary_mode_under_render_transf
     );
 }
 
-
 #[test]
 fn text_area_triple_click_selects_logical_line_including_newline_under_render_transform() {
     let mut app = TestHost::new();
@@ -275,7 +273,6 @@ fn text_area_triple_click_selects_logical_line_including_newline_under_render_tr
         "triple click should select first line (including trailing newline)"
     );
 }
-
 
 #[test]
 fn text_area_double_click_cancels_ime_preedit() {
@@ -388,7 +385,6 @@ fn text_area_double_click_cancels_ime_preedit() {
     assert_eq!(snapshot.text_len_utf16, base_len_utf16);
 }
 
-
 #[test]
 fn text_area_triple_click_cancels_ime_preedit() {
     let mut app = TestHost::new();
@@ -500,7 +496,6 @@ fn text_area_triple_click_cancels_ime_preedit() {
     assert_eq!(snapshot.text_len_utf16, base_len_utf16);
     assert_eq!(snapshot.selection_utf16, Some((0, base_len_utf16)));
 }
-
 
 #[test]
 fn text_area_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
@@ -659,7 +654,6 @@ fn text_area_double_click_respects_window_text_boundary_mode_under_scroll_offset
     );
 }
 
-
 #[test]
 fn text_area_word_navigation_respects_window_text_boundary_mode() {
     fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
@@ -782,7 +776,6 @@ fn text_area_word_navigation_respects_window_text_boundary_mode() {
     );
 }
 
-
 #[test]
 fn text_area_delete_word_respects_window_text_boundary_mode() {
     fn text_after_commands(
@@ -895,7 +888,6 @@ fn text_area_delete_word_respects_window_text_boundary_mode() {
         "Identifier should delete only the first identifier segment on delete_word_forward"
     );
 }
-
 
 #[test]
 fn text_area_triple_click_selects_logical_line_including_newline_under_scroll_offset() {
@@ -1041,4 +1033,3 @@ fn text_area_triple_click_selects_logical_line_including_newline_under_scroll_of
         "triple click should select first line (including trailing newline)"
     );
 }
-

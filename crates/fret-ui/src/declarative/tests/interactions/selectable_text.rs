@@ -113,7 +113,6 @@ fn selectable_text_drag_autoscrolls_scroll_container() {
     );
 }
 
-
 #[test]
 fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
     let mut app = TestHost::new();
@@ -234,7 +233,6 @@ fn selectable_text_drag_autoscrolls_horizontal_scroll_container() {
     );
 }
 
-
 #[test]
 fn selectable_text_double_and_triple_click_select() {
     let mut app = TestHost::new();
@@ -331,7 +329,6 @@ fn selectable_text_double_and_triple_click_select() {
     );
 }
 
-
 #[test]
 fn selectable_text_double_click_respects_window_text_boundary_mode_under_render_transform() {
     fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
@@ -415,7 +412,6 @@ fn selectable_text_double_click_respects_window_text_boundary_mode_under_render_
         "Identifier should stop at the apostrophe"
     );
 }
-
 
 #[test]
 fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
@@ -547,7 +543,6 @@ fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_
     );
 }
 
-
 #[test]
 fn selectable_text_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
     fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
@@ -672,7 +667,6 @@ fn selectable_text_ctrl_arrow_word_navigation_respects_window_text_boundary_mode
     );
 }
 
-
 #[test]
 fn selectable_text_pointer_down_requests_focus() {
     let mut app = TestHost::new();
@@ -725,7 +719,6 @@ fn selectable_text_pointer_down_requests_focus() {
         "expected selectable text to request focus on pointer down"
     );
 }
-
 
 #[test]
 fn selectable_text_double_click_sets_primary_selection_when_enabled() {
@@ -808,7 +801,6 @@ fn selectable_text_double_click_sets_primary_selection_when_enabled() {
         "expected selectable text selection to set primary selection when enabled"
     );
 }
-
 
 #[test]
 fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
@@ -1062,7 +1054,6 @@ fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
     );
 }
 
-
 #[test]
 fn selectable_text_sets_active_text_selection() {
     let mut app = TestHost::new();
@@ -1136,7 +1127,6 @@ fn selectable_text_sets_active_text_selection() {
     );
 }
 
-
 #[test]
 fn selectable_text_copy_availability_requires_selection() {
     let mut app = TestHost::new();
@@ -1187,7 +1177,6 @@ fn selectable_text_copy_availability_requires_selection() {
         "expected text.copy to be available when a selection exists"
     );
 }
-
 
 #[test]
 fn selectable_text_copy_availability_respects_clipboard_capabilities() {
@@ -1241,4 +1230,3 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
         "expected text.copy to not be handled when clipboard text is unsupported"
     );
 }
-

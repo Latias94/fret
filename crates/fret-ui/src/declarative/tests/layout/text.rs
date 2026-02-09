@@ -156,7 +156,6 @@ fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
     );
 }
 
-
 #[test]
 fn text_measurement_and_paint_agree_on_overflow_and_scale_factor() {
     #[derive(Default)]
@@ -281,4 +280,3 @@ fn text_measurement_and_paint_agree_on_overflow_and_scale_factor() {
         "expected measure/paint to use the same max_width; measured={measured:?} prepared={prepared:?}"
     );
 }
-
