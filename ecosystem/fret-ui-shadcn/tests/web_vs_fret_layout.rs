@@ -39,6 +39,13 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
+#[path = "web_vs_fret_layout/chart_scaffold.rs"]
+mod chart_scaffold;
+#[path = "web_vs_fret_layout/shell.rs"]
+mod shell;
+#[path = "web_vs_fret_layout/sidebar.rs"]
+mod sidebar;
+
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureSuite<T> {
     schema_version: u32,
@@ -147,26 +154,6 @@ struct LayoutCalendarVariantCase {
     id: String,
     web_name: String,
     recipe: LayoutCalendarVariantRecipe,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct LayoutSidebarMenuButtonHeightCase {
-    id: String,
-    web_name: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct LayoutShellContainerCenteredCase {
-    id: String,
-    web_name: String,
-    container_class_tokens: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct LayoutChartScaffoldCase {
-    id: String,
-    web_name: String,
-    gate_curve: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1802,75 +1789,6 @@ fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect
     );
 }
 
-fn assert_shell_container_centered_x_w_matches(web_name: &str, tokens: &[&str]) {
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
-    let web_container = web_find_by_class_tokens(&theme.root, tokens).expect("web shell container");
-    let max_w = web_container.rect.w;
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let label: Arc<str> = Arc::from(format!("Golden:{web_name}:container"));
-    let label_str: &str = &label;
-    let snap = run_fret_root(bounds, |cx| {
-        vec![cx.flex(
-            FlexProps {
-                layout: decl_style::layout_style(
-                    &Theme::global(&*cx.app),
-                    LayoutRefinement::default().size_full().min_w_0(),
-                ),
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: Edges::all(Px(40.0)),
-                justify: MainAlign::Center,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            {
-                let label = label.clone();
-                move |cx| {
-                    vec![cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: SemanticsRole::Panel,
-                            label: Some(label.clone()),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![
-                                cx.container(
-                                    ContainerProps {
-                                        layout: decl_style::layout_style(
-                                            &Theme::global(&*cx.app),
-                                            LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(max_w)))
-                                                .min_w_0(),
-                                        ),
-                                        ..Default::default()
-                                    },
-                                    |_cx| Vec::new(),
-                                ),
-                            ]
-                        },
-                    )]
-                }
-            },
-        )]
-    });
-
-    let fret_container =
-        find_semantics(&snap, SemanticsRole::Panel, Some(label_str)).expect("fret container");
-    assert_panel_x_w_match(
-        web_name,
-        "container",
-        &fret_container.bounds,
-        web_container.rect,
-        1.0,
-    );
-}
-
 #[test]
 fn web_vs_fret_layout_login_01_shell_container_matches() {
     let web = read_web_golden("login-01");
@@ -2055,31 +1973,6 @@ fn web_vs_fret_layout_login_02_shell_container_matches() {
         web_container.rect,
         1.0,
     );
-}
-
-#[test]
-fn web_vs_fret_layout_shell_container_centered_x_w_matches_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_shell_container_centered_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutShellContainerCenteredCase> =
-        serde_json::from_str(raw).expect("layout shell container centered fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!(
-            "layout shell container centered case={} web_name={}",
-            case.id, case.web_name
-        );
-        let tokens: Vec<&str> = case
-            .container_class_tokens
-            .iter()
-            .map(|s| s.as_str())
-            .collect();
-        assert_shell_container_centered_x_w_matches(&case.web_name, &tokens);
-    }
 }
 
 #[test]
@@ -2318,97 +2211,6 @@ fn web_vs_fret_layout_otp_02_shell_container_matches() {
         web_container.rect,
         1.0,
     );
-}
-
-fn web_find_sidebar_menu_button_by_height<'a>(
-    root: &'a WebNode,
-    height_token: &str,
-) -> Option<&'a WebNode> {
-    find_first(root, &|n| {
-        (n.tag == "button" || n.tag == "a")
-            && class_has_token(n, "peer/menu-button")
-            && class_has_token(n, height_token)
-    })
-}
-
-fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
-
-    let web_default = web_find_sidebar_menu_button_by_height(&theme.root, "h-8")
-        .unwrap_or_else(|| panic!("missing web sidebar menu button (h-8) in {web_name}"));
-    let web_lg = web_find_sidebar_menu_button_by_height(&theme.root, "h-12");
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let snap_default = run_fret_root(bounds, |cx| {
-        vec![
-            fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
-                .size(SidebarMenuButtonSize::Default)
-                .into_element(cx),
-        ]
-    });
-
-    let fret_default = find_semantics(
-        &snap_default,
-        SemanticsRole::Button,
-        Some("Sidebar Menu Button"),
-    )
-    .or_else(|| find_semantics(&snap_default, SemanticsRole::Button, None))
-    .expect("fret sidebar menu button (default) semantics node");
-
-    assert_close_px(
-        &format!("{web_name} menu button height (h-8)"),
-        fret_default.bounds.size.height,
-        web_default.rect.h,
-        1.0,
-    );
-
-    if let Some(web_lg) = web_lg {
-        let collapsed = (web_lg.rect.h - 32.0).abs() <= 1.0;
-        let snap_lg = run_fret_root(bounds, |cx| {
-            vec![
-                fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
-                    .size(SidebarMenuButtonSize::Lg)
-                    .collapsed(collapsed)
-                    .into_element(cx),
-            ]
-        });
-
-        let fret_lg = find_semantics(&snap_lg, SemanticsRole::Button, Some("Sidebar Menu Button"))
-            .or_else(|| find_semantics(&snap_lg, SemanticsRole::Button, None))
-            .expect("fret sidebar menu button (lg) semantics node");
-
-        assert_close_px(
-            &format!("{web_name} menu button height (h-12)"),
-            fret_lg.bounds.size.height,
-            web_lg.rect.h,
-            1.0,
-        );
-    }
-}
-
-#[test]
-fn web_vs_fret_layout_sidebar_menu_button_heights_match_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_sidebar_menu_button_height_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutSidebarMenuButtonHeightCase> =
-        serde_json::from_str(raw).expect("layout sidebar menu button height fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!(
-            "layout sidebar menu button height case={} web_name={}",
-            case.id, case.web_name
-        );
-        assert_sidebar_menu_button_heights_match_web(&case.web_name);
-    }
 }
 
 #[test]
@@ -27296,217 +27098,6 @@ fn web_find_radar_dots<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
             })
     });
     out
-}
-
-fn assert_chart_scaffold_geometry_matches_web(web_name: &str, gate_curve: bool) {
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
-
-    let web_chart = web_find_chart_container(&theme.root);
-    let web_grid = web_find_chart_grid(web_chart);
-    let web_x_axis = web_find_chart_x_axis(web_chart);
-    let web_curve = web_find_chart_curve(web_chart);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
-    );
-
-    let chart_label = Arc::<str>::from(format!("Golden:{web_name}:chart"));
-    let grid_label = Arc::<str>::from(format!("Golden:{web_name}:grid"));
-    let axis_label = Arc::<str>::from(format!("Golden:{web_name}:x-axis"));
-    let curve_label = Arc::<str>::from(format!("Golden:{web_name}:curve"));
-
-    let chart_label_out = chart_label.clone();
-    let grid_label_out = grid_label.clone();
-    let axis_label_out = axis_label.clone();
-    let curve_label_out = curve_label.clone();
-
-    let snap = run_fret_root(bounds, move |cx| {
-        let chart = cx.container(
-            ContainerProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Px(Px(web_chart.rect.w)),
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    aspect_ratio: Some(16.0 / 9.0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            move |cx| {
-                let grid = {
-                    let dx = web_grid.rect.x - web_chart.rect.x;
-                    let dy = web_grid.rect.y - web_chart.rect.y;
-                    let wrapper = cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: SemanticsRole::Panel,
-                            label: Some(grid_label.clone()),
-                            layout: LayoutStyle {
-                                position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(dx)),
-                                    top: Some(Px(dy)),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(web_grid.rect.w)),
-                                    height: Length::Px(Px(web_grid.rect.h)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.canvas(fret_ui::element::CanvasProps::default(), |_p| {})]
-                        },
-                    );
-                    wrapper
-                };
-
-                let x_axis = {
-                    let dx = web_x_axis.rect.x - web_chart.rect.x;
-                    let dy = web_x_axis.rect.y - web_chart.rect.y;
-                    cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: SemanticsRole::Panel,
-                            label: Some(axis_label.clone()),
-                            layout: LayoutStyle {
-                                position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    left: Some(Px(dx)),
-                                    top: Some(Px(dy)),
-                                    ..Default::default()
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(Px(web_x_axis.rect.w)),
-                                    height: Length::Px(Px(web_x_axis.rect.h)),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        |cx| vec![cx.container(Default::default(), |_cx| Vec::new())],
-                    )
-                };
-
-                let mut out = vec![grid, x_axis];
-                if gate_curve {
-                    if let Some(web_curve) = web_curve {
-                        let dx = web_curve.rect.x - web_chart.rect.x;
-                        let dy = web_curve.rect.y - web_chart.rect.y;
-                        let curve = cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                role: SemanticsRole::Panel,
-                                label: Some(curve_label.clone()),
-                                layout: LayoutStyle {
-                                    position: fret_ui::element::PositionStyle::Absolute,
-                                    inset: fret_ui::element::InsetStyle {
-                                        left: Some(Px(dx)),
-                                        top: Some(Px(dy)),
-                                        ..Default::default()
-                                    },
-                                    size: SizeStyle {
-                                        width: Length::Px(Px(web_curve.rect.w)),
-                                        height: Length::Px(Px(web_curve.rect.h)),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                vec![cx.canvas(fret_ui::element::CanvasProps::default(), |_p| {})]
-                            },
-                        );
-                        out.push(curve);
-                    }
-                }
-
-                out
-            },
-        );
-
-        let chart = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(chart_label.clone()),
-                layout: LayoutStyle {
-                    position: fret_ui::element::PositionStyle::Absolute,
-                    inset: fret_ui::element::InsetStyle {
-                        left: Some(Px(web_chart.rect.x)),
-                        top: Some(Px(web_chart.rect.y)),
-                        ..Default::default()
-                    },
-                    size: SizeStyle {
-                        width: Length::Px(Px(web_chart.rect.w)),
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    aspect_ratio: Some(16.0 / 9.0),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            move |_cx| vec![chart],
-        );
-
-        vec![chart]
-    });
-
-    let chart = find_semantics(&snap, SemanticsRole::Panel, Some(&chart_label_out))
-        .unwrap_or_else(|| panic!("missing fret chart semantics for {web_name}"));
-    assert_rect_close_px(web_name, chart.bounds, web_chart.rect, 1.0);
-
-    let grid = find_semantics(&snap, SemanticsRole::Panel, Some(&grid_label_out))
-        .unwrap_or_else(|| panic!("missing fret chart grid semantics for {web_name}"));
-    assert_rect_close_px(&format!("{web_name} grid"), grid.bounds, web_grid.rect, 1.0);
-
-    let x_axis = find_semantics(&snap, SemanticsRole::Panel, Some(&axis_label_out))
-        .unwrap_or_else(|| panic!("missing fret chart x axis semantics for {web_name}"));
-    assert_rect_close_px(
-        &format!("{web_name} x axis"),
-        x_axis.bounds,
-        web_x_axis.rect,
-        1.0,
-    );
-
-    if gate_curve {
-        if let Some(web_curve) = web_curve {
-            let curve = find_semantics(&snap, SemanticsRole::Panel, Some(&curve_label_out))
-                .unwrap_or_else(|| panic!("missing fret chart curve semantics for {web_name}"));
-            assert_rect_close_px(
-                &format!("{web_name} curve"),
-                curve.bounds,
-                web_curve.rect,
-                1.0,
-            );
-        }
-    }
-}
-
-#[test]
-fn web_vs_fret_layout_chart_scaffold_geometry_matches_web_fixtures() {
-    let raw = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/layout_chart_scaffold_cases_v1.json"
-    ));
-    let suite: FixtureSuite<LayoutChartScaffoldCase> =
-        serde_json::from_str(raw).expect("layout chart scaffold fixture parse");
-    assert_eq!(suite.schema_version, 1);
-    assert!(!suite.cases.is_empty());
-
-    for case in suite.cases {
-        eprintln!(
-            "layout chart scaffold case={} web_name={}",
-            case.id, case.web_name
-        );
-        assert_chart_scaffold_geometry_matches_web(&case.web_name, case.gate_curve);
-    }
 }
 
 #[test]
