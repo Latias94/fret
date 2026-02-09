@@ -8682,3 +8682,14 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --att
 Artifacts:
 - `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.58db05d7c.20260209-1915/summary.json`
 - `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.58db05d7c.20260209-1930/summary.json`
+
+Attribution note (one-off, semantics enabled; not used for gating due to overhead):
+- Command:
+  ```bash
+  cd ../fret-perf-lab-c1af5d1f7
+  FRET_DIAG_SEMANTICS=1 cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json --dir target/fret-diag-perf/semantics-drag-jitter.58db05d7c --timeout-ms 300000 --reuse-launch --repeat 1 --warmup-frames 0 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+  ```
+- Artifact bundle:
+  - `../fret-perf-lab-c1af5d1f7/target/fret-diag-perf/semantics-drag-jitter.58db05d7c/1770620408091-ui-gallery-window-resize-drag-jitter-steady/bundle.json`
+- Finding: the heaviest layout-engine solve during drag-jitter is rooted at `test_id=ui-gallery-view-cache-root`
+  (`measure_calls=960`, `measure_cache_hits=0`), with a smaller secondary root at `test_id=ui-gallery-content-viewport`.
