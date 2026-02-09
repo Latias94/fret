@@ -1037,6 +1037,8 @@ impl<H: UiHost> UiTree<H> {
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
+        let active_pointer_down_outside_layers =
+            self.active_pointer_down_outside_layer_roots(barrier_root);
         self.enforce_modal_barrier_scope(&active_layers);
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
@@ -1582,7 +1584,7 @@ impl<H: UiHost> UiTree<H> {
                         services,
                         PointerDownOutsideParams {
                             input_ctx: &input_ctx,
-                            active_layer_roots: &active_layers,
+                            active_layer_roots: &active_pointer_down_outside_layers,
                             base_root,
                             hit,
                             event,

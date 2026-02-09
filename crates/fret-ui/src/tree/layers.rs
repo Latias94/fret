@@ -391,6 +391,46 @@ impl<H: UiHost> UiTree<H> {
         (roots, barrier_root)
     }
 
+    pub(super) fn active_pointer_down_outside_layer_roots(
+        &self,
+        barrier_root: Option<NodeId>,
+    ) -> Vec<NodeId> {
+        let mut any_visible = false;
+        for &layer_id in &self.layer_order {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            any_visible = true;
+            if layer.blocks_underlay_input {
+                break;
+            }
+        }
+
+        if !any_visible {
+            return Vec::new();
+        }
+
+        let mut roots: Vec<NodeId> = Vec::new();
+        for &layer_id in self.layer_order.iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+
+            roots.push(layer.root);
+
+            if barrier_root == Some(layer.root) {
+                break;
+            }
+        }
+        roots
+    }
+
     pub(super) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
         let mut any_visible = false;
         let mut barrier_root: Option<NodeId> = None;
