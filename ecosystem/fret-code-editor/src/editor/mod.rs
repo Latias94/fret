@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, move_word_left_in_buffer,
+    DisplayMap, DisplayPoint, FoldSpan, InlaySpan, InlinePreedit, move_word_left_in_buffer,
     move_word_right_in_buffer, select_word_range_in_buffer,
 };
 use fret_core::{
@@ -307,6 +307,7 @@ struct CodeEditorState {
     selection: Selection,
     preedit: Option<PreeditState>,
     allow_decorations_under_inline_preedit: bool,
+    compose_inline_preedit: bool,
     interaction: CodeEditorInteractionOptions,
     region_id: Option<fret_ui::GlobalElementId>,
     text_boundary_mode_override: Option<TextBoundaryMode>,
@@ -361,6 +362,7 @@ struct RowTextCacheEntry {
     text: Arc<str>,
     range: Range<usize>,
     fold_map: Option<geom::RowFoldMap>,
+    preedit_range: Option<Range<usize>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -374,6 +376,17 @@ struct BaselineMeasureCache {
 }
 
 impl CodeEditorState {
+    fn invalidate_row_caches(&mut self) {
+        self.row_text_cache_tick = 0;
+        self.row_text_cache.clear();
+        self.row_text_cache_queue.clear();
+        self.cache_stats.row_text_resets = self.cache_stats.row_text_resets.saturating_add(1);
+
+        self.row_geom_cache_tick = 0;
+        self.row_geom_cache.clear();
+        self.row_geom_cache_queue.clear();
+    }
+
     fn refresh_display_map(&mut self) {
         // ADR 0200 / ADR 0203:
         //
@@ -385,11 +398,30 @@ impl CodeEditorState {
         // decorations enabled under inline preedit even when wrapped. This keeps row-breaking
         // stable (still based on fold/inlay composition only) while we migrate toward a fragment-
         // composed DisplayMap (ADR 0203).
-        let suppress_decorations = self.preedit.is_some()
+        let suppress_decorations = !self.compose_inline_preedit
+            && self.preedit.is_some()
             && self.display_wrap_cols.is_some()
             && !self.allow_decorations_under_inline_preedit;
+
+        let preedit = self
+            .compose_inline_preedit
+            .then_some(())
+            .and_then(|_| self.preedit.as_ref())
+            .map(|p| InlinePreedit {
+                anchor: self.selection.caret().min(self.buffer.len_bytes()),
+                text: Arc::<str>::from(p.text.as_str()),
+            });
+
         self.display_map = if suppress_decorations {
             DisplayMap::new(&self.buffer, self.display_wrap_cols)
+        } else if self.compose_inline_preedit {
+            DisplayMap::new_with_decorations_and_preedit(
+                &self.buffer,
+                self.display_wrap_cols,
+                &self.line_folds,
+                &self.line_inlays,
+                preedit,
+            )
         } else {
             DisplayMap::new_with_decorations(
                 &self.buffer,
@@ -406,6 +438,7 @@ impl CodeEditorState {
         }
         self.preedit = preedit;
         self.refresh_display_map();
+        self.invalidate_row_caches();
     }
 
     fn set_allow_decorations_under_inline_preedit(&mut self, allowed: bool) {
@@ -414,6 +447,16 @@ impl CodeEditorState {
         }
         self.allow_decorations_under_inline_preedit = allowed;
         self.refresh_display_map();
+        self.invalidate_row_caches();
+    }
+
+    fn set_compose_inline_preedit(&mut self, enabled: bool) {
+        if self.compose_inline_preedit == enabled {
+            return;
+        }
+        self.compose_inline_preedit = enabled;
+        self.refresh_display_map();
+        self.invalidate_row_caches();
     }
 
     fn set_interaction(&mut self, interaction: CodeEditorInteractionOptions) {
@@ -454,6 +497,7 @@ impl CodeEditorHandle {
                 selection: Selection::default(),
                 preedit: None,
                 allow_decorations_under_inline_preedit: false,
+                compose_inline_preedit: false,
                 interaction: CodeEditorInteractionOptions::default(),
                 region_id: None,
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
@@ -579,6 +623,14 @@ impl CodeEditorHandle {
         self.state
             .borrow_mut()
             .set_allow_decorations_under_inline_preedit(allowed);
+    }
+
+    pub fn compose_inline_preedit(&self) -> bool {
+        self.state.borrow().compose_inline_preedit
+    }
+
+    pub fn set_compose_inline_preedit(&self, enabled: bool) {
+        self.state.borrow_mut().set_compose_inline_preedit(enabled);
     }
 
     pub fn region_id(&self) -> Option<fret_ui::GlobalElementId> {
@@ -713,7 +765,7 @@ impl CodeEditorHandle {
             return None;
         }
         let row = st.display_map.line_first_display_row(line);
-        let (_, text, _) = paint::cached_row_text_with_range(&mut st, row, 64);
+        let (_, text, _, _) = paint::cached_row_text_with_range(&mut st, row, 64);
         Some(text.as_ref().to_string())
     }
 

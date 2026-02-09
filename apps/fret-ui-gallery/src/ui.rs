@@ -3638,6 +3638,12 @@ fn preview_code_editor_torture(
         handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
     }
 
+    let compose_inline_preedit = cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let compose_inline_preedit_enabled = compose_inline_preedit.get();
+    if handle.compose_inline_preedit() != compose_inline_preedit_enabled {
+        handle.set_compose_inline_preedit(compose_inline_preedit_enabled);
+    }
+
     let header_handle = handle.clone();
     let header = stack::vstack(
         cx,
@@ -3785,6 +3791,41 @@ fn preview_code_editor_torture(
                                 "Preedit decorations: on"
                             } else {
                                 "Preedit decorations: off"
+                            }),
+                            shadcn::Button::new("Preedit composition: paint")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-preedit-compose-set-paint")
+                                .on_activate({
+                                    let compose_inline_preedit = compose_inline_preedit.clone();
+                                    let header_handle_controls = header_handle_controls.clone();
+                                    Arc::new(move |host, action_cx, _reason| {
+                                        compose_inline_preedit.set(false);
+                                        header_handle_controls.set_compose_inline_preedit(false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    })
+                                })
+                                .into_element(cx),
+                            shadcn::Button::new("Preedit composition: view")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-preedit-compose-set-view")
+                                .on_activate({
+                                    let compose_inline_preedit = compose_inline_preedit.clone();
+                                    let header_handle_controls = header_handle_controls.clone();
+                                    Arc::new(move |host, action_cx, _reason| {
+                                        compose_inline_preedit.set(true);
+                                        header_handle_controls.set_compose_inline_preedit(true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    })
+                                })
+                                .into_element(cx),
+                            cx.text(if compose_inline_preedit_enabled {
+                                "Preedit composition: view (composed)"
+                            } else {
+                                "Preedit composition: paint (injected)"
                             }),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")

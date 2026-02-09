@@ -22,10 +22,19 @@ pub use folds::{
 pub use inlays::{InlaySpan, InlaySpanError, apply_inlay_spans, validate_inlay_spans};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InlinePreedit {
+    /// Anchor byte index in the underlying buffer.
+    pub anchor: usize,
+    /// Inline preedit text to be composed into the display stream.
+    pub text: Arc<str>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DisplayRowFragment {
     Buffer { range: Range<usize> },
     Placeholder { text: Arc<str>, maps_to: usize },
     Inlay { text: Arc<str>, maps_to: usize },
+    Preedit { text: Arc<str>, maps_to: usize },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,6 +73,7 @@ pub struct DisplayMap {
     row_start_col: Vec<usize>,
     line_folds: Vec<Arc<[FoldSpan]>>,
     line_inlays: Vec<Arc<[InlaySpan]>>,
+    preedit: Option<InlinePreedit>,
 }
 
 impl DisplayMap {
@@ -89,6 +99,20 @@ impl DisplayMap {
         wrap_cols: Option<usize>,
         folds_by_line: &HashMap<usize, Arc<[FoldSpan]>>,
         inlays_by_line: &HashMap<usize, Arc<[InlaySpan]>>,
+    ) -> Self {
+        Self::new_with_decorations_and_preedit(buf, wrap_cols, folds_by_line, inlays_by_line, None)
+    }
+
+    /// Build a display map from the current buffer state, including view-layer fold/inlay
+    /// decorations and an optional inline preedit insertion (ADR 0203).
+    ///
+    /// Preedit is treated as an atomic insertion fragment and participates in wrapped row-breaking.
+    pub fn new_with_decorations_and_preedit(
+        buf: &TextBuffer,
+        wrap_cols: Option<usize>,
+        folds_by_line: &HashMap<usize, Arc<[FoldSpan]>>,
+        inlays_by_line: &HashMap<usize, Arc<[InlaySpan]>>,
+        preedit: Option<InlinePreedit>,
     ) -> Self {
         let wrap_cols = wrap_cols.filter(|v| *v > 0);
 
@@ -128,6 +152,7 @@ impl DisplayMap {
                 row_start_col,
                 line_folds,
                 line_inlays,
+                preedit,
             };
         }
 
@@ -143,7 +168,11 @@ impl DisplayMap {
             let folds = line_folds.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
             let inlays = line_inlays.get(line).map(|v| v.as_ref()).unwrap_or(&[]);
 
-            if folds.is_empty() && inlays.is_empty() {
+            let line_has_preedit = preedit.as_ref().is_some_and(|p| {
+                !p.text.is_empty() && buf.line_index_at_byte(p.anchor.min(buf.len_bytes())) == line
+            });
+
+            if folds.is_empty() && inlays.is_empty() && !line_has_preedit {
                 let cols = buf.line_char_count(line);
                 let rows_for_line = ((cols.max(1) + wrap - 1) / wrap).max(1);
                 for row_in_line in 0..rows_for_line {
@@ -164,7 +193,10 @@ impl DisplayMap {
                 .then_some(inlays)
                 .unwrap_or(&[]);
 
-            let starts = compute_wrapped_row_start_cols(line_text, folds, inlays, wrap);
+            let preedit_for_line =
+                inline_preedit_for_line(buf, line, line_text, folds, preedit.as_ref());
+            let starts =
+                compute_wrapped_row_start_cols(line_text, folds, inlays, preedit_for_line, wrap);
             for start in starts {
                 row_to_line.push(line);
                 row_start_col.push(start);
@@ -183,6 +215,7 @@ impl DisplayMap {
             row_start_col,
             line_folds,
             line_inlays,
+            preedit,
         }
     }
 
@@ -432,10 +465,13 @@ impl DisplayMap {
             .line_inlays
             .get(line)
             .is_some_and(|v| v.as_ref().is_empty());
+        let has_preedit = self.preedit.as_ref().is_some_and(|p| {
+            !p.text.is_empty() && buf.line_index_at_byte(p.anchor.min(buf.len_bytes())) == line
+        });
 
         match self.wrap_cols {
             None => {
-                if folds_empty && inlays_empty {
+                if folds_empty && inlays_empty && !has_preedit {
                     return pt;
                 }
 
@@ -460,7 +496,15 @@ impl DisplayMap {
                     .then_some(inlays)
                     .unwrap_or(&[]);
 
-                let col_in_line = decorated_byte_to_col(line_text, folds, inlays, line_local);
+                let preedit_for_line =
+                    inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
+                let col_in_line = decorated_byte_to_col_with_preedit(
+                    line_text,
+                    folds,
+                    inlays,
+                    preedit_for_line,
+                    line_local,
+                );
                 DisplayPoint::new(line, col_in_line)
             }
             Some(wrap) => {
@@ -471,7 +515,7 @@ impl DisplayMap {
                     .unwrap_or_else(|| self.row_to_line.len());
                 let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
 
-                if folds_empty && inlays_empty {
+                if folds_empty && inlays_empty && !has_preedit {
                     let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
                     let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
                     return DisplayPoint::new(line_first + row_in_line, col_in_row);
@@ -498,7 +542,15 @@ impl DisplayMap {
                     .then_some(inlays)
                     .unwrap_or(&[]);
 
-                let col_in_line = decorated_byte_to_col(line_text, folds, inlays, line_local);
+                let preedit_for_line =
+                    inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
+                let col_in_line = decorated_byte_to_col_with_preedit(
+                    line_text,
+                    folds,
+                    inlays,
+                    preedit_for_line,
+                    line_local,
+                );
                 let rows = self.line_display_row_range(line);
                 let row_in_line =
                     find_row_for_line_col(&self.row_start_col[rows.clone()], col_in_line)
@@ -527,15 +579,18 @@ impl DisplayMap {
             .line_inlays
             .get(line)
             .is_some_and(|v| v.as_ref().is_empty());
+        let has_preedit = self.preedit.as_ref().is_some_and(|p| {
+            !p.text.is_empty() && buf.line_index_at_byte(p.anchor.min(buf.len_bytes())) == line
+        });
 
-        if self.wrap_cols.is_none() && folds_empty && inlays_empty {
+        if self.wrap_cols.is_none() && folds_empty && inlays_empty && !has_preedit {
             return display_point_to_byte(buf, DisplayPoint::new(line, pt.col));
         }
 
         let row_start_col = *self.row_start_col.get(pt.row).unwrap_or(&0);
         let col_in_line = row_start_col.saturating_add(pt.col);
 
-        if folds_empty && inlays_empty {
+        if folds_empty && inlays_empty && !has_preedit {
             return buf.byte_at_line_col(line, col_in_line);
         }
 
@@ -558,7 +613,15 @@ impl DisplayMap {
             .then_some(inlays)
             .unwrap_or(&[]);
 
-        let byte_in_line = decorated_col_to_byte(line_text, folds, inlays, col_in_line);
+        let preedit_for_line =
+            inline_preedit_for_line(buf, line, line_text, folds, self.preedit.as_ref());
+        let byte_in_line = decorated_col_to_byte_with_preedit(
+            line_text,
+            folds,
+            inlays,
+            preedit_for_line,
+            col_in_line,
+        );
         line_start.saturating_add(byte_in_line).min(buf.len_bytes())
     }
 }
@@ -582,6 +645,7 @@ fn compute_wrapped_row_start_cols(
     line_text: &str,
     folds: &[FoldSpan],
     inlays: &[InlaySpan],
+    preedit: Option<(usize, usize)>,
     wrap_cols: usize,
 ) -> Vec<usize> {
     let wrap_cols = wrap_cols.max(1);
@@ -593,8 +657,40 @@ fn compute_wrapped_row_start_cols(
     let mut cursor = 0usize;
     let mut fold_idx = 0usize;
     let mut inlay_idx = 0usize;
+    let mut preedit = preedit.filter(|(_, cols)| *cols > 0);
 
-    while cursor < line_text.len() || fold_idx < folds.len() || inlay_idx < inlays.len() {
+    while cursor < line_text.len()
+        || fold_idx < folds.len()
+        || inlay_idx < inlays.len()
+        || preedit.is_some()
+    {
+        if let Some((anchor, token_cols)) = preedit
+            && anchor == cursor
+        {
+            // Atomic: never split preedit text across wrapped rows (ADR 0203).
+            let remaining = wrap_cols.saturating_sub(in_row);
+            if in_row > 0 && token_cols > remaining {
+                starts.push(col);
+                in_row = 0;
+            }
+
+            col = col.saturating_add(token_cols);
+            if token_cols >= wrap_cols {
+                // Overflow consumes the row; next token starts a fresh row.
+                starts.push(col);
+                in_row = 0;
+            } else {
+                in_row = in_row.saturating_add(token_cols);
+                if in_row == wrap_cols {
+                    starts.push(col);
+                    in_row = 0;
+                }
+            }
+
+            preedit = None;
+            continue;
+        }
+
         while inlay_idx < inlays.len() && inlays[inlay_idx].byte < cursor {
             // Inlays inside a folded span are skipped by advancing past the fold jump.
             inlay_idx = inlay_idx.saturating_add(1);
@@ -777,6 +873,64 @@ fn decorated_byte_to_col(
     col
 }
 
+fn inline_preedit_for_line(
+    buf: &TextBuffer,
+    line: usize,
+    line_text: &str,
+    folds: &[FoldSpan],
+    preedit: Option<&InlinePreedit>,
+) -> Option<(usize, usize)> {
+    let preedit = preedit?;
+    if preedit.text.is_empty() {
+        return None;
+    }
+
+    let anchor = preedit.anchor.min(buf.len_bytes());
+    if buf.line_index_at_byte(anchor) != line {
+        return None;
+    }
+
+    let line_start = buf.line_start(line).unwrap_or(0);
+    let mut local = anchor.saturating_sub(line_start).min(line_text.len());
+    local = clamp_to_char_boundary(line_text, local);
+
+    // If the anchor lands inside a folded span, clamp to the fold start (ADR 0203).
+    for fold in folds {
+        let start = fold.range.start.min(line_text.len());
+        let end = fold.range.end.min(line_text.len()).max(start);
+        if start < local && local < end {
+            local = start;
+            break;
+        }
+    }
+
+    let cols = preedit.text.chars().count();
+    Some((local, cols))
+}
+
+fn decorated_byte_to_col_with_preedit(
+    line_text: &str,
+    folds: &[FoldSpan],
+    inlays: &[InlaySpan],
+    preedit: Option<(usize, usize)>,
+    byte: usize,
+) -> usize {
+    let Some((anchor_local, preedit_cols)) = preedit else {
+        return decorated_byte_to_col(line_text, folds, inlays, byte);
+    };
+    if preedit_cols == 0 {
+        return decorated_byte_to_col(line_text, folds, inlays, byte);
+    }
+
+    let insert_col = decorated_byte_to_col(line_text, folds, inlays, anchor_local);
+    let base_col = decorated_byte_to_col(line_text, folds, inlays, byte);
+    if base_col > insert_col {
+        base_col.saturating_add(preedit_cols)
+    } else {
+        base_col
+    }
+}
+
 fn byte_offset_for_col(slice: &str, col: usize) -> usize {
     if col == 0 {
         return 0;
@@ -858,6 +1012,34 @@ fn decorated_col_to_byte(
     }
 
     line_text.len()
+}
+
+fn decorated_col_to_byte_with_preedit(
+    line_text: &str,
+    folds: &[FoldSpan],
+    inlays: &[InlaySpan],
+    preedit: Option<(usize, usize)>,
+    col: usize,
+) -> usize {
+    let Some((anchor_local, preedit_cols)) = preedit else {
+        return decorated_col_to_byte(line_text, folds, inlays, col);
+    };
+    if preedit_cols == 0 {
+        return decorated_col_to_byte(line_text, folds, inlays, col);
+    }
+
+    let insert_col = decorated_byte_to_col(line_text, folds, inlays, anchor_local);
+    if col < insert_col {
+        return decorated_col_to_byte(line_text, folds, inlays, col);
+    }
+
+    let after_insert = insert_col.saturating_add(preedit_cols);
+    if col >= after_insert {
+        return decorated_col_to_byte(line_text, folds, inlays, col.saturating_sub(preedit_cols));
+    }
+
+    // Inside the injected preedit fragment: snap to its anchor.
+    decorated_col_to_byte(line_text, folds, inlays, insert_col)
 }
 
 /// Map a UTF-8 byte index in the buffer to a `(row, col)` display coordinate.
@@ -1218,6 +1400,9 @@ mod display_map_tests {
                 DisplayRowFragment::Inlay { text, .. } => {
                     out.push_str(text.as_ref());
                 }
+                DisplayRowFragment::Preedit { text, .. } => {
+                    out.push_str(text.as_ref());
+                }
             }
         }
         out
@@ -1237,6 +1422,64 @@ mod display_map_tests {
             map.display_point_to_byte(&buf, DisplayPoint::new(1, 1)),
             buf.len_bytes()
         );
+    }
+
+    #[test]
+    fn inline_preedit_shifts_mapping_without_wrap() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let preedit = InlinePreedit {
+            anchor: 2,
+            text: Arc::<str>::from("XY"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit(
+            &buf,
+            None,
+            &folds,
+            &inlays,
+            Some(preedit),
+        );
+
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 2), DisplayPoint::new(0, 2));
+        assert_eq!(map.byte_to_display_point(&buf, 3), DisplayPoint::new(0, 5));
+
+        // Points inside the preedit map back to its anchor.
+        assert_eq!(map.display_point_to_byte(&buf, DisplayPoint::new(0, 3)), 2);
+        assert_eq!(map.display_point_to_byte(&buf, DisplayPoint::new(0, 4)), 2);
+        assert_eq!(map.display_point_to_byte(&buf, DisplayPoint::new(0, 5)), 3);
+    }
+
+    #[test]
+    fn inline_preedit_participates_in_wrapped_row_breaking() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcdef".to_string()).unwrap();
+
+        let folds: HashMap<usize, Arc<[FoldSpan]>> = HashMap::new();
+        let inlays: HashMap<usize, Arc<[InlaySpan]>> = HashMap::new();
+        let preedit = InlinePreedit {
+            anchor: 2,
+            text: Arc::<str>::from("XY"),
+        };
+
+        let map = DisplayMap::new_with_decorations_and_preedit(
+            &buf,
+            Some(4),
+            &folds,
+            &inlays,
+            Some(preedit),
+        );
+
+        assert_eq!(map.row_count(), 2);
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 3), DisplayPoint::new(1, 1));
+
+        assert_eq!(map.display_row_byte_range(&buf, 0), 0..2);
+        assert_eq!(map.display_row_byte_range(&buf, 1), 2..6);
     }
 
     #[test]

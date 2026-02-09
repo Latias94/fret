@@ -712,14 +712,16 @@ Evidence anchors:
   - Known gaps: not pixel-accurate wrapping. Fallbacks still exist when caret stops/metrics are unavailable (e.g. before the first paint), but the torture harness now includes a strict “0 geometry fallbacks after warmup” diag gate (evaluated after the last stats reset) to keep migration regressions observable and actionable.
 - [~] Fold regions + placeholders without breaking caret/selection.
   - Implemented: fold placeholders participate in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Remaining: unify with inline IME preedit under a single composed mapping surface (ADR 0203).
+  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
 - [~] Inlays (injected display fragments) without mutating the underlying buffer.
   - Implemented: inlay text participates in the same buffer↔display mapping used by caret/selection/hit-test, with wrapped + unwrapped baselines.
-  - Remaining: unify with inline IME preedit under a single composed mapping surface (ADR 0203).
-- [ ] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
-  - Promote inline preedit from paint-time string injection to a view-layer display fragment source.
-  - Make paint, hit-testing, caret/selection mapping, and semantics export consume the same composed mapping.
-  - Definition-of-done: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
+  - Remaining: complete v2 composition with inline IME preedit under a single composed mapping surface (ADR 0203).
+    - Status: a view-composed inline preedit path exists behind an opt-in; a11y export is still v1.
+- [~] v2+ (ADR 0203): fragment-based DisplayMap composition (fold + inlay + inline preedit).
+  - Implemented (staged): inline preedit can be modeled as a view-layer fragment source (opt-in composed path).
+  - In progress: make semantics export (a11y) consume the same composed mapping.
+  - Remaining DOD: add a diag baseline + gate for “soft wrap + folds + inlays + preedit” coexistence without mapping drift.
 
 ### 9) Retained host / composable rows (only if required)
 

@@ -3674,6 +3674,7 @@ pub fn build_app() -> App {
                             let preedit_active = handle.preedit_active();
                             let allow_decorations_under_inline_preedit =
                                 handle.allow_decorations_under_inline_preedit();
+                            let compose_inline_preedit = handle.compose_inline_preedit();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0;
                             let fold_placeholder_present = handle
@@ -3687,6 +3688,7 @@ pub fn build_app() -> App {
                                 "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                                 "preedit_active": preedit_active,
                                 "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
+                                "compose_inline_preedit": compose_inline_preedit,
                                 "interaction": {
                                     "enabled": interaction.enabled,
                                     "focusable": interaction.focusable,

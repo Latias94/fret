@@ -585,9 +585,10 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
     };
     let max_row = st.display_map.row_count().saturating_sub(1);
     let next_row = next_row.min(max_row);
+    let next_row_has_preedit = st.preedit.is_some() && pt.row == next_row;
     let next = if let Some((geom, _)) = st.row_geom_cache.get(&next_row)
         && !geom.caret_stops.is_empty()
-        && geom.preedit.is_some() == st.preedit.is_some()
+        && geom.has_preedit == next_row_has_preedit
     {
         let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
         let byte = map_row_display_local_to_buffer_byte(&st.buffer, geom, local);
