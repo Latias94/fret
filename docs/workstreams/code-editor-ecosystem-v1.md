@@ -254,6 +254,7 @@ Evidence:
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_markdown_editor_source`)
 - `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-markdown-editor-mode-disabled`)
 - `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-baseline.json`
+- `tools/diag-scripts/ui-gallery-markdown-editor-source-disabled-inject-preedit-baseline.json`
 - `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits`)
 
 #### M10.2 — Soft-wrap + selection/navigation consistency
