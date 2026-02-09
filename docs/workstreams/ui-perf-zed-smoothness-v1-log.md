@@ -8558,3 +8558,14 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --ou
 
 Artifacts:
 - `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.1778ba563.20260209-132813/summary.json`
+
+## 2026-02-09 13:39:28 (commit `007006b28`)
+
+Change:
+- Make `CodeEditorHandle::set_line_folds` / `set_line_inlays` idempotent for identical values to avoid per-frame epoch
+  bumps + cache resets in declarative render loops. Add regression tests.
+
+Commands:
+```bash
+cargo test -p fret-code-editor
+```
