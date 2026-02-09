@@ -3472,6 +3472,30 @@ pub fn build_app() -> App {
                             let anchor = selection.anchor.min(text.len()) as u64;
                             let caret = selection.caret().min(text.len()) as u64;
                             let stats = handle.cache_stats();
+                            let paint_perf = handle.paint_perf_frame().map(|frame| {
+                                serde_json::json!({
+                                    "schema_version": 1,
+                                    "frame_seq": frame.frame_seq,
+                                    "visible_start": frame.visible_start,
+                                    "visible_end": frame.visible_end,
+                                    "visible_rows": frame.visible_rows,
+                                    "rows_painted": frame.rows_painted,
+                                    "rows_drew_rich": frame.rows_drew_rich,
+                                    "quads_background": frame.quads_background,
+                                    "quads_selection": frame.quads_selection,
+                                    "quads_caret": frame.quads_caret,
+                                    "us_total": frame.us_total,
+                                    "us_row_text": frame.us_row_text,
+                                    "us_baseline_measure": frame.us_baseline_measure,
+                                    "us_syntax_spans": frame.us_syntax_spans,
+                                    "us_rich_materialize": frame.us_rich_materialize,
+                                    "us_text_draw": frame.us_text_draw,
+                                    "us_selection_rects": frame.us_selection_rects,
+                                    "us_caret_x": frame.us_caret_x,
+                                    "us_caret_stops": frame.us_caret_stops,
+                                    "us_caret_rect": frame.us_caret_rect,
+                                })
+                            });
                             let preedit_active = handle.preedit_active();
                             let interaction = handle.interaction();
                             let buffer_revision = handle.buffer_revision().0 as u64;
@@ -3502,6 +3526,11 @@ pub fn build_app() -> App {
                                     "row_text_misses": stats.row_text_misses,
                                     "row_text_evictions": stats.row_text_evictions,
                                     "row_text_resets": stats.row_text_resets,
+                                    "row_rich_get_calls": stats.row_rich_get_calls(),
+                                    "row_rich_hits": stats.row_rich_hits(),
+                                    "row_rich_misses": stats.row_rich_misses(),
+                                    "row_rich_evictions": stats.row_rich_evictions(),
+                                    "row_rich_resets": stats.row_rich_resets(),
                                     "geom_pointer_hit_test_fallbacks": stats.geom_pointer_hit_test_fallbacks,
                                     "geom_caret_rect_fallbacks": stats.geom_caret_rect_fallbacks,
                                     "geom_vertical_move_fallbacks": stats.geom_vertical_move_fallbacks,
@@ -3511,6 +3540,7 @@ pub fn build_app() -> App {
                                     "syntax_evictions": stats.syntax_evictions,
                                     "syntax_resets": stats.syntax_resets,
                                 },
+                                "paint_perf": paint_perf,
                             })
                         })
                         ;

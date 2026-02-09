@@ -1,6 +1,7 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
 use std::ops::Range;
+use std::time::Instant;
 
 use super::*;
 use fret_core::TextMetrics;
@@ -21,7 +22,24 @@ pub(super) fn paint_row(
 ) {
     st.last_bounds = Some(painter.bounds());
 
-    let (row_range, line, row_folds) = cached_row_text_with_range(st, row, text_cache_max_entries);
+    let perf_enabled = st.paint_perf_enabled;
+    let row_started = perf_enabled.then(Instant::now);
+
+    if perf_enabled {
+        st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
+    }
+
+    let (row_range, line, row_folds) = if perf_enabled {
+        let started = Instant::now();
+        let out = cached_row_text_with_range(st, row, text_cache_max_entries);
+        st.paint_perf_frame.us_row_text = st
+            .paint_perf_frame
+            .us_row_text
+            .saturating_add(started.elapsed().as_micros() as u64);
+        out
+    } else {
+        cached_row_text_with_range(st, row, text_cache_max_entries)
+    };
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
@@ -30,6 +48,10 @@ pub(super) fn paint_row(
         border_color: Color::TRANSPARENT,
         corner_radii: Corners::all(Px(0.0)),
     });
+    if perf_enabled {
+        st.paint_perf_frame.quads_background =
+            st.paint_perf_frame.quads_background.saturating_add(1);
+    }
 
     // Align the text baseline within the row rect.
     //
@@ -71,9 +93,16 @@ pub(super) fn paint_row(
             overflow: TextOverflow::Clip,
             scale_factor,
         };
+        let started = perf_enabled.then(Instant::now);
         let metrics = services
             .text()
             .measure_str(" ", text_style, measure_constraints);
+        if let Some(started) = started {
+            st.paint_perf_frame.us_baseline_measure = st
+                .paint_perf_frame
+                .us_baseline_measure
+                .saturating_add(started.elapsed().as_micros() as u64);
+        }
         let measured_h = if metrics.size.height.0 > 0.01 {
             metrics.size.height
         } else {
@@ -124,6 +153,7 @@ pub(super) fn paint_row(
                 selection_bg,
             );
             let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+            let started = perf_enabled.then(Instant::now);
             let (blob, metrics) = painter.rich_text_with_blob(
                 key,
                 DrawOrder(2),
@@ -134,6 +164,12 @@ pub(super) fn paint_row(
                 constraints,
                 scale_factor,
             );
+            if let Some(started) = started {
+                st.paint_perf_frame.us_text_draw = st
+                    .paint_perf_frame
+                    .us_text_draw
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
             row_preedit = Some(RowPreeditMapping {
                 insert_at: caret_in_line,
                 preedit_len: preedit.text.len(),
@@ -147,7 +183,17 @@ pub(super) fn paint_row(
     {
         if !drew_rich {
             let line_idx = st.display_map.display_row_line(row);
-            let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
+            let spans = if perf_enabled {
+                let started = Instant::now();
+                let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
+                st.paint_perf_frame.us_syntax_spans = st
+                    .paint_perf_frame
+                    .us_syntax_spans
+                    .saturating_add(started.elapsed().as_micros() as u64);
+                spans
+            } else {
+                cached_row_syntax_spans(st, line_idx, text_cache_max_entries)
+            };
             if !spans.is_empty() {
                 let rich_cache_max_entries = text_cache_max_entries.min(2048);
                 st.cache_stats.row_rich_get_calls =
@@ -177,6 +223,7 @@ pub(super) fn paint_row(
                         st.cache_stats.row_rich_hits =
                             st.cache_stats.row_rich_hits.saturating_add(1);
 
+                        let started = perf_enabled.then(Instant::now);
                         let (blob, metrics) = painter.rich_text_with_blob(
                             key,
                             DrawOrder(2),
@@ -187,6 +234,12 @@ pub(super) fn paint_row(
                             constraints,
                             scale_factor,
                         );
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_text_draw = st
+                                .paint_perf_frame
+                                .us_text_draw
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
                         row_blob = Some(blob);
                         row_blob_metrics = Some(metrics);
                         drew_rich = true;
@@ -225,10 +278,17 @@ pub(super) fn paint_row(
                             merged.push(span);
                         }
 
+                        let started = perf_enabled.then(Instant::now);
                         let rich = {
                             let theme = painter.theme();
                             materialize_row_rich_text(theme, Arc::clone(&line), merged.as_ref())
                         };
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_rich_materialize = st
+                                .paint_perf_frame
+                                .us_rich_materialize
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
                         st.row_rich_cache.insert(
                             row,
                             (
@@ -260,6 +320,7 @@ pub(super) fn paint_row(
                             }
                         }
 
+                        let started = perf_enabled.then(Instant::now);
                         let (blob, metrics) = painter.rich_text_with_blob(
                             key,
                             DrawOrder(2),
@@ -270,6 +331,12 @@ pub(super) fn paint_row(
                             constraints,
                             scale_factor,
                         );
+                        if let Some(started) = started {
+                            st.paint_perf_frame.us_text_draw = st
+                                .paint_perf_frame
+                                .us_text_draw
+                                .saturating_add(started.elapsed().as_micros() as u64);
+                        }
                         row_blob = Some(blob);
                         row_blob_metrics = Some(metrics);
                         drew_rich = true;
@@ -280,6 +347,7 @@ pub(super) fn paint_row(
     }
 
     if !drew_rich {
+        let started = perf_enabled.then(Instant::now);
         let (blob, metrics) = painter.text_with_blob(
             key,
             DrawOrder(2),
@@ -290,6 +358,12 @@ pub(super) fn paint_row(
             constraints,
             scale_factor,
         );
+        if let Some(started) = started {
+            st.paint_perf_frame.us_text_draw = st
+                .paint_perf_frame
+                .us_text_draw
+                .saturating_add(started.elapsed().as_micros() as u64);
+        }
         row_blob = Some(blob);
         row_blob_metrics = Some(metrics);
     }
@@ -314,10 +388,24 @@ pub(super) fn paint_row(
         } else {
             let mut stops: Vec<(usize, Px)> = Vec::new();
             let (services, _) = painter.services_and_scene();
+            let caret_stops_started = perf_enabled.then(Instant::now);
             services.text().caret_stops(blob, &mut stops);
+            if let Some(started) = caret_stops_started {
+                st.paint_perf_frame.us_caret_stops = st
+                    .paint_perf_frame
+                    .us_caret_stops
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
+            let caret_rect_started = perf_enabled.then(Instant::now);
             let caret_rect = services
                 .text()
                 .caret_rect(blob, 0, CaretAffinity::Downstream);
+            if let Some(started) = caret_rect_started {
+                st.paint_perf_frame.us_caret_rect = st
+                    .paint_perf_frame
+                    .us_caret_rect
+                    .saturating_add(started.elapsed().as_micros() as u64);
+            }
 
             // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
             // Convert it into row-local coordinates by anchoring the box using the *actual* blob
@@ -369,11 +457,18 @@ pub(super) fn paint_row(
             if local_start < local_end {
                 let (services, _) = painter.services_and_scene();
                 st.selection_rect_scratch.clear();
+                let started = perf_enabled.then(Instant::now);
                 services.text().selection_rects(
                     blob,
                     (local_start, local_end),
                     &mut st.selection_rect_scratch,
                 );
+                if let Some(started) = started {
+                    st.paint_perf_frame.us_selection_rects = st
+                        .paint_perf_frame
+                        .us_selection_rects
+                        .saturating_add(started.elapsed().as_micros() as u64);
+                }
 
                 for local_rect in st.selection_rect_scratch.iter().copied() {
                     let x0 = local_rect.origin.x.0;
@@ -396,6 +491,10 @@ pub(super) fn paint_row(
                         border_color: Color::TRANSPARENT,
                         corner_radii: Corners::all(Px(0.0)),
                     });
+                    if perf_enabled {
+                        st.paint_perf_frame.quads_selection =
+                            st.paint_perf_frame.quads_selection.saturating_add(1);
+                    }
                     drew_selection = true;
                 }
             }
@@ -455,6 +554,10 @@ pub(super) fn paint_row(
                         border_color: Color::TRANSPARENT,
                         corner_radii: Corners::all(Px(0.0)),
                     });
+                    if perf_enabled {
+                        st.paint_perf_frame.quads_selection =
+                            st.paint_perf_frame.quads_selection.saturating_add(1);
+                    }
                 }
             }
         }
@@ -556,7 +659,14 @@ pub(super) fn paint_row(
                     local = local.min(max_len);
 
                     let (services, _) = painter.services_and_scene();
+                    let started = perf_enabled.then(Instant::now);
                     let x0 = services.text().caret_x(blob, local);
+                    if let Some(started) = started {
+                        st.paint_perf_frame.us_caret_x = st
+                            .paint_perf_frame
+                            .us_caret_x
+                            .saturating_add(started.elapsed().as_micros() as u64);
+                    }
 
                     let (caret_top, caret_h) = if let (Some(top), Some(h)) =
                         (caret_rect_top, caret_rect_height)
@@ -592,6 +702,10 @@ pub(super) fn paint_row(
                     border_color: Color::TRANSPARENT,
                     corner_radii: Corners::all(Px(0.0)),
                 });
+                if perf_enabled {
+                    st.paint_perf_frame.quads_caret =
+                        st.paint_perf_frame.quads_caret.saturating_add(1);
+                }
             }
         }
     }
@@ -637,6 +751,19 @@ pub(super) fn paint_row(
             if remove {
                 st.row_geom_cache.remove(&victim);
             }
+        }
+    }
+
+    if perf_enabled {
+        st.paint_perf_frame.rows_drew_rich = st
+            .paint_perf_frame
+            .rows_drew_rich
+            .saturating_add(drew_rich as u64);
+        if let Some(row_started) = row_started {
+            st.paint_perf_frame.us_total = st
+                .paint_perf_frame
+                .us_total
+                .saturating_add(row_started.elapsed().as_micros() as u64);
         }
     }
 }
