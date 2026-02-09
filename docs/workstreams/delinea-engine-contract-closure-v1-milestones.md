@@ -48,6 +48,7 @@ Linking follow-ups (now tracked as contracts-first):
 
 - ADR 1172: axisPointer/cursor link events (crosshair sync).
 - ADR 1173: domain window link events (sync zoom/pan).
+- ADR 1174: host-level link mapping policy (LinkAxisKey) for cross-spec linking.
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 
