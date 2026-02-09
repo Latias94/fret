@@ -584,6 +584,13 @@ pub mod ui_app_driver;
 #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
 
+#[cfg(all(
+    feature = "ui-app-driver",
+    feature = "diagnostics",
+    feature = "diagnostics-ws"
+))]
+mod ui_diagnostics_ws_bridge;
+
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
 pub fn init_diagnostics() {
     init_tracing();

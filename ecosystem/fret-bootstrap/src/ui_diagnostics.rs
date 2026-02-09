@@ -3,6 +3,8 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
+#[cfg(feature = "diagnostics-ws")]
+use fret_diag_protocol::DiagTransportMessageV1;
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -41,13 +43,19 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+    pub devtools_ws_url: Option<String>,
+    pub devtools_token: Option<String>,
 }
 
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
-        let enabled =
-            std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
+
+        let (devtools_ws_url, devtools_token) = read_devtools_ws_config();
+
+        let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+            || out_dir_env.is_some()
+            || (devtools_ws_url.is_some() && devtools_token.is_some());
         let out_dir = out_dir_env
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
@@ -170,6 +178,8 @@ impl Default for UiDiagnosticsConfig {
             max_debug_string_bytes,
             max_gating_trace_entries,
             screenshot_on_dump,
+            devtools_ws_url,
+            devtools_token,
         }
     }
 }
@@ -177,6 +187,8 @@ impl Default for UiDiagnosticsConfig {
 #[derive(Default)]
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
+    #[cfg(feature = "diagnostics-ws")]
+    ws_bridge: crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge,
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
@@ -231,6 +243,80 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
+    fn poll_devtools_ws(&mut self) {
+        #[cfg(not(feature = "diagnostics-ws"))]
+        {
+            return;
+        }
+
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            let ws_url = self.cfg.devtools_ws_url.as_deref();
+            let token = self.cfg.devtools_token.as_deref();
+            if ws_url.is_none() || token.is_none() {
+                return;
+            }
+
+            let mut inbox: Vec<DiagTransportMessageV1> = Vec::new();
+            self.ws_bridge.drain_inbox(ws_url, token, &mut inbox);
+            for msg in inbox {
+                self.handle_devtools_ws_message(msg);
+            }
+        }
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn send_devtools_ws(&mut self, ty: &'static str, payload: serde_json::Value) {
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: ty.to_string(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn handle_devtools_ws_message(&mut self, msg: DiagTransportMessageV1) {
+        match msg.r#type.as_str() {
+            "inspect.set" => {
+                let cfg: UiInspectConfigV1 = match serde_json::from_value(msg.payload) {
+                    Ok(cfg) => cfg,
+                    Err(_) => return,
+                };
+                if cfg.schema_version != 1 {
+                    return;
+                }
+                self.inspect_enabled = cfg.enabled;
+                self.inspect_consume_clicks = cfg.consume_clicks;
+            }
+            "pick.arm" => {
+                self.pending_pick = None;
+                self.pick_armed_run_id = Some(self.next_pick_run_id());
+            }
+            "script.run" => {
+                let Some(script) = msg.payload.get("script").cloned() else {
+                    return;
+                };
+                self.queue_script_value(script);
+            }
+            "bundle.dump" => {
+                let label = msg
+                    .payload
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.trim().is_empty())
+                    .map(|s| s.to_string());
+                self.request_force_dump(label.unwrap_or_else(|| "bundle.dump".to_string()));
+            }
+            _ => {}
+        }
+    }
+
     pub fn set_app_snapshot_provider(
         &mut self,
         provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
@@ -250,6 +336,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
         self.poll_script_trigger();
@@ -377,6 +464,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
 
@@ -642,6 +730,7 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         }
 
+        self.poll_devtools_ws();
         self.ensure_ready_file();
         self.poll_script_trigger();
 
@@ -2623,6 +2712,7 @@ impl UiDiagnosticsService {
             return None;
         }
 
+        self.poll_devtools_ws();
         if let Some(label) = self.pending_force_dump_label.take() {
             return self.dump_bundle(Some(&label));
         }
@@ -2728,7 +2818,61 @@ impl UiDiagnosticsService {
         });
     }
 
+    fn queue_script_value(&mut self, script: serde_json::Value) {
+        let schema_version: u32 = script
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        let script = match schema_version {
+            1 => {
+                let Ok(script) = serde_json::from_value::<UiActionScriptV1>(script) else {
+                    return;
+                };
+                let Some(script) = PendingScript::from_v1(script) else {
+                    return;
+                };
+                script
+            }
+            2 => {
+                let Ok(script) = serde_json::from_value::<UiActionScriptV2>(script) else {
+                    return;
+                };
+                let Some(script) = PendingScript::from_v2(script) else {
+                    return;
+                };
+                script
+            }
+            _ => return,
+        };
+
+        let run_id = self.next_script_run_id();
+        self.pending_script = Some(script);
+        self.pending_script_run_id = Some(run_id);
+        self.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: None,
+            stage: UiScriptStageV1::Queued,
+            step_index: None,
+            reason: None,
+            last_bundle_dir: self
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&self.cfg.out_dir, p)),
+        });
+    }
+
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
+        {
+            if self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some() {
+                return self.dump_bundle_in_memory(label);
+            }
+        }
+
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
         if let Some(label) = label {
@@ -2737,7 +2881,7 @@ impl UiDiagnosticsService {
             }
         }
 
-        let dir = self.cfg.out_dir.join(dir_name);
+        let dir = self.cfg.out_dir.join(&dir_name);
         if std::fs::create_dir_all(&dir).is_err() {
             return None;
         }
@@ -2752,7 +2896,47 @@ impl UiDiagnosticsService {
             let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
         }
         self.last_dump_dir = Some(dir.clone());
+
+        #[cfg(feature = "diagnostics-ws")]
+        self.emit_bundle_dumped(ts, &dir_name, &bundle);
+
         Some(dir)
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn dump_bundle_in_memory(&mut self, label: Option<&str>) -> Option<PathBuf> {
+        let ts = unix_ms_now();
+        let mut dir_name = ts.to_string();
+        if let Some(label) = label {
+            if !label.is_empty() {
+                dir_name = format!("{dir_name}-{label}");
+            }
+        }
+
+        let pseudo_dir = PathBuf::from(dir_name.clone());
+        let bundle = UiDiagnosticsBundleV1::from_service(ts, &pseudo_dir, self);
+        self.last_dump_dir = Some(pseudo_dir.clone());
+        self.emit_bundle_dumped(ts, &dir_name, &bundle);
+        Some(pseudo_dir)
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn emit_bundle_dumped(
+        &mut self,
+        exported_unix_ms: u64,
+        dir_name: &str,
+        bundle: &UiDiagnosticsBundleV1,
+    ) {
+        self.send_devtools_ws(
+            "bundle.dumped",
+            serde_json::json!({
+                "schema_version": 1,
+                "exported_unix_ms": exported_unix_ms,
+                "out_dir": self.cfg.out_dir.to_string_lossy(),
+                "dir": dir_name,
+                "bundle": bundle,
+            }),
+        );
     }
 
     fn next_script_run_id(&mut self) -> u64 {
@@ -2773,20 +2957,32 @@ impl UiDiagnosticsService {
         id
     }
 
-    fn write_script_result(&self, result: UiScriptResultV1) {
+    fn write_script_result(&mut self, result: UiScriptResultV1) {
         if !self.is_enabled() {
             return;
         }
         let _ = write_json(self.cfg.script_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.script_result_trigger_path);
+
+        #[cfg(feature = "diagnostics-ws")]
+        self.send_devtools_ws(
+            "script.result",
+            serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+        );
     }
 
-    fn write_pick_result(&self, result: UiPickResultV1) {
+    fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
         }
         let _ = write_json(self.cfg.pick_result_path.clone(), &result);
         let _ = touch_file(&self.cfg.pick_result_trigger_path);
+
+        #[cfg(feature = "diagnostics-ws")]
+        self.send_devtools_ws(
+            "pick.result",
+            serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
+        );
     }
 
     fn poll_pick_trigger(&mut self) {
@@ -5476,7 +5672,7 @@ fn command_gating_trace_for_window(
     let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
 
     // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
-    for (cmd, _) in gating.enabled_overrides() {
+    for cmd in gating.enabled_overrides().keys() {
         candidates.push(UiCommandGatingTraceCandidate {
             command: cmd.clone(),
             source: "enabled_overrides",
@@ -5485,7 +5681,7 @@ fn command_gating_trace_for_window(
         });
     }
     if let Some(map) = gating.action_availability() {
-        for (cmd, _) in map {
+        for cmd in map.keys() {
             candidates.push(UiCommandGatingTraceCandidate {
                 command: cmd.clone(),
                 source: "action_availability",
@@ -8126,6 +8322,26 @@ fn event_debug_string(event: &Event, redact_text: bool) -> String {
     }
 }
 
+fn read_devtools_ws_config() -> (Option<String>, Option<String>) {
+    #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
+    {
+        fret_diag_ws::client::devtools_ws_config_from_window_query()
+    }
+
+    #[cfg(all(feature = "diagnostics-ws", not(target_arch = "wasm32")))]
+    {
+        (
+            std::env::var("FRET_DEVTOOLS_WS").ok(),
+            std::env::var("FRET_DEVTOOLS_TOKEN").ok(),
+        )
+    }
+
+    #[cfg(not(feature = "diagnostics-ws"))]
+    {
+        (None, None)
+    }
+}
+
 fn unix_ms_now() -> u64 {
     fret_core::time::SystemTime::now()
         .duration_since(fret_core::time::UNIX_EPOCH)
@@ -8923,10 +9139,10 @@ fn pick_semantics_node_at<'a>(
     pick_semantics_node_by_bounds(snapshot, position)
 }
 
-pub(crate) fn pick_semantics_node_by_bounds<'a>(
-    snapshot: &'a fret_core::SemanticsSnapshot,
+pub(crate) fn pick_semantics_node_by_bounds(
+    snapshot: &fret_core::SemanticsSnapshot,
     position: Point,
-) -> Option<&'a fret_core::SemanticsNode> {
+) -> Option<&fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
     pick_best_match(
         snapshot.nodes.iter().filter(|n| {
@@ -8951,21 +9167,21 @@ fn suggest_selectors(
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
-    if let Some(name) = exported_node.label.as_deref() {
-        if !(cfg.redact_text && is_redacted_string(name)) {
-            let ancestors = selector_ancestors_for(snapshot, raw_node);
-            if !ancestors.is_empty() {
-                out.push(UiSelectorV1::RoleAndPath {
-                    role: role.clone(),
-                    name: name.to_string(),
-                    ancestors,
-                });
-            }
-            out.push(UiSelectorV1::RoleAndName {
+    if let Some(name) = exported_node.label.as_deref()
+        && !(cfg.redact_text && is_redacted_string(name))
+    {
+        let ancestors = selector_ancestors_for(snapshot, raw_node);
+        if !ancestors.is_empty() {
+            out.push(UiSelectorV1::RoleAndPath {
                 role: role.clone(),
                 name: name.to_string(),
+                ancestors,
             });
         }
+        out.push(UiSelectorV1::RoleAndName {
+            role: role.clone(),
+            name: name.to_string(),
+        });
     }
 
     if let Some(element) = element {

@@ -4696,7 +4696,6 @@ impl WinitAppDriver for UiGalleryDriver {
 
         scene.clear();
 
-        #[cfg(not(target_arch = "wasm32"))]
         if app
             .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled())
         {
@@ -4800,86 +4799,83 @@ impl WinitAppDriver for UiGalleryDriver {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
-            // VirtualList) have their realized item subtrees available for hit-testing.
-            let semantics_snapshot = state.ui.semantics_snapshot();
-            let drive = app.with_global_mut_untracked(
-                UiDiagnosticsService::default,
-                |svc: &mut UiDiagnosticsService, app| {
-                    let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                    svc.drive_script_for_window(
-                        &*app,
-                        window,
-                        bounds,
-                        scale_factor,
-                        semantics_snapshot,
-                        element_runtime,
-                    )
-                },
-            );
+        // Drive scripted input after `paint_all()` so virtualization-heavy trees (e.g.
+        // VirtualList) have their realized item subtrees available for hit-testing.
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(
+            UiDiagnosticsService::default,
+            |svc: &mut UiDiagnosticsService, app| {
+                let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+                svc.drive_script_for_window(
+                    &*app,
+                    window,
+                    bounds,
+                    scale_factor,
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            },
+        );
 
-            for effect in drive.effects {
-                app.push_effect(effect);
-            }
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
 
-            if drive.request_redraw {
-                app.request_redraw(window);
-                // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-                // scene is otherwise idle. Requesting an animation frame ensures the runner
-                // schedules another render tick.
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
 
-            let mut injected_any = false;
-            for event in drive.events {
-                injected_any = true;
-                state.ui.dispatch_event(app, services, &event);
-            }
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
 
-            if injected_any {
-                // Script-driven events bypass the winit event loop, so we must apply any generated
-                // command effects (e.g. Tab => focus traversal) before we record snapshots.
-                //
-                // Keep non-command effects queued for the runner to handle after `render` returns.
-                let mut deferred_effects: Vec<Effect> = Vec::new();
-                loop {
-                    let effects = app.flush_effects();
-                    if effects.is_empty() {
-                        break;
-                    }
+        if injected_any {
+            // Script-driven events bypass the winit event loop, so we must apply any generated
+            // command effects (e.g. Tab => focus traversal) before we record snapshots.
+            //
+            // Keep non-command effects queued for the runner to handle after `render` returns.
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
 
-                    let mut applied_any_command = false;
-                    for effect in effects {
-                        match effect {
-                            Effect::Command { window: w, command } => {
-                                if w.is_none() || w == Some(window) {
-                                    self.handle_command(
-                                        WinitCommandContext {
-                                            app,
-                                            services,
-                                            window,
-                                            state,
-                                        },
-                                        command,
-                                    );
-                                    applied_any_command = true;
-                                } else {
-                                    deferred_effects.push(Effect::Command { window: w, command });
-                                }
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                self.handle_command(
+                                    WinitCommandContext {
+                                        app,
+                                        services,
+                                        window,
+                                        state,
+                                    },
+                                    command,
+                                );
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
                             }
-                            other => deferred_effects.push(other),
                         }
+                        other => deferred_effects.push(other),
                     }
+                }
 
-                    if !applied_any_command {
-                        break;
-                    }
+                if !applied_any_command {
+                    break;
                 }
-                for effect in deferred_effects {
-                    app.push_effect(effect);
-                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
             }
         }
 
