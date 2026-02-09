@@ -4,7 +4,7 @@ use fret_core::{
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
-use fret_diag_protocol::DiagTransportMessageV1;
+use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -12,6 +12,9 @@ use slotmap::{Key as _, KeyData};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+#[cfg(feature = "diagnostics-ws")]
+use crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge;
 
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
@@ -43,19 +46,48 @@ pub struct UiDiagnosticsConfig {
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
+
+    /// Optional DevTools WebSocket endpoint for diagnostics control (script/pick/dump).
+    ///
+    /// When set (with `devtools_token`), diagnostics enablement is implied even if `FRET_DIAG` is
+    /// not set. This is required for web runners that do not have filesystem access.
     pub devtools_ws_url: Option<String>,
     pub devtools_token: Option<String>,
+    /// Whether `bundle.dumped` should embed the full `bundle.json` payload in the WS message.
+    ///
+    /// Web runners should enable this so tooling can materialize bundles without filesystem
+    /// access inside the browser.
+    pub devtools_embed_bundle: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
     fn default() -> Self {
         let out_dir_env = std::env::var_os("FRET_DIAG_DIR").filter(|v| !v.is_empty());
+        let diag_enabled =
+            std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()) || out_dir_env.is_some();
 
-        let (devtools_ws_url, devtools_token) = read_devtools_ws_config();
+        let (devtools_ws_url, devtools_token) = {
+            #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
+            {
+                fret_diag_ws::client::devtools_ws_config_from_window_query()
+            }
+            #[cfg(all(feature = "diagnostics-ws", not(target_arch = "wasm32")))]
+            {
+                let ws_url = std::env::var("FRET_DEVTOOLS_WS")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty());
+                let token = std::env::var("FRET_DEVTOOLS_TOKEN")
+                    .ok()
+                    .filter(|v| !v.trim().is_empty());
+                (ws_url, token)
+            }
+            #[cfg(not(feature = "diagnostics-ws"))]
+            {
+                (None, None)
+            }
+        };
 
-        let enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
-            || out_dir_env.is_some()
-            || (devtools_ws_url.is_some() && devtools_token.is_some());
+        let enabled = diag_enabled || (devtools_ws_url.is_some() && devtools_token.is_some());
         let out_dir = out_dir_env
             .map(PathBuf::from)
             .unwrap_or_else(|| PathBuf::from("target").join("fret-diag"));
@@ -180,6 +212,7 @@ impl Default for UiDiagnosticsConfig {
             screenshot_on_dump,
             devtools_ws_url,
             devtools_token,
+            devtools_embed_bundle: cfg!(target_arch = "wasm32"),
         }
     }
 }
@@ -187,8 +220,6 @@ impl Default for UiDiagnosticsConfig {
 #[derive(Default)]
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
-    #[cfg(feature = "diagnostics-ws")]
-    ws_bridge: crate::ui_diagnostics_ws_bridge::UiDiagnosticsWsBridge,
     per_window: HashMap<AppWindowId, WindowRing>,
     last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
@@ -223,6 +254,8 @@ pub struct UiDiagnosticsService {
     pending_pick: Option<PendingPick>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+    #[cfg(feature = "diagnostics-ws")]
+    ws_bridge: UiDiagnosticsWsBridge,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -241,80 +274,6 @@ struct InspectToast {
 impl UiDiagnosticsService {
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
-    }
-
-    fn poll_devtools_ws(&mut self) {
-        #[cfg(not(feature = "diagnostics-ws"))]
-        {
-            return;
-        }
-
-        #[cfg(feature = "diagnostics-ws")]
-        {
-            let ws_url = self.cfg.devtools_ws_url.as_deref();
-            let token = self.cfg.devtools_token.as_deref();
-            if ws_url.is_none() || token.is_none() {
-                return;
-            }
-
-            let mut inbox: Vec<DiagTransportMessageV1> = Vec::new();
-            self.ws_bridge.drain_inbox(ws_url, token, &mut inbox);
-            for msg in inbox {
-                self.handle_devtools_ws_message(msg);
-            }
-        }
-    }
-
-    #[cfg(feature = "diagnostics-ws")]
-    fn send_devtools_ws(&mut self, ty: &'static str, payload: serde_json::Value) {
-        self.ws_bridge.send(
-            self.cfg.devtools_ws_url.as_deref(),
-            self.cfg.devtools_token.as_deref(),
-            DiagTransportMessageV1 {
-                schema_version: 1,
-                r#type: ty.to_string(),
-                session_id: None,
-                request_id: None,
-                payload,
-            },
-        );
-    }
-
-    #[cfg(feature = "diagnostics-ws")]
-    fn handle_devtools_ws_message(&mut self, msg: DiagTransportMessageV1) {
-        match msg.r#type.as_str() {
-            "inspect.set" => {
-                let cfg: UiInspectConfigV1 = match serde_json::from_value(msg.payload) {
-                    Ok(cfg) => cfg,
-                    Err(_) => return,
-                };
-                if cfg.schema_version != 1 {
-                    return;
-                }
-                self.inspect_enabled = cfg.enabled;
-                self.inspect_consume_clicks = cfg.consume_clicks;
-            }
-            "pick.arm" => {
-                self.pending_pick = None;
-                self.pick_armed_run_id = Some(self.next_pick_run_id());
-            }
-            "script.run" => {
-                let Some(script) = msg.payload.get("script").cloned() else {
-                    return;
-                };
-                self.queue_script_value(script);
-            }
-            "bundle.dump" => {
-                let label = msg
-                    .payload
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.trim().is_empty())
-                    .map(|s| s.to_string());
-                self.request_force_dump(label.unwrap_or_else(|| "bundle.dump".to_string()));
-            }
-            _ => {}
-        }
     }
 
     pub fn set_app_snapshot_provider(
@@ -336,7 +295,6 @@ impl UiDiagnosticsService {
             return false;
         }
 
-        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
         self.poll_script_trigger();
@@ -464,7 +422,6 @@ impl UiDiagnosticsService {
             return false;
         }
 
-        self.poll_devtools_ws();
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
 
@@ -730,7 +687,6 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         }
 
-        self.poll_devtools_ws();
         self.ensure_ready_file();
         self.poll_script_trigger();
 
@@ -814,7 +770,8 @@ impl UiDiagnosticsService {
 
         let is_v2_intent_step = matches!(
             &step,
-            UiActionStepV2::EnsureVisible { .. }
+            UiActionStepV2::ClickStable { .. }
+                | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
@@ -1127,6 +1084,7 @@ impl UiDiagnosticsService {
                 target,
                 button,
                 click_count,
+                modifiers,
             } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
@@ -1173,7 +1131,13 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                output.events.extend(click_events(pos, button, click_count));
+                let modifiers = core_modifiers_from_ui(modifiers);
+                output.events.extend(click_events_with_modifiers(
+                    pos,
+                    button,
+                    click_count,
+                    modifiers,
+                ));
 
                 active.wait_until = None;
                 active.screenshot_wait = None;
@@ -1181,6 +1145,496 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-click"));
+                }
+            }
+            UiActionStepV2::ClickStable {
+                target,
+                button,
+                click_count,
+                modifiers,
+                stable_frames,
+                max_move_px,
+                timeout_frames,
+            } => {
+                let click_modifiers = core_modifiers_from_ui(modifiers);
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                // Stable-click: wait for semantics bounds to stop moving before clicking.
+                //
+                // This is intended for virtualization-heavy views where a target's measured bounds
+                // can jump across frames (e.g. estimate -> measured), causing clicks to land at
+                // stale coordinates when using a single-frame snapshot.
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_center: None,
+                            },
+                        };
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let center = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+
+                            let moved = match state.last_center {
+                                Some(last) => {
+                                    let dx = (center.x.0 - last.x.0).abs();
+                                    let dy = (center.y.0 - last.y.0).abs();
+                                    dx.max(dy)
+                                }
+                                None => 0.0,
+                            };
+
+                            if moved <= max_move_px {
+                                state.stable_count = state.stable_count.saturating_add(1);
+                            } else {
+                                state.stable_count = 1;
+                            }
+                            state.last_center = Some(center);
+
+                            if state.stable_count >= stable_required {
+                                output.events.extend(click_events_with_modifiers(
+                                    center,
+                                    button,
+                                    click_count,
+                                    click_modifiers,
+                                ));
+                                active.wait_until = None;
+                                active.screenshot_wait = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-click_stable-click"
+                                    ));
+                                }
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::ClickStable(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_stable-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+
+                #[cfg(any())]
+                if let Some(snapshot) = semantics_snapshot {
+                    if let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    {
+                        let stable_required = stable_frames.max(1);
+                        let max_move_px = max_move_px.max(0.0);
+
+                        let mut state = match active.v2_step_state.take() {
+                            Some(V2StepState::ClickStable(mut state))
+                                if state.step_index == step_index =>
+                            {
+                                state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                                state
+                            }
+                            _ => V2ClickStableState {
+                                step_index,
+                                remaining_frames: timeout_frames,
+                                stable_count: 0,
+                                last_center: None,
+                                resolved_center: None,
+                                logged_no_hit: false,
+                                logged_mismatch: false,
+                            },
+                        };
+
+                        let bounds = node.bounds;
+                        let mut center = state
+                            .resolved_center
+                            .unwrap_or_else(|| center_of_rect(bounds));
+
+                        let target_test_id = node.test_id.as_deref();
+                        let mut hit_snapshot_for_center = UiHitTestSnapshotV1::from_tree(
+                            center,
+                            ui,
+                            element_runtime,
+                            window,
+                            Some(snapshot),
+                        );
+                        let mut seed_hittable = hit_snapshot_for_center
+                            .hit_semantics_actionable_ancestor
+                            .as_ref()
+                            .is_some_and(|hit| {
+                                hit.id == node.id.data().as_ffi()
+                                    || (target_test_id.is_some()
+                                        && hit.test_id.as_deref() == target_test_id)
+                            });
+
+                        let seed_hit = ui.debug_hit_test(center).hit;
+                        let seed_hit_node = seed_hit.map(|n| n.data().as_ffi());
+                        let seed_hit_children_transform =
+                            seed_hit.and_then(|n| ui.debug_node_children_render_transform(n));
+                        let target_debug_bounds = ui.debug_node_bounds(node.id);
+                        let target_visual_bounds = ui.debug_node_visual_bounds(node.id);
+                        if state.resolved_center.is_none() && !seed_hittable {
+                            if let Some(found) = find_hittable_point_for_node(ui, node.id, bounds) {
+                                state.resolved_center = Some(found);
+                                center = found;
+                                hit_snapshot_for_center = UiHitTestSnapshotV1::from_tree(
+                                    center,
+                                    ui,
+                                    element_runtime,
+                                    window,
+                                    Some(snapshot),
+                                );
+                                seed_hittable = hit_snapshot_for_center
+                                    .hit_semantics_actionable_ancestor
+                                    .as_ref()
+                                    .is_some_and(|hit| {
+                                        hit.id == node.id.data().as_ffi()
+                                            || (target_test_id.is_some()
+                                                && hit.test_id.as_deref() == target_test_id)
+                                    });
+                            } else if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE")
+                                && !state.logged_no_hit
+                            {
+                                state.logged_no_hit = true;
+                                let seed_hit_actionable_test_id = hit_snapshot_for_center
+                                    .hit_semantics_actionable_ancestor
+                                    .as_ref()
+                                    .and_then(|n| n.test_id.as_deref())
+                                    .unwrap_or("<none>");
+                                let mut mapped = center;
+                                let mut blocker_node_id: Option<u64> = None;
+                                let mut blocker_bounds: Option<Rect> = None;
+                                let mut blocker_pos: Option<Point> = None;
+                                let mut blocker_clips_hit_test: Option<bool> = None;
+                                let mut blocker_element: Option<u64> = None;
+                                let mut blocker_element_path: Option<String> = None;
+                                for id in ui.debug_node_path(node.id) {
+                                    if let Some(t) = ui.debug_node_render_transform(id)
+                                        && let Some(inv) = t.inverse()
+                                    {
+                                        mapped = inv.apply_point(mapped);
+                                    }
+
+                                    let bounds_here = ui.debug_node_bounds(id).unwrap_or_default();
+                                    let clips_here =
+                                        ui.debug_node_clips_hit_test(id).unwrap_or(true);
+                                    if clips_here && !bounds_here.contains(mapped) {
+                                        blocker_node_id = Some(id.data().as_ffi());
+                                        blocker_bounds = Some(bounds_here);
+                                        blocker_pos = Some(mapped);
+                                        blocker_clips_hit_test = Some(clips_here);
+                                        if let Some(el) = ui.debug_node_element(id) {
+                                            blocker_element = Some(el.0);
+                                            blocker_element_path = element_runtime.and_then(|rt| {
+                                                rt.debug_path_for_element(window, el)
+                                            });
+                                        }
+                                        break;
+                                    }
+
+                                    if let Some(t) = ui.debug_node_children_render_transform(id)
+                                        && let Some(inv) = t.inverse()
+                                    {
+                                        mapped = inv.apply_point(mapped);
+                                    }
+                                }
+                                tracing::info!(
+                                    step_index,
+                                    target = ?target,
+                                    target_node_id = node.id.data().as_ffi(),
+                                    bounds = ?bounds,
+                                    seed_hit = ?hit_snapshot_for_center.hit,
+                                    seed_hit_element = ?hit_snapshot_for_center.hit_element,
+                                    seed_hit_element_path = ?hit_snapshot_for_center.hit_element_path,
+                                    seed_hit_actionable_test_id,
+                                    target_debug_bounds = ?target_debug_bounds,
+                                    target_visual_bounds = ?target_visual_bounds,
+                                    center_x = center.x.0,
+                                    center_y = center.y.0,
+                                    seed_hit_node,
+                                    seed_hit_children_transform = ?seed_hit_children_transform,
+                                    blocker_node_id,
+                                    blocker_bounds = ?blocker_bounds,
+                                    blocker_pos = ?blocker_pos,
+                                    blocker_clips_hit_test,
+                                    blocker_element,
+                                    blocker_element_path = blocker_element_path.as_deref().unwrap_or("<none>"),
+                                    "diag click_stable could not find hittable point"
+                                );
+                            }
+                        }
+
+                        if state.remaining_frames == 0 {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-click_stable-timeout"));
+                            stop_script = true;
+                            failure_reason = Some("click_stable_timeout".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            // While waiting for stability, continuously move the pointer to the
+                            // computed center so scroll/hit-test-only transforms settle before we
+                            // press.
+                            let moved = match state.last_center {
+                                Some(prev) => {
+                                    let dx = center.x.0 - prev.x.0;
+                                    let dy = center.y.0 - prev.y.0;
+                                    (dx * dx + dy * dy).sqrt()
+                                }
+                                None => 0.0,
+                            };
+
+                            if state.last_center.is_none() || moved <= max_move_px {
+                                state.stable_count = state.stable_count.saturating_add(1);
+                            } else {
+                                state.stable_count = 1;
+                            }
+                            state.last_center = Some(center);
+
+                            output.events.push(move_pointer_event(center));
+                            let hit_includes_target = hit_snapshot_for_center
+                                .hit_semantics_actionable_ancestor
+                                .as_ref()
+                                .is_some_and(|hit| {
+                                    hit.id == node.id.data().as_ffi()
+                                        || (target_test_id.is_some()
+                                            && hit.test_id.as_deref() == target_test_id)
+                                });
+
+                            if state.stable_count >= stable_required && hit_includes_target {
+                                if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE") {
+                                    let hit = UiHitTestSnapshotV1::from_tree(
+                                        center,
+                                        ui,
+                                        element_runtime,
+                                        window,
+                                        Some(snapshot),
+                                    );
+                                    let semantics_at_center =
+                                        pick_semantics_node_at(snapshot, ui, center)
+                                            .and_then(|n| n.test_id.as_deref())
+                                            .unwrap_or("<none>");
+                                    let target_node = select_semantics_node(
+                                        snapshot,
+                                        window,
+                                        element_runtime,
+                                        &target,
+                                    );
+                                    let target_node_id = target_node
+                                        .as_ref()
+                                        .map(|n| n.id.data().as_ffi())
+                                        .unwrap_or(0);
+                                    let target_bounds =
+                                        target_node.map(|n| n.bounds).unwrap_or(Rect::default());
+                                    let target_visual_bounds = target_node
+                                        .and_then(|n| ui.debug_node_visual_bounds(n.id))
+                                        .unwrap_or(Rect::default());
+                                    let target_debug_bounds = target_node
+                                        .and_then(|n| ui.debug_node_bounds(n.id))
+                                        .unwrap_or(Rect::default());
+                                    let viewport_node = snapshot.nodes.iter().find(|n| {
+                                        n.test_id.as_deref() == Some("ui-gallery-content-viewport")
+                                    });
+                                    let viewport_node_id =
+                                        viewport_node.map(|n| n.id.data().as_ffi()).unwrap_or(0);
+                                    let viewport_children_transform = viewport_node.and_then(|n| {
+                                        ui.debug_node_children_render_transform(n.id)
+                                    });
+                                    let target_path_contains_viewport = target_node
+                                        .as_ref()
+                                        .map(|n| {
+                                            ui.debug_node_path(n.id)
+                                                .iter()
+                                                .any(|id| id.data().as_ffi() == viewport_node_id)
+                                        })
+                                        .unwrap_or(false);
+                                    let hit_actionable_test_id = hit
+                                        .hit_semantics_actionable_ancestor
+                                        .as_ref()
+                                        .and_then(|n| n.test_id.as_deref())
+                                        .unwrap_or("<none>");
+                                    let hit_path_contains_target_node =
+                                        hit.hit_node_path.contains(&target_node_id);
+                                    let hit_path_contains_sources =
+                                        hit.hit_node_path_nodes.iter().any(|entry| {
+                                            entry.element_path.as_ref().is_some_and(|p| {
+                                                p.contains("sources_block.rs")
+                                                    || p.contains("fret-ui-ai")
+                                                    || p.contains("sources")
+                                            })
+                                        });
+
+                                    // Probe a small grid inside the chosen click bounds. If none of these points
+                                    // ever includes the target node in the hit-test path, the target bounds are
+                                    // likely out-of-sync with the hit-test transform chain (e.g. scroll offsets
+                                    // applied differently between semantics vs hit testing).
+                                    let mut probe_hits_target = 0u8;
+                                    let mut probe_logged_sample = false;
+                                    let min_x = bounds.origin.x.0;
+                                    let min_y = bounds.origin.y.0;
+                                    let max_x = bounds.origin.x.0 + bounds.size.width.0;
+                                    let max_y = bounds.origin.y.0 + bounds.size.height.0;
+                                    let xs = [min_x + 0.5, center.x.0, max_x - 0.5];
+                                    let ys = [min_y + 0.5, center.y.0, max_y - 0.5];
+                                    for (xi, x) in xs.into_iter().enumerate() {
+                                        for (yi, y) in ys.into_iter().enumerate() {
+                                            let p = Point::new(fret_core::Px(x), fret_core::Px(y));
+                                            let Some(hit_node) = ui.debug_hit_test(p).hit else {
+                                                continue;
+                                            };
+                                            let path = ui.debug_node_path(hit_node);
+                                            let includes = path
+                                                .iter()
+                                                .any(|id| id.data().as_ffi() == target_node_id);
+                                            if includes {
+                                                probe_hits_target =
+                                                    probe_hits_target.saturating_add(1);
+                                            }
+                                            if !probe_logged_sample {
+                                                probe_logged_sample = true;
+                                                tracing::info!(
+                                                    step_index,
+                                                    target = ?target,
+                                                    probe_x_index = xi,
+                                                    probe_y_index = yi,
+                                                    probe_x = x,
+                                                    probe_y = y,
+                                                    probe_hit = hit_node.data().as_ffi(),
+                                                    probe_hit_path_contains_target = includes,
+                                                    "diag click_stable probe"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    tracing::info!(
+                                        step_index,
+                                        target = ?target,
+                                        target_node_id,
+                                        target_bounds = ?target_bounds,
+                                        target_visual_bounds = ?target_visual_bounds,
+                                        target_debug_bounds = ?target_debug_bounds,
+                                        viewport_node_id,
+                                        viewport_children_transform = ?viewport_children_transform,
+                                        target_path_contains_viewport,
+                                        inspection_active = ui.inspection_active(),
+                                        x = center.x.0,
+                                        y = center.y.0,
+                                        semantics_at_center,
+                                        hit_actionable_test_id,
+                                        hit_node = ?hit.hit,
+                                        hit_element = ?hit.hit_element,
+                                        hit_element_path = ?hit.hit_element_path,
+                                        hit_ancestor_element = ?hit.hit_ancestor_element,
+                                        hit_ancestor_element_path = ?hit.hit_ancestor_element_path,
+                                        hit_path_contains_target_node,
+                                        hit_path_contains_sources,
+                                        probe_hits_target,
+                                        "diag click_stable resolved hit-test"
+                                    );
+                                }
+                                output.events.extend(click_events_with_modifiers(
+                                    center,
+                                    button,
+                                    click_count,
+                                    click_modifiers,
+                                ));
+                                active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-click_stable"));
+                                }
+                            } else {
+                                if state.stable_count >= stable_required && !hit_includes_target {
+                                    if env_flag_default_false("FRET_DIAG_DEBUG_CLICK_STABLE")
+                                        && !state.logged_mismatch
+                                    {
+                                        state.logged_mismatch = true;
+                                        let hit_actionable = hit_snapshot_for_center
+                                            .hit_semantics_actionable_ancestor
+                                            .as_ref();
+                                        tracing::info!(
+                                            step_index,
+                                            target = ?target,
+                                            target_node_id = node.id.data().as_ffi(),
+                                            target_test_id = target_test_id.unwrap_or("<none>"),
+                                            x = center.x.0,
+                                            y = center.y.0,
+                                            hit_actionable_id = hit_actionable.map(|n| n.id).unwrap_or(0),
+                                            hit_actionable_test_id = hit_actionable
+                                                .and_then(|n| n.test_id.as_deref())
+                                                .unwrap_or("<none>"),
+                                            hit_node = ?ui.debug_hit_test(center).hit.map(|n| n.data().as_ffi()),
+                                            "diag click_stable stable-but-mismatch"
+                                        );
+                                    }
+
+                                    // Scroll and other transform-only updates can land after the
+                                    // semantics snapshot used to choose `center`. If the target
+                                    // is not actually hit-testable at this point, keep waiting
+                                    // instead of clicking a stale coordinate.
+                                    state.stable_count = 0;
+                                    state.resolved_center = None;
+                                }
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::ClickStable(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                    } else {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-click_stable-no-semantics-match"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("click_stable_no_semantics_match".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-click_stable-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::MovePointer { target } => {
@@ -2172,6 +2626,12 @@ impl UiDiagnosticsService {
             return;
         }
 
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            // Web runners do not have a stable filesystem surface for the legacy `ready.touch` file.
+            self.ready_written = true;
+            return;
+        }
+
         if let Some(parent) = self.cfg.ready_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -2712,9 +3172,14 @@ impl UiDiagnosticsService {
             return None;
         }
 
-        self.poll_devtools_ws();
+        self.poll_ws_inbox();
+
         if let Some(label) = self.pending_force_dump_label.take() {
             return self.dump_bundle(Some(&label));
+        }
+
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return None;
         }
 
         let Some(stamp) = read_touch_stamp(&self.cfg.trigger_path) else {
@@ -2746,7 +3211,115 @@ impl UiDiagnosticsService {
         self.pending_force_dump_label = Some(sanitize_label(&label));
     }
 
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_is_configured(&self) -> bool {
+        self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some()
+    }
+
+    #[cfg(not(feature = "diagnostics-ws"))]
+    fn ws_is_configured(&self) -> bool {
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn poll_ws_inbox(&mut self) {
+        if !self.ws_is_configured() {
+            return;
+        }
+
+        let mut msgs: Vec<DiagTransportMessageV1> = Vec::new();
+        self.ws_bridge.drain_inbox(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            &mut msgs,
+        );
+
+        for msg in msgs {
+            self.apply_ws_message(msg);
+        }
+    }
+
+    #[cfg(not(feature = "diagnostics-ws"))]
+    fn poll_ws_inbox(&mut self) {}
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn ws_send(&mut self, ty: impl Into<String>, payload: serde_json::Value) {
+        if !self.ws_is_configured() {
+            return;
+        }
+        self.ws_bridge.send(
+            self.cfg.devtools_ws_url.as_deref(),
+            self.cfg.devtools_token.as_deref(),
+            DiagTransportMessageV1 {
+                schema_version: 1,
+                r#type: ty.into(),
+                session_id: None,
+                request_id: None,
+                payload,
+            },
+        );
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn apply_ws_message(&mut self, msg: DiagTransportMessageV1) {
+        match msg.r#type.as_str() {
+            "inspect.set" => {
+                let Ok(cfg) = serde_json::from_value::<UiInspectConfigV1>(msg.payload) else {
+                    return;
+                };
+                self.inspect_enabled = cfg.enabled;
+                self.inspect_consume_clicks = cfg.consume_clicks;
+                if !self.inspect_enabled {
+                    self.inspect_locked_windows.clear();
+                }
+            }
+            "pick.arm" => {
+                self.pending_pick = None;
+                self.pick_armed_run_id = Some(self.next_pick_run_id());
+            }
+            "bundle.dump" => {
+                let label = serde_json::from_value::<DevtoolsBundleDumpV1>(msg.payload)
+                    .ok()
+                    .and_then(|v| v.label)
+                    .unwrap_or_else(|| "bundle".to_string());
+                self.request_force_dump(label);
+            }
+            "script.push" | "script.run" => {
+                let script_value = msg
+                    .payload
+                    .get("script")
+                    .cloned()
+                    .unwrap_or_else(|| msg.payload.clone());
+                let Some(script) = PendingScript::from_json_value(script_value) else {
+                    return;
+                };
+                let run_id = self.next_script_run_id();
+                self.pending_script = Some(script);
+                self.pending_script_run_id = Some(run_id);
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Queued,
+                    step_index: None,
+                    reason: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                });
+            }
+            _ => {}
+        }
+    }
+
     fn poll_script_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let Some(stamp) = read_touch_stamp(&self.cfg.script_trigger_path) else {
             if let Some(dir) = self.cfg.script_trigger_path.parent() {
                 let _ = std::fs::create_dir_all(dir);
@@ -2818,61 +3391,7 @@ impl UiDiagnosticsService {
         });
     }
 
-    fn queue_script_value(&mut self, script: serde_json::Value) {
-        let schema_version: u32 = script
-            .get("schema_version")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0)
-            .min(u32::MAX as u64) as u32;
-
-        let script = match schema_version {
-            1 => {
-                let Ok(script) = serde_json::from_value::<UiActionScriptV1>(script) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v1(script) else {
-                    return;
-                };
-                script
-            }
-            2 => {
-                let Ok(script) = serde_json::from_value::<UiActionScriptV2>(script) else {
-                    return;
-                };
-                let Some(script) = PendingScript::from_v2(script) else {
-                    return;
-                };
-                script
-            }
-            _ => return,
-        };
-
-        let run_id = self.next_script_run_id();
-        self.pending_script = Some(script);
-        self.pending_script_run_id = Some(run_id);
-        self.write_script_result(UiScriptResultV1 {
-            schema_version: 1,
-            run_id,
-            updated_unix_ms: unix_ms_now(),
-            window: None,
-            stage: UiScriptStageV1::Queued,
-            step_index: None,
-            reason: None,
-            last_bundle_dir: self
-                .last_dump_dir
-                .as_ref()
-                .map(|p| display_path(&self.cfg.out_dir, p)),
-        });
-    }
-
     fn dump_bundle(&mut self, label: Option<&str>) -> Option<PathBuf> {
-        #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
-        {
-            if self.cfg.devtools_ws_url.is_some() && self.cfg.devtools_token.is_some() {
-                return self.dump_bundle_in_memory(label);
-            }
-        }
-
         let ts = unix_ms_now();
         let mut dir_name = ts.to_string();
         if let Some(label) = label {
@@ -2881,62 +3400,41 @@ impl UiDiagnosticsService {
             }
         }
 
-        let dir = self.cfg.out_dir.join(&dir_name);
-        if std::fs::create_dir_all(&dir).is_err() {
-            return None;
-        }
+        let dir = self.cfg.out_dir.join(dir_name);
 
         let bundle = UiDiagnosticsBundleV1::from_service(ts, &dir, self);
 
-        if write_json(dir.join("bundle.json"), &bundle).is_err() {
-            return None;
-        }
-        let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
-        if self.cfg.screenshot_on_dump {
-            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
-        }
-        self.last_dump_dir = Some(dir.clone());
-
-        #[cfg(feature = "diagnostics-ws")]
-        self.emit_bundle_dumped(ts, &dir_name, &bundle);
-
-        Some(dir)
-    }
-
-    #[cfg(feature = "diagnostics-ws")]
-    fn dump_bundle_in_memory(&mut self, label: Option<&str>) -> Option<PathBuf> {
-        let ts = unix_ms_now();
-        let mut dir_name = ts.to_string();
-        if let Some(label) = label {
-            if !label.is_empty() {
-                dir_name = format!("{dir_name}-{label}");
+        if !cfg!(target_arch = "wasm32") {
+            if std::fs::create_dir_all(&dir).is_err() {
+                return None;
+            }
+            if write_json(dir.join("bundle.json"), &bundle).is_err() {
+                return None;
+            }
+            let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+            if self.cfg.screenshot_on_dump {
+                let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
             }
         }
 
-        let pseudo_dir = PathBuf::from(dir_name.clone());
-        let bundle = UiDiagnosticsBundleV1::from_service(ts, &pseudo_dir, self);
-        self.last_dump_dir = Some(pseudo_dir.clone());
-        self.emit_bundle_dumped(ts, &dir_name, &bundle);
-        Some(pseudo_dir)
-    }
+        self.last_dump_dir = Some(dir.clone());
 
-    #[cfg(feature = "diagnostics-ws")]
-    fn emit_bundle_dumped(
-        &mut self,
-        exported_unix_ms: u64,
-        dir_name: &str,
-        bundle: &UiDiagnosticsBundleV1,
-    ) {
-        self.send_devtools_ws(
-            "bundle.dumped",
-            serde_json::json!({
-                "schema_version": 1,
-                "exported_unix_ms": exported_unix_ms,
-                "out_dir": self.cfg.out_dir.to_string_lossy(),
-                "dir": dir_name,
-                "bundle": bundle,
-            }),
-        );
+        #[cfg(feature = "diagnostics-ws")]
+        {
+            let embed = self.cfg.devtools_embed_bundle || cfg!(target_arch = "wasm32");
+            let bundle_value = embed.then(|| serde_json::to_value(&bundle).ok()).flatten();
+            let payload = serde_json::to_value(DevtoolsBundleDumpedV1 {
+                schema_version: 1,
+                exported_unix_ms: ts,
+                out_dir: self.cfg.out_dir.to_string_lossy().to_string(),
+                dir: display_path(&self.cfg.out_dir, &dir),
+                bundle: bundle_value,
+            })
+            .unwrap_or(serde_json::Value::Null);
+            self.ws_send("bundle.dumped", payload);
+        }
+
+        Some(dir)
     }
 
     fn next_script_run_id(&mut self) -> u64 {
@@ -2961,31 +3459,42 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
-        let _ = write_json(self.cfg.script_result_path.clone(), &result);
-        let _ = touch_file(&self.cfg.script_result_trigger_path);
+
+        if !cfg!(target_arch = "wasm32") {
+            let _ = write_json(self.cfg.script_result_path.clone(), &result);
+            let _ = touch_file(&self.cfg.script_result_trigger_path);
+        }
 
         #[cfg(feature = "diagnostics-ws")]
-        self.send_devtools_ws(
-            "script.result",
-            serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
-        );
+        {
+            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
+            self.ws_send("script.result", payload);
+        }
     }
 
     fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
         }
-        let _ = write_json(self.cfg.pick_result_path.clone(), &result);
-        let _ = touch_file(&self.cfg.pick_result_trigger_path);
+
+        if !cfg!(target_arch = "wasm32") {
+            let _ = write_json(self.cfg.pick_result_path.clone(), &result);
+            let _ = touch_file(&self.cfg.pick_result_trigger_path);
+        }
 
         #[cfg(feature = "diagnostics-ws")]
-        self.send_devtools_ws(
-            "pick.result",
-            serde_json::to_value(&result).unwrap_or(serde_json::Value::Null),
-        );
+        {
+            let payload = serde_json::to_value(&result).unwrap_or(serde_json::Value::Null);
+            self.ws_send("pick.result", payload);
+        }
     }
 
     fn poll_pick_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let modified =
             match std::fs::metadata(&self.cfg.pick_trigger_path).and_then(|m| m.modified()) {
                 Ok(modified) => modified,
@@ -3023,6 +3532,11 @@ impl UiDiagnosticsService {
     }
 
     fn poll_inspect_trigger(&mut self) {
+        self.poll_ws_inbox();
+        if cfg!(target_arch = "wasm32") && self.ws_is_configured() {
+            return;
+        }
+
         let modified =
             match std::fs::metadata(&self.cfg.inspect_trigger_path).and_then(|m| m.modified()) {
                 Ok(modified) => modified,
@@ -3162,6 +3676,7 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
 
     match step {
         UiActionStepV2::Click { .. }
+        | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::MovePointer { .. }
         | UiActionStepV2::DragPointer { .. }
         | UiActionStepV2::MovePointerSweep { .. }
@@ -3775,6 +4290,8 @@ pub enum UiActionStepV2 {
         button: UiMouseButtonV1,
         #[serde(default = "default_click_count")]
         click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
     },
     ResetDiagnostics,
     MovePointer {
@@ -3839,6 +4356,26 @@ pub enum UiActionStepV2 {
     },
 
     // v2 intent-level steps
+    /// Click a target only after its bounds have remained stable for `stable_frames`.
+    ///
+    /// This is useful for virtualized lists where a target's measured bounds can jump
+    /// across frames (e.g. estimate -> measured), causing clicks to land at stale
+    /// positions when using a single-frame snapshot.
+    ClickStable {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default = "default_click_count")]
+        click_count: u8,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+        #[serde(default = "default_click_stable_frames")]
+        stable_frames: u32,
+        #[serde(default = "default_click_stable_max_move_px")]
+        max_move_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     EnsureVisible {
         target: UiSelectorV1,
         #[serde(default)]
@@ -3919,6 +4456,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 target,
                 button,
                 click_count,
+                modifiers: None,
             },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
             UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
@@ -3985,6 +4523,14 @@ fn default_click_count() -> u8 {
 
 fn default_move_frames_per_step() -> u32 {
     1
+}
+
+fn default_click_stable_frames() -> u32 {
+    2
+}
+
+fn default_click_stable_max_move_px() -> f32 {
+    1.0
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -4311,6 +4857,24 @@ struct PendingScript {
 }
 
 impl PendingScript {
+    fn from_json_value(value: serde_json::Value) -> Option<Self> {
+        let schema_version: u32 = value
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        match schema_version {
+            1 => serde_json::from_value::<UiActionScriptV1>(value)
+                .ok()
+                .and_then(Self::from_v1),
+            2 => serde_json::from_value::<UiActionScriptV2>(value)
+                .ok()
+                .and_then(Self::from_v2),
+            _ => None,
+        }
+    }
+
     fn from_v1(script: UiActionScriptV1) -> Option<Self> {
         if script.schema_version != 1 {
             return None;
@@ -4332,6 +4896,7 @@ impl PendingScript {
 
 #[derive(Debug, Clone)]
 enum V2StepState {
+    ClickStable(V2ClickStableState),
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
@@ -4340,6 +4905,14 @@ enum V2StepState {
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
     MovePointerSweep(V2MovePointerSweepState),
+}
+
+#[derive(Debug, Clone)]
+struct V2ClickStableState {
+    step_index: usize,
+    remaining_frames: u32,
+    stable_count: u32,
+    last_center: Option<Point>,
 }
 
 #[derive(Debug, Clone)]
@@ -5672,7 +6245,7 @@ fn command_gating_trace_for_window(
     let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
 
     // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
-    for cmd in gating.enabled_overrides().keys() {
+    for (cmd, _) in gating.enabled_overrides() {
         candidates.push(UiCommandGatingTraceCandidate {
             command: cmd.clone(),
             source: "enabled_overrides",
@@ -5681,7 +6254,7 @@ fn command_gating_trace_for_window(
         });
     }
     if let Some(map) = gating.action_availability() {
-        for cmd in map.keys() {
+        for (cmd, _) in map {
             candidates.push(UiCommandGatingTraceCandidate {
                 command: cmd.clone(),
                 source: "action_availability",
@@ -8322,26 +8895,6 @@ fn event_debug_string(event: &Event, redact_text: bool) -> String {
     }
 }
 
-fn read_devtools_ws_config() -> (Option<String>, Option<String>) {
-    #[cfg(all(feature = "diagnostics-ws", target_arch = "wasm32"))]
-    {
-        fret_diag_ws::client::devtools_ws_config_from_window_query()
-    }
-
-    #[cfg(all(feature = "diagnostics-ws", not(target_arch = "wasm32")))]
-    {
-        (
-            std::env::var("FRET_DEVTOOLS_WS").ok(),
-            std::env::var("FRET_DEVTOOLS_TOKEN").ok(),
-        )
-    }
-
-    #[cfg(not(feature = "diagnostics-ws"))]
-    {
-        (None, None)
-    }
-}
-
 fn unix_ms_now() -> u64 {
     fret_core::time::SystemTime::now()
         .duration_since(fret_core::time::UNIX_EPOCH)
@@ -9139,10 +9692,10 @@ fn pick_semantics_node_at<'a>(
     pick_semantics_node_by_bounds(snapshot, position)
 }
 
-pub(crate) fn pick_semantics_node_by_bounds(
-    snapshot: &fret_core::SemanticsSnapshot,
+pub(crate) fn pick_semantics_node_by_bounds<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
     position: Point,
-) -> Option<&fret_core::SemanticsNode> {
+) -> Option<&'a fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
     pick_best_match(
         snapshot.nodes.iter().filter(|n| {
@@ -9167,21 +9720,21 @@ fn suggest_selectors(
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
-    if let Some(name) = exported_node.label.as_deref()
-        && !(cfg.redact_text && is_redacted_string(name))
-    {
-        let ancestors = selector_ancestors_for(snapshot, raw_node);
-        if !ancestors.is_empty() {
-            out.push(UiSelectorV1::RoleAndPath {
+    if let Some(name) = exported_node.label.as_deref() {
+        if !(cfg.redact_text && is_redacted_string(name)) {
+            let ancestors = selector_ancestors_for(snapshot, raw_node);
+            if !ancestors.is_empty() {
+                out.push(UiSelectorV1::RoleAndPath {
+                    role: role.clone(),
+                    name: name.to_string(),
+                    ancestors,
+                });
+            }
+            out.push(UiSelectorV1::RoleAndName {
                 role: role.clone(),
                 name: name.to_string(),
-                ancestors,
             });
         }
-        out.push(UiSelectorV1::RoleAndName {
-            role: role.clone(),
-            name: name.to_string(),
-        });
     }
 
     if let Some(element) = element {
@@ -9357,8 +9910,16 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
 }
 
 fn click_events(position: Point, button: UiMouseButtonV1, click_count: u8) -> [Event; 3] {
+    click_events_with_modifiers(position, button, click_count, Modifiers::default())
+}
+
+fn click_events_with_modifiers(
+    position: Point,
+    button: UiMouseButtonV1,
+    click_count: u8,
+    modifiers: Modifiers,
+) -> [Event; 3] {
     let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
     let click_count = click_count.max(1);
 
@@ -9574,13 +10135,7 @@ fn push_drag_playback_frame(state: &mut V2DragPointerState, events: &mut Vec<Eve
 }
 
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
-    let modifiers = Modifiers {
-        shift: modifiers.shift,
-        ctrl: modifiers.ctrl,
-        alt: modifiers.alt,
-        meta: modifiers.meta,
-        ..Modifiers::default()
-    };
+    let modifiers = core_modifiers_from_ui(Some(modifiers));
     let down = Event::KeyDown {
         key,
         modifiers,
@@ -9590,6 +10145,16 @@ fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> 
     [down, up]
 }
 
+fn core_modifiers_from_ui(modifiers: Option<UiKeyModifiersV1>) -> Modifiers {
+    let modifiers = modifiers.unwrap_or_default();
+    Modifiers {
+        shift: modifiers.shift,
+        ctrl: modifiers.ctrl,
+        alt: modifiers.alt,
+        meta: modifiers.meta,
+        ..Modifiers::default()
+    }
+}
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {

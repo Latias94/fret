@@ -1,3 +1,4 @@
+use super::geom::map_row_display_local_to_buffer_byte;
 use super::*;
 use super::{input, paint};
 use fret_core::Point;
@@ -226,7 +227,7 @@ fn caret_stops_hit_test_handles_non_monotonic_x() {
 }
 
 #[test]
-fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
+fn map_row_display_local_to_buffer_byte_snaps_inside_preedit() {
     let doc = DocId::new();
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
@@ -243,15 +244,15 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     };
 
     // Before the injection point maps 1:1.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 0), 0);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 2), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 0), 0);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 2), 2);
 
     // Inside the injected preedit snaps to the injection point.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 3), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 3), 2);
 
     // After the injected preedit shifts by `preedit_len`.
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
-    assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 4), 2);
+    assert_eq!(map_row_display_local_to_buffer_byte(&buffer, &geom, 5), 3);
 }
 
 #[test]
@@ -709,6 +710,39 @@ fn ctrl_page_down_bubbles_and_keeps_preedit() {
             focus: 2
         }
     );
+}
+
+#[test]
+fn ctrl_a_selects_all() {
+    let handle = CodeEditorHandle::new("hello\nworld");
+    handle.set_caret(3);
+
+    let mut host = TestHost::default();
+    let action_cx = ActionCx {
+        window: fret_core::AppWindowId::default(),
+        target: fret_ui::GlobalElementId(0),
+    };
+    let scroll = fret_ui::scroll::ScrollHandle::default();
+    let cell_w = Cell::new(Px(10.0));
+
+    let handled = input::handle_key_down(
+        &mut host,
+        action_cx,
+        &handle.state,
+        Px(16.0),
+        &scroll,
+        &cell_w,
+        KeyCode::KeyA,
+        Modifiers {
+            ctrl: true,
+            ..Modifiers::default()
+        },
+    );
+    assert!(handled);
+
+    let st = handle.state.borrow();
+    assert_eq!(st.selection.anchor, 0);
+    assert_eq!(st.selection.focus, st.buffer.len_bytes());
 }
 
 #[test]

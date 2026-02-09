@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "kbd_button", "web_name": "kbd-button", "text": "Esc" },
+    { "id": "kbd_group", "web_name": "kbd-group", "text": "Esc" }
+  ]
+}

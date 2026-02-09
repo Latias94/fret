@@ -21,6 +21,8 @@ pub mod imui;
 #[cfg(feature = "mathjax-svg")]
 mod mathjax_svg_support;
 mod mermaid;
+#[cfg(feature = "mermaid")]
+mod mermaid_svg_support;
 mod open_url;
 mod pulldown_render;
 #[cfg(test)]
@@ -449,6 +451,11 @@ fn render_code_block<H: UiHost + 'static>(
     }
     if let Some(render_actions) = &components.code_block_actions {
         header = header.push_right(render_actions(cx, info.clone()));
+    }
+
+    #[cfg(feature = "mermaid")]
+    if is_mermaid_language(info.language.as_deref()) {
+        return mermaid_svg_support::render_mermaid_code_fence(cx, &theme, info, options, header);
     }
 
     fret_code_view::code_block_with_header_slots(

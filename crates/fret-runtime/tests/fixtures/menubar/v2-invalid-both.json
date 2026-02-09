@@ -1,0 +1,9 @@
+{
+  "menu_bar_version": 2,
+  "menus": [
+    { "title": "File", "items": [{ "type": "separator" }] }
+  ],
+  "ops": [
+    { "type": "append_item", "menu": "File", "item": { "type": "separator" } }
+  ]
+}

@@ -283,7 +283,7 @@ fn view(
         .layout()
         .cloned_or_default();
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let (done_count, total_count) = cx.use_selector(
         |cx| {
@@ -406,7 +406,7 @@ __ADD_BTN_DEF__
     let rows = ui::v_flex_build(cx, |cx, out| {
         for t in &todos {
             let remove_cmd = msg.cmd(Msg::Remove(t.id));
-            out.push(cx.keyed(t.id, |cx| todo_row(cx, &theme, t, remove_cmd.clone())));
+            out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())));
         }
     })
         .gap(Space::N3)
@@ -457,7 +457,7 @@ __ADD_BTN_DEF__
 
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
+    theme: ThemeSnapshot,
     item: &TodoItem,
     remove_cmd: CommandId,
 ) -> AnyElement {

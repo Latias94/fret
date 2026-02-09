@@ -15,7 +15,7 @@ use fret_runtime::{FrameId, TickId};
 use fret_ui::declarative::RenderRootContext;
 use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
-use fret_ui::{ElementContext, Invalidation, Theme, UiFrameCx, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::primitives::dialog as dialog_prim;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -571,7 +571,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
         return;
     }
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = cx.theme_snapshot();
     let pad = theme.metric_by_key("metric.padding.md").unwrap_or(Px(16.0));
     let pad_sm = theme.metric_by_key("metric.padding.sm").unwrap_or(Px(12.0));
     let radius = theme.metric_by_key("metric.radius.md").unwrap_or(Px(8.0));
@@ -1954,7 +1954,7 @@ fn ui_app_render<S>(
         let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
     }
-    let mut layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
+    let layout_total_ms: Option<u64> = layout_started.map(|s| s.elapsed().as_millis() as u64);
     hotpatch_trace_log(&format!(
         "ui_app_render: after layout_all window={window:?}"
     ));

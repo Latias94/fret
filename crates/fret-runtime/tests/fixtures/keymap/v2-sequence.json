@@ -1,0 +1,13 @@
+{
+  "keymap_version": 2,
+  "bindings": [
+    {
+      "command": "app.leader_k_then_p",
+      "keys": [
+        { "mods": ["ctrl"], "key": "KeyK" },
+        { "mods": [], "key": "KeyP" }
+      ],
+      "when": "platform != \"web\""
+    }
+  ]
+}

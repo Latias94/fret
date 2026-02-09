@@ -1,0 +1,10 @@
+{
+  "keymap_version": 2,
+  "bindings": [
+    {
+      "command": "app.invalid_empty_sequence",
+      "keys": [],
+      "when": "platform != \"web\""
+    }
+  ]
+}

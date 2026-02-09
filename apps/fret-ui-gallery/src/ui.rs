@@ -27,7 +27,6 @@ use fret_core::{
     FontWeight, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
     TextStyle, TextWrap,
 };
-use fret_kit::prelude::AnyElementSemanticsExt;
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
@@ -37,6 +36,7 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets as ui_assets;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -711,9 +711,13 @@ fn page_preview(
             code_editor_folds,
             code_editor_inlays,
         ),
-        PAGE_MARKDOWN_EDITOR_SOURCE => {
-            preview_markdown_editor_source(cx, theme, code_editor_soft_wrap)
-        }
+        PAGE_MARKDOWN_EDITOR_SOURCE => preview_markdown_editor_source(
+            cx,
+            theme,
+            code_editor_soft_wrap,
+            code_editor_folds,
+            code_editor_inlays,
+        ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
@@ -1249,26 +1253,18 @@ fn preview_hit_test_only_paint_cache_probe(
                                             corner_radii: Corners::all(Px(6.0)),
                                         });
                                     })
-                                    .attach_semantics(
-                                        SemanticsDecoration::default()
-                                            .test_id("ui-gallery-hit-test-only-probe-canvas"),
-                                    ),
+                                    .test_id("ui-gallery-hit-test-only-probe-canvas"),
                                 ]
                             },
                         )
-                        .attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id("ui-gallery-hit-test-only-probe-region"),
-                        ),
+                        .test_id("ui-gallery-hit-test-only-probe-region"),
                     ]
                 });
 
                 vec![region]
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hit-test-only-probe-region"),
-        );
+        .test_id("ui-gallery-hit-test-only-probe-region");
 
     vec![header, panel]
 }
@@ -3635,6 +3631,13 @@ fn preview_code_editor_torture(
         last_inlays.set(Some(inlays_enabled));
     }
 
+    let allow_decorations_under_preedit =
+        cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let allow_decorations_under_preedit_enabled = allow_decorations_under_preedit.get();
+    if handle.allow_decorations_under_inline_preedit() != allow_decorations_under_preedit_enabled {
+        handle.set_allow_decorations_under_inline_preedit(allow_decorations_under_preedit_enabled);
+    }
+
     let header_handle = handle.clone();
     let header = stack::vstack(
         cx,
@@ -3687,6 +3690,12 @@ fn preview_code_editor_torture(
                         let reset_handle = header_handle_controls.clone();
                         let preedit_handle = header_handle_controls.clone();
                         let clear_preedit_handle = header_handle_controls.clone();
+                        let allow_decorations_under_preedit_off =
+                            allow_decorations_under_preedit.clone();
+                        let allow_decorations_under_preedit_on =
+                            allow_decorations_under_preedit.clone();
+                        let header_handle_controls_off = header_handle_controls.clone();
+                        let header_handle_controls_on = header_handle_controls.clone();
                         vec![
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -3744,6 +3753,39 @@ fn preview_code_editor_torture(
                                     host.request_redraw(action_cx.window);
                                 }))
                                 .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: off")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-off",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit_off.set(false);
+                                    header_handle_controls_off
+                                        .set_allow_decorations_under_inline_preedit(false);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Preedit decorations: on")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(
+                                    "ui-gallery-code-editor-torture-preedit-decorations-set-on",
+                                )
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    allow_decorations_under_preedit_on.set(true);
+                                    header_handle_controls_on
+                                        .set_allow_decorations_under_inline_preedit(true);
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            cx.text(if allow_decorations_under_preedit_enabled {
+                                "Preedit decorations: on"
+                            } else {
+                                "Preedit decorations: off"
+                            }),
                             shadcn::Switch::new(folds.clone())
                                 .test_id("ui-gallery-code-editor-torture-folds")
                                 .a11y_label("Toggle fold fixture on line 0")
@@ -3926,9 +3968,17 @@ fn preview_markdown_editor_source(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     soft_wrap: Model<bool>,
+    folds: Model<bool>,
+    inlays: Model<bool>,
 ) -> Vec<AnyElement> {
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+    let folds_enabled = cx
+        .get_model_copied(&folds, Invalidation::Layout)
+        .unwrap_or(false);
+    let inlays_enabled = cx
+        .get_model_copied(&inlays, Invalidation::Layout)
         .unwrap_or(false);
 
     let handle = cx.with_state(
@@ -3937,6 +3987,8 @@ fn preview_markdown_editor_source(
     );
     // Best-effort: only takes effect when `fret-code-editor` is built with `syntax` features.
     handle.set_language(Some("markdown"));
+    // Markdown source editing uses Unicode word boundaries (ADR 0194).
+    handle.set_text_boundary_mode(fret_runtime::TextBoundaryMode::UnicodeWord);
 
     #[cfg(not(target_arch = "wasm32"))]
     cx.app.with_global_mut(
@@ -3945,6 +3997,52 @@ fn preview_markdown_editor_source(
             store.per_window.insert(cx.window, handle.clone());
         },
     );
+
+    let last_folds = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_folds.get() != Some(folds_enabled) {
+        if folds_enabled {
+            let span = handle.with_buffer(|b| b.line_text(0)).and_then(|line| {
+                let start = line.find("Editor").unwrap_or(2).min(line.len());
+                let end = line.len();
+                if start < end {
+                    Some(code_editor_view::FoldSpan {
+                        range: start..end,
+                        placeholder: Arc::<str>::from("…"),
+                    })
+                } else {
+                    None
+                }
+            });
+            if let Some(span) = span {
+                handle.set_line_folds(0, vec![span]);
+            } else {
+                handle.clear_all_folds();
+            }
+        } else {
+            handle.clear_all_folds();
+        }
+        last_folds.set(Some(folds_enabled));
+    }
+
+    let last_inlays = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_inlays.get() != Some(inlays_enabled) {
+        if inlays_enabled {
+            let byte = handle
+                .with_buffer(|b| b.line_text(0))
+                .map(|line| 2usize.min(line.len()))
+                .unwrap_or(0);
+            handle.set_line_inlays(
+                0,
+                vec![code_editor_view::InlaySpan {
+                    byte,
+                    text: Arc::<str>::from("<inlay>"),
+                }],
+            );
+        } else {
+            handle.clear_all_inlays();
+        }
+        last_inlays.set(Some(inlays_enabled));
+    }
 
     let header_handle = handle.clone();
     let header = stack::vstack(
@@ -3956,6 +4054,7 @@ fn preview_markdown_editor_source(
             let mode_handle = header_handle.clone();
             let edit_handle = header_handle.clone();
             let read_only_handle = header_handle.clone();
+            let disabled_handle = header_handle.clone();
 
             let mode = mode_handle.interaction();
             let mode_label = if !mode.enabled {
@@ -4010,6 +4109,115 @@ fn preview_markdown_editor_source(
                         ]
                     },
                 ),
+                {
+                    let folds_caret_handle = header_handle.clone();
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| {
+                            let set_folds_on = folds.clone();
+                            let set_folds_off = folds.clone();
+                            let set_inlays_on = inlays.clone();
+                            let set_inlays_off = inlays.clone();
+                            let caret_handle = folds_caret_handle.clone();
+
+                            vec![
+                                shadcn::Switch::new(folds.clone())
+                                    .test_id("ui-gallery-markdown-editor-folds")
+                                    .a11y_label("Toggle fold fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_folds_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Folds: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_folds_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Caret: in fold")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-folds-set-caret-inside")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        if !caret_handle.interaction().enabled {
+                                            return;
+                                        }
+
+                                        let Some(byte) = caret_handle.with_buffer(|b| {
+                                            let line = b.line_text(0)?;
+                                            let line_range = b.line_byte_range(0)?;
+                                            let start =
+                                                line.find("Editor").unwrap_or(2).min(line.len());
+                                            let end = line.len();
+                                            if start + 1 >= end {
+                                                return None;
+                                            }
+                                            Some(line_range.start.saturating_add(start + 1))
+                                        }) else {
+                                            return;
+                                        };
+
+                                        caret_handle.set_caret(byte);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if folds_enabled {
+                                    "Folds: fixture"
+                                } else {
+                                    "Folds: off"
+                                }),
+                                shadcn::Switch::new(inlays.clone())
+                                    .test_id("ui-gallery-markdown-editor-inlays")
+                                    .a11y_label("Toggle inlay fixture on line 0")
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: off")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-off")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ = host
+                                            .models_mut()
+                                            .update(&set_inlays_off, |v| *v = false);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                shadcn::Button::new("Inlays: on")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id("ui-gallery-markdown-editor-inlays-set-on")
+                                    .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                        let _ =
+                                            host.models_mut().update(&set_inlays_on, |v| *v = true);
+                                        host.notify(action_cx);
+                                        host.request_redraw(action_cx.window);
+                                    }))
+                                    .into_element(cx),
+                                cx.text(if inlays_enabled {
+                                    "Inlays: fixture"
+                                } else {
+                                    "Inlays: off"
+                                }),
+                            ]
+                        },
+                    )
+                },
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -4020,6 +4228,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("ab", None);
@@ -4039,6 +4250,9 @@ fn preview_markdown_editor_source(
                                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                                    if !handle.interaction().enabled {
+                                        return true;
+                                    }
                                     const COMPOSITION_CARET: usize = 2;
                                     handle.set_caret(COMPOSITION_CARET);
                                     handle.set_preedit_debug("", None);
@@ -4118,6 +4332,18 @@ fn preview_markdown_editor_source(
                                 .on_activate(Arc::new(move |host, action_cx, _reason| {
                                     read_only_handle.set_interaction(
                                         code_editor::CodeEditorInteractionOptions::read_only(),
+                                    );
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
+                                .into_element(cx),
+                            shadcn::Button::new("Mode: disabled")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-markdown-editor-mode-disabled")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    disabled_handle.set_interaction(
+                                        code_editor::CodeEditorInteractionOptions::disabled(),
                                     );
                                     host.notify(action_cx);
                                     host.request_redraw(action_cx.window);
@@ -6724,7 +6950,7 @@ fn preview_windowed_rows_surface_interactive_torture(
 }
 
 fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let outline_fg = ColorRef::Color(theme.color_required("foreground"));
     let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
@@ -7075,8 +7301,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
             }
         };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -7401,8 +7626,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-    let destructive = theme.color_required("destructive");
+    let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -7426,17 +7650,17 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(420.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let area_layout = LayoutRefinement::default().w_full().max_w(Px(320.0));
@@ -7580,8 +7804,6 @@ fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     pages::preview_kbd(cx)
 }
 fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -7604,17 +7826,17 @@ fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -7873,8 +8095,6 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -7897,17 +8117,17 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -8003,8 +8223,12 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let badge = {
-        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
-        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+        let (secondary_fg, outline_fg) = cx.with_theme(|theme| {
+            (
+                ColorRef::Color(theme.color_required("secondary-foreground")),
+                ColorRef::Color(theme.color_required("foreground")),
+            )
+        });
 
         let row = stack::hstack(
             cx,
@@ -8269,7 +8493,7 @@ fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let outline_fg = ColorRef::Color(theme.color_required("foreground"));
     let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
 
@@ -8663,7 +8887,7 @@ fn preview_calendar(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::calendar::DateRangeSelection;
 
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
     let today = time::OffsetDateTime::now_utc().date();
 
     #[derive(Default, Clone)]
@@ -9497,8 +9721,6 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         rtl_selected: Option<Model<Arc<str>>>,
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -9521,14 +9743,14 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 LayoutRefinement::default().w_full(),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let state = cx.with_state(SidebarModels::default, |st| st.clone());
@@ -10055,7 +10277,6 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use fret_ui::Theme;
     use fret_ui_kit::primitives::direction as direction_prim;
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
@@ -10228,8 +10449,7 @@ fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     });
 
     let invalid = cx.keyed("ui_gallery.radio_group.invalid", |cx| {
-        let theme = Theme::global(&*cx.app).clone();
-        let destructive = theme.color_required("destructive");
+        let destructive = cx.with_theme(|theme| theme.color_required("destructive"));
 
         let group = shadcn::RadioGroup::uncontrolled(Some("email"))
             .a11y_label("Notification Preferences")
@@ -10762,8 +10982,6 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
         rtl_username: Option<Model<String>>,
     }
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -10786,14 +11004,14 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let state = cx.with_state(SheetModels::default, |st| st.clone());
@@ -11210,18 +11428,20 @@ fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
-    let theme = fret_ui::Theme::global(&*cx.app).clone();
-
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::ButtonVariant,
                label: &'static str| {
-        let theme = theme.clone();
+        let (hover_container, hover_label) = cx.with_theme(|theme| {
+            (
+                theme.color_required("md.sys.color.tertiary-container"),
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            )
+        });
+
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
-                let hover_container = theme.color_required("md.sys.color.tertiary-container");
-                let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
                 let hover_style = material3::ButtonStyle::default()
                     .container_background(WidgetStateProperty::new(None).when(
                         WidgetStates::HOVERED,
@@ -11327,13 +11547,16 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.on-tertiary-container"),
-            );
-            let hover_container = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.tertiary-container"),
-            );
+            let (hover_icon, hover_container) = cx.with_theme(|theme| {
+                (
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.on-tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.tertiary-container"),
+                    ),
+                )
+            });
             let hover_style = material3::IconButtonStyle::default()
                 .container_background(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11392,15 +11615,17 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N3).items_center(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_container = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.tertiary-container"),
-            );
-            let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                theme.color_required("md.sys.color.on-tertiary-container"),
-            );
-            let hover_outline =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
+                (
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(
+                        theme.color_required("md.sys.color.on-tertiary-container"),
+                    ),
+                    fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary")),
+                )
+            });
             let hover_style = material3::CheckboxStyle::default()
                 .container_background(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11429,13 +11654,16 @@ fn preview_material3_gallery(
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch Override")
                     .style({
-                        let theme = fret_ui::Theme::global(&*cx.app).clone();
-                        let hover_track = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary-container"),
-                        );
-                        let hover_handle = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.on-tertiary-container"),
-                        );
+                        let (hover_track, hover_handle) = cx.with_theme(|theme| {
+                            (
+                                fret_ui_shadcn::ColorRef::Color(
+                                    theme.color_required("md.sys.color.tertiary-container"),
+                                ),
+                                fret_ui_shadcn::ColorRef::Color(
+                                    theme.color_required("md.sys.color.on-tertiary-container"),
+                                ),
+                            )
+                        });
                         material3::SwitchStyle::default()
                             .track_color(
                                 fret_ui_kit::WidgetStateProperty::new(None)
@@ -11459,23 +11687,19 @@ fn preview_material3_gallery(
                                 .disabled(true),
                         ];
 
-                        let theme = fret_ui::Theme::global(&*cx.app).clone();
-                        let hover_icon = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary"),
-                        );
-                        let hover_state_layer = fret_ui_shadcn::ColorRef::Color(
-                            theme.color_required("md.sys.color.tertiary"),
-                        );
-                        let hover_style = material3::RadioStyle::default()
-                            .icon_color(
-                                fret_ui_kit::WidgetStateProperty::new(None)
-                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                        let hover_color = cx.with_theme(|theme| {
+                            fret_ui_shadcn::ColorRef::Color(
+                                theme.color_required("md.sys.color.tertiary"),
                             )
+                        });
+                        let hover_style = material3::RadioStyle::default()
+                            .icon_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                                fret_ui_kit::WidgetStates::HOVERED,
+                                Some(hover_color.clone()),
+                            ))
                             .state_layer_color(
-                                fret_ui_kit::WidgetStateProperty::new(None).when(
-                                    fret_ui_kit::WidgetStates::HOVERED,
-                                    Some(hover_state_layer),
-                                ),
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_color)),
                             );
 
                         vec![
@@ -11518,9 +11742,9 @@ fn preview_material3_gallery(
         cx,
         stack::VStackProps::default().gap(Space::N1).items_start(),
         |cx| {
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover = cx.with_theme(|theme| {
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+            });
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -11562,23 +11786,19 @@ fn preview_material3_gallery(
                 material3::TabItem::new("settings", "Settings"),
             ];
 
-            let theme = fret_ui::Theme::global(&*cx.app).clone();
-            let hover_label =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
-            let hover_state_layer =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
-            let indicator =
-                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_color = cx.with_theme(|theme| {
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"))
+            });
             let hover_style = material3::TabsStyle::default()
-                .label_color(
-                    fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_label)),
-                )
-                .state_layer_color(
-                    fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_state_layer)),
-                )
-                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(indicator)));
+                .label_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                    fret_ui_kit::WidgetStates::HOVERED,
+                    Some(hover_color.clone()),
+                ))
+                .state_layer_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                    fret_ui_kit::WidgetStates::HOVERED,
+                    Some(hover_color.clone()),
+                ))
+                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(hover_color)));
 
             vec![
                 cx.text("Tabs"),
@@ -11867,8 +12087,6 @@ fn preview_material3_chip(
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let last_action_for_activate = last_action.clone();
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action_for_activate, |v| {
@@ -11876,8 +12094,12 @@ fn preview_material3_chip(
         });
     });
 
-    let hover_container = theme.color_required("md.sys.color.tertiary-container");
-    let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+    let (hover_container, hover_label) = cx.with_theme(|theme| {
+        (
+            theme.color_required("md.sys.color.tertiary-container"),
+            theme.color_required("md.sys.color.on-tertiary-container"),
+        )
+    });
     let accent = fret_core::Color {
         r: 0.9,
         g: 0.2,
@@ -12172,21 +12394,21 @@ fn preview_material3_card(
     use fret_ui::element::{ContainerProps, Length, TextProps};
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&last_action, |v| {
             *v = Arc::<str>::from("material3.card.activated");
         });
     });
 
-    let body_style = theme
-        .text_style_by_key("md.sys.typescale.body-medium")
-        .unwrap_or_else(|| fret_core::TextStyle::default());
-    let body_color = theme.color_required("md.sys.color.on-surface");
-
-    let hover_container = theme.color_required("md.sys.color.tertiary-container");
-    let hover_outline = theme.color_required("md.sys.color.tertiary");
+    let (body_style, body_color, hover_container, hover_outline) = cx.with_theme(|theme| {
+        let body_style = theme
+            .text_style_by_key("md.sys.typescale.body-medium")
+            .unwrap_or_else(|| fret_core::TextStyle::default());
+        let body_color = theme.color_required("md.sys.color.on-surface");
+        let hover_container = theme.color_required("md.sys.color.tertiary-container");
+        let hover_outline = theme.color_required("md.sys.color.tertiary");
+        (body_style, body_color, hover_container, hover_outline)
+    });
 
     let override_style = material3::CardStyle::default()
         .container_background(WidgetStateProperty::new(None).when(
@@ -12298,10 +12520,11 @@ fn preview_material3_touch_targets(
 ) -> Vec<AnyElement> {
     use fret_icons::ids;
 
-    let theme = Theme::global(&*cx.app).clone();
-    let min = theme
-        .metric_by_key("md.sys.layout.minimum-touch-target.size")
-        .unwrap_or(Px(48.0));
+    let min = cx.with_theme(|theme| {
+        theme
+            .metric_by_key("md.sys.layout.minimum-touch-target.size")
+            .unwrap_or(Px(48.0))
+    });
 
     let target_overlay = |cx: &mut ElementContext<'_, App>,
                           label: &'static str,
@@ -12424,30 +12647,40 @@ fn preview_material3_touch_targets(
     };
 
     let checkbox_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.checkbox.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.checkbox.state-layer.size")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
     let radio_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.radio-button.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.radio-button.state-layer.size")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
     let switch_chrome = {
-        let width = theme
-            .metric_by_key("md.comp.switch.track.width")
-            .unwrap_or(Px(52.0));
-        let height = theme
-            .metric_by_key("md.comp.switch.state-layer.size")
-            .unwrap_or(Px(40.0));
+        let (width, height) = cx.with_theme(|theme| {
+            (
+                theme
+                    .metric_by_key("md.comp.switch.track.width")
+                    .unwrap_or(Px(52.0)),
+                theme
+                    .metric_by_key("md.comp.switch.state-layer.size")
+                    .unwrap_or(Px(40.0)),
+            )
+        });
         Size::new(width, height)
     };
     let icon_button_chrome = {
-        let size = theme
-            .metric_by_key("md.comp.icon-button.small.container.height")
-            .unwrap_or(Px(40.0));
+        let size = cx.with_theme(|theme| {
+            theme
+                .metric_by_key("md.comp.icon-button.small.container.height")
+                .unwrap_or(Px(40.0))
+        });
         Size::new(size, size)
     };
 
@@ -12978,15 +13211,12 @@ fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     use fret_core::{Corners, Px};
     use fret_ui::element::{AnyElement, ContainerProps, Length};
 
-    let theme = Theme::global(&*cx.app).clone();
-    let theme_for_anchor = theme.clone();
-
-    let anchor = move |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
+    let anchor = |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
         let mut props = ContainerProps::default();
         props.layout.size.width = Length::Px(size);
         props.layout.size.height = Length::Px(size);
         props.background =
-            Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
+            Some(cx.with_theme(|theme| theme.color_required("md.sys.color.surface-container-low")));
         props.corner_radii = Corners::all(Px(8.0));
         cx.container(props, |_cx| Vec::<AnyElement>::new())
             .test_id(test_id)
@@ -13640,8 +13870,6 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .get_model_copied(&typeahead_delay_ms, Invalidation::Layout)
         .unwrap_or(200);
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let items: Arc<[material3::SelectItem]> = vec![
         material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
         material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
@@ -13658,9 +13886,13 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select")
         .into_element(cx);
 
-    let primary = theme.color_required("md.sys.color.primary");
-    let primary_container = theme.color_required("md.sys.color.primary-container");
-    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+    let (primary, primary_container, secondary_container) = cx.with_theme(|theme| {
+        (
+            theme.color_required("md.sys.color.primary"),
+            theme.color_required("md.sys.color.primary-container"),
+            theme.color_required("md.sys.color.secondary-container"),
+        )
+    });
 
     let override_style = material3::SelectStyle::default()
         .container_background(
@@ -13814,6 +14046,16 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select-transformed")
         .into_element(cx);
 
+    let (probe_bg, probe_border) = cx.with_theme(|theme| {
+        let bg = theme
+            .color_by_key("md.sys.color.surface-container")
+            .or_else(|| theme.color_by_key("md.sys.color.surface"))
+            .unwrap_or(fret_core::Color::TRANSPARENT);
+        let border = theme
+            .color_by_key("md.sys.color.outline-variant")
+            .unwrap_or(fret_core::Color::TRANSPARENT);
+        (bg, border)
+    });
     let transformed_probe = cx.container(
         fret_ui::element::ContainerProps {
             layout: {
@@ -13823,21 +14065,9 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 l.overflow = fret_ui::element::Overflow::Clip;
                 l
             },
-            background: Some(
-                theme
-                    .color_by_key("md.sys.color.surface-container")
-                    .unwrap_or_else(|| {
-                        theme
-                            .color_by_key("md.sys.color.surface")
-                            .unwrap_or(fret_core::Color::TRANSPARENT)
-                    }),
-            ),
+            background: Some(probe_bg),
             border: fret_core::Edges::all(Px(1.0)),
-            border_color: Some(
-                theme
-                    .color_by_key("md.sys.color.outline-variant")
-                    .unwrap_or(fret_core::Color::TRANSPARENT),
-            ),
+            border_color: Some(probe_border),
             corner_radii: fret_core::Corners::all(Px(12.0)),
             padding: fret_core::Edges::all(Px(12.0)),
             ..Default::default()
@@ -15639,8 +15869,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let image = {
-        let theme = Theme::global(&*cx.app).clone();
-        let cover_bg = theme.color_required("muted");
+        let cover_bg = cx.with_theme(|theme| theme.color_required("muted"));
 
         let cover = shadcn::AspectRatio::new(
             16.0 / 9.0,
@@ -15702,7 +15931,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let theme = Theme::global(&*cx.app).snapshot();
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
         stack::vstack(
@@ -16364,8 +16593,6 @@ fn preview_image_object_fit(
 }
 
 fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -16388,17 +16615,17 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full(),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let round = |cx: &mut ElementContext<'_, App>, size: f32| {
@@ -16683,8 +16910,6 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -16707,14 +16932,14 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
                 layout,
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let demo = {
@@ -16776,17 +17001,21 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     .map(|artist| {
                         shadcn::Card::new(vec![
                             shadcn::CardContent::new(vec![
-                                cx.container(
-                                    decl_style::container_props(
-                                        &theme,
-                                        ChromeRefinement::default()
-                                            .rounded(Radius::Md)
-                                            .border_1()
-                                            .bg(ColorRef::Color(theme.color_required("muted"))),
-                                        LayoutRefinement::default().w_px(Px(140.0)).h_px(Px(180.0)),
-                                    ),
-                                    |_cx| Vec::new(),
-                                ),
+                                {
+                                    let photo_props = cx.with_theme(|theme| {
+                                        decl_style::container_props(
+                                            theme,
+                                            ChromeRefinement::default()
+                                                .rounded(Radius::Md)
+                                                .border_1()
+                                                .bg(ColorRef::Color(theme.color_required("muted"))),
+                                            LayoutRefinement::default()
+                                                .w_px(Px(140.0))
+                                                .h_px(Px(180.0)),
+                                        )
+                                    });
+                                    cx.container(photo_props, |_cx| Vec::new())
+                                },
                                 shadcn::typography::muted(cx, format!("Photo by {artist}")),
                             ])
                             .into_element(cx),
@@ -17628,6 +17857,13 @@ fn preview_data_table_legacy(
     let normalize_col_id =
         |id: &str| -> Arc<str> { Arc::<str>::from(id.replace('%', "pct").replace('_', "-")) };
 
+    let toolbar = shadcn::DataTableToolbar::new(
+        state.clone(),
+        assets.columns.clone(),
+        |col: &fret_ui_headless::table::ColumnDef<DemoProcessRow>| col.id.clone(),
+    )
+    .into_element(cx);
+
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
@@ -17635,7 +17871,7 @@ fn preview_data_table_legacy(
             cx,
             assets.data.clone(),
             1,
-            state,
+            state.clone(),
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
             |col| col.id.clone(),
@@ -17662,6 +17898,7 @@ fn preview_data_table_legacy(
         cx.text("Click header to sort; click row to toggle selection."),
         cx.text(format!("Selected rows: {selected_count}")),
         cx.text(sorting_text.as_ref()),
+        toolbar,
         table,
     ]
 }
@@ -17671,7 +17908,7 @@ fn preview_data_table_torture(
     theme: &Theme,
     _state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
-    use fret_ui_headless::table::{ColumnDef, RowKey};
+    use fret_ui_headless::table::{ColumnDef, RowKey, SortSpec};
 
     let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
@@ -17712,9 +17949,28 @@ fn preview_data_table_torture(
             let columns: Arc<[ColumnDef<Row>]> = Arc::from(vec![
                 ColumnDef::new("name")
                     .sort_by(|a: &Row, b: &Row| a.name.cmp(&b.name))
+                    .filter_by(|row: &Row, q| row.name.as_ref().contains(q))
                     .size(220.0),
                 ColumnDef::new("status")
                     .sort_by(|a: &Row, b: &Row| a.status.cmp(&b.status))
+                    .filter_by_with_meta(|row: &Row, value: &serde_json::Value, _add_meta| {
+                        match value {
+                            serde_json::Value::String(s) => row.status.as_ref() == s,
+                            serde_json::Value::Array(items) => items
+                                .iter()
+                                .filter_map(|it| it.as_str())
+                                .any(|s| row.status.as_ref() == s),
+                            _ => false,
+                        }
+                    })
+                    .facet_key_by(|row: &Row| match row.status.as_ref() {
+                        "Running" => 1,
+                        "Idle" => 2,
+                        "Sleeping" => 3,
+                        "Blocked" => 4,
+                        _ => 0,
+                    })
+                    .facet_str_by(|row: &Row| row.status.as_ref())
                     .size(140.0),
                 ColumnDef::new("cpu%")
                     .sort_by(|a: &Row, b: &Row| a.cpu.cmp(&b.cpu))
@@ -17749,6 +18005,137 @@ fn preview_data_table_torture(
         }
     };
 
+    let sorting: Vec<SortSpec> = cx
+        .app
+        .models()
+        .read(&state, |st| st.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+    let sorting_text: Arc<str> = if sorting.is_empty() {
+        Arc::<str>::from("Sorting: <none>")
+    } else {
+        let parts: Vec<String> = sorting
+            .iter()
+            .map(|s| format!("{} {}", s.column, if s.desc { "desc" } else { "asc" }))
+            .collect();
+        Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
+    };
+
+    let pinning_text: Arc<str> = {
+        let pinning = cx
+            .app
+            .models()
+            .read(&state, |st| st.column_pinning.clone())
+            .ok()
+            .unwrap_or_default();
+        if pinning.left.is_empty() && pinning.right.is_empty() {
+            Arc::<str>::from("Pinning: <none>")
+        } else {
+            let left = pinning
+                .left
+                .iter()
+                .map(|v| v.as_ref().to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            let right = pinning
+                .right
+                .iter()
+                .map(|v| v.as_ref().to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            Arc::<str>::from(format!("Pinning: left=[{left}] right=[{right}]"))
+        }
+    };
+
+    let global_filter_text: Arc<str> = {
+        let global_filter = cx
+            .app
+            .models()
+            .read(&state, |st| st.global_filter.clone())
+            .ok()
+            .flatten();
+        match global_filter {
+            None => Arc::<str>::from("GlobalFilter: <none>"),
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    Arc::<str>::from(format!("GlobalFilter: {s}"))
+                } else {
+                    Arc::<str>::from(format!("GlobalFilter: {v}"))
+                }
+            }
+        }
+    };
+
+    let name_filter_text: Arc<str> = {
+        let value = cx
+            .app
+            .models()
+            .read(&state, |st| {
+                st.column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == "name")
+                    .map(|f| f.value.clone())
+            })
+            .ok()
+            .flatten();
+        match value {
+            None => Arc::<str>::from("NameFilter: <none>"),
+            Some(v) => {
+                if let Some(s) = v.as_str() {
+                    Arc::<str>::from(format!("NameFilter: {s}"))
+                } else {
+                    Arc::<str>::from(format!("NameFilter: {v}"))
+                }
+            }
+        }
+    };
+
+    let status_filter_text: Arc<str> = {
+        let value = cx
+            .app
+            .models()
+            .read(&state, |st| {
+                st.column_filters
+                    .iter()
+                    .find(|f| f.column.as_ref() == "status")
+                    .map(|f| f.value.clone())
+            })
+            .ok()
+            .flatten();
+        match value {
+            None => Arc::<str>::from("StatusFilter: <none>"),
+            Some(serde_json::Value::String(s)) => Arc::<str>::from(format!("StatusFilter: {s}")),
+            Some(serde_json::Value::Array(items)) => {
+                let parts: Vec<&str> = items.iter().filter_map(|it| it.as_str()).collect();
+                if parts.is_empty() {
+                    Arc::<str>::from("StatusFilter: <none>")
+                } else {
+                    Arc::<str>::from(format!("StatusFilter: {}", parts.join(", ")))
+                }
+            }
+            Some(v) => Arc::<str>::from(format!("StatusFilter: {v}")),
+        }
+    };
+
+    let toolbar_columns = columns.clone();
+    let toolbar =
+        shadcn::DataTableToolbar::new(state.clone(), toolbar_columns, |col: &ColumnDef<Row>| {
+            Arc::<str>::from(col.id.as_ref())
+        })
+        .column_filter("name")
+        .column_filter_placeholder("Filter name...")
+        .column_filter_a11y_label("Name filter")
+        .faceted_filter(
+            "status",
+            "Status",
+            Arc::<[Arc<str>]>::from(vec![
+                Arc::<str>::from("Running"),
+                Arc::<str>::from("Idle"),
+                Arc::<str>::from("Sleeping"),
+                Arc::<str>::from("Blocked"),
+            ]),
+        );
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -17758,10 +18145,42 @@ fn preview_data_table_torture(
             vec![
                 cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
                 cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
+                cx.text(sorting_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(sorting_text.clone())
+                        .test_id("ui-gallery-data-table-torture-sorting"),
+                ),
+                cx.text(pinning_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(pinning_text.clone())
+                        .test_id("ui-gallery-data-table-torture-pinning"),
+                ),
+                cx.text(global_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(global_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-global-filter"),
+                ),
+                cx.text(name_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(name_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-name-filter"),
+                ),
+                cx.text(status_filter_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(status_filter_text.clone())
+                        .test_id("ui-gallery-data-table-torture-status-filter"),
+                ),
+                toolbar.clone().into_element(cx),
             ]
         },
     );
 
+    let state_for_table = state.clone();
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
             let retained = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
@@ -17773,12 +18192,13 @@ fn preview_data_table_torture(
                 t.overscan(10)
                     .row_height(Px(28.0))
                     .measure_rows(variable_height)
+                    .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .into_element_retained(
                         cx,
                         data.clone(),
                         1,
-                        state,
+                        state_for_table.clone(),
                         columns.clone(),
                         |row, _index, _parent| RowKey(row.id),
                         |col| Arc::<str>::from(col.id.as_ref()),
@@ -17818,6 +18238,7 @@ fn preview_data_table_torture(
                 t.overscan(10)
                     .row_height(Px(28.0))
                     .measure_rows(variable_height)
+                    .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                     .into_element(
                         cx,
@@ -19003,11 +19424,7 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
             )]
         });
 
-        row.attach_semantics(
-            SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
-                "ui-gallery-inspector-row-{index}-label"
-            ))),
-        )
+        row.test_id(format!("ui-gallery-inspector-row-{index}-label"))
     };
 
     let list = cx.virtual_list_keyed_retained_with_layout_fn(
@@ -19147,7 +19564,9 @@ fn preview_table_retained_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    use fret_ui_kit::headless::table::{
+        ColumnDef, RowKey, RowPinPosition, TableState, pagination_bounds, pin_rows,
+    };
     let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -19170,14 +19589,23 @@ fn preview_table_retained_torture(
         data: Option<Arc<[TableRow]>>,
         columns: Option<Arc<[ColumnDef<TableRow>]>>,
         state: Option<Model<TableState>>,
+        keep_pinned_rows: Option<Model<bool>>,
     }
 
-    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
-        (st.data.clone(), st.columns.clone(), st.state.clone())
-    });
+    let (data, columns, state, keep_pinned_rows) =
+        cx.with_state(TableTortureModels::default, |st| {
+            (
+                st.data.clone(),
+                st.columns.clone(),
+                st.state.clone(),
+                st.keep_pinned_rows.clone(),
+            )
+        });
 
-    let (data, columns, state) = match (data, columns, state) {
-        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+    let (data, columns, state, keep_pinned_rows) = match (data, columns, state, keep_pinned_rows) {
+        (Some(data), Some(columns), Some(state), Some(keep_pinned_rows)) => {
+            (data, columns, state, keep_pinned_rows)
+        }
         _ => {
             let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
             for i in 0..50_000u64 {
@@ -19208,16 +19636,174 @@ fn preview_table_retained_torture(
             let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
 
             let state = cx.app.models_mut().insert(TableState::default());
+            let keep_pinned_rows = cx.app.models_mut().insert(true);
 
             cx.with_state(TableTortureModels::default, |st| {
                 st.data = Some(data.clone());
                 st.columns = Some(columns.clone());
                 st.state = Some(state.clone());
+                st.keep_pinned_rows = Some(keep_pinned_rows.clone());
             });
 
-            (data, columns, state)
+            (data, columns, state, keep_pinned_rows)
         }
     };
+
+    let sorting: Vec<fret_ui_kit::headless::table::SortSpec> = cx
+        .app
+        .models()
+        .read(&state, |st| st.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+    let sorting_text: Arc<str> = if sorting.is_empty() {
+        Arc::<str>::from("Sorting: <none>")
+    } else {
+        let parts: Vec<String> = sorting
+            .iter()
+            .map(|s| format!("{} {}", s.column, if s.desc { "desc" } else { "asc" }))
+            .collect();
+        Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
+    };
+
+    let row_pinning_text: Arc<str> = {
+        let pinning = cx
+            .app
+            .models()
+            .read(&state, |st| st.row_pinning.clone())
+            .ok()
+            .unwrap_or_default();
+        let top = pinning
+            .top
+            .iter()
+            .map(|k| k.0.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let bottom = pinning
+            .bottom
+            .iter()
+            .map(|k| k.0.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        Arc::<str>::from(format!("RowPinning: top=[{top}] bottom=[{bottom}]"))
+    };
+
+    let keep_pinned_rows_value = cx
+        .get_model_copied(&keep_pinned_rows, Invalidation::Paint)
+        .unwrap_or(true);
+    let keep_pinned_rows_text: Arc<str> =
+        Arc::<str>::from(format!("KeepPinnedRows: {keep_pinned_rows_value}"));
+
+    let page_text: Arc<str> = {
+        let pagination = cx
+            .app
+            .models()
+            .read(&state, |st| st.pagination)
+            .ok()
+            .unwrap_or_default();
+        let bounds = pagination_bounds(data.len(), pagination);
+        if bounds.page_count == 0 {
+            Arc::<str>::from("Page: 0/0")
+        } else {
+            Arc::<str>::from(format!(
+                "Page: {}/{}",
+                bounds.page_index + 1,
+                bounds.page_count
+            ))
+        }
+    };
+
+    let state_for_pin_top = state.clone();
+    let on_pin_top: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_pin_top, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, Some(RowPinPosition::Top), [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_pin_bottom = state.clone();
+    let on_pin_bottom: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_pin_bottom, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, Some(RowPinPosition::Bottom), [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_unpin = state.clone();
+    let on_unpin: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_unpin, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, None, [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_prev_page = state.clone();
+    let on_prev_page: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_prev_page, |st| {
+            st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_next_page = state.clone();
+    let on_next_page: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_next_page, |st| {
+            st.pagination.page_index = st.pagination.page_index.saturating_add(1);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let actions = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Button::new("Prev page")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-prev-page")
+                    .on_activate(on_prev_page)
+                    .into_element(cx),
+                shadcn::Button::new("Next page")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-next-page")
+                    .on_activate(on_next_page)
+                    .into_element(cx),
+                shadcn::Button::new("Pin top")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-pin-top")
+                    .on_activate(on_pin_top)
+                    .into_element(cx),
+                shadcn::Button::new("Pin bottom")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-pin-bottom")
+                    .on_activate(on_pin_bottom)
+                    .into_element(cx),
+                shadcn::Button::new("Unpin")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-unpin")
+                    .on_activate(on_unpin)
+                    .into_element(cx),
+                shadcn::Switch::new(keep_pinned_rows.clone())
+                    .a11y_label("Keep pinned rows")
+                    .test_id("ui-gallery-table-retained-keep-pinned-rows")
+                    .into_element(cx),
+                cx.text("Keep pinned rows"),
+            ]
+        },
+    );
 
     let header = stack::vstack(
         cx,
@@ -19232,6 +19818,31 @@ fn preview_table_retained_torture(
                 cx.text(
                     "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
                 ),
+                cx.text(sorting_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(sorting_text.clone())
+                        .test_id("ui-gallery-table-retained-sorting"),
+                ),
+                cx.text(row_pinning_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(row_pinning_text.clone())
+                        .test_id("ui-gallery-table-retained-row-pinning"),
+                ),
+                cx.text(keep_pinned_rows_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(keep_pinned_rows_text.clone())
+                        .test_id("ui-gallery-table-retained-keep-pinned-rows-text"),
+                ),
+                cx.text(page_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(page_text.clone())
+                        .test_id("ui-gallery-table-retained-pagination"),
+                ),
+                actions,
             ]
         },
     );
@@ -19256,6 +19867,9 @@ fn preview_table_retained_torture(
             };
             props.enable_column_grouping = false;
             props.enable_column_resizing = false;
+            props.keep_pinned_rows = cx
+                .get_model_copied(&keep_pinned_rows, Invalidation::Layout)
+                .unwrap_or(true);
 
             let header_label =
                 Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
@@ -19305,6 +19919,7 @@ fn preview_table_retained_torture(
                 })),
                 props,
                 header_label,
+                None,
                 cell_at,
                 Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
                 Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
@@ -19393,7 +20008,7 @@ fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
     _value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
+    let primary = cx.with_theme(|theme| theme.color_required("primary"));
     let line_style = shadcn::tabs::TabsStyle::default()
         .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(
             ColorRef::Color(CoreColor::TRANSPARENT),
@@ -19402,7 +20017,7 @@ fn preview_tabs(
             fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(CoreColor::TRANSPARENT)))
                 .when(
                     fret_ui_kit::WidgetStates::SELECTED,
-                    Some(ColorRef::Color(theme.color_required("primary"))),
+                    Some(ColorRef::Color(primary)),
                 ),
         );
 
@@ -19428,17 +20043,17 @@ fn preview_tabs(
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let card_panel = |cx: &mut ElementContext<'_, App>,
@@ -19738,8 +20353,6 @@ fn preview_accordion(
 ) -> Vec<AnyElement> {
     let _ = value;
 
-    let theme = Theme::global(&*cx.app).clone();
-
     let max_w_lg = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(512.0)))
@@ -19930,14 +20543,14 @@ fn preview_accordion(
             ])
             .into_element(cx);
 
-        let wrapper = cx.container(
+        let wrapper_props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Lg),
                 max_w_lg.clone(),
-            ),
-            move |_cx| vec![accordion],
-        );
+            )
+        });
+        let wrapper = cx.container(wrapper_props, move |_cx| vec![accordion]);
 
         let body = centered(cx, wrapper);
         section(cx, "Borders", body)
@@ -20069,7 +20682,6 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         }
     };
 
-    let theme = Theme::global(&*cx.app).clone();
     let invoice_w = fret_core::Px(128.0);
     let status_w = fret_core::Px(120.0);
     let method_w = fret_core::Px(180.0);
@@ -20107,17 +20719,17 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        cx.container(
+        let props = cx.with_theme(|theme| {
             decl_style::container_props(
-                &theme,
+                theme,
                 ChromeRefinement::default()
                     .border_1()
                     .rounded(Radius::Md)
                     .p(Space::N4),
                 LayoutRefinement::default().w_full().max_w(Px(760.0)),
-            ),
-            move |_cx| [body],
-        )
+            )
+        });
+        cx.container(props, move |_cx| [body])
     };
 
     let align_end = |cx: &mut ElementContext<'_, App>, child: AnyElement| {
@@ -21215,9 +21827,7 @@ fn preview_overlay(
             .get_cloned(&last_action)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         let text = format!("last action: {last}");
-        cx.text(text).attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-overlay-last-action"),
-        )
+        cx.text(text).test_id("ui-gallery-overlay-last-action")
     };
 
     let overlays =
@@ -21369,9 +21979,7 @@ fn preview_overlay(
                     "Tooltip: hover intent + placement",
                 )])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-tooltip-content"),
-                ),
+                .test_id("ui-gallery-tooltip-content"),
             )
             .arrow(true)
             .arrow_test_id("ui-gallery-tooltip-arrow")
@@ -21391,9 +21999,7 @@ fn preview_overlay(
                     cx.text("Move pointer from trigger to content."),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-hovercard-content"),
-                ),
+                .test_id("ui-gallery-hovercard-content"),
             )
             .open_delay_frames(10)
             .close_delay_frames(10)
@@ -21441,9 +22047,7 @@ fn preview_overlay(
                             close,
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-popover-content"),
-                        )
+                        .test_id("ui-gallery-popover-content")
                     },
                 );
 
@@ -21504,9 +22108,7 @@ fn preview_overlay(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-dialog-content"),
-                    )
+                    .test_id("ui-gallery-dialog-content")
                 },
             );
 
@@ -21541,9 +22143,7 @@ fn preview_overlay(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-content"),
-                    )
+                    .test_id("ui-gallery-alert-dialog-content")
                 },
             );
 
@@ -21601,9 +22201,7 @@ fn preview_overlay(
                             .into_element(cx),
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-sheet-content"),
-                        )
+                        .test_id("ui-gallery-sheet-content")
                     },
                 );
 
@@ -21685,14 +22283,17 @@ fn preview_overlay(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
                 |cx| {
-                    let theme = Theme::global(&*cx.app).clone();
-                    let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+                    let gap = cx.with_theme(|theme| {
+                        fret_ui_kit::MetricRef::space(Space::N2).resolve(theme)
+                    });
 
                     let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
-                        let layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        );
+                        let layout = cx.with_theme(|theme| {
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0(),
+                            )
+                        });
                         cx.flex(
                             fret_ui::element::FlexProps {
                                 layout,
@@ -21708,10 +22309,12 @@ fn preview_overlay(
                     };
 
                     let row_end = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
-                        let layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().w_full().min_w_0(),
-                        );
+                        let layout = cx.with_theme(|theme| {
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().w_full().min_w_0(),
+                            )
+                        });
                         cx.flex(
                             fret_ui::element::FlexProps {
                                 layout,
@@ -21739,28 +22342,26 @@ fn preview_overlay(
             vec![body]
         });
 
-    let dialog_open_flag =
-        {
-            let open = cx
-                .get_model_copied(&dialog_open, Invalidation::Layout)
-                .unwrap_or(false);
-            if open {
-                Some(cx.text("Dialog open").attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-dialog-open"),
-                ))
-            } else {
-                None
-            }
-        };
+    let dialog_open_flag = {
+        let open = cx
+            .get_model_copied(&dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
+        if open {
+            Some(cx.text("Dialog open").test_id("ui-gallery-dialog-open"))
+        } else {
+            None
+        }
+    };
 
     let alert_dialog_open_flag = {
         let open = cx
             .get_model_copied(&alert_dialog_open, Invalidation::Layout)
             .unwrap_or(false);
         if open {
-            Some(cx.text("AlertDialog open").attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-open"),
-            ))
+            Some(
+                cx.text("AlertDialog open")
+                    .test_id("ui-gallery-alert-dialog-open"),
+            )
         } else {
             None
         }
@@ -21771,9 +22372,10 @@ fn preview_overlay(
             .get_model_cloned(&last_action, Invalidation::Layout)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
-            Some(cx.text("Popover dismissed").attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-popover-dismissed"),
-            ))
+            Some(
+                cx.text("Popover dismissed")
+                    .test_id("ui-gallery-popover-dismissed"),
+            )
         } else {
             None
         }

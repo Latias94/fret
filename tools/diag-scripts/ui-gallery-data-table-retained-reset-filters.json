@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "type_text", "text": "datatable (torture)" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table-torture" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "type_text_into",
+      "target": { "kind": "role_and_name", "role": "text_field", "name": "Global filter" },
+      "text": "Process 123"
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "role_and_name", "role": "text_field", "name": "Name filter" },
+      "text": "Process 123"
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Status" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "role_and_name", "role": "menu_item_checkbox", "name": "Running" }
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "GlobalFilter: Process 123" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "NameFilter: Process 123" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "StatusFilter: Running" }
+      }
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "data-table-toolbar-reset-filters" } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "GlobalFilter: <none>" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "NameFilter: <none>" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "text", "name": "StatusFilter: <none>" }
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-data-table-retained-reset-filters" }
+  ]
+}
+

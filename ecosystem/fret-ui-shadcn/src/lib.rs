@@ -43,6 +43,7 @@ pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
 pub mod experimental;
+pub mod extras;
 pub mod field;
 pub mod form;
 pub mod hover_card;

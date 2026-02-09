@@ -29,7 +29,7 @@ use crate::element::{
     VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
-use crate::{SvgSource, Theme, UiHost};
+use crate::{SvgSource, Theme, ThemeSnapshot, UiHost};
 use fret_core::window::WindowMetricsService;
 
 use super::hash::{callsite_hash, derive_child_id, stable_hash};
@@ -351,6 +351,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.enter_with_callsite(loc, caller, Some(key_hash), Some(name), f)
     }
 
+    /// Runs `f` and then restores the element ID allocator scope to its previous state.
+    ///
+    /// This is intended for "probe" passes that need to build elements to inspect their shape
+    /// (e.g. focus-within detection) without perturbing subsequent `GlobalElementId` derivation
+    /// via callsite counters.
+    ///
+    /// This does **not** roll back side effects that `f` may cause on the window state (e.g.
+    /// element state allocation, model observations, or queued effects). Callers should keep `f`
+    /// side-effect free when possible.
+    pub fn with_callsite_counters_snapshot<R>(&mut self, f: impl FnOnce(&mut Self) -> R) -> R {
+        let saved_stack = self.stack.clone();
+        let saved_counters = self.callsite_counters.clone();
+        let out = f(self);
+        self.stack = saved_stack;
+        self.callsite_counters = saved_counters;
+        out
+    }
+
     pub fn with_state<S: Any, R>(
         &mut self,
         init: impl FnOnce() -> S,
@@ -469,6 +487,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
+    }
+
+    pub fn theme_snapshot(&mut self) -> ThemeSnapshot {
+        self.theme().snapshot()
     }
 
     #[track_caller]

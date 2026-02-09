@@ -1,4 +1,4 @@
-﻿#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
@@ -47,6 +47,8 @@ pub mod echarts_multi_grid_demo;
 pub mod effects_demo;
 pub mod emoji_conformance_demo;
 pub mod error_bars_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod extras_marquee_perf_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]

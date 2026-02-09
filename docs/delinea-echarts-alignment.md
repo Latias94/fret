@@ -419,7 +419,13 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
   - Evidence: `ecosystem/delinea/src/engine/mod.rs`, `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`)
 - AxisPointer/tooltip sampling respects `FilterMode::Empty` masks even when the underlying row selection is non-empty.
   - Evidence: `ecosystem/delinea/src/engine/tests.rs` (`axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series`, `axis_pointer_tooltip_respects_y_empty_mask_for_band_series`, `axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_series`, `axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection_is_not`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_line_series`, `axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_band_series`, `axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empty_mask`, `axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples`, `axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series`, `scatter_large_mode_does_not_hit_y_empty_masked_outlier`, `bar_item_trigger_does_not_hit_y_empty_masked_outlier`, `axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_masked`, `data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection`, `axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_selection_is_not`, `axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_when_marks_are_empty`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_under_x_empty_mask`, `axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar_under_x_empty_mask`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_empty`, `data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_marks_are_empty`)
-- Y dataZoom is mapping-only in v1 (no row filtering) (ADR 1136).
+- Multi-dimensional filtering is intentionally a v1 subset:
+  - the engine owns an explicit per-grid step plan (`XYWeakFilter -> XRange -> XIndices -> YPercent -> YIndices`),
+  - indices materialization is budgeted and size-capped,
+  - and this is not yet full ECharts parity (see ADR 1150 + `ecosystem/delinea/src/engine/stages/filter_processor.rs`).
+- Y dataZoom is mapping-first in v1: it always has a window/mapping carrier, but it may materialize
+  sparse indices selections under size caps when `DataZoomYSpec.filter_mode` opts into filtering
+  semantics (ADR 1136 amendments; ADR 1150).
 - 2D zoom is expressed as a paired window write (`Action::SetViewWindow2DFromZoom`) without introducing
   sparse selections (ADR 1136).
 
@@ -510,6 +516,9 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - Tooltip rich text / HTML parity (S5) (deferred; current work focuses on infra stability).
 
 ## Recommended Next Steps (P0 -> P1)
+
+Workstream tracker for engine-level contract closure (multi-grid + transform lineage + incremental updates):
+`docs/workstreams/delinea-engine-contract-closure-v1.md`.
 
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).

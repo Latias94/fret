@@ -10,7 +10,7 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::headless::calendar::CalendarMonth;
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
@@ -201,7 +201,7 @@ impl WinitAppDriver for DatePickerDemoDriver {
                     cx.observe_model(&disable_weekends, Invalidation::Layout);
                     cx.observe_model(&disabled, Invalidation::Layout);
 
-                    let theme = Theme::global(&*cx.app).clone();
+                    let theme = cx.theme_snapshot();
                     let padding = theme.metric_required("metric.padding.md");
 
                     let open_value = cx.app.models().get_copied(&open).unwrap_or(false);

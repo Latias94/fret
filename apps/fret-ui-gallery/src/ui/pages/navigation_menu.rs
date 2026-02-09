@@ -7,7 +7,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         rtl_value: Option<Model<Option<Arc<str>>>>,
     }
 
-    let theme = Theme::global(&*cx.app).clone();
+    let muted_foreground = cx.with_theme(|theme| theme.color_required("muted-foreground"));
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
@@ -83,7 +83,7 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
                 line_height: None,
                 letter_spacing_em: None,
             }),
-            color: Some(theme.color_required("muted-foreground")),
+            color: Some(muted_foreground),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Ellipsis,
         });

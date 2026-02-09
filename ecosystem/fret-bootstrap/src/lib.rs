@@ -41,15 +41,22 @@
 //! # }
 //! ```
 
-use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
+
+#[cfg(not(target_arch = "wasm32"))]
+use std::path::Path;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+use fret_app::SettingsFileV1;
+#[cfg(not(target_arch = "wasm32"))]
 use fret_app::config_files::LayeredConfigPaths;
-use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError, SettingsFileV1};
+use fret_app::{App, KeymapFileError, MenuBarFileError, SettingsError};
 use fret_i18n::{I18nLookup, I18nService, LocaleId};
 use fret_i18n_fluent::{FluentCatalog, FluentLookup};
+#[cfg(not(target_arch = "wasm32"))]
 use fret_icons::IconRegistry;
 
 #[derive(Debug, thiserror::Error)]

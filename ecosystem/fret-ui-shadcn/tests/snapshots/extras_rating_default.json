@@ -1,0 +1,526 @@
+{
+  "version": 1,
+  "semantics": [
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 128.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 2.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 26.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 28.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 52.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 54.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 78.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 80.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 104.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 106.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "RadioButton",
+      "label": "1 star",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": false
+      }
+    },
+    {
+      "role": "RadioButton",
+      "label": "2 stars",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 26.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": false
+      }
+    },
+    {
+      "role": "RadioButton",
+      "label": "3 stars",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 52.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": true
+      }
+    },
+    {
+      "role": "RadioButton",
+      "label": "4 stars",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 78.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": false
+      }
+    },
+    {
+      "role": "RadioButton",
+      "label": "5 stars",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 104.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 24.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": false
+      }
+    },
+    {
+      "role": "RadioGroup",
+      "label": "Rating",
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 128.0,
+          "h": 24.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Window",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 320.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    }
+  ],
+  "scene_ops": [
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 2.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 28.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 54.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.68,
+        "g": 0.73,
+        "b": 0.815,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 80.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    },
+    {
+      "kind": "SvgMaskIcon",
+      "rect": {
+        "origin": {
+          "x": 106.0,
+          "y": 2.0
+        },
+        "size": {
+          "w": 20.0,
+          "h": 20.0
+        }
+      },
+      "fit": "Contain",
+      "color": {
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
+        "a": 1.0
+      },
+      "opacity": 1.0
+    }
+  ]
+}

@@ -731,7 +731,7 @@ impl Popover {
                 let side = self.side;
                 let align_offset = self.align_offset;
                 let side_offset = self.side_offset;
-                let shift_cross_axis = self.shift_cross_axis.unwrap_or(false);
+                let shift_cross_axis = self.shift_cross_axis.unwrap_or(true);
                 let window_margin = self.window_margin_override.unwrap_or_else(|| {
                     theme
                         .metric_by_key("component.popover.window_margin")
@@ -1202,7 +1202,7 @@ impl PopoverContent {
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = cx.container(props, move |_cx| children);
+        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
 
         container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::Panel),
@@ -5676,13 +5676,13 @@ mod tests {
     }
 
     #[test]
-    fn popover_shift_cross_axis_default_matches_explicit_false() {
+    fn popover_shift_cross_axis_defaults_to_true_and_can_be_disabled() {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
         let a = Popover::new(open.clone());
         let b = Popover::new(open).shift_cross_axis(false);
-        assert_eq!(a.shift_cross_axis.unwrap_or(false), false);
-        assert_eq!(b.shift_cross_axis.unwrap_or(false), false);
+        assert_eq!(a.shift_cross_axis.unwrap_or(true), true);
+        assert_eq!(b.shift_cross_axis.unwrap_or(true), false);
     }
 
     #[test]

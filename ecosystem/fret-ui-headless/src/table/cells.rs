@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use super::ColumnDef;
+use super::RowKey;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CellSnapshot {
@@ -9,6 +10,18 @@ pub struct CellSnapshot {
     pub is_grouped: bool,
     pub is_placeholder: bool,
     pub is_aggregated: bool,
+}
+
+/// A Rust-native equivalent of TanStack `cell.getContext()`.
+///
+/// This provides the stable ids/keys required to render a cell without requiring consumers to
+/// re-derive identity from strings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CellContextSnapshot {
+    pub id: Arc<str>,
+    pub row_id: super::RowId,
+    pub row_key: RowKey,
+    pub column_id: Arc<str>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

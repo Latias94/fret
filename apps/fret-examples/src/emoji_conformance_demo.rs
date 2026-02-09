@@ -10,7 +10,7 @@ use fret_launch::{
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::declarative;
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::primitives::separator::Separator;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::collections::HashSet;
@@ -89,7 +89,7 @@ impl EmojiConformanceDriver {
                 cx.observe_model(&emoji_font_override, Invalidation::Layout);
                 cx.observe_model(&emoji_font_override_open, Invalidation::Layout);
 
-                let theme = Theme::global(&*cx.app).clone();
+                let theme = cx.theme_snapshot();
 
                 let available_fonts = cx
                     .app

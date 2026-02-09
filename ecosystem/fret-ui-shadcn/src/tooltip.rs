@@ -638,7 +638,7 @@ impl Tooltip {
                 });
                 model
             };
-            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx
                 .watch_model(&event_models.close_requested)
@@ -792,7 +792,6 @@ impl Tooltip {
 
             if update.open != open_now {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
-                open_now = update.open;
             }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
@@ -1236,7 +1235,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
