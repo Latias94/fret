@@ -1,11 +1,19 @@
 ---
 name: fret-diag-workflow
-description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted UI automation, diagnostics bundles, screenshots, triage/compare, and turning bugs into stable repro gates. Use when authoring or running `tools/diag-scripts/*.json`, packaging bundles for sharing, or analyzing invalidation/perf regressions."
+description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted interaction automation, diagnostics bundles, screenshots, and triage/compare. Use when authoring or running `tools/diag-scripts/*.json`, turning a flaky UI bug into a stable repro gate, or when you need shareable artifacts for AI/humans."
 ---
 
 # Fret diag workflow
 
-If your primary goal is to quantify performance (baselines/gates/logs), use `fret-perf-workflow` instead.
+## When to use
+
+Use this skill when:
+
+- A UI bug is hard to reproduce, flaky, or requires “human timing”.
+- You need a **shareable artifact** (bundle + optional screenshots) for triage.
+- You want to convert a bug into a **CI-friendly gate** (script + assertions).
+
+If your primary goal is performance quantification (baselines/gates/logs), use `fret-perf-workflow` instead.
 
 ## Quick start
 
@@ -35,8 +43,29 @@ If your primary goal is to quantify performance (baselines/gates/logs), use `fre
 7. Compare before/after runs for regressions.
    - `fretboard diag compare <bundle_a> <bundle_b> --json`
 
-## Tips
+## Evidence anchors
 
 - Add `test_id` at the recipe/component layer (usually `ecosystem/fret-ui-shadcn`) so scripts remain stable across layout refactors.
 - Keep scripts minimal: one bug, one script, one or two assertions.
 - Prefer `tools/diag-scripts/` naming that encodes the scenario (component + behavior + expectation).
+
+Where the code lives:
+
+- Doc: `docs/ui-diagnostics-and-scripted-tests.md`
+- In-app exporter + script executor: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+- CLI entry: `apps/fretboard/src/diag.rs`
+- Protocol types (scripts, selectors, results): `crates/fret-diag-protocol`
+- Triage/compare engine: `crates/fret-diag`
+
+## Common pitfalls
+
+- Scripts that call `capture_screenshot` without `FRET_DIAG_SCREENSHOTS=1`.
+- Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
+- Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
+- Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.
+
+## Related skills
+
+- `fret-shadcn-source-alignment` (turn Radix/shadcn mismatches into tests + scripts)
+- `fret-overlays-and-focus` (overlay/dismiss/focus issues)
+- `fret-perf-workflow` (perf baselines/gates)
