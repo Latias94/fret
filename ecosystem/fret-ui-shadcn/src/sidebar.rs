@@ -4873,12 +4873,12 @@ mod tests {
                         min: Px(0.0),
                         ..Default::default()
                     });
-                    let rail = SidebarRail::new().test_id(test_id).into_element(cx);
-                    let sidebar = Sidebar::new([child, rail])
+                    let sidebar = Sidebar::new([child])
                         .side(side)
                         .collapsible(collapsible)
                         .into_element(cx);
-                    vec![sidebar]
+                    let rail = SidebarRail::new().test_id(test_id).into_element(cx);
+                    vec![sidebar, rail]
                 },
             );
             ui.set_root(root);

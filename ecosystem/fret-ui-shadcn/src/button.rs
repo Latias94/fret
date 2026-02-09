@@ -498,11 +498,26 @@ impl Button {
             );
             if is_icon_button {
                 let icon = size.icon_button_size(&theme);
+                let has_explicit_w = base_layout
+                    .size
+                    .as_ref()
+                    .and_then(|s| s.width.as_ref())
+                    .is_some();
+                let has_explicit_h = base_layout
+                    .size
+                    .as_ref()
+                    .and_then(|s| s.height.as_ref())
+                    .is_some();
 
                 // shadcn/ui v4 `size=icon` uses Tailwind `size-*` (a fixed square), not
                 // `min-width/min-height`. Using an explicit width/height avoids relying on flexbox
                 // min-size behavior and makes icon buttons match web goldens 1:1.
-                base_layout = base_layout.w_px(icon).h_px(icon).min_w(icon).min_h(icon);
+                if !has_explicit_w {
+                    base_layout = base_layout.w_px(icon).min_w(icon);
+                }
+                if !has_explicit_h {
+                    base_layout = base_layout.h_px(icon).min_h(icon);
+                }
             } else {
                 let min_h = size.button_h(&theme);
 
