@@ -29,8 +29,9 @@ fn build_breadcrumb_demo_ellipsis(
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
-                bc::BreadcrumbItem::new()
-                    .into_element(cx, |cx| vec![bc::BreadcrumbLink::new("Home").into_element(cx)]),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![dropdown.into_element(
@@ -41,9 +42,11 @@ fn build_breadcrumb_demo_ellipsis(
                             props.a11y.label = Some(Arc::from("Toggle menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![bc::BreadcrumbEllipsis::new()
-                                    .size(Px(16.0))
-                                    .into_element(cx)]
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(Px(16.0))
+                                        .into_element(cx),
+                                ]
                             })
                         },
                         |_cx| {
@@ -80,8 +83,9 @@ fn build_breadcrumb_dropdown_button(
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
-                bc::BreadcrumbItem::new()
-                    .into_element(cx, |cx| vec![bc::BreadcrumbLink::new("Home").into_element(cx)]),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
                 bc::BreadcrumbSeparator::new()
                     .kind(bc::BreadcrumbSeparatorKind::Slash)
                     .into_element(cx),
@@ -165,8 +169,9 @@ fn build_breadcrumb_responsive_menu(
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
-                bc::BreadcrumbItem::new()
-                    .into_element(cx, |cx| vec![bc::BreadcrumbLink::new("Home").into_element(cx)]),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![dropdown.into_element(
@@ -177,9 +182,11 @@ fn build_breadcrumb_responsive_menu(
                             props.a11y.label = Some(Arc::from("Toggle menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![bc::BreadcrumbEllipsis::new()
-                                    .size(Px(16.0))
-                                    .into_element(cx)]
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(Px(16.0))
+                                        .into_element(cx),
+                                ]
                             })
                         },
                         |_cx| {
@@ -211,8 +218,8 @@ fn build_breadcrumb_responsive_drawer(
 ) -> AnyElement {
     use fret_ui_shadcn::breadcrumb::primitives as bc;
     use fret_ui_shadcn::{
-        Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
-        DrawerTitle,
+        Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerFooter,
+        DrawerHeader, DrawerTitle,
     };
 
     let theme = fret_ui::Theme::global(&*cx.app).clone();
@@ -224,8 +231,9 @@ fn build_breadcrumb_responsive_drawer(
     bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
-                bc::BreadcrumbItem::new()
-                    .into_element(cx, |cx| vec![bc::BreadcrumbLink::new("Home").into_element(cx)]),
+                bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                    vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
                     vec![drawer.into_element(
@@ -236,9 +244,11 @@ fn build_breadcrumb_responsive_drawer(
                             props.a11y.label = Some(Arc::from("Toggle Menu"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![bc::BreadcrumbEllipsis::new()
-                                    .size(Px(16.0))
-                                    .into_element(cx)]
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(Px(16.0))
+                                        .into_element(cx),
+                                ]
                             })
                         },
                         |cx| {
@@ -387,4 +397,3 @@ fn web_vs_fret_breadcrumb_cases_match_web_fixtures() {
         }
     }
 }
-
