@@ -113,6 +113,43 @@ const SIDEBAR_TOGGLE_COMMAND_ID: &str = "sidebar.toggle";
 const SIDEBAR_COLLAPSE_OPEN_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
 const SIDEBAR_COLLAPSE_CLOSE_TICKS: u64 = overlay_motion::SHADCN_MOTION_TICKS_200;
 
+type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
+
+#[derive(Default)]
+struct SidebarProviderOpenChangeCallbackState {
+    initialized: bool,
+    last_open: bool,
+    last_open_mobile: bool,
+}
+
+fn sidebar_provider_open_change_events(
+    state: &mut SidebarProviderOpenChangeCallbackState,
+    open: bool,
+    open_mobile: bool,
+) -> (Option<bool>, Option<bool>) {
+    if !state.initialized {
+        state.initialized = true;
+        state.last_open = open;
+        state.last_open_mobile = open_mobile;
+        return (None, None);
+    }
+
+    let open_changed = if state.last_open != open {
+        state.last_open = open;
+        Some(open)
+    } else {
+        None
+    };
+    let open_mobile_changed = if state.last_open_mobile != open_mobile {
+        state.last_open_mobile = open_mobile;
+        Some(open_mobile)
+    } else {
+        None
+    };
+
+    (open_changed, open_mobile_changed)
+}
+
 fn sidebar_open_url_on_activate(
     url: Arc<str>,
     target: Option<Arc<str>>,
@@ -474,13 +511,32 @@ fn sidebar_toggle_model(
 ///
 /// Provides shared sidebar open/collapsed state and wraps descendants in `TooltipProvider`
 /// with upstream-aligned default delay (`0`).
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SidebarProvider {
     open: Option<Model<bool>>,
     default_open: bool,
     open_mobile: Option<Model<bool>>,
     default_open_mobile: bool,
     is_mobile: bool,
+    on_open_change: Option<OnOpenChange>,
+    on_open_mobile_change: Option<OnOpenChange>,
+}
+
+impl std::fmt::Debug for SidebarProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SidebarProvider")
+            .field("open", &self.open)
+            .field("default_open", &self.default_open)
+            .field("open_mobile", &self.open_mobile)
+            .field("default_open_mobile", &self.default_open_mobile)
+            .field("is_mobile", &self.is_mobile)
+            .field("on_open_change", &self.on_open_change.is_some())
+            .field(
+                "on_open_mobile_change",
+                &self.on_open_mobile_change.is_some(),
+            )
+            .finish()
+    }
 }
 
 impl SidebarProvider {
@@ -491,6 +547,8 @@ impl SidebarProvider {
             open_mobile: None,
             default_open_mobile: false,
             is_mobile: false,
+            on_open_change: None,
+            on_open_mobile_change: None,
         }
     }
 
@@ -516,6 +574,19 @@ impl SidebarProvider {
 
     pub fn is_mobile(mut self, is_mobile: bool) -> Self {
         self.is_mobile = is_mobile;
+        self
+    }
+
+    pub fn on_open_change(mut self, on_open_change: Option<OnOpenChange>) -> Self {
+        self.on_open_change = on_open_change;
+        self
+    }
+
+    pub fn on_open_mobile_change(
+        mut self,
+        on_open_mobile_change: Option<OnOpenChange>,
+    ) -> Self {
+        self.on_open_mobile_change = on_open_mobile_change;
         self
     }
 
@@ -548,6 +619,25 @@ impl SidebarProvider {
         .model();
 
         let open_now = cx.watch_model(&open).layout().copied().unwrap_or(true);
+        let open_mobile_now = cx
+            .watch_model(&open_mobile)
+            .layout()
+            .copied()
+            .unwrap_or(false);
+
+        let (open_changed, open_mobile_changed) =
+            cx.with_state(SidebarProviderOpenChangeCallbackState::default, |state| {
+                sidebar_provider_open_change_events(state, open_now, open_mobile_now)
+            });
+        if let (Some(open), Some(handler)) = (open_changed, self.on_open_change.as_ref()) {
+            handler(open);
+        }
+        if let (Some(open_mobile), Some(handler)) =
+            (open_mobile_changed, self.on_open_mobile_change.as_ref())
+        {
+            handler(open_mobile);
+        }
+
         let state = if open_now {
             SidebarState::Expanded
         } else {
@@ -3160,6 +3250,7 @@ impl SidebarMenuButton {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
     use fret_app::App;
@@ -6000,6 +6091,180 @@ mod tests {
             button.value.as_deref(),
             None,
             "expected as_child sidebar menu button href path to avoid default href semantics value"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_on_open_change_builder_sets_handler() {
+        let provider = SidebarProvider::new().on_open_change(Some(Arc::new(|_open| {})));
+
+        assert!(provider.on_open_change.is_some());
+    }
+
+    #[test]
+    fn sidebar_provider_on_open_mobile_change_builder_sets_handler() {
+        let provider =
+            SidebarProvider::new().on_open_mobile_change(Some(Arc::new(|_open_mobile| {})));
+
+        assert!(provider.on_open_mobile_change.is_some());
+    }
+
+    #[test]
+    fn sidebar_provider_open_change_events_emit_only_on_state_change() {
+        let mut state = SidebarProviderOpenChangeCallbackState::default();
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, false, false);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, false);
+        assert_eq!(open_changed, Some(true));
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, false);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, None);
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, true, true);
+        assert_eq!(open_changed, None);
+        assert_eq!(open_mobile_changed, Some(true));
+
+        let (open_changed, open_mobile_changed) =
+            sidebar_provider_open_change_events(&mut state, false, false);
+        assert_eq!(open_changed, Some(false));
+        assert_eq!(open_mobile_changed, Some(false));
+    }
+
+    #[test]
+    fn sidebar_provider_open_change_callbacks_follow_model_changes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let open_model = app.models_mut().insert(false);
+        let open_mobile_model = app.models_mut().insert(false);
+
+        let open_events: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+        let open_mobile_events: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-sidebar-provider-open-change-callbacks",
+                |cx| {
+                    let open_events = Arc::clone(&open_events);
+                    let open_mobile_events = Arc::clone(&open_mobile_events);
+                    SidebarProvider::new()
+                        .open(Some(open_model.clone()))
+                        .open_mobile(Some(open_mobile_model.clone()))
+                        .on_open_change(Some(Arc::new(move |open| {
+                            open_events
+                                .lock()
+                                .expect("open events lock")
+                                .push(open);
+                        })))
+                        .on_open_mobile_change(Some(Arc::new(move |open_mobile| {
+                            open_mobile_events
+                                .lock()
+                                .expect("open_mobile events lock")
+                                .push(open_mobile);
+                        })))
+                        .with(cx, |_cx| Vec::<AnyElement>::new())
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        assert!(
+            open_events
+                .lock()
+                .expect("open events lock")
+                .is_empty(),
+            "expected initial render to not emit open callback"
+        );
+        assert!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .is_empty(),
+            "expected initial render to not emit open_mobile callback"
+        );
+
+        let _ = app.models_mut().update(&open_model, |value| {
+            *value = true;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true],
+            "expected open callback to emit when open model changes"
+        );
+        assert!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .is_empty(),
+            "expected open_mobile callback to stay silent when open_mobile unchanged"
+        );
+
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true],
+            "expected unchanged open state to avoid duplicate callback"
+        );
+
+        let _ = app.models_mut().update(&open_mobile_model, |value| {
+            *value = true;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+        assert_eq!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .as_slice(),
+            [true],
+            "expected open_mobile callback to emit when open_mobile model changes"
+        );
+
+        let _ = app.models_mut().update(&open_model, |value| {
+            *value = false;
+        });
+        let _ = app.models_mut().update(&open_mobile_model, |value| {
+            *value = false;
+        });
+        render_frame(&mut ui, &mut app, &mut services);
+
+        assert_eq!(
+            open_events.lock().expect("open events lock").as_slice(),
+            [true, false],
+            "expected open callback to track both transitions"
+        );
+        assert_eq!(
+            open_mobile_events
+                .lock()
+                .expect("open_mobile events lock")
+                .as_slice(),
+            [true, false],
+            "expected open_mobile callback to track both transitions"
         );
     }
 
