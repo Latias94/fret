@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "cases": [
+    { "id": "sheet-demo.panel_chrome", "web_name": "sheet-demo", "recipe": "demo_panel_chrome" },
+    { "id": "sheet-demo.surface_colors", "web_name": "sheet-demo", "recipe": "demo_surface_colors_default" },
+    { "id": "sheet-demo.dark.surface_colors", "web_name": "sheet-demo", "theme": "dark", "recipe": "demo_surface_colors_dark" },
+
+    { "id": "sheet-side.top.panel_chrome", "web_name": "sheet-side", "recipe": "side_panel_chrome", "side": "top", "trigger": "top" },
+    { "id": "sheet-side.right.panel_chrome", "web_name": "sheet-side.right", "recipe": "side_panel_chrome", "side": "right", "trigger": "right" },
+    { "id": "sheet-side.bottom.panel_chrome", "web_name": "sheet-side.bottom", "recipe": "side_panel_chrome", "side": "bottom", "trigger": "bottom" },
+    { "id": "sheet-side.left.panel_chrome", "web_name": "sheet-side.left", "recipe": "side_panel_chrome", "side": "left", "trigger": "left" }
+  ]
+}
