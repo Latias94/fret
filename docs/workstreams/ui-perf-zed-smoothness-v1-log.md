@@ -8584,3 +8584,25 @@ tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --att
 
 Artifacts:
 - `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.007006b28.20260209-134317/summary.json`
+
+## 2026-02-09 13:58:15 (commit `f9de44cca`)
+
+Change:
+- Make `UiTree::set_node_view_cache_flags(...)` idempotent for identical flags to avoid redundant writes in hot paths.
+
+Suites:
+- `ui-resize-probes` gate (attempts=3): PASS (passes=2/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout f9de44cca
+tools/perf/diag_resize_probes_gate.sh --suite ui-resize-probes --attempts 3 --out-dir target/perf-gates/ui-resize-probes.f9de44cca.20260209-135815
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-resize-probes.f9de44cca.20260209-135815/summary.json`
+
+Notes:
+- attempt-1 failed due to `top_layout_engine_solve_time_us=3581us` exceeding the baseline threshold `3060us` in
+  `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`, but the gate passed via majority.
