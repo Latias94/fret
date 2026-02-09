@@ -4832,6 +4832,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
         let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
             self.with_engine(|engine| engine.output().axis_pointer.clone())
+                .and_then(|axis_pointer| {
+                    if let Some(grid) = self.grid_override
+                        && axis_pointer.grid != Some(grid)
+                    {
+                        return None;
+                    }
+                    Some(axis_pointer)
+                })
         } else {
             None
         };

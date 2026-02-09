@@ -88,6 +88,7 @@ pub struct ChartOutput {
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerOutput {
+    pub grid: Option<GridId>,
     pub crosshair_px: Point,
     pub hit: Option<HoverHit>,
     pub shadow_rect_px: Option<Rect>,
@@ -1471,6 +1472,11 @@ fn compute_item_axis_pointer_output(
 
     let series = model.series.get(&hit.series);
     let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
+    let grid = model
+        .axes
+        .get(&x_axis)
+        .map(|a| a.grid)
+        .or_else(|| model.axes.get(&y_axis).map(|a| a.grid));
 
     let tooltip = TooltipOutput::Item(TooltipItemOutput {
         series: hit.series,
@@ -1482,6 +1488,7 @@ fn compute_item_axis_pointer_output(
     });
 
     Some(AxisPointerOutput {
+        grid,
         crosshair_px,
         hit: Some(hit),
         shadow_rect_px: None,
@@ -1516,6 +1523,7 @@ fn compute_axis_axis_pointer_output(
         .get(&trigger_axis)
         .map(|a| a.kind)
         .unwrap_or(crate::spec::AxisKind::X);
+    let grid = model.axes.get(&trigger_axis).map(|a| a.grid);
 
     let trigger_window = axis_windows.get(&trigger_axis).copied().unwrap_or_default();
     let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
@@ -1878,6 +1886,7 @@ fn compute_axis_axis_pointer_output(
     }
 
     Some(AxisPointerOutput {
+        grid,
         crosshair_px,
         hit: hit_for_marker,
         shadow_rect_px,

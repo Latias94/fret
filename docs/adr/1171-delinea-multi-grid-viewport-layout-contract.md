@@ -125,7 +125,6 @@ To keep v1 codepaths simple:
 ## Evidence Anchors (Current v1)
 
 - ECharts `gridIndex` translation: `ecosystem/fret-chart/src/echarts/mod.rs`
-- Spec split helper: `ecosystem/fret-chart/src/multi_grid.rs`
 - Retained multi-canvas builder: `ecosystem/fret-chart/src/retained/multi_grid.rs`
-- Declarative multi-canvas builder: `ecosystem/fret-chart/src/declarative/multi_grid.rs`
+- Per-grid plot viewport patching: `ecosystem/fret-chart/src/retained/canvas.rs` (`grid_override`)
 - Workstream context: `docs/workstreams/delinea-engine-contract-closure-v1.md`

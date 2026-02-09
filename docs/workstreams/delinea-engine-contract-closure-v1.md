@@ -53,8 +53,26 @@ Engine-level anchors:
 Adapter-level anchors:
 
 - Multi-axis conformance demo (native + wasm): `apps/fret-examples/src/chart_multi_axis_demo.rs`.
-- Multi-grid UI today is implemented as a **spec split** into multiple `ChartEngine`s:
-  `ecosystem/fret-chart/src/multi_grid.rs` + `ecosystem/fret-chart/src/declarative/multi_grid.rs`.
+- Multi-grid UI (retained) hosts a **single** engine instance and supplies per-grid plot viewports:
+  - multi-canvas layout: `ecosystem/fret-chart/src/retained/multi_grid.rs`
+  - per-grid plot viewport patching: `ecosystem/fret-chart/src/retained/canvas.rs` (`grid_override`)
+  - demo: `apps/fret-examples/src/echarts_multi_grid_demo.rs`
+
+## 7) UI adapter consolidation plan (TanStack-style posture)
+
+The long-term “correct” shape is:
+
+1. **One headless engine, many views**
+   - `ChartEngine` owns semantics + deterministic outputs.
+   - UI hosts provide layout inputs (per-grid plot viewports) and render marks.
+2. **Global controllers (B)**
+   - One shared legend + one shared tooltip/axisPointer overlay for the whole multi-grid surface.
+   - Individual grid views are “plot-only” surfaces (no per-grid legend duplication).
+3. **Unambiguous routing in outputs**
+   - Engine outputs that are tied to a specific grid (e.g. `axisPointer`) must carry `GridId` so
+     adapters do not guess and do not draw duplicates.
+4. **Delete legacy paths**
+   - No adapter-side “spec splitting into multiple engines” once single-engine multi-grid is in place.
 
 ## 3) Scope (what this workstream is and is not)
 
@@ -98,4 +116,3 @@ We consider this workstream “done” when:
    transforms).
 3. Incremental data update semantics are explicit and regression-gated.
 4. The participation/output contract is stable, documented, and consumed consistently by all downstream stages.
-

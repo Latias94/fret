@@ -504,19 +504,15 @@ ECharts uses a staged pipeline and an axisProxy abstraction. One important prope
 - `[~]` Multi-grid layout (multiple independent grids in one chart).
   - Notes: v1 has `GridSpec` + `AxisSpec.grid` in the engine model, and the ECharts translator binds `gridIndex`.
 
-    - Current (v1): the UI adapter renders multi-grid charts by splitting the `ChartSpec` into multiple
-      single-grid charts (one viewport per chart), hosting one `ChartEngine` per grid, and laying them out
-      side-by-side/stacked. This keeps the engine contract surface single-viewport, but it prevents
-      engine-owned cross-grid routing (crosshair / zoom / tooltip / brush linking) and makes per-grid
-      ordering/routing rules harder to lock.
-    - Target: a single `ChartEngine` instance owns per-grid viewport/layout carriers (spec/model/output) and
-      emits deterministic per-grid outputs and routing surfaces. The adapter becomes a pure layout+input
-      router over engine-owned per-grid outputs (see workstream M1).
+    - Current (v1): the retained UI adapter hosts a single `ChartEngine` instance and supplies per-grid plot
+      viewports, allowing the engine to emit deterministic per-grid marks and routing surfaces.
+    - Remaining gap (high value): consolidate the UI adapter around **global** controllers (one legend +
+      one tooltip/axisPointer overlay for the multi-grid surface) instead of per-grid duplication (see
+      workstream notes, section “Global controllers (B)”).
   - Evidence:
     - `ecosystem/fret-chart/src/echarts/mod.rs` (translates `gridIndex`)
-    - `ecosystem/fret-chart/src/multi_grid.rs` (split helper)
-    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-canvas builder)
-    - `ecosystem/fret-chart/src/declarative/multi_grid.rs` (declarative multi-canvas builder)
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs` (retained multi-grid host)
+    - `ecosystem/fret-chart/src/retained/canvas.rs` (per-grid plot viewport patching via `grid_override`)
     - `apps/fret-examples/src/echarts_multi_grid_demo.rs` (demo)
     - Workstream tracker: `docs/workstreams/delinea-engine-contract-closure-v1.md` (M1 contract + acceptance gates)
 - Category axis indexing under zoom for non-bar series (S4).
@@ -533,7 +529,8 @@ Workstream tracker for engine-level contract closure (multi-grid + transform lin
 1. P0: Expand the existing “filter processor” stage (ECharts `dataZoomProcessor` analogue) to cover the remaining order-sensitive multi-dim composition gaps and to emit a unified participation contract (selection + masks) (S2).
 2. P0: Add a general transform graph (cached nodes + derived columns) and migrate DataZoom/filtering to it incrementally (ECharts-class dataset transforms).
 3. P0: Multi-grid layout + deterministic routing rules (UI adapter + engine layout) (ADR 1134 follow-ups).
-   - Note: the current v1 UI shows multi-grid charts via `ChartSpec` splitting; the long-term target is per-grid viewport/layout inside a single chart instance (crosshair/zoom/tooltip linking).
+   - Note: v1 now uses per-grid plot viewports in a single chart instance; the remaining target is
+     global controllers (shared legend + tooltip/axisPointer overlay) and cross-grid linking semantics.
 4. P0/P1: Incremental dataset updates + stable partial recompute (append/update + cache invalidation boundaries) (S9 / ADR 1149).
 5. P1: VisualMap per-item attribute pipelines (beyond bucketization) and multi-map targeting semantics (S7).
 6. P1: Tooltip rich text / HTML parity and richer formatter surfaces (S5 / ADR 1148).

@@ -17,7 +17,7 @@ Each TODO is labeled:
 - [x] DEL-ENG0-docs-001 Update alignment docs to describe the shipped v1 subset boundaries (Y mapping-first, size-capped indices materialization).
 - [x] DEL-ENG0-docs-002 Update ADR 1150 to reflect the shipped v1 subset multi-dimensional `WeakFilter` carrier.
 - [x] DEL-ENG0-docs-003 Update ADR implementation alignment notes for ADR 1150 (remove stale “WeakFilter == Filter only” claim).
-- [x] DEL-ENG0-docs-004 Add a short “current vs target” note to the multi-grid adapter docs (spec split today; single-engine target) with code anchors.
+- [x] DEL-ENG0-docs-004 Update multi-grid adapter notes: retained hosts a single engine; remove stale spec-splitting references.
 
 ## M1 — Single-engine multi-grid viewport/layout contract
 
@@ -35,11 +35,12 @@ Implementation steps (keep them small and regression-gated):
 - [x] DEL-ENG1-impl-011 Teach marks emission to target the correct grid viewport without adapter-side splitting.
 - [x] DEL-ENG1-impl-012 Teach axisPointer sampling to route within the correct grid and preserve deterministic series ordering.
 - [ ] DEL-ENG1-impl-013 Keep brush selection output scoped to the grid/axis pair and preserve link semantics.
+- [x] DEL-ENG1-impl-014 Emit `GridId` in `axisPointer` output so UI adapters can route without guessing.
 
 Regression gates:
 
 - [x] DEL-ENG1-tests-020 Add a headless regression test for multi-grid: window writes + marks counts are stable.
-- [ ] DEL-ENG1-tests-021 Extend the multi-axis demo into a multi-grid demo (or add a new demo) with a concrete P0 checklist.
+- [x] DEL-ENG1-tests-021 Add a retained multi-grid demo with a concrete P0 checklist.
 
 ## M2 — Transform lineage contract (derived datasets/columns)
 
