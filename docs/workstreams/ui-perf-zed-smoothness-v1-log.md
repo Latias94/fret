@@ -8458,3 +8458,78 @@ Notes:
 - The best attempt improved the `top_total_time_us` tail (~41.6ms → ~37.1ms), but the suite remains far above the
   16.3ms threshold and still shows large attempt-to-attempt variance. Next step is to add more fine-grained
   attribution inside the code editor Canvas paint path (see TODO tracker).
+
+## 2026-02-09 12:22:35 (commit `f664ead2d`)
+
+Change:
+- Add code-editor Canvas paint internal attribution (frame-local phase timers + counters), and expose it in
+  the `app_snapshot` under `code_editor.torture.paint_perf` when `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): FAIL (passes=0/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout f664ead2d
+cargo build -p fret-ui-gallery --release
+FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/summary.json`
+
+Tail failures:
+- attempt-1 worst: `top_total_time_us=38098` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-1/1770610982603-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=40934` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-2/1770611097508-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=42129` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.f664ead2d.20260209-122235/attempt-3/1770611282853-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Attribution (attempt-3 worst bundle):
+- Worst frame: `total=42129us`, `paint=40174us`, `layout=2709us`.
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=31443us`.
+- `app_snapshot.code_editor.torture.paint_perf`: `us_total=24920us`, dominated by `us_syntax_spans=24508us`.
+- `app_snapshot.code_editor.torture.cache_stats`: `syntax_resets=4234`, `row_rich_hits=0`.
+
+Finding:
+- `CodeEditorHandle::set_language(...)` was not idempotent: the UI gallery calls it during render even when the
+  language is unchanged, which reset syntax/rich caches on every frame and forced expensive `fret_syntax::highlight`
+  work during resize drag.
+
+## 2026-02-09 12:34:16 (commit `1778ba563`)
+
+Change:
+- Make `CodeEditorHandle::set_language(...)` idempotent: do nothing when the next language matches the current one.
+
+Suites:
+- `ui-code-editor-resize-probes` gate (attempts=3): PASS (passes=3/3; required=2).
+
+Commands:
+```bash
+cd ../fret-perf-lab-c1af5d1f7
+git checkout 1778ba563
+cargo build -p fret-ui-gallery --release
+FRET_CODE_EDITOR_DIAG_PAINT_PERF=1 tools/perf/diag_resize_probes_gate.sh --suite ui-code-editor-resize-probes --attempts 3 --out-dir target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416
+```
+
+Artifacts:
+- `../fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/summary.json`
+
+Results:
+- attempt-1 worst: `top_total_time_us=15953` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-1/1770611691494-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-2 worst: `top_total_time_us=15563` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-2/1770611764113-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+- attempt-3 worst: `top_total_time_us=16006` (threshold `16308`)
+  - worst bundle: `/Users/frankorz/codes/rust/fret-perf-lab-c1af5d1f7/target/perf-gates/ui-code-editor-resize-probes.1778ba563.20260209-123416/attempt-3/1770611803894-ui-gallery-code-editor-window-resize-drag-jitter-steady/bundle.json`
+
+Delta (attempt-3 worst vs `f664ead2d` attempt-3 worst):
+- `top_total_time_us`: `42129us → 16006us` (Δ `-26123us`, `-62.0%`, `2.63×` speedup).
+- `paint_time_us`: `40174us → 14140us` (Δ `-26034us`, `2.84×` speedup).
+
+Attribution (attempt-3 worst bundle):
+- `paint_widget_hotspots[0]`: `element_kind=Canvas` `paint_time_us=8327us`.
+- `app_snapshot.code_editor.torture.paint_perf`: `us_total=125us`, `us_syntax_spans=0us`.
+- `app_snapshot.code_editor.torture.cache_stats`: `syntax_resets=2`, `row_rich_hits=152610`, `row_rich_misses=837`.

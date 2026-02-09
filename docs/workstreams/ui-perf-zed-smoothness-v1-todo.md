@@ -68,19 +68,22 @@ Conventions:
     previous children vec in `TaffyLayoutEngine::set_children`).
     - Implementation: commit `10e30dac1`.
     - Evidence: perf log entry `2026-02-09 09:10:11` in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
-- [ ] **P0.5 Code editor resize drag smoothness**: close the remaining 2–3× gap to the editor resize threshold
-  (currently ~37–46ms worst frames vs `16308us` target).
-  - Evidence snapshot: perf log entry `2026-02-09 10:51:48` (commit `c1af5d1f7`) + follow-up experiments
-    `a78a5fc76`, `f9c2b10d6`, `92ff5182a`, `9fe6fe352`.
-  - Current attribution: paint-dominant; the top hotspot is the code editor’s Canvas paint path (`scene_ops_delta=581`).
+- [x] **P0.5 Code editor resize drag smoothness**: close the remaining 2–3× gap to the editor resize threshold.
+  - Evidence snapshot: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`) showing the gate passing 3/3
+    with `top_total_time_us≈15.6–16.0ms` vs `16308us` target.
+  - Root cause (confirmed): per-frame syntax/rich cache resets caused by non-idempotent `CodeEditorHandle::set_language(...)`
+    being called during render.
   - [x] Cache per-row rich syntax materialization (`AttributedText`) to reduce per-frame span merge churn.
     - Implementation: `perf(fret-code-editor): cache syntax rich text` (commit `26ad57906`) + build fix (commit `a78a5fc76`).
     - Evidence: perf log entry `2026-02-09 11:31:52` (commit `a78a5fc76`) showing a ~5ms reduction in Canvas time in the best attempt
       but still far above threshold.
-  - [ ] Add code-editor-Canvas internal attribution (no more “Canvas is 30ms”).
-    - Goal: split the Canvas hotspot into 5–10 phases (row text fetch, syntax spans, rich materialize, text draw calls,
-      selection geometry, scene op push cost) so we can pick the correct lever.
-    - Deliverable: new fields in `diag perf --json` / `diag stats` output (or a dedicated `diag` command) that surface these phase timings.
+  - [x] Add code-editor-Canvas internal attribution (no more “Canvas is 30ms”).
+    - Implementation: `feat(diag): add code editor paint perf breakdown` (commit `f664ead2d`).
+    - Output: `bundle.json` `app_snapshot.code_editor.torture.paint_perf` (opt-in via `FRET_CODE_EDITOR_DIAG_PAINT_PERF=1`).
+    - Evidence: perf log entry `2026-02-09 12:22:35` (commit `f664ead2d`).
+  - [x] Make `CodeEditorHandle::set_language(...)` idempotent (no per-frame cache reset).
+    - Implementation: `perf(fret-code-editor): make set_language idempotent` (commit `1778ba563`).
+    - Evidence: perf log entry `2026-02-09 12:34:16` (commit `1778ba563`).
   - [ ] Reduce per-row scene op churn in `WindowedRowsSurface` paint.
     - Candidate directions:
       - record per-row display lists (ops) and replay with a transform/translation,
