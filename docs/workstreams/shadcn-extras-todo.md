@@ -44,6 +44,7 @@ Landed behavior gates (in-tree):
 
 - `ecosystem/fret-ui-shadcn/tests/extras_rating_keyboard.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_marquee_motion.rs`
+- `ecosystem/fret-ui-shadcn/tests/extras_marquee_pause_on_hover.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
 
 ## Candidate components (staged)
