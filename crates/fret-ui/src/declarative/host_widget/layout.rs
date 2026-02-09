@@ -702,6 +702,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);
@@ -722,17 +723,28 @@ impl ElementHostWidget {
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
-                let metrics = if can_reuse_metrics {
+                let prepared_matches = self.text_cache.blob.is_some()
+                    && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_width == Some(measure_width);
+
+                let metrics = if can_reuse_metrics && prepared_matches {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
                     let input = fret_core::TextInput::plain(props.text.clone(), style.clone());
-                    let metrics = cx.services.text().measure(&input, constraints);
+                    if let Some(blob) = self.text_cache.blob.take() {
+                        cx.services.text().release(blob);
+                    }
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
+                    self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = Some(props.text.clone());
+                    self.text_cache.last_rich = None;
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
@@ -769,6 +781,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);
@@ -793,7 +806,11 @@ impl ElementHostWidget {
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
-                let metrics = if can_reuse_metrics {
+                let prepared_matches = self.text_cache.blob.is_some()
+                    && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_width == Some(measure_width);
+
+                let metrics = if can_reuse_metrics && prepared_matches {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
                     let input = fret_core::TextInput::attributed(
@@ -801,14 +818,20 @@ impl ElementHostWidget {
                         style.clone(),
                         props.rich.spans.clone(),
                     );
-                    let metrics = cx.services.text().measure(&input, constraints);
+                    if let Some(blob) = self.text_cache.blob.take() {
+                        cx.services.text().release(blob);
+                    }
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
+                    self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
                     self.text_cache.last_rich = Some(props.rich.clone());
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
@@ -845,6 +868,7 @@ impl ElementHostWidget {
                     measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
                 }
                 measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                measure_width = crate::pixel_snap::snap_px_round(measure_width, cx.scale_factor);
                 measure_width = cx
                     .tree
                     .maybe_bucket_text_wrap_width(props.wrap, measure_width);
@@ -869,7 +893,11 @@ impl ElementHostWidget {
                     && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
                     && self.text_cache.last_font_stack_key == Some(font_stack_key);
 
-                let metrics = if can_reuse_metrics {
+                let prepared_matches = self.text_cache.blob.is_some()
+                    && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_width == Some(measure_width);
+
+                let metrics = if can_reuse_metrics && prepared_matches {
                     self.text_cache.metrics.expect("cached metrics")
                 } else {
                     let input = fret_core::TextInput::attributed(
@@ -877,14 +905,20 @@ impl ElementHostWidget {
                         style.clone(),
                         props.rich.spans.clone(),
                     );
-                    let metrics = cx.services.text().measure(&input, constraints);
+                    if let Some(blob) = self.text_cache.blob.take() {
+                        cx.services.text().release(blob);
+                    }
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
+                    self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
                     self.text_cache.measured_scale_factor_bits = Some(scale_bits);
                     self.text_cache.last_text = None;
                     self.text_cache.last_rich = Some(props.rich.clone());
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_width = Some(measure_width);
                     self.text_cache.last_measure_width = Some(measure_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                     metrics
