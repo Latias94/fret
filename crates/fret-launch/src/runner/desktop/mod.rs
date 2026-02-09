@@ -1162,6 +1162,12 @@ pub struct WinitRunner<D: WinitAppDriver> {
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
     main_window: Option<fret_core::AppWindowId>,
+    /// Best-effort approximation of platform window z-order (bottom..top).
+    ///
+    /// This is used for cross-window docking hover/drop routing when multiple windows overlap and
+    /// the platform backend cannot provide reliable "window under cursor" semantics (ImGui-style
+    /// multi-viewports fallback).
+    window_z_order: Vec<fret_core::AppWindowId>,
     menu_bar: Option<fret_runtime::MenuBar>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
@@ -2331,6 +2337,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
+            window_z_order: Vec::new(),
             menu_bar: None,
             windows_pending_front: HashMap::new(),
             saw_left_mouse_release_this_turn: false,
@@ -2945,6 +2952,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
+        self.bump_window_z_order(id);
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -2972,6 +2980,30 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.raf_windows.insert(id);
         }
         Ok(id)
+    }
+
+    fn remove_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        self.window_z_order.retain(|w| *w != window);
+    }
+
+    fn bump_window_z_order(&mut self, window: fret_core::AppWindowId) {
+        self.remove_window_z_order(window);
+        self.window_z_order.push(window);
+    }
+
+    fn window_z_order_snapshot(&self) -> Vec<fret_core::AppWindowId> {
+        let mut out: Vec<fret_core::AppWindowId> = Vec::with_capacity(self.windows.len());
+        for w in &self.window_z_order {
+            if self.windows.contains_key(*w) {
+                out.push(*w);
+            }
+        }
+        for w in self.windows.keys() {
+            if !out.contains(&w) {
+                out.push(w);
+            }
+        }
+        out
     }
 
     fn resize_surface(&mut self, window: fret_core::AppWindowId, width: u32, height: u32) {
@@ -3024,6 +3056,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.internal_drag_hover_pos = None;
             self.internal_drag_pointer_id = None;
         }
+
+        self.remove_window_z_order(window);
 
         {
             use fret_runtime::DragHost as _;
@@ -4310,6 +4344,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                     if let Some(state) = self.windows.get(new_window) {
                                         let _ =
                                             bring_window_to_front(state.window.as_ref(), sender);
+                                        self.bump_window_z_order(new_window);
                                     }
                                 }
 
@@ -4690,8 +4725,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     .source_window
                     .and_then(|id| self.windows.get(id))
                     .map(|w| w.window.as_ref());
-                let _ = bring_window_to_front(state.window.as_ref(), sender);
-                state.window.request_redraw();
+                let window_handle = state.window.clone();
+                let _ = bring_window_to_front(window_handle.as_ref(), sender);
+                self.bump_window_z_order(window);
+                window_handle.request_redraw();
                 req.attempts_left = req.attempts_left.saturating_sub(1);
                 req.next_attempt_at = now + Duration::from_millis(60);
                 did_work = true;
@@ -5087,7 +5124,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
         prefer_not: Option<fret_core::AppWindowId>,
     ) -> Option<fret_core::AppWindowId> {
-        let mut fallback: Option<fret_core::AppWindowId> = None;
+        let mut rects: Vec<(fret_core::AppWindowId, RectF64)> = Vec::new();
         for w in self.windows.keys() {
             let Some(state) = self.windows.get(w) else {
                 continue;
@@ -5101,19 +5138,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let top = outer.y as f64 + deco.y as f64;
             let right = left + size.width as f64;
             let bottom = top + size.height as f64;
-            if screen_pos.x >= left
-                && screen_pos.x < right
-                && screen_pos.y >= top
-                && screen_pos.y < bottom
-            {
-                if prefer_not.is_some_and(|p| p == w) {
-                    fallback = Some(w);
-                    continue;
-                }
-                return Some(w);
-            }
+            rects.push((
+                w,
+                RectF64 {
+                    min_x: left,
+                    min_y: top,
+                    max_x: right,
+                    max_y: bottom,
+                },
+            ));
         }
-        fallback
+        let order = self.window_z_order_snapshot();
+        pick_window_under_cursor_from_client_rects(screen_pos, &rects, &order, prefer_not)
     }
 
     fn is_left_mouse_down_for_window(&self, window: fret_core::AppWindowId) -> bool {
@@ -5246,6 +5282,50 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.enqueue_window_front(follow.window, Some(follow.source_window), None, _now);
         }
     }
+}
+
+fn pick_window_under_cursor_from_client_rects(
+    screen_pos: PhysicalPosition<f64>,
+    rects: &[(fret_core::AppWindowId, RectF64)],
+    z_order_bottom_to_top: &[fret_core::AppWindowId],
+    prefer_not: Option<fret_core::AppWindowId>,
+) -> Option<fret_core::AppWindowId> {
+    let mut hits: std::collections::HashSet<fret_core::AppWindowId> =
+        std::collections::HashSet::new();
+    for (id, rect) in rects {
+        if screen_pos.x >= rect.min_x
+            && screen_pos.x < rect.max_x
+            && screen_pos.y >= rect.min_y
+            && screen_pos.y < rect.max_y
+        {
+            hits.insert(*id);
+        }
+    }
+    if hits.is_empty() {
+        return None;
+    }
+
+    let mut fallback: Option<fret_core::AppWindowId> = None;
+    for id in z_order_bottom_to_top.iter().rev() {
+        if !hits.contains(id) {
+            continue;
+        }
+        if prefer_not.is_some_and(|p| p == *id) {
+            fallback = Some(*id);
+            continue;
+        }
+        return Some(*id);
+    }
+
+    // If z-order is incomplete, fall back to any hit window. Prefer non-prefer_not.
+    if let Some(id) = hits
+        .iter()
+        .copied()
+        .find(|id| !prefer_not.is_some_and(|p| p == *id))
+    {
+        return Some(id);
+    }
+    fallback.or_else(|| hits.iter().copied().next())
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
@@ -5544,5 +5624,116 @@ mod tests {
         let screen_pos = PhysicalPosition::new(120.0, 240.0);
         let local = local_pos_for_screen_pos(origin, scale, screen_pos);
         assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
+    }
+
+    #[test]
+    fn window_under_cursor_prefers_topmost_z_order_when_overlapping() {
+        let mut ids: SlotMap<fret_core::AppWindowId, ()> = SlotMap::with_key();
+        let a = ids.insert(());
+        let b = ids.insert(());
+
+        let rects = vec![
+            (
+                a,
+                RectF64 {
+                    min_x: 0.0,
+                    min_y: 0.0,
+                    max_x: 100.0,
+                    max_y: 100.0,
+                },
+            ),
+            (
+                b,
+                RectF64 {
+                    min_x: 0.0,
+                    min_y: 0.0,
+                    max_x: 100.0,
+                    max_y: 100.0,
+                },
+            ),
+        ];
+
+        let order = vec![a, b]; // b is topmost
+        let picked = pick_window_under_cursor_from_client_rects(
+            PhysicalPosition::new(10.0, 10.0),
+            &rects,
+            &order,
+            None,
+        );
+        assert_eq!(picked, Some(b));
+    }
+
+    #[test]
+    fn window_under_cursor_ignores_prefer_not_when_another_window_is_under_cursor() {
+        let mut ids: SlotMap<fret_core::AppWindowId, ()> = SlotMap::with_key();
+        let a = ids.insert(());
+        let b = ids.insert(());
+
+        let rects = vec![
+            (
+                a,
+                RectF64 {
+                    min_x: 0.0,
+                    min_y: 0.0,
+                    max_x: 100.0,
+                    max_y: 100.0,
+                },
+            ),
+            (
+                b,
+                RectF64 {
+                    min_x: 0.0,
+                    min_y: 0.0,
+                    max_x: 100.0,
+                    max_y: 100.0,
+                },
+            ),
+        ];
+
+        let order = vec![a, b]; // b is topmost but is prefer_not
+        let picked = pick_window_under_cursor_from_client_rects(
+            PhysicalPosition::new(10.0, 10.0),
+            &rects,
+            &order,
+            Some(b),
+        );
+        assert_eq!(picked, Some(a));
+    }
+
+    #[test]
+    fn window_under_cursor_falls_back_to_prefer_not_when_it_is_the_only_hit() {
+        let mut ids: SlotMap<fret_core::AppWindowId, ()> = SlotMap::with_key();
+        let a = ids.insert(());
+        let b = ids.insert(());
+
+        let rects = vec![
+            (
+                a,
+                RectF64 {
+                    min_x: 200.0,
+                    min_y: 0.0,
+                    max_x: 300.0,
+                    max_y: 100.0,
+                },
+            ),
+            (
+                b,
+                RectF64 {
+                    min_x: 0.0,
+                    min_y: 0.0,
+                    max_x: 100.0,
+                    max_y: 100.0,
+                },
+            ),
+        ];
+
+        let order = vec![a, b];
+        let picked = pick_window_under_cursor_from_client_rects(
+            PhysicalPosition::new(10.0, 10.0),
+            &rects,
+            &order,
+            Some(b),
+        );
+        assert_eq!(picked, Some(b));
     }
 }
