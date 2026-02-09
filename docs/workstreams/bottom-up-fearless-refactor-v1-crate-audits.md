@@ -45,7 +45,7 @@ crates that are likely to produce long-lived contracts or that sit on major inte
 | --- | --- | --- |
 | `fret-ui-headless` | L0 | `docs/workstreams/crate-audits/fret-ui-headless.l0.md` |
 | `fret-ui-kit` | L0 | `docs/workstreams/crate-audits/fret-ui-kit.l0.md` |
-| `fret-ui-shadcn` | Not started | |
+| `fret-ui-shadcn` | L0 | `docs/workstreams/crate-audits/fret-ui-shadcn.l0.md` |
 | `fret-docking` | Not started | |
 
 ## `apps/` (demo shells)
