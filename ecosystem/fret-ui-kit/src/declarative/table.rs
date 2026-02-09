@@ -166,6 +166,12 @@ pub struct TableViewProps {
     pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
+    /// When `false`, pinned rows are only rendered if they are part of the current
+    /// filtered/sorted/paginated row model (TanStack `keepPinnedRows=false`).
+    ///
+    /// When `true` (default), pinned rows can remain visible even when they are outside the
+    /// current row model (TanStack default).
+    pub keep_pinned_rows: bool,
     /// When `false`, the table does not render an outer border/radius frame.
     ///
     /// This is useful when embedding the table inside a higher-level component that owns the
@@ -238,6 +244,7 @@ impl Default for TableViewProps {
             grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
+            keep_pinned_rows: true,
             draw_frame: true,
             optimize_paint_order: false,
             optimize_grid_lines: false,
@@ -2663,12 +2670,15 @@ where
 
     let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
         if has_row_pinning {
+            let mut options = crate::headless::table::TableOptions::default();
+            options.keep_pinned_rows = props.keep_pinned_rows;
+
             let table_pre = Table::builder(data)
                 .columns(columns.to_vec())
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, idx, _parent| row_key_at(row, idx))
                 .state(state_value.clone())
-                .options(TableOptions::default())
+                .options(options)
                 .build();
 
             let total_rows = table_pre.pre_pagination_row_model().root_rows().len();
@@ -2697,7 +2707,7 @@ where
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, idx, _parent| row_key_at(row, idx))
                 .state(render_state)
-                .options(TableOptions::default())
+                .options(options)
                 .build();
 
             let core = table.core_row_model();
@@ -2883,6 +2893,7 @@ where
             options.manual_sorting = true;
             options.manual_pagination = true;
             options.manual_expanding = true;
+            options.keep_pinned_rows = props.keep_pinned_rows;
 
             let mut state_for_grouping = state_value.clone();
             state_for_grouping.sorting.clear();

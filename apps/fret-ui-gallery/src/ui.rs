@@ -18242,7 +18242,9 @@ fn preview_table_retained_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    use fret_ui_kit::headless::table::{
+        ColumnDef, RowKey, RowPinPosition, TableState, pagination_bounds, pin_rows,
+    };
     let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -18265,14 +18267,23 @@ fn preview_table_retained_torture(
         data: Option<Arc<[TableRow]>>,
         columns: Option<Arc<[ColumnDef<TableRow>]>>,
         state: Option<Model<TableState>>,
+        keep_pinned_rows: Option<Model<bool>>,
     }
 
-    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
-        (st.data.clone(), st.columns.clone(), st.state.clone())
-    });
+    let (data, columns, state, keep_pinned_rows) =
+        cx.with_state(TableTortureModels::default, |st| {
+            (
+                st.data.clone(),
+                st.columns.clone(),
+                st.state.clone(),
+                st.keep_pinned_rows.clone(),
+            )
+        });
 
-    let (data, columns, state) = match (data, columns, state) {
-        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+    let (data, columns, state, keep_pinned_rows) = match (data, columns, state, keep_pinned_rows) {
+        (Some(data), Some(columns), Some(state), Some(keep_pinned_rows)) => {
+            (data, columns, state, keep_pinned_rows)
+        }
         _ => {
             let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
             for i in 0..50_000u64 {
@@ -18303,14 +18314,16 @@ fn preview_table_retained_torture(
             let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
 
             let state = cx.app.models_mut().insert(TableState::default());
+            let keep_pinned_rows = cx.app.models_mut().insert(true);
 
             cx.with_state(TableTortureModels::default, |st| {
                 st.data = Some(data.clone());
                 st.columns = Some(columns.clone());
                 st.state = Some(state.clone());
+                st.keep_pinned_rows = Some(keep_pinned_rows.clone());
             });
 
-            (data, columns, state)
+            (data, columns, state, keep_pinned_rows)
         }
     };
 
@@ -18329,6 +18342,146 @@ fn preview_table_retained_torture(
             .collect();
         Arc::<str>::from(format!("Sorting: {}", parts.join(", ")))
     };
+
+    let row_pinning_text: Arc<str> = {
+        let pinning = cx
+            .app
+            .models()
+            .read(&state, |st| st.row_pinning.clone())
+            .ok()
+            .unwrap_or_default();
+        let top = pinning
+            .top
+            .iter()
+            .map(|k| k.0.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let bottom = pinning
+            .bottom
+            .iter()
+            .map(|k| k.0.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+        Arc::<str>::from(format!("RowPinning: top=[{top}] bottom=[{bottom}]"))
+    };
+
+    let keep_pinned_rows_value = cx
+        .get_model_copied(&keep_pinned_rows, Invalidation::Paint)
+        .unwrap_or(true);
+    let keep_pinned_rows_text: Arc<str> =
+        Arc::<str>::from(format!("KeepPinnedRows: {keep_pinned_rows_value}"));
+
+    let page_text: Arc<str> = {
+        let pagination = cx
+            .app
+            .models()
+            .read(&state, |st| st.pagination)
+            .ok()
+            .unwrap_or_default();
+        let bounds = pagination_bounds(data.len(), pagination);
+        if bounds.page_count == 0 {
+            Arc::<str>::from("Page: 0/0")
+        } else {
+            Arc::<str>::from(format!(
+                "Page: {}/{}",
+                bounds.page_index + 1,
+                bounds.page_count
+            ))
+        }
+    };
+
+    let state_for_pin_top = state.clone();
+    let on_pin_top: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_pin_top, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, Some(RowPinPosition::Top), [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_pin_bottom = state.clone();
+    let on_pin_bottom: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_pin_bottom, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, Some(RowPinPosition::Bottom), [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_unpin = state.clone();
+    let on_unpin: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_unpin, |st| {
+            let Some(&row_key) = st.row_selection.iter().next() else {
+                return;
+            };
+            pin_rows(&mut st.row_pinning, None, [row_key]);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_prev_page = state.clone();
+    let on_prev_page: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_prev_page, |st| {
+            st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let state_for_next_page = state.clone();
+    let on_next_page: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host.models_mut().update(&state_for_next_page, |st| {
+            st.pagination.page_index = st.pagination.page_index.saturating_add(1);
+        });
+        host.request_redraw(action_cx.window);
+    });
+
+    let actions = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Button::new("Prev page")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-prev-page")
+                    .on_activate(on_prev_page)
+                    .into_element(cx),
+                shadcn::Button::new("Next page")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-next-page")
+                    .on_activate(on_next_page)
+                    .into_element(cx),
+                shadcn::Button::new("Pin top")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-pin-top")
+                    .on_activate(on_pin_top)
+                    .into_element(cx),
+                shadcn::Button::new("Pin bottom")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-pin-bottom")
+                    .on_activate(on_pin_bottom)
+                    .into_element(cx),
+                shadcn::Button::new("Unpin")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-table-retained-unpin")
+                    .on_activate(on_unpin)
+                    .into_element(cx),
+                shadcn::Switch::new(keep_pinned_rows.clone())
+                    .a11y_label("Keep pinned rows")
+                    .test_id("ui-gallery-table-retained-keep-pinned-rows")
+                    .into_element(cx),
+                cx.text("Keep pinned rows"),
+            ]
+        },
+    );
 
     let header = stack::vstack(
         cx,
@@ -18349,6 +18502,25 @@ fn preview_table_retained_torture(
                         .label(sorting_text.clone())
                         .test_id("ui-gallery-table-retained-sorting"),
                 ),
+                cx.text(row_pinning_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(row_pinning_text.clone())
+                        .test_id("ui-gallery-table-retained-row-pinning"),
+                ),
+                cx.text(keep_pinned_rows_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(keep_pinned_rows_text.clone())
+                        .test_id("ui-gallery-table-retained-keep-pinned-rows-text"),
+                ),
+                cx.text(page_text.as_ref()).attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Text)
+                        .label(page_text.clone())
+                        .test_id("ui-gallery-table-retained-pagination"),
+                ),
+                actions,
             ]
         },
     );
@@ -18373,6 +18545,9 @@ fn preview_table_retained_torture(
             };
             props.enable_column_grouping = false;
             props.enable_column_resizing = false;
+            props.keep_pinned_rows = cx
+                .get_model_copied(&keep_pinned_rows, Invalidation::Layout)
+                .unwrap_or(true);
 
             let header_label =
                 Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));

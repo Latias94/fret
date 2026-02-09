@@ -841,6 +841,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done: policy-level regression gates added for grouped display composition.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
       (`grouped_row_pinning_policy_preserve_hierarchy_keeps_page_rows_center_unchanged`)
+- [x] HTP-ui-rowpin-030 Add UI gallery gates for row pinning semantics (flat rows + `keepPinnedRows`).
+  - Motivation: `RowPinning` is “headless-first”; UI recipes must be able to *exercise* the contract surface
+    without re-implementing the pinning math.
+  - Gate A: pin a row, page forward, and assert the pinned row remains visible when `keepPinnedRows=true`.
+  - Gate B: toggle `keepPinnedRows=false`, page forward, and assert pinned rows outside the current page are not rendered.
+  - Evidence:
+    - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`TableViewProps.keep_pinned_rows`).
+    - Gallery controls: `apps/fret-ui-gallery/src/ui.rs` (`preview_table_retained_torture`).
+    - Gates:
+      - `tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json`
+      - `tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json`
 - [x] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
   - Done (retained path parity): `table_virtualized_retained_v0` now computes visible ordered columns,
     splits them by `column_pinning` into `left/center/right`, and renders header/body with the same split contract.
@@ -887,7 +898,7 @@ Next UI parity targets (capability, not exact DOM behavior):
   - Protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::{Click,ClickStable}`).
   - Runner: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`click_events_with_modifiers` + ClickStable injection).
   - Tests: `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
-- [ ] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
+- [~] HTP-ui-dt-010 Track `fret-ui-shadcn` DataTable parity backlog:
   - Guiding principle (UI): focus on capability parity (not pixel-identical behavior). Prefer
     small, script-gated affordances that exercise the headless engine’s contract surface.
   - Sub-milestones (keep each gateable via `fretboard diag`):
@@ -902,7 +913,7 @@ Next UI parity targets (capability, not exact DOM behavior):
         - UI: `ecosystem/fret-ui-shadcn/src/data_table.rs` (header indicator renders `▲2` / `▼2`)
         - UI: `ecosystem/fret-ui-kit/src/declarative/table.rs` (retained header text renders `mem_mb ▲2`)
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json` (asserts `mem_mb ▲2`)
-    - [ ] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
+    - [x] HTP-ui-dt-020 Column filters UI (per-column filtering + faceting-driven menus).
       - Sub-milestones:
         - [x] HTP-ui-dt-021 Gate global filter input: typing updates `TableState.global_filter` (UI wiring).
           - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` global filter input sets
@@ -932,7 +943,7 @@ Next UI parity targets (capability, not exact DOM behavior):
         - `tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json`
         - `tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json`
         - `tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json`
-    - [ ] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
+    - [x] HTP-ui-dt-030 Column pinning UI affordances (left/center/right sticky behavior).
       - Scope note: sticky rendering + split layout are already wired in `table_virtualized` (HTP-ui-colpin-010).
         This milestone focuses on *UI entrypoints* that let users drive `TableState.column_pinning`.
       - Sub-milestones:
@@ -952,6 +963,13 @@ Next UI parity targets (capability, not exact DOM behavior):
         - UI: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs` (`DataTableToolbar` wires `TableState.column_visibility`)
         - Gallery: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_legacy`, `preview_data_table_torture` add toolbar)
         - Gate: `tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json`
+    - [ ] HTP-ui-dt-050 Column header actions menu (TanStack-style capability surface).
+      - Goal: upstream-typical “Column actions” dropdown per header:
+        - Sorting: asc/desc/clear
+        - Visibility: hide
+        - Pinning: left/right/unpin
+      - Note: this is a UI recipe milestone; the headless engine already gates the underlying state transitions.
+      - Gate: one diag script that exercises the menu (toggle sort + hide + pin) and asserts stable status rows.
 
 ---
 

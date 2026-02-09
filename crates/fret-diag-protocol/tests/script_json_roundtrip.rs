@@ -53,6 +53,20 @@ fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_true() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_false() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json"
