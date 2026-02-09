@@ -25,6 +25,13 @@ Milestones (one-screen): `docs/workstreams/shadcn-extras-milestones.md`
       - `test_id` conventions,
       - and required gates.
 
+Landed snapshot gates (in-tree):
+
+- `extras_announcement_default.json`
+- `extras_banner_default.json`
+- `extras_tags_default.json`
+- `extras_relative_time_default.json`
+
 ## Candidate components (staged)
 
 Legend:
