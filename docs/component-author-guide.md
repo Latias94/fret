@@ -123,8 +123,10 @@ Recommended patterns:
 
 - For pure token reads: use `ThemeSnapshot` via `cx.theme_snapshot()` (cheap `Copy`, no long-lived
   `&Theme` borrow).
-- If you need a full `Theme` (e.g. some `fret-ui-kit` helpers take `&Theme`): prefer
-  `let theme = cx.theme().clone();` so theme observation is wired automatically.
+- Many `fret-ui-kit` style helpers accept a `ThemeSnapshot` (via `ThemeTokenRead`), e.g.
+  `declarative::style::container_props(&theme, ...)`.
+- If you truly need a full `Theme` (theme metadata/config, APIs not mirrored on `ThemeSnapshot`):
+  prefer `let theme = cx.theme().clone();` so theme observation is wired automatically.
 
 ```rust
 let theme = cx.theme_snapshot();
