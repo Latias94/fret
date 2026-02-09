@@ -37,8 +37,7 @@ pub struct TaffyLayoutEngine {
     styles: SecondaryMap<NodeId, taffy::Style>,
     children: SecondaryMap<NodeId, Vec<NodeId>>,
     parent: SecondaryMap<NodeId, NodeId>,
-    seen_generation: u64,
-    seen_stamp: SecondaryMap<NodeId, u64>,
+    seen: HashSet<NodeId>,
     solve_generation: u64,
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
@@ -94,8 +93,7 @@ impl Default for TaffyLayoutEngine {
             styles: SecondaryMap::new(),
             children: SecondaryMap::new(),
             parent: SecondaryMap::new(),
-            seen_generation: 1,
-            seen_stamp: SecondaryMap::new(),
+            seen: HashSet::new(),
             solve_generation: 0,
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
@@ -115,10 +113,6 @@ impl Default for TaffyLayoutEngine {
 }
 
 impl TaffyLayoutEngine {
-    fn saw_this_frame(&self, node: NodeId) -> bool {
-        self.seen_stamp.get(node).copied() == Some(self.seen_generation)
-    }
-
     fn invalidate_solved_ancestors(&mut self, mut node: NodeId) {
         while let Some(parent) = self.parent.get(node).copied() {
             self.node_solved_stamp.remove(parent);
@@ -130,12 +124,7 @@ impl TaffyLayoutEngine {
     pub fn begin_frame(&mut self, frame_id: FrameId) {
         if self.frame_id != Some(frame_id) {
             self.frame_id = Some(frame_id);
-            self.seen_generation = self.seen_generation.wrapping_add(1);
-            if self.seen_generation == 0 {
-                // Keep `seen_generation` non-zero to simplify "not seen this frame" checks.
-                self.seen_generation = 1;
-                self.seen_stamp.clear();
-            }
+            self.seen.clear();
             self.solve_generation = 0;
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
@@ -152,10 +141,7 @@ impl TaffyLayoutEngine {
         let stale: Vec<NodeId> = self
             .node_to_layout
             .iter()
-            .filter_map(|(node, _)| {
-                let seen = self.seen_stamp.get(node).copied() == Some(self.seen_generation);
-                (!seen).then_some(node)
-            })
+            .filter_map(|(node, _)| (!self.seen.contains(&node)).then_some(node))
             .collect();
 
         for node in stale {
@@ -164,7 +150,6 @@ impl TaffyLayoutEngine {
             };
             self.layout_to_node.remove(&layout_id);
             self.styles.remove(node);
-            self.seen_stamp.remove(node);
             if let Some(children) = self.children.remove(node) {
                 for child in children {
                     if self.parent.get(child) == Some(&node) {
@@ -185,7 +170,7 @@ impl TaffyLayoutEngine {
 
     pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) {
         if self.node_to_layout.contains_key(node) {
-            self.seen_stamp.insert(node, self.seen_generation);
+            self.seen.insert(node);
         }
     }
 
@@ -245,7 +230,7 @@ impl TaffyLayoutEngine {
         {
             return None;
         }
-        if !self.saw_this_frame(parent) || !self.saw_this_frame(child) {
+        if !self.seen.contains(&parent) || !self.seen.contains(&child) {
             return None;
         }
         if !self
@@ -265,7 +250,7 @@ impl TaffyLayoutEngine {
         available: LayoutSize<AvailableSpace>,
         scale_factor: f32,
     ) -> bool {
-        if !self.saw_this_frame(root) {
+        if !self.seen.contains(&root) {
             return false;
         }
         let Some(frame_id) = self.frame_id else {
@@ -319,7 +304,7 @@ impl TaffyLayoutEngine {
     }
 
     pub fn request_layout_node(&mut self, node: NodeId) -> LayoutId {
-        self.seen_stamp.insert(node, self.seen_generation);
+        self.seen.insert(node);
         if let Some(id) = self.node_to_layout.get(node).copied() {
             return id;
         }
