@@ -83,6 +83,7 @@ enum SnapSceneOp {
     },
     Image {
         rect: SnapRect,
+        fit: String,
         opacity: f32,
     },
     ImageRegion {
@@ -248,8 +249,11 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             border_color: snap_color(border_color),
             corner_radii: snap_corners(corner_radii),
         },
-        SceneOp::Image { rect, opacity, .. } => SnapSceneOp::Image {
+        SceneOp::Image {
+            rect, fit, opacity, ..
+        } => SnapSceneOp::Image {
             rect: snap_rect(rect),
+            fit: format!("{fit:?}"),
             opacity: round3(opacity),
         },
         SceneOp::ImageRegion {

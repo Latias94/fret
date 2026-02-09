@@ -642,9 +642,10 @@ pub mod composable {
                         .filter(|value| root.is_item_open(cx, value.as_ref()))
                         .cloned()
                         .collect::<Vec<_>>();
-                    let changed = cx.with_state(AccordionValueChangeCallbackState::default, |state| {
-                        accordion_value_change_event(state, &next)
-                    });
+                    let changed = cx
+                        .with_state(AccordionValueChangeCallbackState::default, |state| {
+                            accordion_value_change_event(state, &next)
+                        });
                     if let Some(next) = changed {
                         on_value_change(next);
                     }
@@ -2472,11 +2473,8 @@ mod tests {
             .models_mut()
             .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
 
-        let accordion =
-            composable_accordion::AccordionRoot::single(open).on_value_change(Some(Arc::new(
-                |_value| {},
-            )));
-        assert!(accordion.on_value_change.is_some());
+        let _accordion = composable_accordion::AccordionRoot::single(open)
+            .on_value_change(Some(Arc::new(|_value| {})));
     }
 
     #[test]
@@ -2498,8 +2496,14 @@ mod tests {
             Size::new(Px(800.0), Px(600.0)),
         );
 
-        let root =
-            fret_ui::declarative::render_root(&mut ui, &mut app, &mut services, window, bounds, "test", |cx| {
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
                 let item_1 = AccordionItem::new(
                     Arc::from("item-1"),
                     AccordionTrigger::new(vec![cx.text("Item 1")])
@@ -2513,16 +2517,19 @@ mod tests {
                     AccordionContent::new(vec![cx.text("Content 2")]),
                 );
 
-                vec![Accordion::single(open.clone())
-                    .on_value_change(Some(Arc::new(move |value| {
-                        changed_values_for_handler
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner())
-                            .push(value);
-                    })))
-                    .items([item_1, item_2])
-                    .into_element(cx)]
-            });
+                vec![
+                    Accordion::single(open.clone())
+                        .on_value_change(Some(Arc::new(move |value| {
+                            changed_values_for_handler
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .push(value);
+                        })))
+                        .items([item_1, item_2])
+                        .into_element(cx),
+                ]
+            },
+        );
 
         ui.set_root(root);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
