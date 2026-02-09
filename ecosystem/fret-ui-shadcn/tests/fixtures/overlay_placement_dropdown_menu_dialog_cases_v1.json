@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "dropdown-menu-dialog.overlay_placement",
+      "web_name": "dropdown-menu-dialog",
+      "recipe": "overlay_placement"
+    },
+    {
+      "id": "dropdown-menu-dialog.vp375x240.overlay_placement",
+      "web_name": "dropdown-menu-dialog.vp375x240",
+      "recipe": "overlay_placement"
+    },
+    {
+      "id": "dropdown-menu-dialog.menu_item_height",
+      "web_name": "dropdown-menu-dialog",
+      "recipe": "menu_item_height"
+    },
+    {
+      "id": "dropdown-menu-dialog.vp375x240.menu_item_height",
+      "web_name": "dropdown-menu-dialog.vp375x240",
+      "recipe": "menu_item_height"
+    },
+    {
+      "id": "dropdown-menu-dialog.menu_content_insets",
+      "web_name": "dropdown-menu-dialog",
+      "recipe": "menu_content_insets"
+    },
+    {
+      "id": "dropdown-menu-dialog.vp375x240.menu_content_insets",
+      "web_name": "dropdown-menu-dialog.vp375x240",
+      "recipe": "menu_content_insets"
+    }
+  ]
+}
+
