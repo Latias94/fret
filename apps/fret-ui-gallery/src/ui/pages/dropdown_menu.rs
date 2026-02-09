@@ -531,10 +531,7 @@ pub(super) fn preview_dropdown_menu(
             shadcn::Avatar::new([shadcn::AvatarFallback::new("JD").into_element(cx)])
                 .refine_layout(LayoutRefinement::default().w_px(Px(36.0)).h_px(Px(36.0)))
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-dropdown-menu-avatar-trigger"),
-                )
+                .test_id("ui-gallery-dropdown-menu-avatar-trigger")
         },
         |_cx| {
             vec![
@@ -660,9 +657,8 @@ pub(super) fn preview_dropdown_menu(
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-dropdown-menu-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-dropdown-menu-component");
 
     let code_panel_body = stack::vstack(
         cx,

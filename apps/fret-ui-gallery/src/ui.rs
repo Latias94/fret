@@ -7,7 +7,6 @@ use fret_core::{
     FontWeight, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
     TextStyle, TextWrap,
 };
-use fret_kit::prelude::AnyElementSemanticsExt;
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
@@ -1210,26 +1209,18 @@ fn preview_hit_test_only_paint_cache_probe(
                                             corner_radii: Corners::all(Px(6.0)),
                                         });
                                     })
-                                    .attach_semantics(
-                                        SemanticsDecoration::default()
-                                            .test_id("ui-gallery-hit-test-only-probe-canvas"),
-                                    ),
+                                    .test_id("ui-gallery-hit-test-only-probe-canvas"),
                                 ]
                             },
                         )
-                        .attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id("ui-gallery-hit-test-only-probe-region"),
-                        ),
+                        .test_id("ui-gallery-hit-test-only-probe-region"),
                     ]
                 });
 
                 vec![region]
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-hit-test-only-probe-region"),
-        );
+        .test_id("ui-gallery-hit-test-only-probe-region");
 
     vec![header, panel]
 }
@@ -18736,11 +18727,7 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
             )]
         });
 
-        row.attach_semantics(
-            SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
-                "ui-gallery-inspector-row-{index}-label"
-            ))),
-        )
+        row.test_id(format!("ui-gallery-inspector-row-{index}-label"))
     };
 
     let list = cx.virtual_list_keyed_retained_with_layout_fn(
@@ -21146,9 +21133,7 @@ fn preview_overlay(
             .get_cloned(&last_action)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         let text = format!("last action: {last}");
-        cx.text(text).attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-overlay-last-action"),
-        )
+        cx.text(text).test_id("ui-gallery-overlay-last-action")
     };
 
     let overlays =
@@ -21300,9 +21285,7 @@ fn preview_overlay(
                     "Tooltip: hover intent + placement",
                 )])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-tooltip-content"),
-                ),
+                .test_id("ui-gallery-tooltip-content"),
             )
             .arrow(true)
             .arrow_test_id("ui-gallery-tooltip-arrow")
@@ -21322,9 +21305,7 @@ fn preview_overlay(
                     cx.text("Move pointer from trigger to content."),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-hovercard-content"),
-                ),
+                .test_id("ui-gallery-hovercard-content"),
             )
             .open_delay_frames(10)
             .close_delay_frames(10)
@@ -21372,9 +21353,7 @@ fn preview_overlay(
                             close,
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-popover-content"),
-                        )
+                        .test_id("ui-gallery-popover-content")
                     },
                 );
 
@@ -21435,9 +21414,7 @@ fn preview_overlay(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-dialog-content"),
-                    )
+                    .test_id("ui-gallery-dialog-content")
                 },
             );
 
@@ -21472,9 +21449,7 @@ fn preview_overlay(
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-content"),
-                    )
+                    .test_id("ui-gallery-alert-dialog-content")
                 },
             );
 
@@ -21532,9 +21507,7 @@ fn preview_overlay(
                             .into_element(cx),
                         ])
                         .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-sheet-content"),
-                        )
+                        .test_id("ui-gallery-sheet-content")
                     },
                 );
 
@@ -21670,28 +21643,26 @@ fn preview_overlay(
             vec![body]
         });
 
-    let dialog_open_flag =
-        {
-            let open = cx
-                .get_model_copied(&dialog_open, Invalidation::Layout)
-                .unwrap_or(false);
-            if open {
-                Some(cx.text("Dialog open").attach_semantics(
-                    SemanticsDecoration::default().test_id("ui-gallery-dialog-open"),
-                ))
-            } else {
-                None
-            }
-        };
+    let dialog_open_flag = {
+        let open = cx
+            .get_model_copied(&dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
+        if open {
+            Some(cx.text("Dialog open").test_id("ui-gallery-dialog-open"))
+        } else {
+            None
+        }
+    };
 
     let alert_dialog_open_flag = {
         let open = cx
             .get_model_copied(&alert_dialog_open, Invalidation::Layout)
             .unwrap_or(false);
         if open {
-            Some(cx.text("AlertDialog open").attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-open"),
-            ))
+            Some(
+                cx.text("AlertDialog open")
+                    .test_id("ui-gallery-alert-dialog-open"),
+            )
         } else {
             None
         }
@@ -21702,9 +21673,10 @@ fn preview_overlay(
             .get_model_cloned(&last_action, Invalidation::Layout)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
-            Some(cx.text("Popover dismissed").attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-popover-dismissed"),
-            ))
+            Some(
+                cx.text("Popover dismissed")
+                    .test_id("ui-gallery-popover-dismissed"),
+            )
         } else {
             None
         }

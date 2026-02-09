@@ -1984,9 +1984,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer area element id
                 // back to the named scope id so z-order state can track areas by `area_id`.
                 area.id = area_id;
-                let area = area.attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
-                );
+                let area = area.test_id(final_test_id);
 
                 let response = FloatingAreaResponse {
                     id: area_id,
@@ -4867,9 +4865,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer window element
                 // id back to the named scope id so z-order state can track windows by `window_id`.
                 window.id = window_id;
-                window.attach_semantics(
-                    fret_ui::element::SemanticsDecoration::default().test_id(window_test_id),
-                )
+                window.test_id(window_test_id)
             })
         });
 

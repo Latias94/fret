@@ -131,9 +131,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     .open_delay_frames(10)
                     .close_delay_frames(10)
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("ui-gallery-kbd-tooltip"),
-                    ),
+                    .test_id("ui-gallery-kbd-tooltip"),
                 ]
             })
             .into_iter()

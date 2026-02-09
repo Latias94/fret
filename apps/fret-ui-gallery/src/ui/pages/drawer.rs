@@ -276,15 +276,10 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .test_id("ui-gallery-drawer-scrollable-content"),
-                    )
+                    .test_id("ui-gallery-drawer-scrollable-content")
                 },
             )
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-drawer-scrollable"),
-            );
+            .test_id("ui-gallery-drawer-scrollable");
 
         section_card(cx, "Scrollable Content", drawer)
     };
@@ -323,9 +318,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .into_element(cx),
                     ])
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id(format!("{test_id_prefix}-content")),
-                    )
+                    .test_id(format!("{test_id_prefix}-content"))
                 },
             )
         };
@@ -404,10 +397,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-drawer-responsive-desktop-content"),
-                )
+                .test_id("ui-gallery-drawer-responsive-desktop-content")
             },
         );
 
@@ -437,10 +427,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                     .into_element(cx),
                 ])
                 .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id("ui-gallery-drawer-responsive-mobile-content"),
-                )
+                .test_id("ui-gallery-drawer-responsive-mobile-content")
             },
         );
 

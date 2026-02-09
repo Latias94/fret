@@ -213,9 +213,7 @@ pub(super) fn preview_alert_dialog(
                 shadcn::AlertDialogContent::new(vec![header, footer])
                     .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id(format!("{test_id_prefix}-content")),
-                    )
+                    .test_id(format!("{test_id_prefix}-content"))
             },
         )
     };
@@ -368,9 +366,7 @@ pub(super) fn preview_alert_dialog(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-alert-dialog-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

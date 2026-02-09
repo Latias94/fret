@@ -77,9 +77,7 @@ pub(super) fn preview_data_table(
         section_card(
             cx,
             "Basic Table",
-            live_stack.attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-data-table-basic"),
-            ),
+            live_stack.test_id("ui-gallery-data-table-basic"),
         )
     };
 
@@ -158,9 +156,7 @@ pub(super) fn preview_data_table(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-data-table-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-data-table-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

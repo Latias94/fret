@@ -431,9 +431,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element(cx)
             },
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-collapsible-settings"),
-        );
+        .test_id("ui-gallery-collapsible-settings");
 
     let settings_panel = stack::vstack(
         cx,
@@ -550,9 +548,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
             |_cx| vec![components_folder, src_folder, cargo_toml],
         )
-        .attach_semantics(
-            SemanticsDecoration::default().test_id("ui-gallery-collapsible-file-tree"),
-        )
+        .test_id("ui-gallery-collapsible-file-tree")
     };
     let file_tree = section_card(cx, "File Tree", file_tree_content);
 
@@ -593,9 +589,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-collapsible-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-collapsible-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

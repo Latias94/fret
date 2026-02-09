@@ -6035,9 +6035,7 @@ mod tests {
             |cx| {
                 let child = ui::text(cx, "Custom Child")
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("sidebar-menu-sub-button-child"),
-                    );
+                    .test_id("sidebar-menu-sub-button-child");
                 let button = SidebarMenuSubButton::new("Child")
                     .as_child(true)
                     .children([child])
@@ -6097,9 +6095,7 @@ mod tests {
             |cx| {
                 let child = ui::text(cx, "Custom Child")
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("sidebar-menu-button-child"),
-                    );
+                    .test_id("sidebar-menu-button-child");
                 let button = SidebarMenuButton::new("Projects")
                     .as_child(true)
                     .children([child])
@@ -6159,9 +6155,7 @@ mod tests {
             |cx| {
                 let child = ui::text(cx, "Custom Child")
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("sidebar-menu-sub-button-child"),
-                    );
+                    .test_id("sidebar-menu-sub-button-child");
                 let button = SidebarMenuSubButton::new("Child")
                     .as_child(true)
                     .href("https://example.com/docs")
@@ -6220,9 +6214,7 @@ mod tests {
             |cx| {
                 let child = ui::text(cx, "Custom Child")
                     .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default().test_id("sidebar-menu-button-child"),
-                    );
+                    .test_id("sidebar-menu-button-child");
                 let button = SidebarMenuButton::new("Projects")
                     .as_child(true)
                     .href("https://example.com/docs")

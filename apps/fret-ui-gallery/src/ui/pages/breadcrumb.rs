@@ -157,9 +157,7 @@ pub(super) fn preview_breadcrumb(
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-breadcrumb-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-breadcrumb-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

@@ -226,9 +226,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             ]
         },
     );
-    let component_panel = shell(cx, component_stack).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-typography-component"),
-    );
+    let component_panel = shell(cx, component_stack).test_id("ui-gallery-typography-component");
 
     let code_block =
         |cx: &mut ElementContext<'_, App>, title: &'static str, snippet: &'static str| {

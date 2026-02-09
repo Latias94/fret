@@ -458,9 +458,8 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             ]
         },
     );
-    let component_panel = shell(cx, component_panel_body).attach_semantics(
-        SemanticsDecoration::default().test_id("ui-gallery-input-group-component"),
-    );
+    let component_panel =
+        shell(cx, component_panel_body).test_id("ui-gallery-input-group-component");
 
     let code_panel_body = stack::vstack(
         cx,

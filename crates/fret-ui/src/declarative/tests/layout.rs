@@ -859,9 +859,7 @@ fn attach_semantics_is_layout_transparent_for_flex_items() {
 
             let mut right = cx.text_props(right_props);
             if decorate {
-                right = right.attach_semantics(
-                    crate::element::SemanticsDecoration::default().test_id("row-title"),
-                );
+                right = right.test_id("row-title");
             }
 
             vec![left, right]
