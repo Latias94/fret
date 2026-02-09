@@ -63,5 +63,5 @@ ADR anchor:
   dialog's committed container width.
 - [ ] `ecosystem/fret-ui-shadcn/src/calendar*.rs`: audit which responsive branches should follow
   container width (panels) vs viewport width (device-size).
-- [ ] `ecosystem/fret-ui-shadcn/src/empty.rs`: padding/layout should follow container width, not
+- [x] `ecosystem/fret-ui-shadcn/src/empty.rs`: padding/layout should follow container width, not
   viewport width.
