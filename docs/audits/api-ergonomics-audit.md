@@ -133,6 +133,24 @@ This table is intentionally focused on 鈥渨hat an app author experiences鈥?an
 
 This forces application code and third-party crates into a 鈥渧ector-first鈥?authoring style, reducing code density and composability with iterators/arrays.
 
+### View function signatures (`fn(&mut ElementContext, &mut State) -> Elements`)
+
+Many “golden path” apps are wired through a `fn` pointer view signature (not a captured closure), e.g.
+
+- `type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements`
+- `pub type ViewElements = Elements`
+- Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+
+This choice has real ergonomics implications:
+
+- **Why not `-> impl Into<Elements>` / `-> impl Trait`?** A `fn` pointer type requires a concrete, nameable return type. `impl Trait` works on *functions*, but you cannot put an `impl Trait` return into a `type ViewFn = fn(...) -> ...` alias.
+- **Why keep `fn` pointers at all?** Fret’s hotpatch/hot-reload story intentionally prefers predictable boundaries. Captured closures (and large generic surfaces) tend to complicate patchability and dramatically increase monomorphization cost.
+
+Practical recommendation:
+
+- Keep the view signature returning a concrete `Elements`/`ViewElements` for the default driver.
+- Reduce the “vector-first” feel by improving `Elements` conversions (`FromIterator`, small arrays, iterator helpers) and by pushing app code toward the ecosystem builder surface where feasible (`UiExt::ui()` + `UiBuilder`).
+
 ### Unified builder surface exists (but must become the default)
 
 `fret-ui-kit` provides a patch aggregator and a single authoring entrypoint:
