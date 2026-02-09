@@ -267,3 +267,164 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
         }
     }
 }
+#[test]
+fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
+    let web = read_web_golden("empty-icon");
+    let theme = web_theme(&web);
+
+    let web_grid =
+        web_find_by_class_tokens(&theme.root, &["grid", "gap-8"]).expect("web grid root");
+
+    let mut cards = find_all(&theme.root, &|n| {
+        n.tag == "div"
+            && class_has_token(n, "border-dashed")
+            && class_has_token(n, "gap-6")
+            && class_has_token(n, "rounded-lg")
+    });
+    cards.sort_by(|a, b| {
+        a.rect
+            .y
+            .total_cmp(&b.rect.y)
+            .then_with(|| a.rect.x.total_cmp(&b.rect.x))
+    });
+    let web_first = *cards.first().expect("web first empty card");
+    let web_second = *cards.get(1).expect("web second empty card");
+    let gap = web_second.rect.x - (web_first.rect.x + web_first.rect.w);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let theme = Theme::global(&*cx.app).clone();
+
+        fn mk_card(
+            cx: &mut fret_ui::ElementContext<'_, App>,
+            label: &'static str,
+            title: &'static str,
+            desc: &'static str,
+        ) -> AnyElement {
+            let icon =
+                decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
+            let media = EmptyMedia::new(vec![icon])
+                .variant(EmptyMediaVariant::Icon)
+                .into_element(cx);
+            let title = EmptyTitle::new(title).into_element(cx);
+            let desc = EmptyDescription::new(desc).into_element(cx);
+            let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
+            let card = fret_ui_shadcn::Empty::new(vec![header]).into_element(cx);
+            cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::Panel,
+                    label: Some(Arc::from(label)),
+                    ..Default::default()
+                },
+                move |_cx| vec![card],
+            )
+        }
+
+        let card_1 = mk_card(
+            cx,
+            "Golden:empty-icon:card-1",
+            "No messages",
+            "Your inbox is empty. New messages will appear here.",
+        );
+        let card_2 = mk_card(
+            cx,
+            "Golden:empty-icon:card-2",
+            "No favorites",
+            "Items you mark as favorites will appear here.",
+        );
+        let card_3 = mk_card(
+            cx,
+            "Golden:empty-icon:card-3",
+            "No likes yet",
+            "Content you like will be saved here for easy access.",
+        );
+        let card_4 = mk_card(
+            cx,
+            "Golden:empty-icon:card-4",
+            "No bookmarks",
+            "Save interesting content by bookmarking it.",
+        );
+
+        let root_layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(web_grid.rect.w)))
+                .min_w_0(),
+        );
+
+        vec![cx.container(
+            ContainerProps {
+                layout: root_layout,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.grid(
+                    GridProps {
+                        cols: 2,
+                        gap: Px(gap),
+                        layout: decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full(),
+                        ),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![card_1, card_2, card_3, card_4],
+                )]
+            },
+        )]
+    });
+
+    let first = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:empty-icon:card-1"),
+    )
+    .expect("fret card 1");
+    let second = find_semantics(
+        &snap,
+        SemanticsRole::Panel,
+        Some("Golden:empty-icon:card-2"),
+    )
+    .expect("fret card 2");
+
+    assert_close_px(
+        "empty-icon card-1 x",
+        first.bounds.origin.x,
+        web_first.rect.x,
+        2.0,
+    );
+    assert_close_px(
+        "empty-icon card-1 y",
+        first.bounds.origin.y,
+        web_first.rect.y,
+        2.0,
+    );
+    assert_close_px(
+        "empty-icon card-1 w",
+        first.bounds.size.width,
+        web_first.rect.w,
+        2.0,
+    );
+    assert_close_px(
+        "empty-icon card-2 x",
+        second.bounds.origin.x,
+        web_second.rect.x,
+        2.0,
+    );
+    assert_close_px(
+        "empty-icon card-2 y",
+        second.bounds.origin.y,
+        web_second.rect.y,
+        2.0,
+    );
+    assert_close_px(
+        "empty-icon card-2 w",
+        second.bounds.size.width,
+        web_second.rect.w,
+        2.0,
+    );
+}

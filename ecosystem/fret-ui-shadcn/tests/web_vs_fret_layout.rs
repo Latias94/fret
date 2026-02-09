@@ -39,6 +39,14 @@ use css_color::{Rgba, color_to_rgba, parse_css_color};
 mod chart_test_data;
 use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
+#[path = "web_vs_fret_layout/avatar.rs"]
+mod avatar;
+#[path = "web_vs_fret_layout/badge.rs"]
+mod badge;
+#[path = "web_vs_fret_layout/basic.rs"]
+mod basic;
+#[path = "web_vs_fret_layout/breadcrumb.rs"]
+mod breadcrumb;
 #[path = "web_vs_fret_layout/calendar.rs"]
 mod calendar;
 #[path = "web_vs_fret_layout/chart.rs"]
@@ -55,6 +63,8 @@ mod field;
 mod form;
 #[path = "web_vs_fret_layout/input.rs"]
 mod input;
+#[path = "web_vs_fret_layout/item.rs"]
+mod item;
 #[path = "web_vs_fret_layout/kbd.rs"]
 mod kbd;
 #[path = "web_vs_fret_layout/native_select.rs"]
@@ -65,6 +75,8 @@ mod radio_group;
 mod resizable;
 #[path = "web_vs_fret_layout/scroll.rs"]
 mod scroll;
+#[path = "web_vs_fret_layout/separator.rs"]
+mod separator;
 #[path = "web_vs_fret_layout/shell.rs"]
 mod shell;
 #[path = "web_vs_fret_layout/sidebar.rs"]
@@ -81,6 +93,29 @@ mod textarea;
 mod triggers;
 #[path = "web_vs_fret_layout/typography.rs"]
 mod typography;
+
+#[path = "web_vs_fret_layout/accordion.rs"]
+mod accordion;
+#[path = "web_vs_fret_layout/button.rs"]
+mod button;
+#[path = "web_vs_fret_layout/card.rs"]
+mod card;
+#[path = "web_vs_fret_layout/carousel.rs"]
+mod carousel;
+#[path = "web_vs_fret_layout/collapsible.rs"]
+mod collapsible;
+#[path = "web_vs_fret_layout/pagination.rs"]
+mod pagination;
+#[path = "web_vs_fret_layout/progress.rs"]
+mod progress;
+#[path = "web_vs_fret_layout/select.rs"]
+mod select;
+#[path = "web_vs_fret_layout/sonner.rs"]
+mod sonner;
+#[path = "web_vs_fret_layout/spinner.rs"]
+mod spinner;
+#[path = "web_vs_fret_layout/tabs.rs"]
+mod tabs;
 
 use calendar::{
     parse_calendar_cell_size_px, parse_calendar_day_aria_label, parse_calendar_title_label,
@@ -1745,6 +1780,8 @@ fn assert_panel_x_w_match(web_name: &str, label: &str, fret: &Rect, web: WebRect
 }
 
 #[test]
+// Moved to web_vs_fret_layout/shell.rs
+#[cfg(any())]
 fn web_vs_fret_layout_login_01_shell_container_matches() {
     let web = read_web_golden("login-01");
     let theme = web_theme(&web);
@@ -1812,6 +1849,8 @@ fn web_vs_fret_layout_login_01_shell_container_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/shell.rs
+#[cfg(any())]
 fn web_vs_fret_layout_login_02_shell_container_matches() {
     let web = read_web_golden("login-02");
     let theme = web_theme(&web);
@@ -1931,6 +1970,8 @@ fn web_vs_fret_layout_login_02_shell_container_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/shell.rs
+#[cfg(any())]
 fn web_vs_fret_layout_signup_02_shell_container_matches() {
     let web = read_web_golden("signup-02");
     let theme = web_theme(&web);
@@ -2050,6 +2091,8 @@ fn web_vs_fret_layout_signup_02_shell_container_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/shell.rs
+#[cfg(any())]
 fn web_vs_fret_layout_otp_02_shell_container_matches() {
     let web = read_web_golden("otp-02");
     let theme = web_theme(&web);
@@ -2169,6 +2212,8 @@ fn web_vs_fret_layout_otp_02_shell_container_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_aspect_ratio_demo_geometry_matches() {
     let web = read_web_golden("aspect-ratio-demo");
     let theme = web_theme(&web);
@@ -2191,6 +2236,8 @@ fn web_vs_fret_layout_aspect_ratio_demo_geometry_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_checkbox_demo_control_size() {
     let web = read_web_golden("checkbox-demo");
     let theme = web_theme(&web);
@@ -2234,6 +2281,8 @@ fn web_vs_fret_layout_checkbox_demo_control_size() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_label_demo_geometry() {
     let web = read_web_golden("label-demo");
     let theme = web_theme(&web);
@@ -2328,6 +2377,8 @@ fn web_vs_fret_layout_label_demo_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_checkbox_with_text_geometry() {
     let web = read_web_golden("checkbox-with-text");
     let theme = web_theme(&web);
@@ -2463,6 +2514,8 @@ fn web_vs_fret_layout_checkbox_with_text_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_slider_demo_geometry() {
     let web = read_web_golden("slider-demo");
     let theme = web_theme(&web);
@@ -2604,6 +2657,8 @@ fn web_vs_fret_layout_slider_demo_geometry() {
 // Moved to web_vs_fret_layout/textarea.rs
 #[cfg(any())]
 #[test]
+// Moved to web_vs_fret_layout/textarea.rs
+#[cfg(any())]
 fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -2941,6 +2996,8 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
 // Moved to web_vs_fret_layout/empty.rs
 #[cfg(any())]
 #[test]
+// Moved to web_vs_fret_layout/empty.rs
+#[cfg(any())]
 fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -3209,6 +3266,8 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/empty.rs
+#[cfg(any())]
 fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
     let web = read_web_golden("empty-icon");
     let theme = web_theme(&web);
@@ -3923,6 +3982,8 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/separator.rs
+#[cfg(any())]
 fn web_vs_fret_layout_separator_demo_geometry() {
     let web = read_web_golden("separator-demo");
     let theme = web_theme(&web);
@@ -4072,6 +4133,8 @@ fn web_vs_fret_layout_separator_demo_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_separator_geometry() {
     let web = read_web_golden("breadcrumb-separator");
     let theme = web_theme(&web);
@@ -4162,6 +4225,8 @@ fn web_vs_fret_layout_breadcrumb_separator_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_link_geometry() {
     let web = read_web_golden("breadcrumb-link");
     let theme = web_theme(&web);
@@ -4371,6 +4436,8 @@ fn web_vs_fret_layout_breadcrumb_link_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
     let web = read_web_golden("breadcrumb-ellipsis");
     let theme = web_theme(&web);
@@ -4489,6 +4556,8 @@ fn web_vs_fret_layout_breadcrumb_ellipsis_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
     let web = read_web_golden("breadcrumb-dropdown");
     let theme = web_theme(&web);
@@ -4675,6 +4744,8 @@ fn web_vs_fret_layout_breadcrumb_dropdown_trigger_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
     let web = read_web_golden("breadcrumb-demo");
     let theme = web_theme(&web);
@@ -4835,6 +4906,8 @@ fn web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/breadcrumb.rs
+#[cfg(any())]
 fn web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry() {
     let web = read_web_golden("breadcrumb-responsive.vp375x812");
     let theme = web_theme(&web);
@@ -4966,6 +5039,8 @@ fn web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/badge.rs
+#[cfg(any())]
 fn web_vs_fret_layout_badge_demo_heights() {
     let web = read_web_golden("badge-demo");
     let theme = web_theme(&web);
@@ -5091,6 +5166,8 @@ fn web_vs_fret_layout_badge_demo_heights() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/avatar.rs
+#[cfg(any())]
 fn web_vs_fret_layout_avatar_demo_geometry() {
     let web = read_web_golden("avatar-demo");
     let theme = web_theme(&web);
@@ -5369,6 +5446,8 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/avatar.rs
+#[cfg(any())]
 fn web_vs_fret_layout_empty_avatar_geometry() {
     let web = read_web_golden("empty-avatar");
     let theme = web_theme(&web);
@@ -5472,6 +5551,8 @@ fn web_vs_fret_layout_empty_avatar_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/avatar.rs
+#[cfg(any())]
 fn web_vs_fret_layout_empty_avatar_group_geometry() {
     let web = read_web_golden("empty-avatar-group");
     let theme = web_theme(&web);
@@ -5621,6 +5702,8 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_avatar_geometry() {
     let web = read_web_golden("item-avatar");
     let theme = web_theme(&web);
@@ -5839,6 +5922,8 @@ fn web_vs_fret_layout_item_avatar_geometry() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_demo_item_rects_match_web() {
     let web = read_web_golden("item-demo");
     let theme = web_theme(&web);
@@ -5956,6 +6041,8 @@ fn web_vs_fret_layout_item_demo_item_rects_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_size_item_rects_match_web() {
     let web = read_web_golden("item-size");
     let theme = web_theme(&web);
@@ -6073,6 +6160,8 @@ fn web_vs_fret_layout_item_size_item_rects_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_variant_item_heights_match_web() {
     let web = read_web_golden("item-variant");
     let theme = web_theme(&web);
@@ -6169,6 +6258,8 @@ fn web_vs_fret_layout_item_variant_item_heights_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_icon_item_rect_matches_web() {
     let web = read_web_golden("item-icon");
     let theme = web_theme(&web);
@@ -6239,6 +6330,8 @@ fn web_vs_fret_layout_item_icon_item_rect_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_link_item_rects_match_web() {
     let web = read_web_golden("item-link");
     let theme = web_theme(&web);
@@ -6350,6 +6443,8 @@ fn web_vs_fret_layout_item_link_item_rects_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
     let web = read_web_golden("item-group");
     let theme = web_theme(&web);
@@ -6478,6 +6573,8 @@ fn web_vs_fret_layout_item_group_item_and_separator_heights_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
     let web = read_web_golden("item-header");
     let theme = web_theme(&web);
@@ -6573,6 +6670,8 @@ fn web_vs_fret_layout_item_header_grid_item_rects_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/item.rs
+#[cfg(any())]
 fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
     let web = read_web_golden("item-image");
     let theme = web_theme(&web);
@@ -6678,6 +6777,8 @@ fn web_vs_fret_layout_item_image_list_item_heights_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_tab_list_height() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -6721,6 +6822,8 @@ fn web_vs_fret_layout_tabs_demo_tab_list_height() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_active_tab_height() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -6761,6 +6864,8 @@ fn web_vs_fret_layout_tabs_demo_active_tab_height() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_inactive_tab_text_color_matches_web() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -6811,6 +6916,8 @@ fn web_vs_fret_layout_tabs_demo_inactive_tab_text_color_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_active_tab_text_color_matches_web() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -6861,6 +6968,8 @@ fn web_vs_fret_layout_tabs_demo_active_tab_text_color_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_active_tab_inset_matches_web() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -6968,6 +7077,8 @@ fn web_vs_fret_layout_tabs_demo_active_tab_inset_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/tabs.rs
+#[cfg(any())]
 fn web_vs_fret_layout_tabs_demo_panel_gap() {
     let web = read_web_golden("tabs-demo");
     let theme = web_theme(&web);
@@ -7010,6 +7121,8 @@ fn web_vs_fret_layout_tabs_demo_panel_gap() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/select.rs
+#[cfg(any())]
 fn web_vs_fret_layout_select_scrollable_trigger_size() {
     let web = read_web_golden("select-scrollable");
     let theme = web_theme(&web);
@@ -7086,6 +7199,8 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
     let web = read_web_golden("spinner-input-group");
     let theme = web_theme(&web);
@@ -7471,6 +7586,8 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/card.rs
+#[cfg(any())]
 fn web_vs_fret_layout_card_with_form_width() {
     let web = read_web_golden("card-with-form");
     let theme = web_theme(&web);
@@ -7524,6 +7641,8 @@ fn web_vs_fret_layout_card_with_form_width() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/accordion.rs
+#[cfg(any())]
 fn web_vs_fret_layout_accordion_demo_geometry_light() {
     let web = read_web_golden("accordion-demo");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -7709,6 +7828,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/accordion.rs
+#[cfg(any())]
 fn web_vs_fret_layout_accordion_demo_geometry_dark() {
     let web = read_web_golden("accordion-demo");
     let theme = web.themes.get("dark").expect("missing dark theme");
@@ -7894,6 +8015,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/progress.rs
+#[cfg(any())]
 fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
     let web = read_web_golden("progress-demo");
     let theme = web.themes.get("light").expect("missing light theme");
@@ -8191,6 +8314,8 @@ fn assert_carousel_geometry_matches_web(
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_demo_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-demo",
@@ -8212,6 +8337,8 @@ fn web_vs_fret_layout_carousel_demo_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_plugin_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-plugin",
@@ -8233,6 +8360,8 @@ fn web_vs_fret_layout_carousel_plugin_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_api_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-api",
@@ -8269,6 +8398,8 @@ fn web_vs_fret_layout_carousel_api_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_size_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-size",
@@ -8298,6 +8429,8 @@ fn web_vs_fret_layout_carousel_size_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_spacing_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-spacing",
@@ -8327,6 +8460,8 @@ fn web_vs_fret_layout_carousel_spacing_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/carousel.rs
+#[cfg(any())]
 fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
     assert_carousel_geometry_matches_web(
         "carousel-orientation",
@@ -8357,6 +8492,8 @@ fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/progress.rs
+#[cfg(any())]
 fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
     let web = read_web_golden("progress-demo");
     let theme = web.themes.get("dark").expect("missing dark theme");
@@ -8481,6 +8618,8 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_basic_geometry_matches_web() {
     let web = read_web_golden("spinner-basic");
     let theme = web_theme(&web);
@@ -8523,6 +8662,8 @@ fn web_vs_fret_layout_spinner_basic_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_custom_geometry_matches_web() {
     let web = read_web_golden("spinner-custom");
     let theme = web_theme(&web);
@@ -8565,6 +8706,8 @@ fn web_vs_fret_layout_spinner_custom_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_size_variants_match_web() {
     let web = read_web_golden("spinner-size");
     let theme = web_theme(&web);
@@ -8626,6 +8769,8 @@ fn web_vs_fret_layout_spinner_size_variants_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_color_sizes_match_web() {
     let web = read_web_golden("spinner-color");
     let theme = web_theme(&web);
@@ -8650,6 +8795,8 @@ fn web_vs_fret_layout_spinner_color_sizes_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_button_disabled_sm_heights_match_web() {
     let web = read_web_golden("spinner-button");
     let theme = web_theme(&web);
@@ -8720,6 +8867,8 @@ fn web_vs_fret_layout_spinner_button_disabled_sm_heights_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_badge_heights_match_web() {
     let web = read_web_golden("spinner-badge");
     let theme = web_theme(&web);
@@ -8782,6 +8931,8 @@ fn web_vs_fret_layout_spinner_badge_heights_match_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
     let web = read_web_golden("spinner-demo");
     let theme = web_theme(&web);
@@ -8938,6 +9089,8 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_item_height_matches_web() {
     let web = read_web_golden("spinner-item");
     let theme = web_theme(&web);
@@ -9002,6 +9155,8 @@ fn web_vs_fret_layout_spinner_item_height_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/spinner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
     let web = read_web_golden("spinner-empty");
     let theme = web_theme(&web);
@@ -9130,6 +9285,8 @@ fn web_find_all_by_data_slot<'a>(root: &'a WebNode, slot: &str) -> Vec<&'a WebNo
 }
 
 #[test]
+// Moved to web_vs_fret_layout/button.rs
+#[cfg(any())]
 fn web_vs_fret_layout_button_as_child_geometry_matches_web() {
     let web = read_web_golden("button-as-child");
     let theme = web_theme(&web);
@@ -9164,6 +9321,8 @@ fn web_vs_fret_layout_button_as_child_geometry_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/basic.rs
+#[cfg(any())]
 fn web_vs_fret_layout_checkbox_disabled_control_size_matches_web() {
     let web = read_web_golden("checkbox-disabled");
     let theme = web_theme(&web);
@@ -9209,6 +9368,8 @@ fn web_vs_fret_layout_checkbox_disabled_control_size_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/collapsible.rs
+#[cfg(any())]
 fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
     let web = read_web_golden("collapsible-demo");
     let theme = web_theme(&web);
@@ -9331,6 +9492,8 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
 // Moved to web_vs_fret_layout/triggers.rs
 #[cfg(any())]
 #[test]
+// Moved to web_vs_fret_layout/triggers.rs
+#[cfg(any())]
 fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
     let raw = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -9452,6 +9615,8 @@ fn web_vs_fret_layout_date_picker_trigger_geometry_matches_web_fixtures() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/sonner.rs
+#[cfg(any())]
 fn web_vs_fret_layout_sonner_types_first_button_height_matches_web() {
     let web = read_web_golden("sonner-types");
     let theme = web_theme(&web);
@@ -9484,6 +9649,8 @@ fn web_vs_fret_layout_sonner_types_first_button_height_matches_web() {
 }
 
 #[test]
+// Moved to web_vs_fret_layout/pagination.rs
+#[cfg(any())]
 fn web_vs_fret_layout_pagination_demo_active_link_size_matches_web() {
     let web = read_web_golden("pagination-demo");
     let theme = web_theme(&web);
