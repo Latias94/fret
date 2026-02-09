@@ -1739,7 +1739,7 @@ impl LayoutNodeProfileState {
             node,
             pass_kind,
             bounds,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1800,7 +1800,7 @@ struct LayoutNodeProfileStackEntry {
     node: NodeId,
     pass_kind: crate::layout_pass::LayoutPassKind,
     bounds: Rect,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 
@@ -1871,7 +1871,7 @@ impl MeasureNodeProfileState {
         self.stack.push(MeasureNodeProfileStackEntry {
             node,
             constraints,
-            started: std::time::Instant::now(),
+            started: fret_core::time::Instant::now(),
             child_time: Duration::default(),
         });
     }
@@ -1928,7 +1928,7 @@ impl MeasureNodeProfileState {
 struct MeasureNodeProfileStackEntry {
     node: NodeId,
     constraints: crate::layout_constraints::LayoutConstraints,
-    started: std::time::Instant,
+    started: fret_core::time::Instant,
     child_time: Duration,
 }
 

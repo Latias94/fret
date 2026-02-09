@@ -3,7 +3,7 @@ use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
 use super::{CachedPreparedTextByWidth, interactive_resize_text_width_cache_entries};
-use std::time::Instant;
+use fret_core::time::Instant;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
