@@ -16,10 +16,12 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M0 — Lock decisions (no more “implicit stretch”)
 
-- [ ] IMG-adr-001 Draft and land an ADR for image `object-fit` semantics.
+- [x] IMG-adr-001 Draft and land an ADR for image `object-fit` semantics.
   - Must cover: fit enum vocabulary, default behavior, `ImageRegion` interaction rule, and backcompat.
   - References: `docs/adr/0121-streaming-images-and-video-surfaces.md`, `docs/adr/0004-resource-handles.md`.
   - Draft: `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
+  - Evidence:
+    - `docs/adr/1170-image-object-fit-for-sceneop-image-v1.md`
 
 - [ ] IMG-guard-010 Add a minimal regression gate checklist for image work (fast vs full).
   - Fast: `cargo fmt`, `cargo clippy -p fret-ui -p fret-render-wgpu -p fret-ui-shadcn --all-targets -- -D warnings`
@@ -27,29 +29,37 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M1 — Core fit semantics (mechanism layer)
 
-- [ ] IMG-core-100 Add fit semantics to the core image draw primitive (`SceneOp::Image`).
+- [x] IMG-core-100 Add fit semantics to the core image draw primitive (`SceneOp::Image`).
   - Evidence anchors:
     - `crates/fret-core/src/scene/mod.rs`
     - `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/image.rs`
+    - `crates/fret-core/src/scene/image_object_fit.rs` (`map_image_object_fit`)
 
-- [ ] IMG-core-101 Plumb fit through the declarative element surface (`ImageProps`) and paint path.
+- [x] IMG-core-101 Plumb fit through the declarative element surface (`ImageProps`) and paint path.
   - Evidence anchors:
     - `crates/fret-ui/src/element.rs`
     - `crates/fret-ui/src/declarative/host_widget/paint.rs`
 
-- [ ] IMG-test-120 Add conformance tests for fit mapping + UV crop math.
+- [x] IMG-test-120 Add conformance tests for fit mapping + UV crop math.
   - Prefer: pure math unit tests (no GPU required) + one renderer smoke test.
   - Must cover: clamp + monotonic UV rules and “no early rounding” guidance (ADR 1170).
+  - Evidence:
+    - `crates/fret-core/src/scene/image_object_fit.rs` (unit tests)
+    - `crates/fret-render-wgpu/src/renderer/tests.rs` (`image_fit_*`)
 
 ## M2 — shadcn parity (user-visible win)
 
-- [ ] IMG-shadcn-200 Make `AvatarImage` default to cover semantics (no stretching).
+- [x] IMG-shadcn-200 Make `AvatarImage` default to cover semantics (no stretching).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/avatar.rs`
     - `ecosystem/fret-ui-shadcn/tests/*` (web_vs_fret snapshots)
+    - `ecosystem/fret-ui-shadcn/src/avatar.rs` (`avatar_image_emits_cover_fit_scene_op`)
 
-- [ ] IMG-shadcn-210 Add a small shadcn `Image` recipe/component for cards/media rows.
+- [x] IMG-shadcn-210 Add a small shadcn `Image` recipe/component for cards/media rows.
   - Must support: `fit`, `loading` skeleton slot, and `fallback` slot (policy lives here).
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/media_image.rs` (`MediaImage`)
+    - `ecosystem/fret-ui-shadcn/src/media_image.rs` (`media_image_emits_fit_scene_op_when_image_present`)
 
 ## M3 — Metadata query seam (optional but likely needed)
 
