@@ -341,6 +341,15 @@ Markdown Editor v0”).
 - [x] Follow-up: add a triple-click select-line baseline for the Markdown editor page (ADR 0194).
   - Script: `tools/diag-scripts/ui-gallery-markdown-editor-source-line-boundary-triple-click-baseline.json`.
   - Gate: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click`).
+- [x] Add fold/inlay decoration baselines for the Markdown editor page (ADR 0200; present under wrap; suppressed under inline preedit).
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json`.
+    - `tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json`.
+  - Gates: `crates/fret-diag/src/stats.rs` (`check_bundle_for_ui_gallery_markdown_editor_source_*folds*`, `check_bundle_for_ui_gallery_markdown_editor_source_*inlays*`).
 
 ### M10.3 — IME bridge seam validation (native + web)
 

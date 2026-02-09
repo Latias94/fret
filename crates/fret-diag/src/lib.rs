@@ -56,6 +56,12 @@ use stats::{
     check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition,
     check_bundle_for_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
     check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits,
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present,
+    check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_present,
+    check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
     check_bundle_for_ui_gallery_markdown_editor_source_line_boundary_triple_click,
     check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits,
     check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
@@ -152,6 +158,15 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_markdown_editor_source_a11y_composition: bool = false;
     let mut check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool = false;
     let mut check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool =
+        false;
+    let mut check_ui_gallery_markdown_editor_source_folds_placeholder_present: bool = false;
+    let mut check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: bool =
+        false;
+    let mut check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: bool =
+        false;
+    let mut check_ui_gallery_markdown_editor_source_inlays_present: bool = false;
+    let mut check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: bool = false;
+    let mut check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: bool =
         false;
     let mut check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool =
         false;
@@ -699,6 +714,34 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--check-ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-stable" => {
                 check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable =
                     true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-folds-placeholder-present" => {
+                check_ui_gallery_markdown_editor_source_folds_placeholder_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-folds-placeholder-present-under-soft-wrap" =>
+            {
+                check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-folds-placeholder-absent-under-inline-preedit" =>
+            {
+                check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
+                    true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-inlays-present" => {
+                check_ui_gallery_markdown_editor_source_inlays_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-inlays-present-under-soft-wrap" => {
+                check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-markdown-editor-source-inlays-absent-under-inline-preedit" => {
+                check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit = true;
                 i += 1;
             }
             "--check-ui-gallery-code-editor-torture-folds-placeholder-absent-under-inline-preedit" =>
@@ -1652,6 +1695,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_markdown_editor_source_a11y_composition
                     || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
                     || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
+                    || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                    || check_ui_gallery_markdown_editor_source_inlays_present
+                    || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+                    || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present
                     || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -1728,6 +1777,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_markdown_editor_source_a11y_composition,
                         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_markdown_editor_source_inlays_present,
+                        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
@@ -2066,6 +2121,12 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_markdown_editor_source_a11y_composition
                         || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
                         || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+                        || check_ui_gallery_markdown_editor_source_folds_placeholder_present
+                        || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
+                        || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                        || check_ui_gallery_markdown_editor_source_inlays_present
+                        || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+                        || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present
                         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
@@ -2141,6 +2202,12 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_markdown_editor_source_a11y_composition,
                             check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                             check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                            check_ui_gallery_markdown_editor_source_folds_placeholder_present,
+                            check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+                            check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                            check_ui_gallery_markdown_editor_source_inlays_present,
+                            check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+                            check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present,
                             check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
@@ -3446,6 +3513,14 @@ See: `docs/tracy.md`.\n";
                         &src,
                     )
                     || ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
+                        &src,
+                    )
+                    || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
+                    || ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
                 let is_gc_liveness_script =
@@ -3672,6 +3747,24 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable =
                         ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection_wrap_stable_gate(&src)
                             && !check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable;
+                    let suite_ui_gallery_markdown_editor_source_folds_placeholder_present =
+                        ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_folds_placeholder_present;
+                    let suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap =
+                        ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap;
+                    let suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit =
+                        ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit;
+                    let suite_ui_gallery_markdown_editor_source_inlays_present =
+                        ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_inlays_present;
+                    let suite_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap =
+                        ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
+                    let suite_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit =
+                        ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(&src)
+                            && !check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
                     let suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit =
                         ui_gallery_script_requires_code_editor_torture_folds_placeholder_absent_under_inline_preedit_gate(&src)
                             && !check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
@@ -3800,6 +3893,18 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
                         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
                             || suite_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present
+                            || suite_ui_gallery_markdown_editor_source_folds_placeholder_present,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
+                            || suite_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+                            || suite_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
+                        check_ui_gallery_markdown_editor_source_inlays_present
+                            || suite_ui_gallery_markdown_editor_source_inlays_present,
+                        check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+                            || suite_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+                        check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
+                            || suite_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
                             || suite_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
                         check_ui_gallery_code_editor_torture_folds_placeholder_present
@@ -7170,7 +7275,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 36] {
+fn ui_gallery_suite_scripts() -> [&'static str; 42] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -7199,6 +7304,12 @@ fn ui_gallery_suite_scripts() -> [&'static str; 36] {
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
@@ -7211,7 +7322,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 36] {
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 27] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 33] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -7223,6 +7334,12 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 27] {
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-word-boundary-double-click-baseline.json",
         "tools/diag-scripts/ui-gallery-markdown-editor-source-a11y-composition-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-placeholder-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-placeholder-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-baseline.json",
@@ -7515,6 +7632,82 @@ fn ui_gallery_script_requires_markdown_editor_source_soft_wrap_editing_selection
     matches!(
         name,
         "ui-gallery-markdown-editor-source-soft-wrap-editing-selection-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-folds-placeholder-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_folds_placeholder_present_under_soft_wrap_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-folds-soft-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_folds_placeholder_absent_under_inline_preedit_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-folds-soft-wrap-inline-preedit-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_inlays_present_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-inlays-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_inlays_present_under_soft_wrap_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-inlays-soft-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_markdown_editor_source_inlays_absent_under_inline_preedit_gate(
+    script: &Path,
+) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-markdown-editor-source-inlays-soft-wrap-inline-preedit-baseline.json"
     )
 }
 
@@ -7891,6 +8084,12 @@ fn apply_post_run_checks(
     check_ui_gallery_markdown_editor_source_a11y_composition: bool,
     check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: bool,
     check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: bool,
+    check_ui_gallery_markdown_editor_source_folds_placeholder_present: bool,
+    check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: bool,
+    check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: bool,
+    check_ui_gallery_markdown_editor_source_inlays_present: bool,
+    check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: bool,
+    check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present: bool,
     check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: bool,
@@ -8097,6 +8296,42 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable {
         check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_folds_placeholder_present {
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap {
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit {
+        check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_inlays_present {
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_present(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap {
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit {
+        check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit(
             bundle_path,
             warmup_frames,
         )?;
