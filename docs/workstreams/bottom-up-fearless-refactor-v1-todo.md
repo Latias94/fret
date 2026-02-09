@@ -83,6 +83,10 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (fixture-driven slice, select overlay placement + metrics):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select.rs` (`web_vs_fret_select_cases_match_web_fixtures`)
+  - Evidence (fixture-driven slice, misc overlays overlay placement + chrome insets):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs` (`web_vs_fret_misc_overlays_cases_match_web_fixtures`)
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays.rs` (keeps procedural “underlay scroll re-anchor” tests)
   - Evidence (fixture-driven slice, layout trigger heights):
     - `ecosystem/fret-ui-shadcn/tests/fixtures/layout_trigger_height_cases_v1.json`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs` (`web_vs_fret_layout_trigger_heights_match_web_fixtures`)
@@ -588,3 +592,8 @@ When completing an item, prefer leaving 1–3 evidence anchors:
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   - Gate: `cargo nextest run -p fret-ui-shadcn`
+  - Interim evidence (fixture-driven conversion):
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_dropdown_menu_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_menubar_demo_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_select_cases_v1.json`
+    - `ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json`
