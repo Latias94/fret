@@ -55,3 +55,35 @@ fn web_vs_fret_layout_kbd_heights_match_web_fixtures() {
         assert_kbd_first_height_matches_web(&case.web_name, &case.text);
     }
 }
+
+#[test]
+fn web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web() {
+    let web = read_web_golden("kbd-tooltip");
+    let theme = web_theme(&web);
+    let web_button = web_find_by_tag_and_text(&theme.root, "button", "Save").expect("web button");
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Save")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .size(fret_ui_shadcn::ButtonSize::Sm)
+                .into_element(cx),
+        ]
+    });
+
+    let button = find_semantics(&snap, SemanticsRole::Button, Some("Save"))
+        .or_else(|| find_semantics(&snap, SemanticsRole::Button, None))
+        .expect("fret button");
+
+    assert_close_px(
+        "kbd-tooltip button h",
+        button.bounds.size.height,
+        web_button.rect.h,
+        1.0,
+    );
+}
