@@ -84,6 +84,9 @@ impl ChartPatch {
                             dataset.id,
                             DatasetModel {
                                 id: dataset.id,
+                                from: None,
+                                transforms: Vec::new(),
+                                root: dataset.id,
                                 fields: dataset_fields_map(&dataset)?,
                             },
                         );
@@ -256,9 +259,19 @@ impl ChartPatch {
         for op in self.datasets {
             match op {
                 DatasetOp::Upsert(dataset) => {
+                    let fields = dataset_fields_map(&dataset)?;
+                    let (from, root, transforms) = match model.datasets.get(&dataset.id) {
+                        Some(existing) => {
+                            (existing.from, existing.root, existing.transforms.clone())
+                        }
+                        None => (None, dataset.id, Vec::new()),
+                    };
                     let next = DatasetModel {
                         id: dataset.id,
-                        fields: dataset_fields_map(&dataset)?,
+                        from,
+                        root,
+                        transforms,
+                        fields,
                     };
                     if model
                         .datasets

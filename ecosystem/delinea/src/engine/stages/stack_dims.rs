@@ -100,7 +100,7 @@ impl StackDimsStage {
                 continue;
             };
 
-            let Some(table) = datasets.dataset(inputs.dataset_id) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(inputs.dataset_id)) else {
                 self.cache.remove(&stack);
                 continue;
             };
@@ -189,7 +189,7 @@ impl StackDimsStage {
                 continue;
             }
 
-            let Some(table) = datasets.dataset(*dataset) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(*dataset)) else {
                 self.cursor += 1;
                 continue;
             };
@@ -434,7 +434,7 @@ fn stack_group_inputs(
             return None;
         }
 
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             return None;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -501,7 +501,7 @@ fn stack_indexing_for_group(
     inputs: &StackGroupInputs,
     row_count: usize,
 ) -> StackIndexing {
-    let Some(table) = datasets.dataset(inputs.dataset_id) else {
+    let Some(table) = datasets.dataset(model.root_dataset_id(inputs.dataset_id)) else {
         return StackIndexing::ByRowIndex {
             accum_pos: vec![0.0; row_count],
             accum_neg: if inputs.strategy == StackStrategy::SameSign {
@@ -631,6 +631,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -773,6 +776,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

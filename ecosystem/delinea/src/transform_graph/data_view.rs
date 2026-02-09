@@ -21,6 +21,7 @@ pub struct DataViewStage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DataViewKey {
     dataset: DatasetId,
+    root_dataset: DatasetId,
     kind: DataViewKind,
 }
 
@@ -59,12 +60,14 @@ pub enum DataViewKind {
 impl DataViewKey {
     pub fn x_filter(
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         range: RowRange,
         filter: AxisFilter1D,
     ) -> Self {
         Self {
             dataset,
+            root_dataset,
             kind: DataViewKind::XFilter {
                 x_col,
                 start: range.start.min(u32::MAX as usize) as u32,
@@ -77,6 +80,7 @@ impl DataViewKey {
 
     pub fn xy_weak_filter(
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         y_col: usize,
         range: RowRange,
@@ -85,6 +89,7 @@ impl DataViewKey {
     ) -> Self {
         Self {
             dataset,
+            root_dataset,
             kind: DataViewKind::XYWeakFilter {
                 x_col,
                 y_col,
@@ -100,6 +105,7 @@ impl DataViewKey {
 
     pub fn xy_weak_filter_band(
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         y0_col: usize,
         y1_col: usize,
@@ -109,6 +115,7 @@ impl DataViewKey {
     ) -> Self {
         Self {
             dataset,
+            root_dataset,
             kind: DataViewKind::XYWeakFilterBand {
                 x_col,
                 y0_col,
@@ -184,7 +191,8 @@ impl DataViewStage {
             return false;
         };
 
-        let table = datasets.dataset(series.dataset);
+        let root = model.root_dataset_id(series.dataset);
+        let table = datasets.dataset(root);
         let Some(table) = table else {
             return false;
         };
@@ -220,6 +228,7 @@ impl DataViewStage {
 
         self.request(DataViewKey::x_filter(
             series.dataset,
+            root,
             x_col,
             selection_range,
             filter,
@@ -265,7 +274,8 @@ impl DataViewStage {
             return false;
         }
 
-        let table = datasets.dataset(series.dataset);
+        let root = model.root_dataset_id(series.dataset);
+        let table = datasets.dataset(root);
         let Some(table) = table else {
             return false;
         };
@@ -296,6 +306,7 @@ impl DataViewStage {
 
         self.request(DataViewKey::xy_weak_filter(
             series.dataset,
+            root,
             x_col,
             y_col,
             selection_range,
@@ -338,7 +349,8 @@ impl DataViewStage {
             return false;
         }
 
-        let table = datasets.dataset(series.dataset);
+        let root = model.root_dataset_id(series.dataset);
+        let table = datasets.dataset(root);
         let Some(table) = table else {
             return false;
         };
@@ -378,6 +390,7 @@ impl DataViewStage {
 
         self.request(DataViewKey::xy_weak_filter_band(
             series.dataset,
+            root,
             x_col,
             y0_col,
             y1_col,
@@ -403,7 +416,7 @@ impl DataViewStage {
             if self.cache.contains_key(key) {
                 continue;
             }
-            let table = datasets.dataset(key.dataset);
+            let table = datasets.dataset(key.root_dataset);
             let Some(table) = table else {
                 continue;
             };
@@ -463,7 +476,7 @@ impl DataViewStage {
         let mut best: Option<(usize, DataViewKey)> = None;
 
         for (k, _) in self.cache.iter() {
-            if k.dataset != requested.dataset {
+            if k.dataset != requested.dataset || k.root_dataset != requested.root_dataset {
                 continue;
             }
             let DataViewKind::XFilter {
@@ -510,7 +523,7 @@ impl DataViewStage {
         let mut best: Option<(usize, Vec<u32>, usize)> = None;
 
         for (k, entry) in self.cache.iter() {
-            if k.dataset != requested.dataset {
+            if k.dataset != requested.dataset || k.root_dataset != requested.root_dataset {
                 continue;
             }
             let DataViewKind::XFilter {
@@ -563,7 +576,7 @@ impl DataViewStage {
         while self.cursor < self.requested.len() {
             let key = self.requested[self.cursor];
 
-            let table = datasets.dataset(key.dataset);
+            let table = datasets.dataset(key.root_dataset);
             let Some(table) = table else {
                 self.cache.remove(&key);
                 self.cursor += 1;
@@ -940,12 +953,13 @@ impl DataViewStage {
     pub fn selection_for(
         &self,
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         selection_range: RowRange,
         filter: AxisFilter1D,
         table_rev: Revision,
     ) -> Option<RowSelection> {
-        let key = DataViewKey::x_filter(dataset, x_col, selection_range, filter);
+        let key = DataViewKey::x_filter(dataset, root_dataset, x_col, selection_range, filter);
         match self.cache.get(&key) {
             Some(DataViewEntry::Ready {
                 data_rev, indices, ..
@@ -957,6 +971,7 @@ impl DataViewStage {
     pub fn selection_for_xy_weak_filter(
         &self,
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         y_col: usize,
         selection_range: RowRange,
@@ -964,8 +979,15 @@ impl DataViewStage {
         y_filter: AxisFilter1D,
         table_rev: Revision,
     ) -> Option<RowSelection> {
-        let key =
-            DataViewKey::xy_weak_filter(dataset, x_col, y_col, selection_range, x_filter, y_filter);
+        let key = DataViewKey::xy_weak_filter(
+            dataset,
+            root_dataset,
+            x_col,
+            y_col,
+            selection_range,
+            x_filter,
+            y_filter,
+        );
         match self.cache.get(&key) {
             Some(DataViewEntry::Ready {
                 data_rev, indices, ..
@@ -977,6 +999,7 @@ impl DataViewStage {
     pub fn selection_for_xy_weak_filter_band(
         &self,
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         y0_col: usize,
         y1_col: usize,
@@ -987,6 +1010,7 @@ impl DataViewStage {
     ) -> Option<RowSelection> {
         let key = DataViewKey::xy_weak_filter_band(
             dataset,
+            root_dataset,
             x_col,
             y0_col,
             y1_col,
@@ -1006,13 +1030,21 @@ impl DataViewStage {
         &self,
         table: &'a DataTable,
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         selection_range: RowRange,
         filter: AxisFilter1D,
         base_selection: RowSelection,
     ) -> DataTableView<'a> {
         let selection = self
-            .selection_for(dataset, x_col, selection_range, filter, table.revision)
+            .selection_for(
+                dataset,
+                root_dataset,
+                x_col,
+                selection_range,
+                filter,
+                table.revision,
+            )
             .unwrap_or(base_selection);
         DataTableView::new(table, selection)
     }
@@ -1030,13 +1062,14 @@ mod tests {
 
     fn build_stage_with_single_key(
         dataset_id: DatasetId,
+        root_dataset_id: DatasetId,
         x_col: usize,
         range: RowRange,
         filter: AxisFilter1D,
         data_rev: Revision,
         row_count: usize,
     ) -> DataViewStage {
-        let key = DataViewKey::x_filter(dataset_id, x_col, range, filter);
+        let key = DataViewKey::x_filter(dataset_id, root_dataset_id, x_col, range, filter);
         let mut stage = DataViewStage::default();
         stage.requested.push(key);
         stage.requested_set.insert(key);
@@ -1058,6 +1091,7 @@ mod tests {
 
     fn build_stage_with_single_xy_key(
         dataset_id: DatasetId,
+        root_dataset_id: DatasetId,
         x_col: usize,
         y_col: usize,
         range: RowRange,
@@ -1066,7 +1100,15 @@ mod tests {
         data_rev: Revision,
         row_count: usize,
     ) -> DataViewStage {
-        let key = DataViewKey::xy_weak_filter(dataset_id, x_col, y_col, range, x_filter, y_filter);
+        let key = DataViewKey::xy_weak_filter(
+            dataset_id,
+            root_dataset_id,
+            x_col,
+            y_col,
+            range,
+            x_filter,
+            y_filter,
+        );
         let mut stage = DataViewStage::default();
         stage.requested.push(key);
         stage.requested_set.insert(key);
@@ -1088,6 +1130,7 @@ mod tests {
 
     fn build_stage_with_single_xy_band_key(
         dataset_id: DatasetId,
+        root_dataset_id: DatasetId,
         x_col: usize,
         y0_col: usize,
         y1_col: usize,
@@ -1098,7 +1141,14 @@ mod tests {
         row_count: usize,
     ) -> DataViewStage {
         let key = DataViewKey::xy_weak_filter_band(
-            dataset_id, x_col, y0_col, y1_col, range, x_filter, y_filter,
+            dataset_id,
+            root_dataset_id,
+            x_col,
+            y0_col,
+            y1_col,
+            range,
+            x_filter,
+            y_filter,
         );
         let mut stage = DataViewStage::default();
         stage.requested.push(key);
@@ -1137,6 +1187,7 @@ mod tests {
 
         let mut stage = build_stage_with_single_key(
             dataset_id,
+            dataset_id,
             0,
             range,
             filter,
@@ -1151,7 +1202,7 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for(dataset_id, 0, range, filter, table.revision)
+            .selection_for(dataset_id, dataset_id, 0, range, filter, table.revision)
             .expect("selection should be ready");
 
         let RowSelection::Indices(indices) = sel else {
@@ -1185,6 +1236,7 @@ mod tests {
 
         let mut stage = build_stage_with_single_xy_key(
             dataset_id,
+            dataset_id,
             0,
             1,
             range,
@@ -1202,6 +1254,7 @@ mod tests {
 
         let sel = stage
             .selection_for_xy_weak_filter(
+                dataset_id,
                 dataset_id,
                 0,
                 1,
@@ -1249,6 +1302,7 @@ mod tests {
 
         let mut stage = build_stage_with_single_xy_band_key(
             dataset_id,
+            dataset_id,
             0,
             1,
             2,
@@ -1267,6 +1321,7 @@ mod tests {
 
         let sel = stage
             .selection_for_xy_weak_filter_band(
+                dataset_id,
                 dataset_id,
                 0,
                 1,
@@ -1309,6 +1364,7 @@ mod tests {
         let data_rev = store.dataset(dataset_id).unwrap().revision;
         let mut stage = build_stage_with_single_key(
             dataset_id,
+            dataset_id,
             0,
             range,
             filter,
@@ -1320,7 +1376,7 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for(dataset_id, 0, range, filter, data_rev)
+            .selection_for(dataset_id, dataset_id, 0, range, filter, data_rev)
             .expect("selection should be ready");
         assert!(matches!(sel, RowSelection::Indices(_)));
 
@@ -1333,7 +1389,7 @@ mod tests {
         // The cached selection should be considered stale when queried with the new data revision.
         assert!(
             stage
-                .selection_for(dataset_id, 0, range, filter, new_rev)
+                .selection_for(dataset_id, dataset_id, 0, range, filter, new_rev)
                 .is_none()
         );
 
@@ -1343,7 +1399,7 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for(dataset_id, 0, range, filter, new_rev)
+            .selection_for(dataset_id, dataset_id, 0, range, filter, new_rev)
             .expect("selection should be rebuilt");
         let RowSelection::Indices(indices) = sel else {
             panic!("expected indices selection");
@@ -1375,6 +1431,7 @@ mod tests {
         let data_rev = store.dataset(dataset_id).unwrap().revision;
         let mut stage = build_stage_with_single_xy_key(
             dataset_id,
+            dataset_id,
             0,
             1,
             range,
@@ -1388,7 +1445,9 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, data_rev)
+            .selection_for_xy_weak_filter(
+                dataset_id, dataset_id, 0, 1, range, x_filter, y_filter, data_rev,
+            )
             .expect("selection should be ready");
         assert!(matches!(sel, RowSelection::Indices(_)));
 
@@ -1401,7 +1460,9 @@ mod tests {
         // The cached selection should be considered stale when queried with the new data revision.
         assert!(
             stage
-                .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, new_rev)
+                .selection_for_xy_weak_filter(
+                    dataset_id, dataset_id, 0, 1, range, x_filter, y_filter, new_rev,
+                )
                 .is_none()
         );
 
@@ -1411,7 +1472,9 @@ mod tests {
         assert!(stage.step(&store, &mut budget));
 
         let sel = stage
-            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, new_rev)
+            .selection_for_xy_weak_filter(
+                dataset_id, dataset_id, 0, 1, range, x_filter, y_filter, new_rev,
+            )
             .expect("selection should be rebuilt");
         let RowSelection::Indices(indices) = sel else {
             panic!("expected indices selection");
@@ -1438,6 +1501,7 @@ mod tests {
         let rev0 = store.dataset(dataset_id).unwrap().revision;
         let mut stage = build_stage_with_single_key(
             dataset_id,
+            dataset_id,
             0,
             range,
             filter,
@@ -1460,7 +1524,7 @@ mod tests {
         );
 
         let sel = stage
-            .selection_for(dataset_id, 0, range, filter, rev1)
+            .selection_for(dataset_id, dataset_id, 0, range, filter, rev1)
             .expect("selection should be updated for the new revision");
         let RowSelection::Indices(indices) = sel else {
             panic!("expected indices selection");
@@ -1491,6 +1555,7 @@ mod tests {
         let rev0 = store.dataset(dataset_id).unwrap().revision;
         let mut stage = build_stage_with_single_xy_key(
             dataset_id,
+            dataset_id,
             0,
             1,
             range,
@@ -1515,7 +1580,9 @@ mod tests {
         );
 
         let sel = stage
-            .selection_for_xy_weak_filter(dataset_id, 0, 1, range, x_filter, y_filter, rev1)
+            .selection_for_xy_weak_filter(
+                dataset_id, dataset_id, 0, 1, range, x_filter, y_filter, rev1,
+            )
             .expect("selection should be updated for the new revision");
         let RowSelection::Indices(indices) = sel else {
             panic!("expected indices selection");

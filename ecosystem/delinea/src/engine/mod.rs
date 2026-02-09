@@ -1159,7 +1159,9 @@ impl ChartEngine {
             &mut self.transform_graph,
         );
         self.transform_graph.prepare_requests(&self.datasets);
-        let selection_done = self.transform_graph.step(&self.datasets, &mut budget);
+        let selection_done =
+            self.transform_graph
+                .step(&self.model, &self.datasets, &self.view, &mut budget);
 
         // Multi-dimensional `weakFilter` (v1 subset) is materialized as an indices-backed selection.
         // Apply the cached selection when available so all downstream consumers observe the correct
@@ -1289,7 +1291,10 @@ impl ChartEngine {
                 let Some(x_col) = dataset_model.fields.get(&series.encode.x).copied() else {
                     continue;
                 };
-                let Some(table) = self.datasets.dataset(series.dataset) else {
+                let Some(table) = self
+                    .datasets
+                    .dataset(self.model.root_dataset_id(series.dataset))
+                else {
                     continue;
                 };
                 let Some(x_values) = table.column_f64(x_col) else {
@@ -1548,7 +1553,7 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         }
 
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             continue;
         };
         let contract = participation.series_contract(series.id, table.row_count);
@@ -1575,8 +1580,10 @@ fn request_nearest_x_indices_for_axis_pointer(
             continue;
         }
 
+        let root = model.root_dataset_id(series.dataset);
         stage.request(NearestXIndexKey::new(
             series.dataset,
+            root,
             x_col,
             selection_range,
             contract.x_policy.filter,
@@ -1828,7 +1835,7 @@ fn compute_axis_axis_pointer_output(
             continue;
         }
 
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -1863,10 +1870,12 @@ fn compute_axis_axis_pointer_output(
             crate::engine::window_policy::AxisFilter1D::default()
         };
 
+        let root_dataset = model.root_dataset_id(series.dataset);
         let table_view = x_col.map(|x_col| {
             data_views.table_view_for(
                 table,
                 series.dataset,
+                root_dataset,
                 x_col,
                 selection_range,
                 filter,
@@ -1877,8 +1886,13 @@ fn compute_axis_axis_pointer_output(
         let model_rev = model.revs.marks;
         let table_rev = table.revision;
         let nearest_index = x_col.and_then(|x_col| {
-            let key =
-                NearestXIndexKey::new(series.dataset, x_col, selection_range, filter_for_index);
+            let key = NearestXIndexKey::new(
+                series.dataset,
+                root_dataset,
+                x_col,
+                selection_range,
+                filter_for_index,
+            );
             nearest_x_indices.items_for(key, table_rev)
         });
 
@@ -1894,6 +1908,7 @@ fn compute_axis_axis_pointer_output(
             if let Some(ordinal_col) = ordinal_col {
                 let key = crate::engine::stages::OrdinalIndexKey::new(
                     series.dataset,
+                    root_dataset,
                     ordinal_col,
                     category_len,
                     selection_range,
@@ -2113,7 +2128,8 @@ fn snap_axis_pointer_x_to_series(
         return None;
     }
 
-    let table = datasets.dataset(primary.dataset)?;
+    let root_dataset = model.root_dataset_id(primary.dataset);
+    let table = datasets.dataset(root_dataset)?;
     let table_rev = table.revision;
     let model_rev = model.revs.data;
 
@@ -2135,16 +2151,24 @@ fn snap_axis_pointer_x_to_series(
     let base_selection = contract.selection;
     let empty_mask = contract.empty_mask;
 
+    let root_dataset = model.root_dataset_id(primary.dataset);
     let table_view = data_views.table_view_for(
         table,
         primary.dataset,
+        root_dataset,
         x_col,
         selection_range,
         filter,
         base_selection,
     );
 
-    let nearest_key = NearestXIndexKey::new(primary.dataset, x_col, selection_range, filter);
+    let nearest_key = NearestXIndexKey::new(
+        primary.dataset,
+        root_dataset,
+        x_col,
+        selection_range,
+        filter,
+    );
     let nearest_index = nearest_x_indices.items_for(nearest_key, table_rev);
     let (raw_index, x_raw) =
         nearest_raw_index_at_x_view(axis_value, x, filter, &table_view, nearest_index)?;
@@ -2319,7 +2343,8 @@ fn snap_axis_pointer_y_to_series(
         return None;
     }
 
-    let table = datasets.dataset(primary.dataset)?;
+    let root_dataset = model.root_dataset_id(primary.dataset);
+    let table = datasets.dataset(root_dataset)?;
     let table_rev = table.revision;
     let model_rev = model.revs.data;
 
@@ -2344,6 +2369,7 @@ fn snap_axis_pointer_y_to_series(
     let table_view = data_views.table_view_for(
         table,
         primary.dataset,
+        root_dataset,
         x_col,
         selection_range,
         filter,
@@ -2546,7 +2572,7 @@ fn request_ordinal_indices_for_axis_pointer(
             continue;
         };
 
-        let Some(table) = datasets.dataset(series.dataset) else {
+        let Some(table) = datasets.dataset(model.root_dataset_id(series.dataset)) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series.dataset) else {
@@ -2575,8 +2601,10 @@ fn request_ordinal_indices_for_axis_pointer(
         } else {
             crate::engine::window_policy::AxisFilter1D::default()
         };
+        let root_dataset = model.root_dataset_id(series.dataset);
         let key = crate::engine::stages::OrdinalIndexKey::new(
             series.dataset,
+            root_dataset,
             ordinal_col,
             category_len,
             selection_range,

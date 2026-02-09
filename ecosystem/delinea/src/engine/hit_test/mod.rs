@@ -51,7 +51,7 @@ pub fn hover_hit_test(
             }
         }
 
-        let table = datasets.dataset(series.dataset);
+        let table = datasets.dataset(model.root_dataset_id(series.dataset));
         let Some(table) = table else {
             continue;
         };
@@ -477,6 +477,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -613,6 +616,9 @@ mod tests {
                         column: 2,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -759,6 +765,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![crate::spec::GridSpec { id: grid_id }],
             axes: vec![
@@ -892,6 +901,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

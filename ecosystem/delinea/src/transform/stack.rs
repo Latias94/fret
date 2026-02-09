@@ -109,7 +109,7 @@ fn series_y_at_index(
     let dataset = model.datasets.get(&dataset_id)?;
     let y_col = *dataset.fields.get(&series.encode.y)?;
 
-    let table = datasets.dataset(dataset_id)?;
+    let table = datasets.dataset(model.root_dataset_id(dataset_id))?;
     let y = table.column_f64(y_col)?;
     y.get(index).copied()
 }

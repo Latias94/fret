@@ -155,7 +155,7 @@ impl ViewState {
         self.datasets.clear();
         self.series.clear();
         for (id, _dataset_model) in &model.datasets {
-            let table = datasets.dataset(*id);
+            let table = datasets.dataset(model.root_dataset_id(*id));
             let Some(table) = table else { continue };
             let mut row_range = state
                 .dataset_row_ranges
@@ -178,7 +178,7 @@ impl ViewState {
             let Some(series) = model.series.get(series_id) else {
                 continue;
             };
-            let table = datasets.dataset(series.dataset);
+            let table = datasets.dataset(model.root_dataset_id(series.dataset));
             let Some(table) = table else { continue };
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 continue;
@@ -282,7 +282,7 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
     hash = fnv1a_step(hash, model.datasets.len() as u64);
     for dataset_id in model.datasets.keys() {
         hash = fnv1a_step(hash, dataset_id.0);
-        if let Some(table) = datasets.dataset(*dataset_id) {
+        if let Some(table) = datasets.dataset(model.root_dataset_id(*dataset_id)) {
             hash = fnv1a_step(hash, table.revision.0);
             hash = fnv1a_step(hash, table.row_count as u64);
             hash = fnv1a_step(hash, table.columns.len() as u64);
@@ -419,6 +419,9 @@ mod tests {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![

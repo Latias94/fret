@@ -29,6 +29,47 @@ pub struct ChartSpec {
 pub struct DatasetSpec {
     pub id: DatasetId,
     pub fields: Vec<FieldSpec>,
+    /// When set, this dataset is derived from an upstream dataset by applying `transforms` in
+    /// order.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub from: Option<DatasetId>,
+    /// v1 subset: row-preserving transforms only (filter/sort); schema is inherited from `from`.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub transforms: Vec<DatasetTransformSpecV1>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DatasetSortOrder {
+    #[default]
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DatasetFilterSpecV1 {
+    pub field: FieldId,
+    pub gte: Option<f64>,
+    pub gt: Option<f64>,
+    pub lte: Option<f64>,
+    pub lt: Option<f64>,
+    pub eq: Option<f64>,
+    pub ne: Option<f64>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DatasetSortSpecV1 {
+    pub field: FieldId,
+    pub order: DatasetSortOrder,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DatasetTransformSpecV1 {
+    Filter(DatasetFilterSpecV1),
+    Sort(DatasetSortSpecV1),
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

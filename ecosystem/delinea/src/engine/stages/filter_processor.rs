@@ -233,6 +233,10 @@ impl FilterProcessorStage {
                 continue;
             };
 
+            // Dataset transforms are engine-owned and must be materialized before downstream
+            // dataZoom/filter steps can produce correct selections.
+            transform_graph.request_dataset_transforms_for_dataset(model, series.dataset);
+
             let Some(zoom_state) = state.data_zoom_x.get(&series.x_axis) else {
                 continue;
             };
@@ -371,6 +375,15 @@ impl FilterProcessorStage {
             .map(|(i, v)| (v.series, i))
             .collect();
 
+        apply_dataset_transforms_for_view(
+            transform_graph,
+            model,
+            datasets,
+            view,
+            &view_series_index,
+            &mut view_changed,
+        );
+
         // Step ordering is intentionally explicit and per-grid (ECharts-style ordering scaffold).
         const MAX_MULTI_DIM_WEAKFILTER_VIEW_LEN: usize = 200_000;
         const MAX_Y_FILTER_VIEW_LEN: usize = 200_000;
@@ -473,6 +486,58 @@ impl FilterProcessorStage {
     }
 }
 
+fn apply_dataset_transforms_for_view(
+    transform_graph: &TransformGraph,
+    model: &ChartModel,
+    datasets: &DatasetStore,
+    view: &mut ViewState,
+    view_series_index: &BTreeMap<SeriesId, usize>,
+    view_changed: &mut bool,
+) {
+    for series_id in &model.series_order {
+        let Some(series_model) = model.series.get(series_id) else {
+            continue;
+        };
+        let Some(dataset_model) = model.datasets.get(&series_model.dataset) else {
+            continue;
+        };
+        if dataset_model.from.is_none() || dataset_model.transforms.is_empty() {
+            continue;
+        }
+
+        let Some(series_view_index) = view_series_index.get(series_id).copied() else {
+            continue;
+        };
+
+        let root = model.root_dataset_id(series_model.dataset);
+        let Some(table) = datasets.dataset(root) else {
+            continue;
+        };
+
+        let base_range = view
+            .dataset_view(series_model.dataset)
+            .map(|v| v.row_range)
+            .unwrap_or(RowRange {
+                start: 0,
+                end: table.row_count,
+            });
+
+        let sel = transform_graph.dataset_transform_selection_for_dataset(
+            model,
+            datasets,
+            view,
+            series_model.dataset,
+        );
+        let sel = sel.unwrap_or(RowSelection::Range(base_range));
+
+        let series_view = &mut view.series[series_view_index];
+        if series_view.selection != sel {
+            series_view.selection = sel;
+            *view_changed = true;
+        }
+    }
+}
+
 fn apply_xy_weak_filter_for_grid(
     model: &ChartModel,
     datasets: &DatasetStore,
@@ -538,7 +603,8 @@ fn apply_xy_weak_filter_for_grid(
             continue;
         }
 
-        let Some(table) = datasets.dataset(series_model.dataset) else {
+        let root = model.root_dataset_id(series_model.dataset);
+        let Some(table) = datasets.dataset(root) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series_model.dataset) else {
@@ -606,6 +672,7 @@ fn apply_xy_weak_filter_for_grid(
         let sel = match y1_col {
             Some(y1_col) => transform_graph.selection_for_xy_weak_filter_band(
                 series_model.dataset,
+                root,
                 x_col,
                 y0_col,
                 y1_col,
@@ -616,6 +683,7 @@ fn apply_xy_weak_filter_for_grid(
             ),
             None => transform_graph.selection_for_xy_weak_filter(
                 series_model.dataset,
+                root,
                 x_col,
                 y0_col,
                 base_range,
@@ -729,7 +797,8 @@ fn apply_x_indices_for_grid(
             continue;
         }
 
-        let Some(table) = datasets.dataset(series_model.dataset) else {
+        let root = model.root_dataset_id(series_model.dataset);
+        let Some(table) = datasets.dataset(root) else {
             continue;
         };
         let Some(dataset) = model.datasets.get(&series_model.dataset) else {
@@ -747,6 +816,7 @@ fn apply_x_indices_for_grid(
 
         let Some(sel) = transform_graph.selection_for_x_filter(
             series_model.dataset,
+            root,
             x_col,
             selection_range,
             x_filter,

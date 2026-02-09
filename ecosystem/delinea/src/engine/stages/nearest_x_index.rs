@@ -17,6 +17,7 @@ pub struct NearestXIndexStage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NearestXIndexKey {
     dataset: DatasetId,
+    root_dataset: DatasetId,
     x_col: usize,
     start: u32,
     end: u32,
@@ -25,9 +26,16 @@ pub struct NearestXIndexKey {
 }
 
 impl NearestXIndexKey {
-    pub fn new(dataset: DatasetId, x_col: usize, range: RowRange, filter: AxisFilter1D) -> Self {
+    pub fn new(
+        dataset: DatasetId,
+        root_dataset: DatasetId,
+        x_col: usize,
+        range: RowRange,
+        filter: AxisFilter1D,
+    ) -> Self {
         Self {
             dataset,
+            root_dataset,
             x_col,
             start: range.start.min(u32::MAX as usize) as u32,
             end: range.end.min(u32::MAX as usize) as u32,
@@ -102,7 +110,7 @@ impl NearestXIndexStage {
                 continue;
             }
 
-            let Some(table) = datasets.dataset(key.dataset) else {
+            let Some(table) = datasets.dataset(key.root_dataset) else {
                 continue;
             };
 
@@ -134,7 +142,7 @@ impl NearestXIndexStage {
         let mut best: Option<(usize, NearestXIndexKey)> = None;
 
         for (k, _) in self.cache.iter() {
-            if k.dataset != requested.dataset {
+            if k.dataset != requested.dataset || k.root_dataset != requested.root_dataset {
                 continue;
             }
             if k.x_col != requested.x_col {
@@ -169,7 +177,7 @@ impl NearestXIndexStage {
         let mut best: Option<(usize, Vec<NearestXIndexItem>, usize)> = None;
 
         for (k, entry) in self.cache.iter() {
-            if k.dataset != requested.dataset {
+            if k.dataset != requested.dataset || k.root_dataset != requested.root_dataset {
                 continue;
             }
             if k.x_col != requested.x_col {
@@ -218,7 +226,7 @@ impl NearestXIndexStage {
         while self.cursor < self.requested.len() {
             let key = self.requested[self.cursor];
 
-            let Some(table) = datasets.dataset(key.dataset) else {
+            let Some(table) = datasets.dataset(key.root_dataset) else {
                 self.cache.remove(&key);
                 self.cursor += 1;
                 continue;
@@ -456,9 +464,20 @@ mod tests {
         let mut stage = NearestXIndexStage::default();
         let filter = AxisFilter1D::default();
 
-        let key_prefix =
-            NearestXIndexKey::new(dataset_id, 0, RowRange { start: 0, end: 3 }, filter);
-        let key_full = NearestXIndexKey::new(dataset_id, 0, RowRange { start: 0, end: 10 }, filter);
+        let key_prefix = NearestXIndexKey::new(
+            dataset_id,
+            dataset_id,
+            0,
+            RowRange { start: 0, end: 3 },
+            filter,
+        );
+        let key_full = NearestXIndexKey::new(
+            dataset_id,
+            dataset_id,
+            0,
+            RowRange { start: 0, end: 10 },
+            filter,
+        );
 
         stage.begin_frame();
         stage.request(key_prefix);
@@ -494,7 +513,13 @@ mod tests {
         let mut stage = NearestXIndexStage::default();
         let filter = AxisFilter1D::default();
 
-        let key = NearestXIndexKey::new(dataset_id, 0, RowRange { start: 0, end: 10 }, filter);
+        let key = NearestXIndexKey::new(
+            dataset_id,
+            dataset_id,
+            0,
+            RowRange { start: 0, end: 10 },
+            filter,
+        );
 
         stage.begin_frame();
         stage.request(key);

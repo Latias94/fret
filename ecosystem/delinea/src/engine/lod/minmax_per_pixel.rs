@@ -9,12 +9,14 @@ use crate::transform::RowSelection;
 pub struct LodScratch {
     buckets: Vec<Bucket>,
     tmp_indices: Vec<usize>,
+    tmp_candidates: Vec<Candidate>,
 }
 
 impl LodScratch {
     pub fn clear(&mut self) {
         self.reset_buckets();
         self.tmp_indices.clear();
+        self.tmp_candidates.clear();
     }
 
     pub fn ensure_bucket_count(&mut self, count: usize) {
@@ -40,6 +42,7 @@ struct Candidate {
     index: usize,
     y: f64,
     y_clamped: f64,
+    seq: u32,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -211,10 +214,12 @@ pub fn minmax_per_pixel_step_selection_with(
 
         let b = &mut scratch.buckets[bucket];
         let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let seq = view_index.min(u32::MAX as usize) as u32;
         let c = Candidate {
             index: i,
             y: yi,
             y_clamped: yi_clamped,
+            seq,
         };
 
         if b.first.is_none() {
@@ -285,10 +290,12 @@ pub fn minmax_per_pixel_step_with(
 
         let b = &mut scratch.buckets[bucket];
         let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let seq = i.min(u32::MAX as usize) as u32;
         let c = Candidate {
             index: i,
             y: yi,
             y_clamped: yi_clamped,
+            seq,
         };
 
         if b.first.is_none() {
@@ -403,10 +410,12 @@ pub fn minmax_per_pixel_step_segmented_with(
 
         let b = &mut scratch.buckets[bucket];
         let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let seq = view_index.min(u32::MAX as usize) as u32;
         let c = Candidate {
             index: i,
             y: yi,
             y_clamped: yi_clamped,
+            seq,
         };
 
         if b.first.is_none() {
@@ -536,10 +545,12 @@ pub fn minmax_per_pixel_step_segmented_selection_with(
 
         let b = &mut scratch.buckets[bucket];
         let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+        let seq = view_index.min(u32::MAX as usize) as u32;
         let c = Candidate {
             index: i,
             y: yi,
             y_clamped: yi_clamped,
+            seq,
         };
 
         if b.first.is_none() {
@@ -615,40 +626,50 @@ pub fn minmax_per_pixel_finalize(
     };
 
     let buckets = &scratch.buckets;
-    let indices = &mut scratch.tmp_indices;
+    let candidates = &mut scratch.tmp_candidates;
+    candidates.clear();
 
     for bucket in buckets {
-        indices.clear();
         if let Some(c) = bucket.first {
-            indices.push(c.index);
+            candidates.push(c);
         }
         if let Some(c) = bucket.min {
-            indices.push(c.index);
+            candidates.push(c);
         }
         if let Some(c) = bucket.max {
-            indices.push(c.index);
+            candidates.push(c);
         }
         if let Some(c) = bucket.last {
-            indices.push(c.index);
+            candidates.push(c);
         }
-        indices.sort_unstable();
-        indices.dedup();
+    }
 
-        for &i in indices.iter() {
-            let xi = x.get(i).copied().unwrap_or(f64::NAN);
-            let yi = bucket
-                .first
-                .and_then(|c| (c.index == i).then_some(c.y))
-                .or_else(|| bucket.min.and_then(|c| (c.index == i).then_some(c.y)))
-                .or_else(|| bucket.max.and_then(|c| (c.index == i).then_some(c.y)))
-                .or_else(|| bucket.last.and_then(|c| (c.index == i).then_some(c.y)))
-                .unwrap_or(f64::NAN);
-            if !xi.is_finite() || !yi.is_finite() {
-                continue;
-            }
-            out_points.push(to_px(xi, yi));
-            out_indices.push(i as u32);
+    candidates.sort_by(|a, b| {
+        let ord = a.index.cmp(&b.index);
+        if ord == core::cmp::Ordering::Equal {
+            a.seq.cmp(&b.seq)
+        } else {
+            ord
         }
+    });
+    candidates.dedup_by(|a, b| a.index == b.index);
+
+    candidates.sort_by(|a, b| {
+        let ord = a.seq.cmp(&b.seq);
+        if ord == core::cmp::Ordering::Equal {
+            a.index.cmp(&b.index)
+        } else {
+            ord
+        }
+    });
+
+    for c in candidates.iter() {
+        let xi = x.get(c.index).copied().unwrap_or(f64::NAN);
+        if !xi.is_finite() || !c.y.is_finite() {
+            continue;
+        }
+        out_points.push(to_px(xi, c.y));
+        out_indices.push(c.index.min(u32::MAX as usize) as u32);
     }
 
     start..out_points.len()

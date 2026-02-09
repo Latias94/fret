@@ -148,7 +148,7 @@ impl MarksStage {
                 continue;
             };
             let dataset_id = series.dataset;
-            let Some(table) = datasets.dataset(dataset_id) else {
+            let Some(table) = datasets.dataset(model.root_dataset_id(dataset_id)) else {
                 full_reset = true;
                 continue;
             };
@@ -324,7 +324,8 @@ impl MarksStage {
                 .or_else(|| plot_viewports_by_grid.values().next().copied())
                 .unwrap_or_default();
 
-            let table = datasets.dataset(series.dataset);
+            let root = model.root_dataset_id(series.dataset);
+            let table = datasets.dataset(root);
             let Some(table) = table else {
                 self.series_index += 1;
                 continue;
@@ -354,6 +355,7 @@ impl MarksStage {
                 let view = selection_stage.table_view_for(
                     table,
                     series.dataset,
+                    root,
                     x_col,
                     selection_range,
                     view_x_filter,
@@ -482,7 +484,8 @@ impl MarksStage {
                                 continue;
                             };
 
-                            let table = datasets.dataset(s.dataset);
+                            let root = model.root_dataset_id(s.dataset);
+                            let table = datasets.dataset(root);
                             let Some(table) = table else {
                                 build.series_index += 1;
                                 build.cursor = BoundsCursor::default();
@@ -2568,7 +2571,7 @@ fn dataset_store_signature(model: &ChartModel, datasets: &DatasetStore) -> u64 {
         };
         let dataset_id = series.dataset;
         hash = fnv1a_step(hash, dataset_id.0);
-        if let Some(table) = datasets.dataset(dataset_id) {
+        if let Some(table) = datasets.dataset(model.root_dataset_id(dataset_id)) {
             hash = fnv1a_step(hash, table.revision.0);
             hash = fnv1a_step(hash, table.row_count as u64);
             hash = fnv1a_step(hash, table.columns.len() as u64);

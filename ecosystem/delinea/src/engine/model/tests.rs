@@ -27,6 +27,9 @@ fn basic_spec() -> ChartSpec {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec {
             id: crate::ids::GridId::new(1),

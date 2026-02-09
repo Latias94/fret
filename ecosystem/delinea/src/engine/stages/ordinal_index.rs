@@ -20,6 +20,7 @@ pub struct OrdinalIndexStage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OrdinalIndexKey {
     dataset: DatasetId,
+    root_dataset: DatasetId,
     x_col: usize,
     ordinal_len: u32,
     start: u32,
@@ -74,7 +75,7 @@ impl OrdinalIndexStage {
                 continue;
             }
 
-            let Some(table) = datasets.dataset(key.dataset) else {
+            let Some(table) = datasets.dataset(key.root_dataset) else {
                 continue;
             };
 
@@ -105,7 +106,10 @@ impl OrdinalIndexStage {
         let mut best: Option<(usize, OrdinalIndexKey)> = None;
 
         for (k, _) in self.cache.iter() {
-            if k.dataset != requested.dataset || k.x_col != requested.x_col {
+            if k.dataset != requested.dataset
+                || k.root_dataset != requested.root_dataset
+                || k.x_col != requested.x_col
+            {
                 continue;
             }
             if k.start != requested.start
@@ -134,7 +138,10 @@ impl OrdinalIndexStage {
         let mut best: Option<(usize, Vec<i32>, usize)> = None;
 
         for (k, entry) in self.cache.iter() {
-            if k.dataset != requested.dataset || k.x_col != requested.x_col {
+            if k.dataset != requested.dataset
+                || k.root_dataset != requested.root_dataset
+                || k.x_col != requested.x_col
+            {
                 continue;
             }
             if k.start != requested.start
@@ -174,7 +181,7 @@ impl OrdinalIndexStage {
         while self.cursor < self.requested.len() {
             let key = self.requested[self.cursor];
 
-            let Some(table) = datasets.dataset(key.dataset) else {
+            let Some(table) = datasets.dataset(key.root_dataset) else {
                 self.cache.remove(&key);
                 self.cursor += 1;
                 continue;
@@ -354,6 +361,7 @@ impl OrdinalIndexStage {
 impl OrdinalIndexKey {
     pub fn new(
         dataset: DatasetId,
+        root_dataset: DatasetId,
         x_col: usize,
         ordinal_len: usize,
         range: RowRange,
@@ -361,6 +369,7 @@ impl OrdinalIndexKey {
     ) -> Self {
         Self {
             dataset,
+            root_dataset,
             x_col,
             ordinal_len: ordinal_len.min(u32::MAX as usize) as u32,
             start: range.start.min(u32::MAX as usize) as u32,
@@ -398,6 +407,7 @@ mod tests {
 
         let key = OrdinalIndexKey::new(
             dataset,
+            dataset,
             0,
             3,
             RowRange { start: 0, end: 100 },
@@ -431,6 +441,7 @@ mod tests {
         datasets.insert(dataset, table);
 
         let key = OrdinalIndexKey::new(
+            dataset,
             dataset,
             0,
             4,

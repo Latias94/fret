@@ -38,6 +38,9 @@ fn basic_spec() -> ChartSpec {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec {
             id: crate::ids::GridId::new(1),
@@ -144,6 +147,9 @@ fn multi_grid_plot_viewports_route_mark_mapping_by_grid() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
         axes: vec![
@@ -368,6 +374,9 @@ fn bar_emits_rect_batch() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -469,6 +478,9 @@ fn bar_filter_mode_none_culls_categories_outside_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -581,6 +593,9 @@ fn horizontal_bar_emits_rect_batch() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -689,6 +704,9 @@ fn stacked_bar_uses_stack_base() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -847,6 +865,9 @@ fn grouped_bars_have_distinct_x_offsets() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -1003,6 +1024,9 @@ fn stacked_and_grouped_bars_share_and_separate_slots() {
                     column: 3,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -1190,6 +1214,9 @@ fn grouped_bars_order_slots_by_first_occurrence_across_stacks() {
                     column: 5,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -1608,6 +1635,9 @@ fn brush_selection_is_scoped_to_grid_and_filters_series_ranges() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_a }, GridSpec { id: grid_b }],
         axes: vec![
@@ -2739,6 +2769,9 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_none() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2865,6 +2898,9 @@ fn data_zoom_y_filter_mode_filter_ignores_x_window_when_x_filter_mode_empty() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -2999,6 +3035,9 @@ fn data_zoom_x_filter_mode_empty_masks_scatter_marks_without_culling_row_selecti
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3138,6 +3177,9 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_filter() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3260,6 +3302,9 @@ fn data_zoom_y_filter_mode_filter_respects_x_window_when_x_filter_mode_weakfilte
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3383,6 +3428,9 @@ fn data_zoom_xy_filter_mode_filter_applies_x_indices_before_y_indices_in_same_fr
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3692,6 +3740,9 @@ fn visual_map_can_emit_stroke_width_for_scatter_buckets() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3824,6 +3875,9 @@ fn band_emits_two_polylines() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -3944,6 +3998,9 @@ fn stacked_area_emits_two_polylines() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4062,6 +4119,9 @@ fn row_range_limits_mark_indices() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4171,6 +4231,9 @@ fn x_window_limits_mark_indices() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4285,6 +4348,9 @@ fn category_x_window_updates_axis_window_and_rounds_axis_pointer_value() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4436,6 +4502,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_line_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4602,6 +4671,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_scatter_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4778,6 +4850,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_band_series() {
                     column: 4,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -4960,6 +5035,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_under_x_weakfilter_for_scatter_ser
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5134,6 +5212,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_when_marks_are_empty_but_selection
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5318,6 +5399,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_lin
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5492,6 +5576,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_under_y_filtered_selection_for_ban
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5662,6 +5749,9 @@ fn axis_pointer_item_trigger_returns_none_when_marks_are_empty_under_x_empty_mas
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5804,6 +5894,9 @@ fn axis_pointer_item_trigger_returns_none_when_line_marks_are_empty_under_x_empt
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -5950,6 +6043,9 @@ fn axis_pointer_item_trigger_returns_none_when_band_marks_are_empty_under_x_empt
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6091,6 +6187,9 @@ fn axis_pointer_item_trigger_is_suppressed_for_y_empty_masked_line_samples() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6248,6 +6347,9 @@ fn axis_pointer_item_trigger_does_not_hit_clamped_y_empty_gap_for_line_series() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6420,6 +6522,9 @@ fn axis_pointer_tooltip_respects_y_empty_mask_for_bar_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6580,6 +6685,9 @@ fn axis_fixed_overrides_data_window_for_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6695,6 +6803,9 @@ fn set_series_visible_hides_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6861,6 +6972,9 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -6989,6 +7103,9 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7136,6 +7253,9 @@ fn data_window_filter_mode_resets_to_spec_default() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7256,6 +7376,9 @@ fn data_zoom_x_filter_mode_empty_preserves_base_row_selection_for_monotonic_x() 
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7370,6 +7493,9 @@ fn filter_mode_empty_line_marks_respect_indices_selection_from_y_filter() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7503,6 +7629,9 @@ fn filter_mode_empty_does_not_cull_y_filtered_row_selection_by_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7636,6 +7765,9 @@ fn data_zoom_x_filter_mode_weakfilter_matches_filter_for_monotonic_x() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7750,6 +7882,9 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -7888,6 +8023,9 @@ fn data_zoom_xy_filter_mode_weakfilter_prefers_xy_indices_over_x_only_indices_fo
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8043,6 +8181,9 @@ fn data_zoom_xy_filter_mode_weakfilter_keeps_mixed_side_outliers_for_scatter() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8195,6 +8336,9 @@ fn data_zoom_xy_filter_mode_weakfilter_drops_only_same_side_outliers_for_band() 
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8326,6 +8470,9 @@ fn data_zoom_x_filter_mode_none_vs_filter_vs_empty_y_axis_window_semantics() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
@@ -8472,6 +8619,9 @@ fn data_zoom_x_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8603,6 +8753,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_line_marks_are_e
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8758,6 +8911,9 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_li
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -8921,6 +9077,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_band_marks_are_e
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9081,6 +9240,9 @@ fn data_zoom_x_filter_mode_empty_with_y_filter_keeps_axis_windows_stable_when_ba
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9241,6 +9403,9 @@ fn data_zoom_x_filter_mode_empty_keeps_axis_windows_stable_when_scatter_lod_mark
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9391,6 +9556,9 @@ fn data_zoom_y_filter_mode_empty_breaks_line_into_segments_for_interleaved_out_o
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9785,6 +9953,9 @@ fn data_zoom_y_filter_mode_empty_keeps_band_visible_when_interval_intersects_win
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -9917,6 +10088,9 @@ fn data_zoom_y_filter_mode_filter_culls_band_rows_by_interval_intersection() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10036,6 +10210,9 @@ fn data_zoom_y_filter_mode_empty_masks_bar_marks_outside_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10161,6 +10338,9 @@ fn data_zoom_x_filter_mode_empty_breaks_band_into_segments_for_interleaved_out_o
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10305,6 +10485,9 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10424,6 +10607,9 @@ fn hover_does_not_rebuild_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10523,6 +10709,9 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10642,6 +10831,9 @@ fn axis_pointer_item_trigger_is_suppressed_when_far_from_series() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10758,6 +10950,9 @@ fn axis_pointer_axis_trigger_emits_multi_series_tooltip() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -10904,6 +11099,9 @@ fn output_hover_is_gated_by_axis_trigger_marker_distance() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11022,6 +11220,9 @@ fn axis_pointer_axis_trigger_respects_x_filter_for_non_monotonic_x() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11157,6 +11358,9 @@ fn axis_pointer_axis_trigger_emits_range_for_band_series() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11277,6 +11481,9 @@ fn axis_pointer_axis_trigger_samples_scatter_by_nearest_point() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11401,6 +11608,9 @@ fn axis_pointer_axis_trigger_handles_indices_selection_from_y_filter() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11571,6 +11781,9 @@ fn axis_pointer_axis_trigger_uses_nearest_x_index_for_large_non_monotonic_views(
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11713,6 +11926,9 @@ fn data_zoom_x_filter_mode_materializes_indices_selection_for_large_non_monotoni
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11846,6 +12062,9 @@ fn data_zoom_x_then_y_filter_materializes_indices_in_order_for_large_non_monoton
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -11992,6 +12211,9 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             },
             DatasetSpec {
                 id: dataset2_id,
@@ -12005,6 +12227,9 @@ fn filter_plan_isolated_per_grid_for_x_indices_materialization() {
                         column: 1,
                     },
                 ],
+
+                from: None,
+                transforms: Vec::new(),
             },
         ],
         grids: vec![GridSpec { id: grid1_id }, GridSpec { id: grid2_id }],
@@ -12188,6 +12413,9 @@ fn axis_pointer_axis_trigger_handles_non_monotonic_x_by_nearest_sample() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12339,6 +12567,9 @@ fn axis_pointer_axis_trigger_includes_placeholders_for_missing_series_values() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12481,6 +12712,9 @@ fn axis_pointer_item_trigger_snaps_to_hit_point_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12589,6 +12823,9 @@ fn axis_pointer_axis_trigger_snaps_axis_value_to_nearest_sample_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12710,6 +12947,9 @@ fn axis_pointer_axis_trigger_uses_first_visible_series_as_primary() {
                 FieldSpec { id: x_b, column: 2 },
                 FieldSpec { id: y_b, column: 3 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -12869,6 +13109,9 @@ fn axis_pointer_axis_trigger_snaps_category_y_to_band_center_when_enabled() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13003,6 +13246,9 @@ fn axis_pointer_axis_trigger_emits_shadow_rect_for_category_trigger_axis() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13130,6 +13376,9 @@ fn axis_pointer_shadow_rect_respects_category_band_edges_under_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13265,6 +13514,9 @@ fn category_x_filter_culls_marks_for_non_monotonic_line_and_samples_first_duplic
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13440,6 +13692,9 @@ fn category_x_filter_materializes_indices_for_scatter_and_respects_base_row_rang
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13601,6 +13856,9 @@ fn scatter_emits_point_marks() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13710,6 +13968,9 @@ fn scatter_filter_mode_none_culls_points_outside_x_window() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13835,6 +14096,9 @@ fn scatter_large_mode_is_pixel_bounded() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -13958,6 +14222,9 @@ fn scatter_large_threshold_can_force_large_mode() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14100,6 +14367,9 @@ fn scatter_progressive_can_force_multiple_steps() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14213,6 +14483,9 @@ fn scatter_large_mode_respects_y_empty_mask() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14382,6 +14655,9 @@ fn scatter_large_mode_does_not_hit_y_empty_masked_outlier() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14588,6 +14864,9 @@ fn append_only_marks_rebuild_updates_lod_polyline_without_clearing_nodes() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14754,6 +15033,9 @@ fn bar_item_trigger_does_not_hit_y_empty_masked_outlier() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -14949,6 +15231,9 @@ fn axis_pointer_shadow_rect_is_emitted_for_category_axis_when_bar_is_y_empty_mas
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15109,6 +15394,9 @@ fn data_zoom_x_filter_mode_empty_masks_bar_marks_without_culling_row_selection()
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15268,6 +15556,9 @@ fn axis_pointer_tooltip_respects_x_empty_mask_for_bar_when_marks_are_empty_but_s
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15439,6 +15730,9 @@ fn axis_pointer_item_trigger_returns_none_for_bar_under_x_empty_mask_when_marks_
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15612,6 +15906,9 @@ fn axis_pointer_item_trigger_returns_none_for_stacked_bar_under_x_empty_mask_whe
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15785,6 +16082,9 @@ fn axis_pointer_item_trigger_returns_none_for_horizontal_bar_under_x_empty_mask_
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -15941,6 +16241,9 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_stacked_bar_un
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16145,6 +16448,9 @@ fn axis_pointer_axis_trigger_emits_shadow_and_missing_tooltip_for_horizontal_bar
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16322,6 +16628,9 @@ fn line_large_mode_is_pixel_bounded() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16445,6 +16754,9 @@ fn lod_scatter_large_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16565,6 +16877,9 @@ fn lod_line_large_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16685,6 +17000,9 @@ fn lod_bar_mode_is_budget_invariant() {
                     column: 1,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16845,6 +17163,9 @@ fn stacked_line_series_offsets_y() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -16983,6 +17304,9 @@ fn stack_strategy_samesign_separates_positive_and_negative() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
@@ -17281,6 +17605,9 @@ fn band_missing_upper_breaks_and_preserves_pairing() {
                     column: 2,
                 },
             ],
+
+            from: None,
+            transforms: Vec::new(),
         }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
