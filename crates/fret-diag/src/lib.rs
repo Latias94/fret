@@ -7978,7 +7978,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 52] {
+fn ui_gallery_suite_scripts() -> [&'static str; 53] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -8029,13 +8029,14 @@ fn ui_gallery_suite_scripts() -> [&'static str; 52] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 42] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 43] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -8068,6 +8069,7 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 42] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
@@ -8607,6 +8609,7 @@ fn ui_gallery_script_requires_code_editor_torture_folds_placeholder_present_unde
     matches!(
         name,
         "ui-gallery-code-editor-torture-folds-soft-wrap-inline-preedit-with-decorations-composed-baseline.json"
+            | "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
     )
 }
 
@@ -8667,6 +8670,7 @@ fn ui_gallery_script_requires_code_editor_torture_inlays_present_under_inline_pr
     matches!(
         name,
         "ui-gallery-code-editor-torture-inlays-soft-wrap-inline-preedit-with-decorations-composed-baseline.json"
+            | "ui-gallery-code-editor-torture-decorations-soft-wrap-inline-preedit-composed-baseline.json"
     )
 }
 
