@@ -85,3 +85,6 @@ Active workstreams:
 - `docs/workstreams/router-v1-todo.md`
 - `docs/workstreams/router-tanstack-parity-v1.md`
 - `docs/workstreams/router-tanstack-parity-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1.md`
+- `docs/workstreams/fret-interaction-kernel-v1-todo.md`
+- `docs/workstreams/fret-interaction-kernel-v1-milestones.md`
