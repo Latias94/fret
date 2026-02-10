@@ -164,6 +164,12 @@ impl Marquee {
 
             let theme_for_inner = theme.clone();
             let build_inner = move |cx: &mut ElementContext<'_, H>, paused: bool| {
+                let reduced_motion = fret_ui_kit::declarative::prefers_reduced_motion(
+                    cx,
+                    fret_ui::Invalidation::Paint,
+                    false,
+                );
+                let paused = paused || reduced_motion;
                 let animating = speed.0.abs() > 0.0 && !paused;
                 scheduling::set_continuous_frames(cx, animating);
 
@@ -191,7 +197,9 @@ impl Marquee {
                 });
 
                 let translate_x = if speed.0.abs() > 0.0 {
-                    let base = cycle_width_px.unwrap_or_else(|| cx.bounds.size.width);
+                    let base = cycle_width_px.unwrap_or_else(|| {
+                        cx.environment_viewport_width(fret_ui::Invalidation::Layout)
+                    });
                     let gap_px = MetricRef::space(track_gap).resolve(&theme_for_inner);
                     let cycle = base.0.max(0.0) + gap_px.0.max(0.0);
                     if cycle > 0.0 {

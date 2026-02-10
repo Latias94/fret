@@ -1,6 +1,6 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Point, Px, Rect, Scene, SceneOp,
+    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Paint, Point, Px, Rect, Scene, SceneOp,
     SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
@@ -235,9 +235,14 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             background,
             border,
             corner_radii,
-            border_color,
+            border_paint,
             ..
         } = *op
+        else {
+            continue;
+        };
+
+        let (Paint::Solid(background), Paint::Solid(border_color)) = (background, border_paint)
         else {
             continue;
         };
@@ -319,6 +324,19 @@ impl fret_core::SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -532,11 +550,20 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             background,
             border,
             corner_radii,
-            border_color,
+            border_paint,
             ..
         } = *op
         else {
             continue;
+        };
+
+        let background = match background {
+            Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
+        };
+        let border_color = match border_paint {
+            Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
         };
 
         if background != Color::TRANSPARENT {
@@ -5610,10 +5637,14 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
                 rect,
                 background,
                 border,
-                border_color,
+                border_paint,
                 corner_radii,
                 ..
             } = *op
+            else {
+                continue;
+            };
+            let (Paint::Solid(background), Paint::Solid(border_color)) = (background, border_paint)
             else {
                 continue;
             };

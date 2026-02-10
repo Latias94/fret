@@ -23,6 +23,7 @@ use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
@@ -208,7 +209,7 @@ impl Tabs {
 
             let selected = cx
                 .get_model_cloned(&model, Invalidation::Layout)
-                .unwrap_or_else(|| Arc::<str>::from(""));
+                .unwrap_or_else(empty_arc_str);
             let selected_idx = items
                 .iter()
                 .position(|it| it.value.as_ref() == selected.as_ref());

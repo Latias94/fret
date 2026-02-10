@@ -8,6 +8,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     AttributedText, Axis, Edges, FontWeight, KeyCode, Px, SemanticsRole, Size, TextOverflow,
@@ -39,6 +40,12 @@ use crate::motion::ms_to_frames;
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
+
+fn default_autocomplete_listbox_test_id() -> Arc<str> {
+    static ID: OnceLock<Arc<str>> = OnceLock::new();
+    ID.get_or_init(|| Arc::<str>::from("material3-autocomplete-listbox"))
+        .clone()
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AutocompleteVariant {
@@ -290,6 +297,9 @@ fn autocomplete_runtime_models<H: UiHost>(
 struct AutocompleteFrameState {
     last_query: String,
     was_focused_input: bool,
+    items_ptr: usize,
+    items_len: usize,
+    filtered_items: Option<Arc<[AutocompleteItem]>>,
 }
 
 #[derive(Debug, Default)]
@@ -398,8 +408,6 @@ fn autocomplete_into_element<H: UiHost>(
             .get_model_cloned(&autocomplete.query, Invalidation::Layout)
             .unwrap_or_default();
 
-        let filtered_items = filter_items(&query, &autocomplete.items);
-
         let selected_value = autocomplete
             .selected_value
             .as_ref()
@@ -411,14 +419,26 @@ fn autocomplete_into_element<H: UiHost>(
             .get()
             .is_some_and(|id| cx.is_focused_element(id));
 
-        let (query_changed, focus_gained) = cx.with_state(AutocompleteFrameState::default, |st| {
+        let (filtered_items, query_changed, focus_gained) =
+            cx.with_state(AutocompleteFrameState::default, |st| {
             let changed = st.last_query != query;
+            let ptr = Arc::as_ptr(&autocomplete.items) as *const AutocompleteItem as usize;
+            let len = autocomplete.items.len();
+            if st.filtered_items.is_none() || changed || st.items_ptr != ptr || st.items_len != len {
+                st.items_ptr = ptr;
+                st.items_len = len;
+                st.filtered_items = Some(filter_items(&query, &autocomplete.items));
+            }
             if changed {
                 st.last_query = query.clone();
             }
             let focus_gained = focused_input && !st.was_focused_input;
             st.was_focused_input = focused_input;
-            (changed, focus_gained)
+            (
+                st.filtered_items.as_ref().expect("filtered_items").clone(),
+                changed,
+                focus_gained,
+            )
         });
 
         if query_changed && suppress_open {
@@ -627,7 +647,11 @@ fn autocomplete_into_element<H: UiHost>(
                 return trigger;
             };
 
-            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
+            let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
+                cx,
+                fret_ui::Invalidation::Layout,
+                Px(0.0),
+            );
 
             let item_height = {
                 let theme = Theme::global(&*cx.app);
@@ -925,18 +949,74 @@ fn autocomplete_listbox_panel<H: UiHost>(
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
 ) -> AnyElement {
-    let listbox_test_id = test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{}-listbox", id)));
+    #[derive(Default)]
+    struct DerivedTestIds {
+        base: Option<Arc<str>>,
+        listbox: Option<Arc<str>>,
+    }
+
+    let listbox_test_id = cx.with_state(DerivedTestIds::default, |st| {
+        if st.base.as_deref() != test_id.as_deref() {
+            st.base = test_id.clone();
+            st.listbox = st
+                .base
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
+        }
+        st.listbox.clone()
+    });
 
     let sem = SemanticsProps {
         role: SemanticsRole::ListBox,
         label: a11y_label.clone(),
-        test_id: listbox_test_id
-            .or_else(|| Some(Arc::<str>::from("material3-autocomplete-listbox"))),
+        test_id: listbox_test_id.or_else(|| Some(default_autocomplete_listbox_test_id())),
         labelled_by_element,
         ..Default::default()
     };
+
+    #[derive(Default)]
+    struct DerivedOptionTestIds {
+        ptr: usize,
+        len: usize,
+        base: Option<Arc<str>>,
+        option_test_ids: Option<Arc<[Option<Arc<str>>]>>,
+    }
+
+    let option_test_ids = cx.with_state(DerivedOptionTestIds::default, |st| {
+        let ptr = Arc::as_ptr(&items) as *const AutocompleteItem as usize;
+        let len = items.len();
+        if st.option_test_ids.is_none()
+            || st.ptr != ptr
+            || st.len != len
+            || st.base.as_deref() != test_id.as_deref()
+        {
+            st.ptr = ptr;
+            st.len = len;
+            st.base = test_id.clone();
+            let base = st.base.as_ref();
+            st.option_test_ids = Some(Arc::from(
+                items
+                    .iter()
+                    .map(|item| {
+                        item.test_id.clone().or_else(|| {
+                            base.map(|parent| {
+                                Arc::<str>::from(format!(
+                                    "{}-option-{}",
+                                    parent.as_ref(),
+                                    sanitize_test_id_suffix(item.value.as_ref())
+                                ))
+                            })
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+            ));
+        }
+
+        st.option_test_ids
+            .as_ref()
+            .expect("option_test_ids")
+            .clone()
+    });
 
     let (surface, corner, selected_bg, label_style, label_color, item_height) = {
         let theme = Theme::global(&*cx.app);
@@ -1023,15 +1103,8 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             .is_some_and(|v| v.as_ref() == item.value.as_ref());
                         let label_style = label_style.clone();
                         let query = query.clone();
-                        let option_test_id = item.test_id.clone().or_else(|| {
-                            test_id.as_ref().map(|parent| {
-                                Arc::<str>::from(format!(
-                                    "{}-option-{}",
-                                    parent,
-                                    sanitize_test_id_suffix(item.value.as_ref())
-                                ))
-                            })
-                        });
+                        let option_test_id =
+                            option_test_ids.get(idx).cloned().unwrap_or(None);
 
                         let open_for_select = open.clone();
                         let suppress_open_for_select = suppress_open.clone();

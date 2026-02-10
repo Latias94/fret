@@ -31,6 +31,8 @@ Landed snapshot gates (in-tree):
 - `extras_avatar_stack_default.json`
 - `extras_avatar_stack_overflow_default.json`
 - `extras_banner_default.json`
+- `extras_kanban_custom_cards.json`
+- `extras_kanban_default.json`
 - `extras_marquee_default.json`
 - `extras_marquee_right_default.json`
 - `extras_marquee_static_default.json`
@@ -46,12 +48,17 @@ Landed behavior gates (in-tree):
 - `ecosystem/fret-ui-shadcn/tests/extras_marquee_motion.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_marquee_pause_on_hover.rs`
 - `ecosystem/fret-ui-shadcn/tests/extras_relative_time_auto_update.rs`
+- `tools/diag-scripts/ui-gallery-shadcn-extras-kanban-dnd.json`
 
 Landed perf gates (in-tree):
 
 - `tools/diag-scripts/extras-marquee-steady.json`
+- `tools/diag-scripts/ui-gallery-shadcn-extras-screenshots.json`
 - `tools/perf/diag_extras_marquee_gate.sh`
+- `tools/perf/diag_extras_marquee_gate.ps1`
+- `tools/perf/diag_extras_marquee_gate.py`
 - `docs/workstreams/perf-baselines/policies/extras-marquee-steady.v1.json`
+- `docs/workstreams/perf-baselines/extras-marquee-steady.windows-rtx4090.v1.json`
 
 ## Candidate components (staged)
 

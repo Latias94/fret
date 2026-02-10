@@ -279,9 +279,16 @@ impl Dialog {
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
-                let on_dismiss_request_for_request = self.on_dismiss_request.clone();
                 let on_open_auto_focus = self.on_open_auto_focus.clone();
-                let on_close_auto_focus = self.on_close_auto_focus.clone();
+                let policy = radix_dialog::DialogCloseAutoFocusGuardPolicy::for_modal(true);
+                let (on_dismiss_request_for_request, on_close_auto_focus) =
+                    radix_dialog::dialog_close_auto_focus_guard_hooks(
+                        cx,
+                        policy,
+                        self.open.clone(),
+                        self.on_dismiss_request.clone(),
+                        self.on_close_auto_focus.clone(),
+                    );
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
@@ -310,7 +317,7 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
@@ -914,6 +921,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
@@ -2174,6 +2194,92 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn dialog_escape_closes_by_default_when_handler_allows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let dismiss_reason: Rc<Cell<Option<fret_ui::action::DismissReason>>> =
+            Rc::new(Cell::new(None));
+        let dismiss_reason_cell = dismiss_reason.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            dismiss_reason_cell.set(Some(req.reason));
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .on_dismiss_request(Some(handler.clone()))
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            DialogContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Escape,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            dismiss_reason.get(),
+            Some(fret_ui::action::DismissReason::Escape)
+        );
     }
 
     #[test]

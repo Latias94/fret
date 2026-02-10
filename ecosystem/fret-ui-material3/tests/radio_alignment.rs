@@ -18,6 +18,13 @@ use fret_runtime::{
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+
+fn paint_alpha(paint: &fret_core::Paint) -> f32 {
+    match paint {
+        fret_core::Paint::Solid(c) => c.a,
+        _ => 1.0,
+    }
+}
 use fret_ui_material3::tokens::v30::{
     ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
 };
@@ -311,6 +318,19 @@ impl fret_core::SvgService for FakeUiServices {
     }
 
     fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for FakeUiServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         false
     }
 }
@@ -2832,7 +2852,7 @@ fn radio_selected_dot_is_centered_in_outline() {
 
                 let border_any =
                     border.top.0 > 0.0 || border.right.0 > 0.0 || border.bottom.0 > 0.0;
-                if border_any && background.a <= 0.01 {
+                if border_any && paint_alpha(background) <= 0.01 {
                     if outline.is_none_or(|r| rect.size.width.0 < r.size.width.0 + 1e-3) {
                         outline = Some(*rect);
                     }
@@ -2840,7 +2860,7 @@ fn radio_selected_dot_is_centered_in_outline() {
                 }
 
                 if border == &Edges::all(Px(0.0))
-                    && background.a > 0.5
+                    && paint_alpha(background) > 0.5
                     && rect.size.width.0 <= 12.0
                     && rect.size.height.0 <= 12.0
                 {
@@ -2960,7 +2980,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3100,7 +3120,7 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || background.a <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3306,8 +3326,8 @@ fn switch_keyboard_ripple_origin_ignores_stale_pointer_down() {
                     };
                     if order != DrawOrder(1)
                         || border != Edges::all(Px(0.0))
-                        || background.a <= 0.001
-                        || background.a >= 0.9
+                        || paint_alpha(&background) <= 0.001
+                        || paint_alpha(&background) >= 0.9
                         || (rect.size.width.0 - rect.size.height.0).abs() >= 0.25
                     {
                         continue;
@@ -3458,7 +3478,9 @@ fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
                     background,
                     border,
                     ..
-                } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => Some(background.a),
+                } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => {
+                    Some(paint_alpha(background))
+                }
                 _ => None,
             })
             .next()
@@ -4174,7 +4196,7 @@ fn menu_style_overrides_apply_to_container_and_label() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
         }),
         "expected MenuStyle.container_background to affect at least one quad background"
     );
@@ -4454,7 +4476,7 @@ fn dialog_style_overrides_apply_to_container_and_text() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
         }),
         "expected DialogStyle.container_background to affect at least one quad background"
     );

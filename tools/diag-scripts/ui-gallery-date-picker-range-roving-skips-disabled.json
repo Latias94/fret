@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "button",
+          "name": "Feb 13, 2024"
+        }
+      },
+      "timeout_frames": 180
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "role_and_name",
+        "role": "button",
+        "name": "Feb 13, 2024"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "button",
+          "name": "Tuesday, February 13th, 2024, selected"
+        }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "arrow_right" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "role_and_name",
+          "role": "button",
+          "name": "Friday, February 16th, 2024"
+        }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-date-picker-range-roving-skips-disabled"
+    }
+  ]
+}

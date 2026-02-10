@@ -59,6 +59,11 @@ pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
     pub style: window_overlays::ToastLayerStyle,
+    pub toaster_id: Option<std::sync::Arc<str>>,
+    pub visible_toasts: usize,
+    pub expand: bool,
+    pub rich_colors: bool,
+    pub invert: bool,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -287,6 +292,11 @@ impl OverlayRequest {
                 store,
                 position: window_overlays::ToastPosition::default(),
                 style: window_overlays::ToastLayerStyle::default(),
+                toaster_id: None,
+                visible_toasts: window_overlays::DEFAULT_VISIBLE_TOASTS,
+                expand: false,
+                rich_colors: false,
+                invert: false,
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -311,6 +321,51 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn toast_toaster_id(mut self, id: impl Into<std::sync::Arc<str>>) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_toaster_id requires a ToastLayer request");
+        spec.toaster_id = Some(id.into());
+        self
+    }
+
+    pub fn toast_visible_toasts(mut self, visible_toasts: usize) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_visible_toasts requires a ToastLayer request");
+        spec.visible_toasts = visible_toasts.max(1);
+        self
+    }
+
+    pub fn toast_expand_by_default(mut self, expand: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_expand_by_default requires a ToastLayer request");
+        spec.expand = expand;
+        self
+    }
+
+    pub fn toast_rich_colors(mut self, rich_colors: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_rich_colors requires a ToastLayer request");
+        spec.rich_colors = rich_colors;
+        self
+    }
+
+    pub fn toast_invert(mut self, invert: bool) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_invert requires a ToastLayer request");
+        spec.invert = invert;
         self
     }
 
@@ -603,6 +658,11 @@ impl OverlayController {
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
                     .style(spec.style)
+                    .toaster_id_opt(spec.toaster_id)
+                    .visible_toasts(spec.visible_toasts)
+                    .expand_by_default(spec.expand)
+                    .rich_colors(spec.rich_colors)
+                    .invert(spec.invert)
                     .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
@@ -1186,6 +1246,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

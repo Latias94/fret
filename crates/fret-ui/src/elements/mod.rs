@@ -15,7 +15,11 @@ pub use queries::{
 };
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
 #[cfg(feature = "diagnostics")]
-pub use runtime::{NodeEntryRootOverwrite, WindowElementDiagnosticsSnapshot};
+pub use runtime::{
+    ElementObservedEnvironmentDiagnosticsSnapshot, EnvironmentQueryDiagnosticsSnapshot,
+    NodeEntryRootOverwrite, ObservedEnvironmentKeyDiagnosticsSnapshot,
+    WindowElementDiagnosticsSnapshot,
+};
 
 pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, record_timer_target, record_transient_event,

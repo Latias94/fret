@@ -454,8 +454,8 @@ impl TextField {
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
-                                .get_model_cloned(&model, Invalidation::Layout)
-                                .map(|v| !v.is_empty())
+                                .read_model_ref(&model, Invalidation::Layout, |v| !v.is_empty())
+                                .ok()
                                 .unwrap_or(false);
 
                             let mut container = ContainerProps::default();
@@ -855,11 +855,31 @@ impl TextField {
                                         icon_el
                                     };
 
+                                    #[derive(Default)]
+                                    struct DerivedTestIds {
+                                        base: Option<Arc<str>>,
+                                        explicit: Option<Arc<str>>,
+                                        icon: Option<Arc<str>>,
+                                    }
+
                                     let icon_test_id =
-                                        trailing_icon_test_id.clone().or_else(|| {
-                                            test_id.as_ref().map(|id| {
-                                                Arc::<str>::from(format!("{id}-trailing-icon"))
-                                            })
+                                        cx.with_state(DerivedTestIds::default, |st| {
+                                            if st.base.as_deref() != test_id.as_deref()
+                                                || st.explicit.as_deref()
+                                                    != trailing_icon_test_id.as_deref()
+                                            {
+                                                st.base = test_id.clone();
+                                                st.explicit = trailing_icon_test_id.clone();
+                                                st.icon = st.explicit.clone().or_else(|| {
+                                                    st.base.as_ref().map(|id| {
+                                                        Arc::<str>::from(format!(
+                                                            "{}-trailing-icon",
+                                                            id.as_ref()
+                                                        ))
+                                                    })
+                                                });
+                                            }
+                                            st.icon.clone()
                                         });
 
                                     let icon_a11y_label = trailing_icon_a11y_label.clone();
@@ -894,10 +914,11 @@ impl TextField {
                                         },
                                         move |cx, state| {
                                             if enabled {
+                                                let handler = handler.clone();
                                                 cx.pressable_on_pointer_down(Arc::new(
                                                     move |host, action_cx, down: PointerDownCx| {
                                                         host.request_focus(input_id_for_focus);
-                                                        if let Some(h) = handler.clone() {
+                                                        if let Some(ref h) = handler {
                                                             return h(host, action_cx, down);
                                                         }
                                                         PressablePointerDownResult::Continue

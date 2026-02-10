@@ -11,6 +11,7 @@
 //! - Range (two-thumb) slider.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use fret_core::{
     Color, Corners, CursorIcon, DrawOrder, Edges, KeyCode, LayoutDirection, MouseButton, Px, Rect,
@@ -34,6 +35,13 @@ use crate::foundation::indication::material_pressable_indication_config;
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::slider as slider_tokens;
+
+fn default_range_slider_a11y_label() -> Arc<str> {
+    static LABEL: OnceLock<Arc<str>> = OnceLock::new();
+    LABEL
+        .get_or_init(|| Arc::<str>::from("range slider"))
+        .clone()
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -484,7 +492,23 @@ pub fn slider<H: UiHost>(
     semantics.test_id = test_id;
     semantics.focusable = !disabled;
     semantics.disabled = disabled;
-    semantics.value = Some(Arc::from(format!("{value_now:.3}")));
+
+    #[derive(Default)]
+    struct DerivedValueString {
+        bits: u32,
+        value: Option<Arc<str>>,
+    }
+
+    let value_text = cx.with_state(DerivedValueString::default, |st| {
+        let bits = value_now.to_bits();
+        if st.value.is_none() || st.bits != bits {
+            st.bits = bits;
+            st.value = Some(Arc::from(format!("{value_now:.3}")));
+        }
+        st.value.as_ref().expect("value").clone()
+    });
+
+    semantics.value = Some(value_text);
 
     cx.semantics_with_id(semantics, move |cx, semantics_id| {
         let layout_direction = resolved_layout_direction(cx, default_layout_direction);
@@ -1126,10 +1150,29 @@ pub fn range_slider<H: UiHost>(
     semantics.test_id = test_id.clone();
     semantics.focusable = false;
     semantics.disabled = !enabled;
-    semantics.value = Some(Arc::from(format!(
-        "{:.3}..{:.3}",
-        values_now[0], values_now[1]
-    )));
+
+    #[derive(Default)]
+    struct DerivedRangeValueString {
+        start_bits: u32,
+        end_bits: u32,
+        value: Option<Arc<str>>,
+    }
+
+    let range_value_text = cx.with_state(DerivedRangeValueString::default, |st| {
+        let start_bits = values_now[0].to_bits();
+        let end_bits = values_now[1].to_bits();
+        if st.value.is_none() || st.start_bits != start_bits || st.end_bits != end_bits {
+            st.start_bits = start_bits;
+            st.end_bits = end_bits;
+            st.value = Some(Arc::from(format!(
+                "{:.3}..{:.3}",
+                values_now[0], values_now[1]
+            )));
+        }
+        st.value.as_ref().expect("value").clone()
+    });
+
+    semantics.value = Some(range_value_text);
 
     let track_h = Px(active_track_h.0.max(inactive_track_h.0));
 
@@ -1145,7 +1188,68 @@ pub fn range_slider<H: UiHost>(
 
         let thumb_label_base: Arc<str> = a11y_label
             .clone()
-            .unwrap_or_else(|| Arc::from("range slider"));
+            .unwrap_or_else(default_range_slider_a11y_label);
+
+        #[derive(Default)]
+        struct DerivedThumbStrings {
+            label_base: Option<Arc<str>>,
+            test_id_base: Option<Arc<str>>,
+            start_label: Option<Arc<str>>,
+            end_label: Option<Arc<str>>,
+            start_test_id: Option<Arc<str>>,
+            end_test_id: Option<Arc<str>>,
+        }
+
+        let (start_label, end_label, start_test_id, end_test_id) =
+            cx.with_state(DerivedThumbStrings::default, |st| {
+                if st.start_label.is_none()
+                    || st.label_base.as_deref() != Some(thumb_label_base.as_ref())
+                    || st.test_id_base.as_deref() != test_id.as_deref()
+                {
+                    st.label_base = Some(thumb_label_base.clone());
+                    st.test_id_base = test_id.clone();
+                    st.start_label =
+                        Some(Arc::from(format!("{} start", thumb_label_base.as_ref())));
+                    st.end_label = Some(Arc::from(format!("{} end", thumb_label_base.as_ref())));
+                    st.start_test_id = test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{}.start", id.as_ref())));
+                    st.end_test_id = test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{}.end", id.as_ref())));
+                }
+                (
+                    st.start_label.as_ref().expect("start_label").clone(),
+                    st.end_label.as_ref().expect("end_label").clone(),
+                    st.start_test_id.clone(),
+                    st.end_test_id.clone(),
+                )
+            });
+
+        #[derive(Default)]
+        struct DerivedThumbValues {
+            start_bits: u32,
+            end_bits: u32,
+            start: Option<Arc<str>>,
+            end: Option<Arc<str>>,
+        }
+
+        let (start_value_text, end_value_text) = cx.with_state(DerivedThumbValues::default, |st| {
+            let start_bits = values_now[0].to_bits();
+            let end_bits = values_now[1].to_bits();
+            if st.start.is_none() || st.start_bits != start_bits {
+                st.start_bits = start_bits;
+                st.start = Some(Arc::from(format!("{:.3}", values_now[0])));
+            }
+            if st.end.is_none() || st.end_bits != end_bits {
+                st.end_bits = end_bits;
+                st.end = Some(Arc::from(format!("{:.3}", values_now[1])));
+            }
+            (
+                st.start.as_ref().expect("start_value").clone(),
+                st.end.as_ref().expect("end_value").clone(),
+            )
+        });
 
         let last = cx.last_bounds_for_element(group_semantics_id);
         let (start_left, end_left) = if let Some(bounds) = last {
@@ -1169,11 +1273,11 @@ pub fn range_slider<H: UiHost>(
         start_thumb_semantics.layout.size.width = Length::Px(handle_h);
         start_thumb_semantics.layout.size.height = Length::Px(handle_h);
         start_thumb_semantics.role = SemanticsRole::Slider;
-        start_thumb_semantics.label = Some(Arc::from(format!("{thumb_label_base} start")));
-        start_thumb_semantics.test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}.start")));
+        start_thumb_semantics.label = Some(start_label);
+        start_thumb_semantics.test_id = start_test_id;
         start_thumb_semantics.focusable = enabled;
         start_thumb_semantics.disabled = !enabled;
-        start_thumb_semantics.value = Some(Arc::from(format!("{:.3}", values_now[0])));
+        start_thumb_semantics.value = Some(start_value_text);
 
         let start_thumb = cx.semantics_with_id(start_thumb_semantics, |cx, semantics_id| {
             start_thumb_id = Some(semantics_id);
@@ -1235,11 +1339,11 @@ pub fn range_slider<H: UiHost>(
         end_thumb_semantics.layout.size.width = Length::Px(handle_h);
         end_thumb_semantics.layout.size.height = Length::Px(handle_h);
         end_thumb_semantics.role = SemanticsRole::Slider;
-        end_thumb_semantics.label = Some(Arc::from(format!("{thumb_label_base} end")));
-        end_thumb_semantics.test_id = test_id.as_ref().map(|id| Arc::from(format!("{id}.end")));
+        end_thumb_semantics.label = Some(end_label);
+        end_thumb_semantics.test_id = end_test_id;
         end_thumb_semantics.focusable = enabled;
         end_thumb_semantics.disabled = !enabled;
-        end_thumb_semantics.value = Some(Arc::from(format!("{:.3}", values_now[1])));
+        end_thumb_semantics.value = Some(end_value_text);
 
         let end_thumb = cx.semantics_with_id(end_thumb_semantics, |cx, semantics_id| {
             end_thumb_id = Some(semantics_id);

@@ -239,16 +239,26 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             rect,
             background,
             border,
-            border_color,
+            border_paint,
             corner_radii,
             ..
-        } => SnapSceneOp::Quad {
-            rect: snap_rect(rect),
-            background: snap_color(background),
-            border: snap_edges(border),
-            border_color: snap_color(border_color),
-            corner_radii: snap_corners(corner_radii),
-        },
+        } => {
+            let background = match background {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            let border_color = match border_paint {
+                fret_core::Paint::Solid(c) => c,
+                _ => fret_core::Color::TRANSPARENT,
+            };
+            SnapSceneOp::Quad {
+                rect: snap_rect(rect),
+                background: snap_color(background),
+                border: snap_edges(border),
+                border_color: snap_color(border_color),
+                corner_radii: snap_corners(corner_radii),
+            }
+        }
         SceneOp::Image {
             rect, fit, opacity, ..
         } => SnapSceneOp::Image {
@@ -396,6 +406,19 @@ impl SvgService for FakeServices {
     }
 
     fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Ok(fret_core::MaterialId::default())
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
         true
     }
 }
@@ -765,5 +788,88 @@ fn snapshot_extras_avatar_stack_overflow_default() {
                 .max_visible(4)
                 .into_element(cx),
         ]
+    });
+}
+
+#[test]
+fn snapshot_extras_kanban_default() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(920.0), Px(420.0)),
+    );
+    snapshot_for_root("extras_kanban_default", bounds, |cx| {
+        let columns = vec![
+            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+        ];
+
+        let items = cx.app.models_mut().insert(vec![
+            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+        ]);
+
+        vec![fret_ui_shadcn::extras::Kanban::new(columns, items).into_element(cx)]
+    });
+}
+
+#[test]
+fn snapshot_extras_kanban_custom_cards() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(920.0), Px(420.0)),
+    );
+    snapshot_for_root("extras_kanban_custom_cards", bounds, |cx| {
+        let columns = vec![
+            fret_ui_shadcn::extras::KanbanColumn::new("backlog", "Backlog"),
+            fret_ui_shadcn::extras::KanbanColumn::new("in_progress", "In Progress"),
+            fret_ui_shadcn::extras::KanbanColumn::new("done", "Done"),
+        ];
+
+        let items = cx.app.models_mut().insert(vec![
+            fret_ui_shadcn::extras::KanbanItem::new("card-1", "Write docs", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-2", "Port block", "backlog"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-3", "Add gates", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-4", "Fix regressions", "in_progress"),
+            fret_ui_shadcn::extras::KanbanItem::new("card-5", "Ship", "done"),
+        ]);
+
+        let board = fret_ui_shadcn::extras::Kanban::new(columns, items).into_element_with(
+            cx,
+            |cx, item, ctx| {
+                let title = fret_ui_kit::ui::text(cx, item.name.clone())
+                    .font_medium()
+                    .w_full()
+                    .min_w_0()
+                    .truncate()
+                    .into_element(cx);
+
+                let badge = fret_ui_shadcn::Badge::new(item.column.clone())
+                    .variant(fret_ui_shadcn::BadgeVariant::Secondary)
+                    .into_element(cx);
+
+                let mut children = vec![title, badge];
+                if ctx.mode == fret_ui_shadcn::extras::KanbanCardMode::Overlay {
+                    children.push(
+                        fret_ui_kit::ui::text(cx, "overlay")
+                            .nowrap()
+                            .into_element(cx),
+                    );
+                }
+
+                fret_ui_kit::declarative::stack::vstack(
+                    cx,
+                    fret_ui_kit::declarative::stack::VStackProps::default()
+                        .gap(fret_ui_kit::Space::N1)
+                        .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
+                    |_cx| children,
+                )
+            },
+        );
+
+        vec![board]
     });
 }

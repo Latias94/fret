@@ -14,6 +14,49 @@ pub enum CollisionStrategy {
     ClosestCenter,
 }
 
+pub fn pointer_within_over(snapshot: &RegistrySnapshot, pointer: Point) -> Option<DndItemId> {
+    let mut best: Option<(DndItemId, i32)> = None;
+    for droppable in snapshot.droppables.iter() {
+        if droppable.disabled || !droppable.rect.contains(pointer) {
+            continue;
+        }
+
+        match best {
+            None => best = Some((droppable.id, droppable.z_index)),
+            Some((best_id, best_z)) => {
+                if droppable.z_index > best_z
+                    || (droppable.z_index == best_z && droppable.id < best_id)
+                {
+                    best = Some((droppable.id, droppable.z_index));
+                }
+            }
+        }
+    }
+
+    best.map(|(id, _z)| id)
+}
+
+pub fn closest_center_over(snapshot: &RegistrySnapshot, pointer: Point) -> Option<DndItemId> {
+    let mut best: Option<DndCollision> = None;
+    for droppable in snapshot.droppables.iter() {
+        if droppable.disabled {
+            continue;
+        }
+
+        let c = collision_distance_to_center(droppable, pointer);
+        match best {
+            None => best = Some(c),
+            Some(best_c) => {
+                if c.score < best_c.score || (c.score == best_c.score && c.id < best_c.id) {
+                    best = Some(c);
+                }
+            }
+        }
+    }
+
+    best.map(|c| c.id)
+}
+
 pub fn pointer_within_collisions(snapshot: &RegistrySnapshot, pointer: Point) -> Vec<DndCollision> {
     let mut out: Vec<(i32, DndCollision)> = snapshot
         .droppables
@@ -116,5 +159,57 @@ mod tests {
         let cols = closest_center_collisions(&snapshot, Point::new(Px(6.0), Px(5.0)));
         assert_eq!(cols[0].id, DndItemId(1));
         assert_eq!(cols[1].id, DndItemId(2));
+    }
+
+    #[test]
+    fn pointer_within_over_picks_topmost() {
+        let snapshot = RegistrySnapshot {
+            draggables: vec![],
+            droppables: vec![
+                Droppable {
+                    id: DndItemId(1),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+                Droppable {
+                    id: DndItemId(2),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 10,
+                },
+            ],
+        };
+
+        assert_eq!(
+            pointer_within_over(&snapshot, Point::new(Px(5.0), Px(5.0))),
+            Some(DndItemId(2))
+        );
+    }
+
+    #[test]
+    fn closest_center_over_picks_nearest() {
+        let snapshot = RegistrySnapshot {
+            draggables: vec![],
+            droppables: vec![
+                Droppable {
+                    id: DndItemId(1),
+                    rect: rect(0.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+                Droppable {
+                    id: DndItemId(2),
+                    rect: rect(100.0, 0.0, 10.0, 10.0),
+                    disabled: false,
+                    z_index: 0,
+                },
+            ],
+        };
+
+        assert_eq!(
+            closest_center_over(&snapshot, Point::new(Px(6.0), Px(5.0))),
+            Some(DndItemId(1))
+        );
     }
 }

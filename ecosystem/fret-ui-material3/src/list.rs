@@ -86,7 +86,7 @@ impl ListItem {
 #[derive(Debug, Clone)]
 pub struct List {
     model: Model<Arc<str>>,
-    items: Vec<ListItem>,
+    items: Arc<[ListItem]>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     disabled: bool,
@@ -97,7 +97,7 @@ impl List {
     pub fn new(model: Model<Arc<str>>) -> Self {
         Self {
             model,
-            items: Vec::new(),
+            items: Arc::from([]),
             a11y_label: None,
             test_id: None,
             disabled: false,
@@ -106,6 +106,11 @@ impl List {
     }
 
     pub fn items(mut self, items: Vec<ListItem>) -> Self {
+        self.items = Arc::from(items.into_boxed_slice());
+        self
+    }
+
+    pub fn items_arc(mut self, items: Arc<[ListItem]>) -> Self {
         self.items = items;
         self
     }
@@ -148,22 +153,41 @@ impl List {
                 ..Default::default()
             };
 
-            let disabled_items: Arc<[bool]> =
-                Arc::from(items.iter().map(|it| it.disabled).collect::<Vec<_>>());
-            let values_for_roving: Arc<[Arc<str>]> =
-                Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
+            #[derive(Default)]
+            struct DerivedItems {
+                ptr: usize,
+                len: usize,
+                disabled: Option<Arc<[bool]>>,
+            }
+
+            let disabled_items = cx.with_state(DerivedItems::default, |st| {
+                let ptr = Arc::as_ptr(&items) as *const ListItem as usize;
+                let len = items.len();
+                if st.disabled.is_none() || st.ptr != ptr || st.len != len {
+                    st.ptr = ptr;
+                    st.len = len;
+                    st.disabled = Some(Arc::from(
+                        items.iter().map(|it| it.disabled).collect::<Vec<_>>(),
+                    ));
+                }
+
+                st.disabled.as_ref().expect("disabled").clone()
+            });
+
             let count = items.len();
 
-            let selected_idx =
-                cx.get_model_cloned(&model, Invalidation::Layout)
-                    .and_then(|value| {
-                        items
-                            .iter()
-                            .position(|it| it.value.as_ref() == value.as_ref())
-                    });
+            let selected_idx = cx
+                .read_model_ref(&model, Invalidation::Layout, |value| {
+                    items
+                        .iter()
+                        .position(|it| it.value.as_ref() == value.as_ref())
+                })
+                .ok()
+                .flatten();
 
             let tab_stop = selected_idx.or_else(|| disabled_items.iter().position(|&d| !d));
             let model_for_roving = model.clone();
+            let items_for_roving = items.clone();
 
             let mut roving = RovingFlexProps::default();
             roving.flex.direction = Axis::Vertical;
@@ -240,7 +264,9 @@ impl List {
                             }));
 
                             cx.roving_on_active_change(Arc::new(move |host, action_cx, idx| {
-                                let Some(value) = values_for_roving.get(idx).cloned() else {
+                                let Some(value) =
+                                    items_for_roving.get(idx).map(|it| it.value.clone())
+                                else {
                                     return;
                                 };
                                 let already_selected = host
@@ -298,8 +324,10 @@ fn list_item<H: UiHost>(
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !disabled_group && !item.disabled;
         let selected = cx
-            .get_model_cloned(&model, Invalidation::Layout)
-            .map(|v| v.as_ref() == value.as_ref())
+            .read_model_ref(&model, Invalidation::Layout, |v| {
+                v.as_ref() == value.as_ref()
+            })
+            .ok()
             .unwrap_or(false);
 
         let default_design_variant = {

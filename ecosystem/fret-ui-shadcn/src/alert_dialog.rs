@@ -261,7 +261,7 @@ impl AlertDialog {
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
                     // Center like `Dialog`, but avoid full-window wrappers that can steal hit tests.
-                    let outer = cx.bounds;
+                    let outer = cx.environment_viewport_bounds(fret_ui::Invalidation::Layout);
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
@@ -893,6 +893,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

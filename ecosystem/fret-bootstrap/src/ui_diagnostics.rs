@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, ModelId};
 use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
-    PointerId, PointerType, Px, Rect, Scene, SemanticsRole,
+    PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
 #[cfg(feature = "diagnostics-ws")]
 use fret_diag_protocol::{DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1, DiagTransportMessageV1};
@@ -5981,6 +5981,14 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
     #[serde(default)]
     pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
+    /// A committed per-window environment snapshot (ADR 1171), exported under `debug.environment`
+    /// for easy diagnostics consumption.
+    ///
+    /// This duplicates the committed fields also present under `debug.element_runtime.environment`
+    /// (when the element runtime snapshot is enabled), but keeps a stable schema path for tools
+    /// that do not want to parse the entire element runtime snapshot payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub environment: Option<ElementEnvironmentSnapshotV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -6129,6 +6137,9 @@ impl UiTreeDebugSnapshotV1 {
             .iter()
             .copied()
             .collect();
+        let environment = element_runtime_snapshot
+            .as_ref()
+            .and_then(|snapshot| snapshot.environment.clone());
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
@@ -6305,6 +6316,7 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiOverlayPolicyDecisionV1::from_decision)
                 .collect(),
+            environment,
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
@@ -9574,12 +9586,78 @@ pub struct ElementLayoutQueryRegionV1 {
     pub current_bounds: Option<RectV1>,
 }
 
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiEdgesV1 {
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+    pub left: f32,
+}
+
+impl From<fret_core::Edges> for UiEdgesV1 {
+    fn from(value: fret_core::Edges) -> Self {
+        Self {
+            top: value.top.0,
+            right: value.right.0,
+            bottom: value.bottom.0,
+            left: value.left.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementEnvironmentSnapshotV1 {
     pub viewport_bounds: RectV1,
     pub scale_factor: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_scheme: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefers_reduced_motion: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_scale_factor: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prefers_reduced_transparency: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent_color: Option<fret_core::Color>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contrast_preference: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forced_colors_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_pointer_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_area_insets: Option<UiEdgesV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occlusion_insets: Option<UiEdgesV1>,
+}
+
+impl ElementEnvironmentSnapshotV1 {
+    fn from_diagnostics_snapshot(
+        snapshot: &fret_ui::elements::EnvironmentQueryDiagnosticsSnapshot,
+    ) -> Self {
+        Self {
+            viewport_bounds: RectV1::from(snapshot.viewport_bounds),
+            scale_factor: snapshot.scale_factor,
+            color_scheme: snapshot
+                .color_scheme
+                .map(|s| color_scheme_label(s).to_string()),
+            prefers_reduced_motion: snapshot.prefers_reduced_motion,
+            text_scale_factor: snapshot.text_scale_factor,
+            prefers_reduced_transparency: snapshot.prefers_reduced_transparency,
+            accent_color: snapshot.accent_color,
+            contrast_preference: snapshot
+                .contrast_preference
+                .map(|c| contrast_preference_label(c).to_string()),
+            forced_colors_mode: snapshot
+                .forced_colors_mode
+                .map(|m| forced_colors_mode_label(m).to_string()),
+            primary_pointer_type: Some(
+                viewport_pointer_type_label(snapshot.primary_pointer_type).to_string(),
+            ),
+            safe_area_insets: snapshot.safe_area_insets.map(UiEdgesV1::from),
+            occlusion_insets: snapshot.occlusion_insets.map(UiEdgesV1::from),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9700,11 +9778,9 @@ impl ElementDiagnosticsSnapshotV1 {
                     current_bounds: r.current_bounds.map(RectV1::from),
                 })
                 .collect(),
-            environment: Some(ElementEnvironmentSnapshotV1 {
-                viewport_bounds: RectV1::from(snapshot.environment.viewport_bounds),
-                scale_factor: snapshot.environment.scale_factor,
-                prefers_reduced_motion: snapshot.environment.prefers_reduced_motion,
-            }),
+            environment: Some(ElementEnvironmentSnapshotV1::from_diagnostics_snapshot(
+                &snapshot.environment,
+            )),
             observed_environment: snapshot
                 .observed_environment
                 .into_iter()
@@ -9864,6 +9940,29 @@ fn viewport_pointer_type_label(pointer_type: fret_core::PointerType) -> &'static
         fret_core::PointerType::Touch => "touch",
         fret_core::PointerType::Pen => "pen",
         fret_core::PointerType::Unknown => "unknown",
+    }
+}
+
+fn color_scheme_label(scheme: fret_core::ColorScheme) -> &'static str {
+    match scheme {
+        fret_core::ColorScheme::Light => "light",
+        fret_core::ColorScheme::Dark => "dark",
+    }
+}
+
+fn contrast_preference_label(preference: fret_core::ContrastPreference) -> &'static str {
+    match preference {
+        fret_core::ContrastPreference::NoPreference => "no_preference",
+        fret_core::ContrastPreference::More => "more",
+        fret_core::ContrastPreference::Less => "less",
+        fret_core::ContrastPreference::Custom => "custom",
+    }
+}
+
+fn forced_colors_mode_label(mode: fret_core::ForcedColorsMode) -> &'static str {
+    match mode {
+        fret_core::ForcedColorsMode::None => "none",
+        fret_core::ForcedColorsMode::Active => "active",
     }
 }
 
@@ -12183,6 +12282,58 @@ mod tests {
         assert_eq!(parse_key_code("f1"), Some(KeyCode::F1));
         assert_eq!(parse_key_code("f10"), Some(KeyCode::F10));
         assert_eq!(parse_key_code("F12"), Some(KeyCode::F12));
+    }
+
+    #[test]
+    fn environment_snapshot_exports_committed_preferences_and_insets() {
+        use fret_core::{ColorScheme, ContrastPreference, Edges, ForcedColorsMode, PointerType};
+
+        let snapshot = fret_ui::elements::EnvironmentQueryDiagnosticsSnapshot {
+            viewport_bounds: rect(0.0, 0.0, 100.0, 200.0),
+            scale_factor: 2.0,
+            color_scheme: Some(ColorScheme::Dark),
+            prefers_reduced_motion: Some(true),
+            text_scale_factor: Some(1.25),
+            prefers_reduced_transparency: Some(true),
+            accent_color: Some(fret_core::Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            }),
+            contrast_preference: Some(ContrastPreference::More),
+            forced_colors_mode: Some(ForcedColorsMode::Active),
+            primary_pointer_type: PointerType::Touch,
+            safe_area_insets: Some(Edges {
+                top: Px(1.0),
+                right: Px(2.0),
+                bottom: Px(3.0),
+                left: Px(4.0),
+            }),
+            occlusion_insets: None,
+        };
+
+        let exported = ElementEnvironmentSnapshotV1::from_diagnostics_snapshot(&snapshot);
+        assert_eq!(exported.color_scheme.as_deref(), Some("dark"));
+        assert_eq!(exported.prefers_reduced_motion, Some(true));
+        assert_eq!(exported.text_scale_factor, Some(1.25));
+        assert_eq!(exported.prefers_reduced_transparency, Some(true));
+        assert_eq!(
+            exported.accent_color,
+            Some(fret_core::Color {
+                r: 1.0,
+                g: 0.5,
+                b: 0.25,
+                a: 1.0,
+            })
+        );
+        assert_eq!(exported.contrast_preference.as_deref(), Some("more"));
+        assert_eq!(exported.forced_colors_mode.as_deref(), Some("active"));
+        assert_eq!(exported.primary_pointer_type.as_deref(), Some("touch"));
+        assert_eq!(exported.safe_area_insets.map(|e| e.top), Some(1.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.right), Some(2.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.bottom), Some(3.0));
+        assert_eq!(exported.safe_area_insets.map(|e| e.left), Some(4.0));
     }
 
     fn node_id(id: u64) -> NodeId {

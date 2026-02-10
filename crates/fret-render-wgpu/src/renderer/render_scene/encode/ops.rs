@@ -78,7 +78,15 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             corner_radii,
             ..
         } => {
-            draw::encode_quad(state, rect, background, border, border_paint, corner_radii);
+            draw::encode_quad(
+                renderer,
+                state,
+                rect,
+                background,
+                border,
+                border_paint,
+                corner_radii,
+            );
         }
         SceneOp::Image {
             rect,

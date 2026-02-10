@@ -18,13 +18,14 @@ Baseline: Radix Tooltip outcomes (provider delays, skip-delay window, pointer/ke
 - Primitives/policy:
   - `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`
   - `ecosystem/fret-ui-kit/src/primitives/tooltip_provider.rs`
-  - `ecosystem/fret-ui-kit/src/primitives/tooltip_delay_group.rs`
+  - delay-group state machine: `ecosystem/fret-ui-headless/src/tooltip_delay_group.rs`
   - shared hover intent helper: `ecosystem/fret-ui-kit/src/primitives/hover_intent.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/tooltip.rs`
 
 Time-source note (audit focus):
 
 - The current Tooltip surface is **tick-based** (`open_delay_ticks*` / `close_delay_ticks*`), with a deterministic delay-group state machine.
+- The shadcn recipe configures delays in **ticks/frames**; misleading `*_ms` helpers were removed to avoid API names that do not match the underlying time source.
 - The workstream principle is “delays are semantic”; expect follow-up work to lift these to
   `Duration` at the policy surface (or to clearly document “ticks” as the stable unit).
 

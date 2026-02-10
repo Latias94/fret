@@ -1743,6 +1743,27 @@ let dialog = shadcn::Dialog::new(open.clone()).into_element(
 ```
 "#;
 
+pub(crate) const DOC_SHADCN_EXTRAS: &str = r#"
+## Shadcn Extras (`fret-ui-shadcn::extras`)
+
+This page showcases shadcn-styled **blocks / recipes** that are intentionally out of scope for
+shadcn/ui v4 taxonomy parity.
+
+Design rules:
+
+- Exposed under a module surface (`shadcn::extras::*`), not glob re-exported from the crate root.
+- Should not expand the `fret-ui` runtime contract surface (ADR 0066).
+"#;
+
+pub(crate) const USAGE_SHADCN_EXTRAS: &str = r#"
+```rust
+use fret_ui_shadcn as shadcn;
+
+let tags = shadcn::extras::Tags::new(["Alpha", "Beta"]).into_element(cx);
+let marquee = shadcn::extras::Marquee::new(["One", "Two"]).into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_CARD: &str = r#"
 ## Card
 

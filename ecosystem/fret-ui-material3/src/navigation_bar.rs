@@ -22,6 +22,7 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -165,7 +166,7 @@ impl NavigationBar {
 
             let selected = cx
                 .get_model_cloned(&model, Invalidation::Layout)
-                .unwrap_or_else(|| Arc::<str>::from(""));
+                .unwrap_or_else(empty_arc_str);
             let selected_idx = items
                 .iter()
                 .position(|it| it.value.as_ref() == selected.as_ref());
@@ -533,13 +534,27 @@ fn navigation_bar_item<H: UiHost>(
 
                     let icon_el = nav_icon(cx, &icon, icon_size, icon_color);
                     let icon_el = if let Some(badge) = badge.clone() {
+                        #[derive(Default)]
+                        struct DerivedBadgeTestId {
+                            base: Option<Arc<str>>,
+                            badge: Option<Arc<str>>,
+                        }
+
                         let badge = match badge {
                             BadgeValue::Dot => Badge::dot(),
                             BadgeValue::Text(value) => Badge::text(value),
                         };
-                        let badge_test_id = test_id
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}-badge")));
+
+                        let badge_test_id = cx.with_state(DerivedBadgeTestId::default, |st| {
+                            if st.base.as_deref() != test_id.as_deref() {
+                                st.base = test_id.clone();
+                                st.badge = st
+                                    .base
+                                    .as_ref()
+                                    .map(|id| Arc::<str>::from(format!("{id}-badge")));
+                            }
+                            st.badge.clone()
+                        });
                         let badge = badge
                             .placement(BadgePlacement::NavigationIcon)
                             .navigation_anchor_size(icon_size);

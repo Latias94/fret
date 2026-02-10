@@ -1,10 +1,11 @@
 use fret_core::{Edges, Point, Px, Rect, Size};
-use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelLayout, AnchoredPanelOptions, Side, anchored_panel_bounds_sized, inset_rect,
 };
+use fret_ui::pixel_snap;
+use fret_ui::{ElementContext, Invalidation};
 
 fn prefer_visual_bounds(visual: Option<Rect>, layout: Option<Rect>) -> Option<Rect> {
     visual.or(layout)
@@ -28,6 +29,22 @@ pub fn outer_bounds_with_window_margin(window_bounds: Rect, window_margin: Px) -
     inset_rect(window_bounds, Edges::all(window_margin))
 }
 
+/// Returns an "outer viewport" rect inset by a uniform window margin, observing the committed
+/// environment snapshot (ADR 1171).
+#[track_caller]
+pub fn outer_bounds_with_window_margin_for_environment<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    invalidation: Invalidation,
+    window_margin: Px,
+) -> Rect {
+    let outer = outer_bounds_with_window_margin(
+        cx.environment_viewport_bounds(invalidation),
+        window_margin,
+    );
+    let scale_factor = cx.environment_scale_factor(invalidation);
+    pixel_snap::snap_rect_edges_round(outer, scale_factor)
+}
+
 /// Wraps a point as a 1x1 rect anchor for placement solvers.
 pub fn anchor_rect_from_point(point: Point) -> Rect {
     Rect::new(point, Size::new(Px(1.0), Px(1.0)))
@@ -45,7 +62,7 @@ pub fn estimated_element_size<H: UiHost>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn anchored_panel_bounds_for_element<H: UiHost>(
-    cx: &ElementContext<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     trigger: GlobalElementId,
     content: GlobalElementId,
     window_margin: Px,
@@ -55,7 +72,8 @@ pub fn anchored_panel_bounds_for_element<H: UiHost>(
     fallback_size: Size,
 ) -> Option<Rect> {
     let anchor = anchor_bounds_for_element(cx, trigger)?;
-    let outer = outer_bounds_with_window_margin(cx.bounds, window_margin);
+    let outer =
+        outer_bounds_with_window_margin_for_environment(cx, Invalidation::Layout, window_margin);
     let size = estimated_element_size(cx, content, fallback_size);
     Some(anchored_panel_bounds_sized(
         outer,
@@ -94,7 +112,7 @@ pub fn popper_layout_sized(
 /// - `desired` is derived from last-frame content size (falls back to `fallback_size`).
 #[allow(clippy::too_many_arguments)]
 pub fn popper_layout_for_element<H: UiHost>(
-    cx: &ElementContext<'_, H>,
+    cx: &mut ElementContext<'_, H>,
     anchor: GlobalElementId,
     content: GlobalElementId,
     window_margin: Px,
@@ -105,7 +123,8 @@ pub fn popper_layout_for_element<H: UiHost>(
     options: AnchoredPanelOptions,
 ) -> Option<AnchoredPanelLayout> {
     let anchor = anchor_bounds_for_element(cx, anchor)?;
-    let outer = outer_bounds_with_window_margin(cx.bounds, window_margin);
+    let outer =
+        outer_bounds_with_window_margin_for_environment(cx, Invalidation::Layout, window_margin);
     let size = estimated_element_size(cx, content, fallback_size);
     Some(popper_layout_sized(
         outer,

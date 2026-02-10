@@ -18,6 +18,12 @@ Baseline: Radix Menubar outcomes (keyboard-first activation, mnemonic/Alt behavi
 - Primitive/policy: `ecosystem/fret-ui-kit/src/primitives/menubar.rs`
 - shadcn recipe: `ecosystem/fret-ui-shadcn/src/menubar.rs`
 
+Shared menu substrate (dismiss + click-through semantics):
+
+- `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`:
+  - `dismissible_menu_request_with_modal*` (modal vs click-through)
+  - `menu_close_auto_focus_guard_hooks` (suppress close auto-focus for non-modal outside presses)
+
 Key implementation anchors (trigger row active-mode + mnemonics):
 
 - Trigger-row policy surface + unit tests:

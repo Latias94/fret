@@ -16,6 +16,7 @@ pub(crate) struct DndRegistryService {
 struct WindowRegistry {
     frame_id: FrameId,
     scopes: HashMap<DndScopeId, RegistrySnapshot>,
+    droppable_rects: HashMap<DndScopeId, HashMap<DndItemId, Rect>>,
 }
 
 impl DndRegistryService {
@@ -32,8 +33,27 @@ impl DndRegistryService {
                 snapshot.draggables.clear();
                 snapshot.droppables.clear();
             }
+            entry.droppable_rects.clear();
         }
         entry.scopes.entry(scope).or_default()
+    }
+
+    pub(crate) fn droppable_rects_mut_for_frame(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        scope: DndScopeId,
+    ) -> &mut HashMap<DndItemId, Rect> {
+        let entry = self.windows.entry(window).or_default();
+        if entry.frame_id != frame_id {
+            entry.frame_id = frame_id;
+            for snapshot in entry.scopes.values_mut() {
+                snapshot.draggables.clear();
+                snapshot.droppables.clear();
+            }
+            entry.droppable_rects.clear();
+        }
+        entry.droppable_rects.entry(scope).or_default()
     }
 
     pub(crate) fn snapshot_for_frame(
@@ -60,12 +80,10 @@ pub fn droppable_rect_in_scope(
         if window.frame_id != frame_id {
             return None;
         }
-        let snapshot = window.scopes.get(&scope)?;
-        snapshot
-            .droppables
-            .iter()
-            .find(|d| d.id == id && !d.disabled)
-            .map(|d| d.rect)
+        window
+            .droppable_rects
+            .get(&scope)
+            .and_then(|m| m.get(&id).copied())
     })
     .flatten()
 }
@@ -89,6 +107,15 @@ pub fn register_droppable_rect_in_scope(
             disabled,
             z_index,
         });
+
+        let rects = dnd
+            .registry
+            .droppable_rects_mut_for_frame(window, frame_id, scope);
+        if disabled {
+            rects.remove(&id);
+        } else {
+            rects.insert(id, rect);
+        }
     });
 }
 

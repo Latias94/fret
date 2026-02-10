@@ -536,6 +536,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn switch_thumb_is_vertically_centered_in_track() {
         fn overlap_area(a: Rect, b: Rect) -> f32 {
@@ -626,12 +639,12 @@ mod tests {
 
             let is_thumb = (rect.size.width.0 - thumb_size.0).abs() <= 0.1
                 && (rect.size.height.0 - thumb_size.0).abs() <= 0.1
-                && *background == thumb_bg;
+                && *background == fret_core::Paint::Solid(thumb_bg);
             if is_thumb {
                 thumb_rect = Some(*rect);
             }
 
-            if *background == track_bg {
+            if *background == fret_core::Paint::Solid(track_bg) {
                 let score = overlap_area(*rect, switch_bounds);
                 if score <= 0.0 {
                     continue;

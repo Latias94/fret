@@ -99,6 +99,16 @@ fn mix_paint(mut state: u64, p: Paint) -> u64 {
             }
             state
         }
+        Paint::Material { id, params } => {
+            state = mix_u64(state, 4);
+            state = mix_u64(state, id.data().as_ffi());
+            for v in params.vec4s {
+                for x in v {
+                    state = mix_f32(state, x);
+                }
+            }
+            state
+        }
     }
 }
 

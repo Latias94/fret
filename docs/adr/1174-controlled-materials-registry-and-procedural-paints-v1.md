@@ -1,6 +1,6 @@
 # ADR 1174: Controlled Materials Registry and Procedural Paints (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

@@ -656,7 +656,15 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     inputs: SelectItemAlignedElementInputs,
 ) -> Option<SelectItemAlignedLayout> {
     let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
-    let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
+    // The item-aligned solver expects DOM-like layout-space measurements (`offsetTop` etc). Using
+    // visual bounds here is incorrect because it bakes in render transforms (e.g. presence scale),
+    // which can cause the overlay to "chase" its own animation and jitter on open/close.
+    //
+    // Prefer layout bounds for the scroll viewport. Fall back to the generic anchor helper only
+    // when we have no recorded layout bounds yet (e.g. very first mount).
+    let viewport = cx
+        .last_bounds_for_element(inputs.viewport)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.viewport))?;
     // Item-aligned select positioning uses `offsetTop`-like measurements that must remain stable
     // as the viewport scrolls. Prefer layout bounds for scrolled descendants (they do not include
     // the scroll render transform) so wheel scrolling cannot cause the overlay to "chase" the
@@ -1805,9 +1813,73 @@ mod tests {
         AppWindowId, Event, Modifiers, MouseButtons, Point, PointerEvent, PointerId, PointerType,
         Px, Rect, Size,
     };
+    use fret_core::{MaterialDescriptor, MaterialId, MaterialRegistrationError, MaterialService};
+    use fret_core::{PathCommand, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Scene, Transform2D};
+    use fret_core::{TextBlobId, TextConstraints, TextInput, TextMetrics, TextService};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
-    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
+    use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use std::time::Duration;
+
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Err(MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            true
+        }
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1901,6 +1973,235 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn select_item_aligned_layout_from_elements_ignores_visual_bounds_for_viewport() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+
+        let prepare_frame = |app: &mut App, window: AppWindowId| {
+            let frame_id = app.frame_id();
+            app.with_global_mut_untracked(
+                fret_ui::elements::ElementRuntime::default,
+                |rt, _app| {
+                    rt.prepare_window_for_frame(window, frame_id);
+                },
+            );
+        };
+
+        let b = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+
+        // Fixed layout-space geometry for the headless solver.
+        let trigger = Rect::new(
+            Point::new(Px(120.0), Px(32.0)),
+            Size::new(Px(120.0), Px(28.0)),
+        );
+        let value_node = Rect::new(
+            Point::new(Px(132.0), Px(40.0)),
+            Size::new(Px(80.0), Px(16.0)),
+        );
+        let content_panel = Rect::new(
+            Point::new(Px(80.0), Px(72.0)),
+            Size::new(Px(200.0), Px(140.0)),
+        );
+        let viewport = Rect::new(
+            Point::new(Px(80.0), Px(88.0)),
+            Size::new(Px(200.0), Px(108.0)),
+        );
+        let listbox = Rect::new(
+            Point::new(Px(80.0), Px(88.0)),
+            Size::new(Px(200.0), Px(420.0)),
+        );
+        let selected_item = Rect::new(
+            Point::new(Px(80.0), Px(120.0)),
+            Size::new(Px(200.0), Px(28.0)),
+        );
+        let selected_item_text = Rect::new(
+            Point::new(Px(96.0), Px(126.0)),
+            Size::new(Px(120.0), Px(16.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            b: Rect,
+            trigger: Rect,
+            value_node: Rect,
+            content_panel: Rect,
+            viewport: Rect,
+            listbox: Rect,
+            selected_item: Rect,
+            selected_item_text: Rect,
+            got: Option<&Cell<Option<SelectItemAlignedLayout>>>,
+        ) -> fret_core::NodeId {
+            let viewport_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let listbox_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let content_panel_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let selected_item_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+            let selected_item_text_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+
+            fret_ui::declarative::render_root(ui, app, services, window, b, "test", |cx| {
+                let abs = |rect: Rect| {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                    layout.inset.left = Some(rect.origin.x);
+                    layout.inset.top = Some(rect.origin.y);
+                    layout.size.width = Length::Px(rect.size.width);
+                    layout.size.height = Length::Px(rect.size.height);
+                    ContainerProps {
+                        layout,
+                        ..Default::default()
+                    }
+                };
+
+                let value_node_el = cx.container(abs(value_node), |_cx| Vec::new());
+
+                let mut transform_layout = LayoutStyle::default();
+                transform_layout.size.width = Length::Fill;
+                transform_layout.size.height = Length::Fill;
+                let transformed = cx.render_transform_props(
+                    fret_ui::element::RenderTransformProps {
+                        layout: transform_layout,
+                        transform: Transform2D::scale_uniform(0.5),
+                    },
+                    |cx| {
+                        let viewport_el = cx.container(abs(viewport), |_cx| Vec::new());
+                        viewport_id.set(Some(viewport_el.id));
+                        let listbox_el = cx.container(abs(listbox), |_cx| Vec::new());
+                        listbox_id.set(Some(listbox_el.id));
+                        let content_panel_el = cx.container(abs(content_panel), |_cx| Vec::new());
+                        content_panel_id.set(Some(content_panel_el.id));
+                        let selected_item_el = cx.container(abs(selected_item), |_cx| Vec::new());
+                        selected_item_id.set(Some(selected_item_el.id));
+                        let selected_item_text_el =
+                            cx.container(abs(selected_item_text), |_cx| Vec::new());
+                        selected_item_text_id.set(Some(selected_item_text_el.id));
+
+                        vec![
+                            viewport_el,
+                            listbox_el,
+                            content_panel_el,
+                            selected_item_el,
+                            selected_item_text_el,
+                        ]
+                    },
+                );
+
+                if let Some(got) = got {
+                    let inputs = SelectItemAlignedElementInputs {
+                        direction: popper::LayoutDirection::Ltr,
+                        window: b,
+                        trigger,
+                        content_min_width: Px(80.0),
+                        content_border_top: Px(1.0),
+                        content_padding_top: Px(0.0),
+                        content_border_bottom: Px(1.0),
+                        content_padding_bottom: Px(0.0),
+                        viewport_padding_top: Px(4.0),
+                        viewport_padding_bottom: Px(4.0),
+                        selected_item_is_first: false,
+                        selected_item_is_last: false,
+                        value_node: value_node_el.id,
+                        viewport: viewport_id.get().expect("viewport id"),
+                        listbox: listbox_id.get().expect("listbox id"),
+                        content_panel: content_panel_id.get().expect("content_panel id"),
+                        content_width_probe: None,
+                        selected_item: selected_item_id.get().expect("selected_item id"),
+                        selected_item_text: selected_item_text_id
+                            .get()
+                            .expect("selected_item_text id"),
+                    };
+                    got.set(select_item_aligned_layout_from_elements(&*cx, inputs));
+                }
+
+                vec![value_node_el, transformed]
+            })
+        }
+
+        // Frame 0: mount the geometry nodes and paint with a render transform so last-visual-bounds
+        // differ from last-layout-bounds for overlay elements.
+        app.set_frame_id(fret_core::FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        prepare_frame(&mut app, window);
+        let root0 = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            trigger,
+            value_node,
+            content_panel,
+            viewport,
+            listbox,
+            selected_item,
+            selected_item_text,
+            None,
+        );
+        ui.set_root(root0);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, b, &mut scene, 1.0);
+
+        // Frame boundary: commit recorded bounds so `last_*_bounds_for_element` can observe them.
+        app.set_frame_id(fret_core::FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        prepare_frame(&mut app, window);
+
+        // Expected output is based on layout-space geometry (render transforms must not affect it).
+        let expected = select_item_aligned_layout(SelectItemAlignedInputs {
+            direction: fret_core::LayoutDirection::Ltr,
+            window: b,
+            trigger,
+            content: content_panel,
+            value_node,
+            selected_item_text,
+            selected_item,
+            viewport,
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
+            items_height: listbox.size.height,
+        });
+
+        let got: Cell<Option<SelectItemAlignedLayout>> = Cell::new(None);
+        let root1 = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            trigger,
+            value_node,
+            content_panel,
+            viewport,
+            listbox,
+            selected_item,
+            selected_item_text,
+            Some(&got),
+        );
+        ui.set_root(root1);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let got = got.get().expect("expected resolved layout");
+        assert_eq!(got.rect, expected.rect);
+        assert_eq!(got.side, expected.side);
+        assert_eq!(got.outputs, expected.outputs);
     }
 
     struct PointerHost<'a> {

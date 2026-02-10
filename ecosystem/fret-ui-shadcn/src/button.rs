@@ -778,6 +778,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn disabled_button_emits_opacity_stack_ops() {
         let window = AppWindowId::default();
@@ -1363,6 +1376,9 @@ mod tests {
             else {
                 continue;
             };
+            let fret_core::Paint::Solid(background) = *background else {
+                continue;
+            };
             if background.a < 0.5 {
                 continue;
             }
@@ -1372,7 +1388,7 @@ mod tests {
             }
             let replace = best_quad.is_none_or(|(_, _, best)| score > best);
             if replace {
-                best_quad = Some((*rect, *background, score));
+                best_quad = Some((*rect, background, score));
             }
         }
 

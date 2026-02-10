@@ -76,7 +76,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    let mut services = FakeServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
@@ -987,6 +987,10 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
         if (rect.size.height.0 - web_icon.rect.h).abs() > 2.0 {
             continue;
         }
+
+        let Some(background) = paint_solid_color(background) else {
+            continue;
+        };
 
         let diff = rgba_diff_metric(color_to_rgba(background), expected_bg);
         match best {

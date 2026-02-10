@@ -5,7 +5,10 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
-use fret_core::{AppWindowId, Edges, NodeId, PointerType, Rect};
+use fret_core::{
+    AppWindowId, Color, ColorScheme, ContrastPreference, Edges, ForcedColorsMode, NodeId,
+    PointerType, Rect,
+};
 use fret_runtime::{FrameId, ModelId, TimerToken};
 #[cfg(feature = "diagnostics")]
 use slotmap::Key as _;
@@ -22,9 +25,16 @@ use super::hash::stable_hash;
 pub(crate) enum EnvironmentQueryKey {
     ViewportSize,
     ScaleFactor,
+    ColorScheme,
     PrefersReducedMotion,
+    TextScaleFactor,
+    PrefersReducedTransparency,
+    AccentColor,
+    PrefersContrast,
+    ForcedColorsMode,
     PrimaryPointerType,
     SafeAreaInsets,
+    OcclusionInsets,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -100,9 +110,16 @@ pub struct ObservedLayoutQueryRegionDiagnosticsSnapshot {
 pub struct EnvironmentQueryDiagnosticsSnapshot {
     pub viewport_bounds: Rect,
     pub scale_factor: f32,
+    pub color_scheme: Option<ColorScheme>,
     pub prefers_reduced_motion: Option<bool>,
+    pub text_scale_factor: Option<f32>,
+    pub prefers_reduced_transparency: Option<bool>,
+    pub accent_color: Option<Color>,
+    pub contrast_preference: Option<ContrastPreference>,
+    pub forced_colors_mode: Option<ForcedColorsMode>,
     pub primary_pointer_type: PointerType,
     pub safe_area_insets: Option<Edges>,
+    pub occlusion_insets: Option<Edges>,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -163,6 +180,29 @@ impl ElementRuntime {
             .set_committed_prefers_reduced_motion(prefers_reduced_motion);
     }
 
+    pub fn set_window_color_scheme(&mut self, window: AppWindowId, scheme: Option<ColorScheme>) {
+        self.for_window_mut(window)
+            .set_committed_color_scheme(scheme);
+    }
+
+    pub fn set_window_contrast_preference(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ContrastPreference>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_contrast_preference(value);
+    }
+
+    pub fn set_window_forced_colors_mode(
+        &mut self,
+        window: AppWindowId,
+        value: Option<ForcedColorsMode>,
+    ) {
+        self.for_window_mut(window)
+            .set_committed_forced_colors_mode(value);
+    }
+
     pub fn set_window_primary_pointer_type(
         &mut self,
         window: AppWindowId,
@@ -175,6 +215,11 @@ impl ElementRuntime {
     pub fn set_window_safe_area_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
         self.for_window_mut(window)
             .record_committed_safe_area_insets(insets);
+    }
+
+    pub fn set_window_occlusion_insets(&mut self, window: AppWindowId, insets: Option<Edges>) {
+        self.for_window_mut(window)
+            .record_committed_occlusion_insets(insets);
     }
 
     pub fn for_window_mut(&mut self, window: AppWindowId) -> &mut WindowElementState {
@@ -284,9 +329,16 @@ pub struct WindowElementState {
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
     committed_viewport_bounds: Rect,
     committed_scale_factor: f32,
+    committed_color_scheme: Option<ColorScheme>,
     committed_prefers_reduced_motion: Option<bool>,
+    committed_text_scale_factor: Option<f32>,
+    committed_prefers_reduced_transparency: Option<bool>,
+    committed_accent_color: Option<Color>,
+    committed_contrast_preference: Option<ContrastPreference>,
+    committed_forced_colors_mode: Option<ForcedColorsMode>,
     committed_primary_pointer_type: Option<PointerType>,
     committed_safe_area_insets: Option<Edges>,
+    committed_occlusion_insets: Option<Edges>,
     pub(super) focused_element: Option<GlobalElementId>,
     pub(super) active_text_selection: Option<ActiveTextSelection>,
     pub(super) hovered_pressable: Option<GlobalElementId>,
@@ -646,9 +698,16 @@ impl WindowElementState {
         let key_id = |k: EnvironmentQueryKey| match k {
             EnvironmentQueryKey::ViewportSize => 0u8,
             EnvironmentQueryKey::ScaleFactor => 1u8,
-            EnvironmentQueryKey::PrefersReducedMotion => 2u8,
-            EnvironmentQueryKey::PrimaryPointerType => 3u8,
-            EnvironmentQueryKey::SafeAreaInsets => 4u8,
+            EnvironmentQueryKey::ColorScheme => 2u8,
+            EnvironmentQueryKey::PrefersReducedMotion => 3u8,
+            EnvironmentQueryKey::PrimaryPointerType => 4u8,
+            EnvironmentQueryKey::SafeAreaInsets => 5u8,
+            EnvironmentQueryKey::OcclusionInsets => 6u8,
+            EnvironmentQueryKey::PrefersContrast => 7u8,
+            EnvironmentQueryKey::ForcedColorsMode => 8u8,
+            EnvironmentQueryKey::TextScaleFactor => 9u8,
+            EnvironmentQueryKey::PrefersReducedTransparency => 10u8,
+            EnvironmentQueryKey::AccentColor => 11u8,
         };
 
         let mut entries: Vec<(u8, u64, u8)> = deps
@@ -1221,8 +1280,32 @@ impl WindowElementState {
         self.committed_scale_factor
     }
 
+    pub(crate) fn committed_color_scheme(&self) -> Option<ColorScheme> {
+        self.committed_color_scheme
+    }
+
     pub(crate) fn committed_prefers_reduced_motion(&self) -> Option<bool> {
         self.committed_prefers_reduced_motion
+    }
+
+    pub(crate) fn committed_text_scale_factor(&self) -> Option<f32> {
+        self.committed_text_scale_factor
+    }
+
+    pub(crate) fn committed_prefers_reduced_transparency(&self) -> Option<bool> {
+        self.committed_prefers_reduced_transparency
+    }
+
+    pub(crate) fn committed_accent_color(&self) -> Option<Color> {
+        self.committed_accent_color
+    }
+
+    pub(crate) fn committed_contrast_preference(&self) -> Option<ContrastPreference> {
+        self.committed_contrast_preference
+    }
+
+    pub(crate) fn committed_forced_colors_mode(&self) -> Option<ForcedColorsMode> {
+        self.committed_forced_colors_mode
     }
 
     pub(crate) fn committed_primary_pointer_type(&self) -> PointerType {
@@ -1232,6 +1315,10 @@ impl WindowElementState {
 
     pub(crate) fn committed_safe_area_insets(&self) -> Option<Edges> {
         self.committed_safe_area_insets
+    }
+
+    pub(crate) fn committed_occlusion_insets(&self) -> Option<Edges> {
+        self.committed_occlusion_insets
     }
 
     pub(crate) fn set_committed_prefers_reduced_motion(&mut self, value: Option<bool>) {
@@ -1245,6 +1332,90 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::PrefersReducedMotion);
+    }
+
+    pub(crate) fn set_committed_text_scale_factor(&mut self, value: Option<f32>) {
+        let changed = match (self.committed_text_scale_factor, value) {
+            (Some(a), Some(b)) => (a - b).abs() > 0.0001,
+            (None, None) => false,
+            _ => true,
+        };
+        if !changed {
+            return;
+        }
+
+        self.committed_text_scale_factor = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::TextScaleFactor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::TextScaleFactor);
+    }
+
+    pub(crate) fn set_committed_prefers_reduced_transparency(&mut self, value: Option<bool>) {
+        if self.committed_prefers_reduced_transparency == value {
+            return;
+        }
+        self.committed_prefers_reduced_transparency = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersReducedTransparency)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersReducedTransparency);
+    }
+
+    pub(crate) fn set_committed_accent_color(&mut self, value: Option<Color>) {
+        if self.committed_accent_color == value {
+            return;
+        }
+        self.committed_accent_color = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::AccentColor)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::AccentColor);
+    }
+
+    pub(crate) fn set_committed_color_scheme(&mut self, value: Option<ColorScheme>) {
+        if self.committed_color_scheme == value {
+            return;
+        }
+        self.committed_color_scheme = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ColorScheme)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ColorScheme);
+    }
+
+    pub(crate) fn set_committed_contrast_preference(&mut self, value: Option<ContrastPreference>) {
+        if self.committed_contrast_preference == value {
+            return;
+        }
+        self.committed_contrast_preference = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::PrefersContrast)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::PrefersContrast);
+    }
+
+    pub(crate) fn set_committed_forced_colors_mode(&mut self, value: Option<ForcedColorsMode>) {
+        if self.committed_forced_colors_mode == value {
+            return;
+        }
+        self.committed_forced_colors_mode = value;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::ForcedColorsMode)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::ForcedColorsMode);
     }
 
     pub(crate) fn record_committed_primary_pointer_type(&mut self, pointer_type: PointerType) {
@@ -1271,6 +1442,19 @@ impl WindowElementState {
             .or_insert(1);
         self.environment_changed_this_frame
             .insert(EnvironmentQueryKey::SafeAreaInsets);
+    }
+
+    pub(crate) fn record_committed_occlusion_insets(&mut self, insets: Option<Edges>) {
+        if self.committed_occlusion_insets == insets {
+            return;
+        }
+        self.committed_occlusion_insets = insets;
+        self.environment_revisions
+            .entry(EnvironmentQueryKey::OcclusionInsets)
+            .and_modify(|v| *v = v.saturating_add(1))
+            .or_insert(1);
+        self.environment_changed_this_frame
+            .insert(EnvironmentQueryKey::OcclusionInsets);
     }
 
     pub(crate) fn record_committed_viewport_bounds(&mut self, bounds: Rect) {
@@ -1331,9 +1515,16 @@ impl WindowElementState {
         let env_key_label = |key: EnvironmentQueryKey| match key {
             EnvironmentQueryKey::ViewportSize => "viewport_size",
             EnvironmentQueryKey::ScaleFactor => "scale_factor",
+            EnvironmentQueryKey::ColorScheme => "color_scheme",
             EnvironmentQueryKey::PrefersReducedMotion => "prefers_reduced_motion",
+            EnvironmentQueryKey::TextScaleFactor => "text_scale_factor",
+            EnvironmentQueryKey::PrefersReducedTransparency => "prefers_reduced_transparency",
+            EnvironmentQueryKey::AccentColor => "accent_color",
+            EnvironmentQueryKey::PrefersContrast => "prefers_contrast",
+            EnvironmentQueryKey::ForcedColorsMode => "forced_colors_mode",
             EnvironmentQueryKey::PrimaryPointerType => "primary_pointer_type",
             EnvironmentQueryKey::SafeAreaInsets => "safe_area_insets",
+            EnvironmentQueryKey::OcclusionInsets => "occlusion_insets",
         };
 
         let bounds_for = |element: Option<GlobalElementId>| {
@@ -1460,9 +1651,16 @@ impl WindowElementState {
         let environment = EnvironmentQueryDiagnosticsSnapshot {
             viewport_bounds: self.committed_viewport_bounds,
             scale_factor: self.committed_scale_factor,
+            color_scheme: self.committed_color_scheme,
             prefers_reduced_motion: self.committed_prefers_reduced_motion,
+            text_scale_factor: self.committed_text_scale_factor,
+            prefers_reduced_transparency: self.committed_prefers_reduced_transparency,
+            accent_color: self.committed_accent_color,
+            contrast_preference: self.committed_contrast_preference,
+            forced_colors_mode: self.committed_forced_colors_mode,
             primary_pointer_type: self.committed_primary_pointer_type(),
             safe_area_insets: self.committed_safe_area_insets,
+            occlusion_insets: self.committed_occlusion_insets,
         };
 
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1889,6 +2087,126 @@ mod tests {
     }
 
     #[test]
+    fn color_scheme_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ColorScheme)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ColorScheme)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_color_scheme(Some(ColorScheme::Light));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_color_scheme(Some(ColorScheme::Dark));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ColorScheme)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn prefers_contrast_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::PrefersContrast)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::PrefersContrast)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_contrast_preference(Some(ContrastPreference::NoPreference));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_contrast_preference(Some(ContrastPreference::More));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::PrefersContrast)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn forced_colors_mode_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::ForcedColorsMode)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::ForcedColorsMode)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::None));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.set_committed_forced_colors_mode(Some(ForcedColorsMode::Active));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::ForcedColorsMode)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
     fn safe_area_insets_is_none_until_committed() {
         let state = WindowElementState::default();
         assert_eq!(state.committed_safe_area_insets(), None);
@@ -1928,6 +2246,52 @@ mod tests {
             state
                 .environment_revisions
                 .get(&EnvironmentQueryKey::SafeAreaInsets)
+                .copied()
+                .unwrap(),
+            first_revision + 1
+        );
+    }
+
+    #[test]
+    fn occlusion_insets_is_none_until_committed() {
+        let state = WindowElementState::default();
+        assert_eq!(state.committed_occlusion_insets(), None);
+    }
+
+    #[test]
+    fn occlusion_insets_revision_increments_on_change() {
+        let mut state = WindowElementState::default();
+        state.prepare_for_frame(FrameId(1), 0);
+
+        assert!(state.environment_revisions.is_empty());
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert!(
+            state
+                .environment_changed_this_frame
+                .contains(&EnvironmentQueryKey::OcclusionInsets)
+        );
+        let first_revision = state
+            .environment_revisions
+            .get(&EnvironmentQueryKey::OcclusionInsets)
+            .copied()
+            .unwrap();
+
+        // Same value should not bump the revision.
+        state.record_committed_occlusion_insets(Some(Edges::all(fret_core::Px(16.0))));
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
+                .copied()
+                .unwrap(),
+            first_revision
+        );
+
+        state.record_committed_occlusion_insets(None);
+        assert_eq!(
+            state
+                .environment_revisions
+                .get(&EnvironmentQueryKey::OcclusionInsets)
                 .copied()
                 .unwrap(),
             first_revision + 1

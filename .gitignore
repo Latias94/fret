@@ -19,3 +19,5 @@ tools/_clippy*.txt
 tmp*
 *.rej
 /.bench/
+__pycache__/
+*.pyc

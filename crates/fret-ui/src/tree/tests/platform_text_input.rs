@@ -110,6 +110,19 @@ impl fret_core::SvgService for PlatformTextTestServices {
     }
 }
 
+impl fret_core::MaterialService for PlatformTextTestServices {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 #[test]
 fn platform_text_input_query_can_get_text_ranges_bounds_and_replace() {
     let mut app = crate::test_host::TestHost::new();

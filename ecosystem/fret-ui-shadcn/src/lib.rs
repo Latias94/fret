@@ -254,7 +254,8 @@ pub use sidebar::{
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
 pub use sonner::{
-    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
+    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise,
+    ToastPromiseAsyncOptions, ToastPromiseHandle, ToastPromiseUnwrapError, ToastRequest,
     ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
@@ -277,7 +278,10 @@ pub use tooltip::{
 };
 
 #[cfg(feature = "app-integration")]
-pub use app_integration::{install, install_app, install_app_with, install_app_with_theme};
+pub use app_integration::{
+    ShadcnInstallConfig, install, install_app, install_app_with, install_app_with_theme,
+    sync_theme_from_environment,
+};
 
 pub use ::fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.

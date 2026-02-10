@@ -671,7 +671,11 @@ impl HoverCard {
                     .or(last_content_size)
                     .unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    window_margin,
+                );
 
                 let align = match align {
                     HoverCardAlign::Start => Align::Start,
@@ -1083,6 +1087,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }

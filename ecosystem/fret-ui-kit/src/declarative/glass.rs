@@ -3,12 +3,13 @@ use fret_core::scene::{EffectMode, EffectQuality};
 use fret_ui::element::{
     AnyElement, ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::ChromeRefinement;
+use crate::declarative::reduced_transparency_queries;
 use crate::recipes::glass::{
-    GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys, glass_effect_chain,
-    resolve_glass_chrome, resolve_glass_effect,
+    GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys,
+    glass_effect_chain_for_environment, resolve_glass_chrome, resolve_glass_effect,
 };
 
 #[derive(Debug, Clone)]
@@ -47,10 +48,13 @@ pub fn glass_panel<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
+    let prefers_reduced_transparency =
+        reduced_transparency_queries::prefers_reduced_transparency(cx, Invalidation::Paint, false);
+
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_glass_chrome(theme, &props.chrome, props.chrome_keys);
     let effect = resolve_glass_effect(theme, &props.effect, props.effect_keys);
-    let chain = glass_effect_chain(effect);
+    let chain = glass_effect_chain_for_environment(effect, prefers_reduced_transparency);
 
     // Structure:
     //

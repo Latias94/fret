@@ -312,26 +312,8 @@ impl TooltipProvider {
         self
     }
 
-    /// Base UI-compatible alias (`delay`), in milliseconds.
-    pub fn delay_duration_ms(mut self, millis: u64) -> Self {
-        self.delay_duration_frames = millis as u32;
-        self
-    }
-
-    /// Base UI-compatible close delay (`closeDelay`), in milliseconds.
-    pub fn close_delay_duration_ms(mut self, millis: u64) -> Self {
-        self.close_delay_duration_frames = millis as u32;
-        self
-    }
-
     pub fn skip_delay_duration_frames(mut self, frames: u32) -> Self {
         self.skip_delay_duration_frames = frames;
-        self
-    }
-
-    /// Base UI-compatible alias (`skipDelayDuration`), in milliseconds.
-    pub fn skip_delay_duration_ms(mut self, millis: u64) -> Self {
-        self.skip_delay_duration_frames = millis as u32;
         self
     }
 
@@ -502,20 +484,8 @@ impl Tooltip {
         self
     }
 
-    /// Base UI-compatible alias (`delay`), in milliseconds.
-    pub fn open_delay_ms(mut self, millis: u64) -> Self {
-        self.open_delay_frames_override = Some(millis as u32);
-        self
-    }
-
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames_override = Some(frames);
-        self
-    }
-
-    /// Base UI-compatible alias (`closeDelay`), in milliseconds.
-    pub fn close_delay_ms(mut self, millis: u64) -> Self {
-        self.close_delay_frames_override = Some(millis as u32);
         self
     }
 
@@ -809,7 +779,11 @@ impl Tooltip {
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    window_margin,
+                );
 
                 let align = match align {
                     TooltipAlign::Start => Align::Start,
@@ -1073,7 +1047,11 @@ impl Tooltip {
                 let estimated_size = Size::new(Px(240.0), Px(44.0));
                 let content_size = last_content_size.unwrap_or(estimated_size);
 
-                let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                let outer = overlay::outer_bounds_with_window_margin_for_environment(
+                    cx,
+                    fret_ui::Invalidation::Layout,
+                    window_margin,
+                );
 
                 let align = match align {
                     TooltipAlign::Start => Align::Start,
@@ -1400,6 +1378,19 @@ mod tests {
         }
     }
 
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
     #[test]
     fn tooltip_content_applies_default_fg_to_descendant_text() {
         use fret_core::Color;
@@ -1498,17 +1489,17 @@ mod tests {
         );
 
         let tooltip = Tooltip::new(trigger, content)
-            .open_delay_ms(120)
-            .close_delay_ms(80)
+            .open_delay_frames(120)
+            .close_delay_frames(80)
             .disable_hoverable_popup(true);
         assert_eq!(tooltip.open_delay_frames_override, Some(120));
         assert_eq!(tooltip.close_delay_frames_override, Some(80));
         assert_eq!(tooltip.disable_hoverable_content_override, Some(true));
 
         let provider = TooltipProvider::new()
-            .delay_duration_ms(200)
-            .close_delay_duration_ms(150)
-            .skip_delay_duration_ms(300)
+            .delay_duration_frames(200)
+            .close_delay_duration_frames(150)
+            .skip_delay_duration_frames(300)
             .disable_hoverable_popup(true);
         assert_eq!(provider.delay_duration_frames, 200);
         assert_eq!(provider.close_delay_duration_frames, 150);

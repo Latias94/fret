@@ -155,6 +155,21 @@ impl Renderer {
             encoding
         };
 
+        if perf_enabled {
+            frame_perf.material_quad_ops = frame_perf
+                .material_quad_ops
+                .saturating_add(encoding.material_quad_ops);
+            frame_perf.material_distinct = frame_perf
+                .material_distinct
+                .saturating_add(encoding.material_distinct);
+            frame_perf.material_unknown_ids = frame_perf
+                .material_unknown_ids
+                .saturating_add(encoding.material_unknown_ids);
+            frame_perf.material_degraded_due_to_budget = frame_perf
+                .material_degraded_due_to_budget
+                .saturating_add(encoding.material_degraded_due_to_budget);
+        }
+
         let postprocess = if self.debug_pixelate_scale > 0 {
             DebugPostprocess::Pixelate {
                 scale: self.debug_pixelate_scale,
@@ -2811,6 +2826,22 @@ impl Renderer {
                 .perf
                 .scene_encoding_cache_misses
                 .saturating_add(frame_perf.scene_encoding_cache_misses);
+            self.perf.material_quad_ops = self
+                .perf
+                .material_quad_ops
+                .saturating_add(frame_perf.material_quad_ops);
+            self.perf.material_distinct = self
+                .perf
+                .material_distinct
+                .saturating_add(frame_perf.material_distinct);
+            self.perf.material_unknown_ids = self
+                .perf
+                .material_unknown_ids
+                .saturating_add(frame_perf.material_unknown_ids);
+            self.perf.material_degraded_due_to_budget = self
+                .perf
+                .material_degraded_due_to_budget
+                .saturating_add(frame_perf.material_degraded_due_to_budget);
 
             self.last_frame_perf = Some(RenderPerfSnapshot {
                 frames: frame_perf.frames,
@@ -2880,6 +2911,10 @@ impl Renderer {
                 vertex_bytes: frame_perf.vertex_bytes,
                 scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
                 scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
+                material_quad_ops: frame_perf.material_quad_ops,
+                material_distinct: frame_perf.material_distinct,
+                material_unknown_ids: frame_perf.material_unknown_ids,
+                material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
             });
         }
 

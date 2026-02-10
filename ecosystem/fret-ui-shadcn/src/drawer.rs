@@ -218,7 +218,11 @@ impl DrawerContent {
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
-                .max_h(drawer_vertical_max_height(cx.bounds.size.height))
+                .max_h(drawer_vertical_max_height(
+                    cx.environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                        .size
+                        .height,
+                ))
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
@@ -529,7 +533,10 @@ impl Drawer {
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
-                let viewport_w = cx.bounds.size.width;
+                let viewport_w = cx
+                    .environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                    .size
+                    .width;
                 let desired = Px((viewport_w.0 * DRAWER_SIDE_PANEL_WIDTH_FRACTION)
                     .min(DRAWER_SIDE_PANEL_MAX_WIDTH_PX.0)
                     .max(0.0));
@@ -546,7 +553,10 @@ impl Drawer {
 
             let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
             let (runtime, offset_model, was_open) = drawer_drag_models(cx);
-            let window_height = cx.bounds.size.height;
+            let window_height = cx
+                .environment_viewport_bounds(fret_ui::Invalidation::Layout)
+                .size
+                .height;
             let has_snap_points = snap_points.as_ref().map(|v| !v.is_empty()).unwrap_or(false);
 
             if is_open && !was_open {
@@ -1028,6 +1038,19 @@ mod tests {
         }
 
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
     }
