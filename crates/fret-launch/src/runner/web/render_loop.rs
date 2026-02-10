@@ -62,7 +62,15 @@ impl WebEnvironmentMediaQueries {
             let cb = Closure::wrap(Box::new(move |_evt: web_sys::MediaQueryListEvent| {
                 dirty.set(true);
             }) as Box<dyn FnMut(_)>);
-            let _ = list.add_event_listener_with_callback("change", cb.as_ref().unchecked_ref());
+            // Prefer the standard `change` event listener.
+            // Fallback to the deprecated `addListener` API for older browsers.
+            let callback: &js_sys::Function = cb.as_ref().unchecked_ref();
+            if list
+                .add_event_listener_with_callback("change", callback)
+                .is_err()
+            {
+                let _ = list.add_listener_with_opt_callback(Some(callback));
+            }
             listeners.push(cb);
         };
 

@@ -1520,6 +1520,7 @@ dependencies = [
  "fret-runtime",
  "getrandom 0.3.4",
  "image",
+ "js-sys",
  "keyboard-types",
  "objc",
  "pollster",
