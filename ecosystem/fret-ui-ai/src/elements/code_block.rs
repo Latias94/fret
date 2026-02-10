@@ -195,6 +195,9 @@ fn alpha(color: Color, a: f32) -> Color {
 #[derive(Clone)]
 pub struct CodeBlockCopyButton {
     code: Arc<str>,
+    on_copy: Option<
+        Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static>,
+    >,
     timeout: Duration,
     test_id: Option<Arc<str>>,
     copied_marker_test_id: Option<Arc<str>>,
@@ -218,10 +221,25 @@ impl CodeBlockCopyButton {
     pub fn new(code: impl Into<Arc<str>>) -> Self {
         Self {
             code: code.into(),
+            on_copy: None,
             timeout: Duration::from_millis(2000),
             test_id: None,
             copied_marker_test_id: None,
         }
+    }
+
+    /// Called after the copy intent is issued.
+    ///
+    /// Note: this callback does not currently model "copy failed" (platform effects are
+    /// best-effort).
+    pub fn on_copy(
+        mut self,
+        on_copy: Arc<
+            dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx) + 'static,
+        >,
+    ) -> Self {
+        self.on_copy = Some(on_copy);
+        self
     }
 
     pub fn timeout(mut self, timeout: Duration) -> Self {
@@ -247,6 +265,7 @@ impl CodeBlockCopyButton {
         let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
 
         let code = self.code;
+        let on_copy = self.on_copy;
         let timeout = self.timeout;
         let test_id = self.test_id;
         let copied_marker_test_id = self.copied_marker_test_id;
@@ -276,10 +295,18 @@ impl CodeBlockCopyButton {
             cx.pressable_on_activate({
                 let code = code.clone();
                 let feedback = feedback.clone();
+                let on_copy = on_copy.clone();
                 Arc::new(move |host, action_cx, _reason| {
+                    if feedback.lock().copied {
+                        return;
+                    }
+
                     host.push_effect(Effect::ClipboardSetText {
                         text: code.to_string(),
                     });
+                    if let Some(on_copy) = on_copy.as_ref() {
+                        on_copy(host, action_cx);
+                    }
 
                     let (prev, token) = {
                         let mut feedback = feedback.lock();
