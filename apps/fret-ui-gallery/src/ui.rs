@@ -731,6 +731,7 @@ fn page_preview(
         PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
+        PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
         PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
         PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
@@ -20627,6 +20628,150 @@ fn preview_ai_plan_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![cx.text("Plan (AI Elements)"), plan],
+    )]
+}
+
+fn preview_ai_tool_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_ui::element::{SemanticsDecoration, SemanticsProps};
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    use serde_json::json;
+
+    let gate_tool = {
+        let input = ui_ai::ToolCallPayload::Json(json!({
+            "query": "fret ui toolkit",
+            "limit": 3,
+        }));
+        let output = ui_ai::ToolCallPayload::Json(json!({
+            "results": [
+                {"title": "docs/architecture.md", "score": 0.93},
+                {"title": "docs/repo-structure.md", "score": 0.87},
+            ]
+        }));
+
+        let header = ui_ai::ToolHeader::new("tool-web-search", ui_ai::ToolStatus::InputAvailable)
+            .test_id("ui-ai-tool-demo-trigger");
+
+        let input = ui_ai::ToolInput::new(input).into_element(cx);
+        let output = ui_ai::ToolOutput::new(Some(output), None)
+            .into_element(cx)
+            .expect("output section must render");
+
+        let marker = cx.text("").attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id("ui-ai-tool-demo-content-marker"),
+        );
+
+        let content = ui_ai::ToolContent::new([input, output, marker]);
+        let tool = ui_ai::Tool::new(header, content)
+            .default_open(false)
+            .into_element(cx);
+
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(Arc::<str>::from("ui-ai-tool-demo-root")),
+                ..Default::default()
+            },
+            move |_cx| vec![tool],
+        )
+    };
+
+    let examples = {
+        let calls: Vec<(Arc<str>, ui_ai::ToolCall)> = vec![
+            (
+                Arc::<str>::from("approval-requested"),
+                ui_ai::ToolCall::new("call-approval-requested", "tool-delete-file")
+                    .state(ui_ai::ToolCallState::ApprovalRequested)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "path": "Cargo.lock"
+                    }))),
+            ),
+            (
+                Arc::<str>::from("approval-responded"),
+                ui_ai::ToolCall::new("call-approval-responded", "tool-delete-file")
+                    .state(ui_ai::ToolCallState::ApprovalResponded)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "path": "Cargo.lock"
+                    }))),
+            ),
+            (
+                Arc::<str>::from("input-streaming"),
+                ui_ai::ToolCall::new("call-input-streaming", "tool-web-search")
+                    .state(ui_ai::ToolCallState::InputStreaming)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "query": "ai elements tool component"
+                    }))),
+            ),
+            (
+                Arc::<str>::from("output-available"),
+                ui_ai::ToolCall::new("call-output-available", "tool-web-search")
+                    .state(ui_ai::ToolCallState::OutputAvailable)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "query": "fret ui ai elements"
+                    })))
+                    .output(ui_ai::ToolCallPayload::Json(json!({
+                        "ok": true
+                    }))),
+            ),
+            (
+                Arc::<str>::from("output-denied"),
+                ui_ai::ToolCall::new("call-output-denied", "tool-delete-file")
+                    .state(ui_ai::ToolCallState::OutputDenied)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "path": "src/main.rs"
+                    })))
+                    .error("Denied by user"),
+            ),
+            (
+                Arc::<str>::from("output-error"),
+                ui_ai::ToolCall::new("call-output-error", "tool-web-search")
+                    .state(ui_ai::ToolCallState::OutputError)
+                    .input(ui_ai::ToolCallPayload::Json(json!({
+                        "query": "nonexistent"
+                    })))
+                    .error("Network timeout"),
+            ),
+        ];
+
+        stack::vstack_build(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N4),
+            move |cx, out| {
+                for (label, call) in calls {
+                    out.push(
+                        ui_ai::ToolCallBlock::new(call)
+                            .default_open(true)
+                            .test_id_root(Arc::<str>::from(format!("ui-ai-tool-demo-call-{label}")))
+                            .test_id_trigger(Arc::<str>::from(format!(
+                                "ui-ai-tool-demo-call-{label}-trigger"
+                            )))
+                            .into_element(cx),
+                    );
+                }
+            },
+        )
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Tool (AI Elements)"),
+                cx.text("Click the header to toggle details; examples below show status mapping."),
+                gate_tool,
+                examples,
+            ]
+        },
     )]
 }
 

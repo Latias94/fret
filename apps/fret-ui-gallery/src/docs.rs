@@ -1063,6 +1063,27 @@ use fret_ui_ai::{
 ```
 "#;
 
+pub(crate) const DOC_AI_TOOL_DEMO: &str = r#"
+## AI tool (demo)
+
+This page is a small demo for the AI Elements-aligned `Tool` / `ToolCallBlock` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- status badge mapping for `ToolCallState` (Awaiting Approval / Responded / Running / Pending / Completed / Denied / Error),
+- parameter + result rendering via `ToolInput` / `ToolOutput` (JSON pretty-print via `ToolCallPayload`),
+- stable `test_id` anchors for `fretboard diag` gates (trigger + content marker).
+"#;
+
+pub(crate) const USAGE_AI_TOOL_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Tool, ToolCall, ToolCallBlock, ToolCallPayload, ToolCallState, ToolContent, ToolHeader, ToolInput,
+    ToolOutput, ToolStatus,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_MODEL_SELECTOR_DEMO: &str = r#"
 ## AI model selector (demo)
 

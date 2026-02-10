@@ -135,6 +135,7 @@ pub(crate) const PAGE_AI_CHECKPOINT_DEMO: &str = "ai_checkpoint_demo";
 pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
 pub(crate) const PAGE_AI_ENVIRONMENT_VARIABLES_DEMO: &str = "ai_environment_variables_demo";
 pub(crate) const PAGE_AI_PLAN_DEMO: &str = "ai_plan_demo";
+pub(crate) const PAGE_AI_TOOL_DEMO: &str = "ai_tool_demo";
 pub(crate) const PAGE_AI_MODEL_SELECTOR_DEMO: &str = "ai_model_selector_demo";
 pub(crate) const PAGE_AI_CHAIN_OF_THOUGHT_DEMO: &str = "ai_chain_of_thought_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
@@ -294,6 +295,7 @@ pub(crate) const CMD_NAV_AI_CONFIRMATION_DEMO: &str = "ui_gallery.nav.select.ai_
 pub(crate) const CMD_NAV_AI_ENVIRONMENT_VARIABLES_DEMO: &str =
     "ui_gallery.nav.select.ai_environment_variables_demo";
 pub(crate) const CMD_NAV_AI_PLAN_DEMO: &str = "ui_gallery.nav.select.ai_plan_demo";
+pub(crate) const CMD_NAV_AI_TOOL_DEMO: &str = "ui_gallery.nav.select.ai_tool_demo";
 pub(crate) const CMD_NAV_AI_MODEL_SELECTOR_DEMO: &str =
     "ui_gallery.nav.select.ai_model_selector_demo";
 pub(crate) const CMD_NAV_AI_CHAIN_OF_THOUGHT_DEMO: &str =
@@ -1108,6 +1110,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "plan", "collapsible", "streaming", "shimmer", "demo"],
                 docs::DOC_AI_PLAN_DEMO,
                 docs::USAGE_AI_PLAN_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_TOOL_DEMO,
+                "AI Tool (Demo)",
+                "AI Elements Tool / Collapsible Tool Call Demo",
+                "fret-ui-ai (tool call chrome)",
+                CMD_NAV_AI_TOOL_DEMO,
+                &[
+                    "ai",
+                    "tool",
+                    "tool-call",
+                    "collapsible",
+                    "code-block",
+                    "demo",
+                ],
+                docs::DOC_AI_TOOL_DEMO,
+                docs::USAGE_AI_TOOL_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_MODEL_SELECTOR_DEMO,
