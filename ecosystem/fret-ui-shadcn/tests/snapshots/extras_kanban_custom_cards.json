@@ -35,7 +35,7 @@
         },
         "size": {
           "w": 920.0,
-          "h": 160.0
+          "h": 0.0
         }
       },
       "flags": {
@@ -58,7 +58,76 @@
         },
         "size": {
           "w": 920.0,
-          "h": 160.0
+          "h": 0.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 0.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 0.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 0.0
         }
       },
       "flags": {
@@ -1222,6 +1291,19 @@
     }
   ],
   "scene_ops": [
+    {
+      "kind": "PushClipRect",
+      "rect": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 0.0
+        }
+      }
+    },
     {
       "kind": "Quad",
       "rect": {
@@ -2974,6 +3056,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "PopClip"

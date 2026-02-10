@@ -6,8 +6,10 @@ use fret_runtime::{DragKindId, Model};
 use fret_ui::action::{
     OnPointerDown, OnPointerMove, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
 };
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, ScrollAxis,
+};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -19,6 +21,7 @@ use fret_ui_kit::dnd::{
 use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
+use crate::ScrollArea;
 use crate::test_id::attach_test_id;
 
 const DRAG_KIND_KANBAN: DragKindId = DragKindId(101);
@@ -418,6 +421,20 @@ impl Kanban {
 
             let el = cx.container(root_props, move |cx| {
                 let items_snapshot = cx.watch_model(&items).layout().cloned_or_default();
+                let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+                    cx,
+                    Invalidation::Layout,
+                    fret_ui_kit::declarative::tailwind::SM,
+                    fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+                );
+                let board_gap_x = if sm_breakpoint { Space::N4 } else { Space::N3 };
+                let column_layout = if sm_breakpoint {
+                    column_layout.clone()
+                } else {
+                    column_layout
+                        .clone()
+                        .merge(LayoutRefinement::default().w_px(Px(240.0)).min_w_0())
+                };
 
                 let overlay_presence =
                     presence::fade_presence_with_durations(cx, dragging_open, 1, 6);
@@ -1151,11 +1168,15 @@ impl Kanban {
                 let board = stack::hstack(
                     cx,
                     stack::HStackProps::default()
-                        .gap_x(Space::N4)
+                        .gap_x(board_gap_x)
                         .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
+                        .layout(LayoutRefinement::default()),
                     |_cx| cols,
                 );
+                let board = ScrollArea::new([board])
+                    .axis(ScrollAxis::X)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
 
                 let overlay = if dragging {
                     (|| -> Option<AnyElement> {
