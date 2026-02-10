@@ -40,6 +40,7 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence (module split):
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support/`
+    - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/harness.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/web.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/`
