@@ -1,22 +1,31 @@
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll, Waker};
 use std::time::Duration;
+use std::{fmt, future::Future};
 
 use fret_core::AppWindowId;
 use fret_core::Px;
-use fret_runtime::{CommandId, Model};
+use fret_executor::FutureSpawnerHandle;
+use fret_runtime::{CommandId, DispatcherHandle, Model};
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::{OverlayController, OverlayRequest, ToastStore};
+use fret_ui_kit::{OverlayController, OverlayRequest, ToastAsyncQueueHandle, ToastStore};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Toaster {
+    id: Option<Arc<str>>,
     position: ToastPosition,
     margin: Option<Px>,
     gap: Option<Px>,
     toast_min_width: Option<Px>,
     toast_max_width: Option<Px>,
     max_toasts: Option<usize>,
+    visible_toasts: Option<usize>,
+    expand_by_default: bool,
+    rich_colors: bool,
+    invert: bool,
 }
 
 #[derive(Debug, Default)]
@@ -27,6 +36,7 @@ struct ToasterConfigState {
 impl Default for Toaster {
     fn default() -> Self {
         Self {
+            id: None,
             // shadcn/ui v4 app layout mounts Sonner's `<Toaster position="top-center" />`.
             // Keep the default aligned with that "golden" baseline.
             position: ToastPosition::TopCenter,
@@ -39,6 +49,10 @@ impl Default for Toaster {
             toast_min_width: Some(Px(356.0)),
             toast_max_width: Some(Px(356.0)),
             max_toasts: Some(fret_ui_kit::DEFAULT_MAX_TOASTS),
+            visible_toasts: Some(fret_ui_kit::DEFAULT_VISIBLE_TOASTS),
+            expand_by_default: false,
+            rich_colors: false,
+            invert: false,
         }
     }
 }
@@ -46,6 +60,11 @@ impl Default for Toaster {
 impl Toaster {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.id = Some(id.into());
+        self
     }
 
     pub fn position(mut self, position: ToastPosition) -> Self {
@@ -83,6 +102,26 @@ impl Toaster {
         self
     }
 
+    pub fn visible_toasts(mut self, visible_toasts: usize) -> Self {
+        self.visible_toasts = Some(visible_toasts.max(1));
+        self
+    }
+
+    pub fn expand_by_default(mut self, expand: bool) -> Self {
+        self.expand_by_default = expand;
+        self
+    }
+
+    pub fn rich_colors(mut self, rich_colors: bool) -> Self {
+        self.rich_colors = rich_colors;
+        self
+    }
+
+    pub fn invert(mut self, invert: bool) -> Self {
+        self.invert = invert;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
@@ -107,7 +146,16 @@ impl Toaster {
 
             let mut request = OverlayRequest::toast_layer(id, store)
                 .toast_position(self.position)
-                .toast_style(style);
+                .toast_style(style)
+                .toast_expand_by_default(self.expand_by_default)
+                .toast_rich_colors(self.rich_colors)
+                .toast_invert(self.invert);
+            if let Some(toaster_id) = self.id.clone() {
+                request = request.toast_toaster_id(toaster_id);
+            }
+            if let Some(visible) = self.visible_toasts {
+                request = request.toast_visible_toasts(visible);
+            }
             if let Some(margin) = self.margin {
                 request = request.toast_margin(margin);
             }
@@ -130,6 +178,9 @@ impl Toaster {
 #[derive(Clone)]
 pub struct Sonner {
     store: Model<ToastStore>,
+    async_queue: ToastAsyncQueueHandle,
+    dispatcher: Option<DispatcherHandle>,
+    spawner: Option<FutureSpawnerHandle>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -197,7 +248,15 @@ impl ToastMessageOptions {
 
 impl std::fmt::Debug for Sonner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Sonner").field("store", &"<model>").finish()
+        f.debug_struct("Sonner")
+            .field("store", &"<model>")
+            .field("async_queue", &"<queue>")
+            .field(
+                "dispatcher",
+                &self.dispatcher.as_ref().map(|_| "<dispatcher>"),
+            )
+            .field("spawner", &self.spawner.as_ref().map(|_| "<spawner>"))
+            .finish()
     }
 }
 
@@ -205,6 +264,9 @@ impl Sonner {
     pub fn global<H: UiHost>(app: &mut H) -> Self {
         Self {
             store: OverlayController::toast_store(app),
+            async_queue: fret_ui_kit::toast_async_queue(app),
+            dispatcher: app.global::<DispatcherHandle>().cloned(),
+            spawner: app.global::<FutureSpawnerHandle>().cloned(),
         }
     }
 
@@ -538,6 +600,196 @@ impl Sonner {
             id,
         }
     }
+
+    /// Runs an async task and updates the toast when it resolves/rejects, mirroring Sonner's
+    /// `toast.promise(...)` surface on the web.
+    ///
+    /// Notes:
+    /// - This requires installing a `FutureSpawnerHandle` as a global.
+    /// - Completion is applied via a queue drained during the window overlays render pass.
+    pub fn toast_promise_async<T, E, Fut>(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        loading: impl Into<Arc<str>>,
+        promise: impl FnOnce() -> Fut + Send + 'static,
+        options: ToastPromiseAsyncOptions<T, E>,
+    ) -> ToastId
+    where
+        T: Send + 'static,
+        E: Send + 'static,
+        Fut: Future<Output = Result<T, E>> + Send + 'static,
+    {
+        self.toast_promise_async_with(
+            host,
+            window,
+            ToastRequest::new(loading)
+                .variant(ToastVariant::Loading)
+                .duration(None),
+            promise,
+            options,
+        )
+    }
+
+    pub fn toast_promise_async_with<T, E, Fut>(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        loading: ToastRequest,
+        promise: impl FnOnce() -> Fut + Send + 'static,
+        options: ToastPromiseAsyncOptions<T, E>,
+    ) -> ToastId
+    where
+        T: Send + 'static,
+        E: Send + 'static,
+        Fut: Future<Output = Result<T, E>> + Send + 'static,
+    {
+        self.toast_promise_async_handle_with(host, window, Some(loading), promise, options)
+            .id()
+            .unwrap_or(ToastId(0))
+    }
+
+    /// Runs an async task and returns a handle that can be awaited via `.unwrap()`.
+    ///
+    /// This is the closest Rust analogue to Sonner's `toast.promise(...).unwrap()` pattern.
+    /// The returned handle:
+    /// - always provides an awaitable `unwrap()` future (even if no toast is shown),
+    /// - optionally provides a `ToastId` when a loading toast is created.
+    ///
+    /// If `loading` is `None`, no loading toast is shown and the handle's `id()` is `None` (matching
+    /// Sonner's behavior where `toast.promise(promise, { success/error })` can return `{ unwrap }`
+    /// without an id when no `loading` toast exists).
+    pub fn toast_promise_async_handle_with<T, E, Fut>(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        loading: Option<ToastRequest>,
+        promise: impl FnOnce() -> Fut + Send + 'static,
+        options: ToastPromiseAsyncOptions<T, E>,
+    ) -> ToastPromiseHandle<T, E>
+    where
+        T: Send + 'static,
+        E: Send + 'static,
+        Fut: Future<Output = Result<T, E>> + Send + 'static,
+    {
+        let loading_description = options.description_static.clone();
+        let id = loading.map(|loading| {
+            let mut req = loading.variant(ToastVariant::Loading).duration(None);
+            if let Some(desc) = loading_description {
+                req = req.description(desc);
+            }
+            self.toast(host, window, req)
+        });
+
+        let shared = Arc::new(ToastPromiseShared::<T, E>::default());
+        let handle = ToastPromiseHandle {
+            id,
+            shared: shared.clone(),
+        };
+
+        let Some(spawner) = self.spawner.clone() else {
+            shared.complete(Err(
+                ToastPromiseUnwrapError::MissingFutureSpawnerHandleGlobal,
+            ));
+            if let Some(id) = id {
+                let _ = self.toast_update(
+                    host,
+                    window,
+                    id,
+                    ToastRequest::new("missing FutureSpawnerHandle global")
+                        .variant(ToastVariant::Error),
+                );
+            }
+            return handle;
+        };
+        let Some(dispatcher) = self.dispatcher.clone() else {
+            shared.complete(Err(ToastPromiseUnwrapError::MissingDispatcherHandleGlobal));
+            if let Some(id) = id {
+                let _ = self.toast_update(
+                    host,
+                    window,
+                    id,
+                    ToastRequest::new("missing DispatcherHandle global")
+                        .variant(ToastVariant::Error),
+                );
+            }
+            return handle;
+        };
+
+        let queue = self.async_queue.clone();
+        let success = options.success.clone();
+        let error = options.error.clone();
+        let finally = options.finally.clone();
+        let description_static = options.description_static.clone();
+        let description_success = options.description_success.clone();
+        let description_error = options.description_error.clone();
+
+        spawner.spawn_send(Box::pin(async move {
+            let fut = promise();
+            let result = fut.await;
+
+            match result {
+                Ok(value) => {
+                    let desc = description_success
+                        .as_ref()
+                        .map(|f| (f)(&value))
+                        .or_else(|| description_static.clone());
+
+                    if let Some(success) = success {
+                        let mut req = (success)(&value);
+                        if req.variant == ToastVariant::Default {
+                            req = req.variant(ToastVariant::Success);
+                        }
+                        if let Some(desc) = desc {
+                            req = req.description(desc);
+                        }
+                        if let Some(id) = id {
+                            queue.upsert(window, req.id(id));
+                        } else {
+                            queue.upsert(window, req);
+                        }
+                    } else if let Some(id) = id {
+                        queue.dismiss(window, id);
+                    }
+
+                    shared.complete(Ok(value));
+                }
+                Err(err) => {
+                    let desc = description_error
+                        .as_ref()
+                        .map(|f| (f)(&err))
+                        .or_else(|| description_static.clone());
+
+                    if let Some(error) = error {
+                        let mut req = (error)(&err);
+                        if req.variant == ToastVariant::Default {
+                            req = req.variant(ToastVariant::Error);
+                        }
+                        if let Some(desc) = desc {
+                            req = req.description(desc);
+                        }
+                        if let Some(id) = id {
+                            queue.upsert(window, req.id(id));
+                        } else {
+                            queue.upsert(window, req);
+                        }
+                    } else if let Some(id) = id {
+                        queue.dismiss(window, id);
+                    }
+
+                    shared.complete(Err(ToastPromiseUnwrapError::Rejected(err)));
+                }
+            }
+
+            if let Some(finally) = finally {
+                finally();
+            }
+
+            dispatcher.wake(Some(window));
+        }));
+
+        handle
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -611,6 +863,200 @@ impl ToastPromise {
 }
 
 pub use fret_ui_kit::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
+
+#[derive(Clone)]
+pub struct ToastPromiseAsyncOptions<T, E> {
+    success: Option<Arc<dyn Fn(&T) -> ToastRequest + Send + Sync + 'static>>,
+    error: Option<Arc<dyn Fn(&E) -> ToastRequest + Send + Sync + 'static>>,
+    finally: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+    description_static: Option<Arc<str>>,
+    description_success: Option<Arc<dyn Fn(&T) -> Arc<str> + Send + Sync + 'static>>,
+    description_error: Option<Arc<dyn Fn(&E) -> Arc<str> + Send + Sync + 'static>>,
+}
+
+impl<T, E> fmt::Debug for ToastPromiseAsyncOptions<T, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ToastPromiseAsyncOptions")
+            .field("success", &self.success.as_ref().map(|_| "<fn>"))
+            .field("error", &self.error.as_ref().map(|_| "<fn>"))
+            .field("finally", &self.finally.as_ref().map(|_| "<fn>"))
+            .field(
+                "description_static",
+                &self.description_static.as_ref().map(|_| "<str>"),
+            )
+            .field(
+                "description_success",
+                &self.description_success.as_ref().map(|_| "<fn>"),
+            )
+            .field(
+                "description_error",
+                &self.description_error.as_ref().map(|_| "<fn>"),
+            )
+            .finish()
+    }
+}
+
+impl<T, E> Default for ToastPromiseAsyncOptions<T, E> {
+    fn default() -> Self {
+        Self {
+            success: None,
+            error: None,
+            finally: None,
+            description_static: None,
+            description_success: None,
+            description_error: None,
+        }
+    }
+}
+
+impl<T, E> ToastPromiseAsyncOptions<T, E> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn success_message(mut self, title: impl Into<Arc<str>>) -> Self {
+        let title = title.into();
+        self.success = Some(Arc::new(move |_value| {
+            ToastRequest::new(title.clone()).variant(ToastVariant::Success)
+        }));
+        self
+    }
+
+    pub fn error_message(mut self, title: impl Into<Arc<str>>) -> Self {
+        let title = title.into();
+        self.error = Some(Arc::new(move |_err| {
+            ToastRequest::new(title.clone()).variant(ToastVariant::Error)
+        }));
+        self
+    }
+
+    pub fn success_with(mut self, f: impl Fn(&T) -> ToastRequest + Send + Sync + 'static) -> Self {
+        self.success = Some(Arc::new(f));
+        self
+    }
+
+    pub fn error_with(mut self, f: impl Fn(&E) -> ToastRequest + Send + Sync + 'static) -> Self {
+        self.error = Some(Arc::new(f));
+        self
+    }
+
+    pub fn finally(mut self, f: impl Fn() + Send + Sync + 'static) -> Self {
+        self.finally = Some(Arc::new(f));
+        self
+    }
+
+    /// Sets a static description, mirroring Sonner's `description: "..."` option.
+    ///
+    /// This description is applied to:
+    /// - the loading toast (if present),
+    /// - the success/error toast updates (when a success/error handler is configured).
+    pub fn description_message(mut self, description: impl Into<Arc<str>>) -> Self {
+        self.description_static = Some(description.into());
+        self
+    }
+
+    /// Sets a description computed from the resolved promise value.
+    pub fn description_success_with(
+        mut self,
+        f: impl Fn(&T) -> Arc<str> + Send + Sync + 'static,
+    ) -> Self {
+        self.description_success = Some(Arc::new(f));
+        self
+    }
+
+    /// Sets a description computed from the rejected promise value.
+    pub fn description_error_with(
+        mut self,
+        f: impl Fn(&E) -> Arc<str> + Send + Sync + 'static,
+    ) -> Self {
+        self.description_error = Some(Arc::new(f));
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ToastPromiseUnwrapError<E> {
+    MissingFutureSpawnerHandleGlobal,
+    MissingDispatcherHandleGlobal,
+    Rejected(E),
+}
+
+struct ToastPromiseShared<T, E> {
+    state: std::sync::Mutex<ToastPromiseSharedState<T, E>>,
+}
+
+struct ToastPromiseSharedState<T, E> {
+    result: Option<Result<T, ToastPromiseUnwrapError<E>>>,
+    waker: Option<Waker>,
+}
+
+impl<T, E> Default for ToastPromiseShared<T, E> {
+    fn default() -> Self {
+        Self {
+            state: std::sync::Mutex::new(ToastPromiseSharedState {
+                result: None,
+                waker: None,
+            }),
+        }
+    }
+}
+
+impl<T, E> ToastPromiseShared<T, E> {
+    fn complete(&self, result: Result<T, ToastPromiseUnwrapError<E>>) {
+        let waker = {
+            let mut guard = self.state.lock().unwrap_or_else(|p| p.into_inner());
+            guard.result = Some(result);
+            guard.waker.take()
+        };
+        if let Some(waker) = waker {
+            waker.wake();
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ToastPromiseHandle<T, E> {
+    id: Option<ToastId>,
+    shared: Arc<ToastPromiseShared<T, E>>,
+}
+
+impl<T, E> fmt::Debug for ToastPromiseHandle<T, E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ToastPromiseHandle")
+            .field("id", &self.id)
+            .finish()
+    }
+}
+
+impl<T, E> ToastPromiseHandle<T, E> {
+    pub fn id(&self) -> Option<ToastId> {
+        self.id
+    }
+
+    pub fn unwrap(self) -> ToastPromiseUnwrap<T, E> {
+        ToastPromiseUnwrap {
+            shared: self.shared,
+        }
+    }
+}
+
+pub struct ToastPromiseUnwrap<T, E> {
+    shared: Arc<ToastPromiseShared<T, E>>,
+}
+
+impl<T, E> Future for ToastPromiseUnwrap<T, E> {
+    type Output = Result<T, ToastPromiseUnwrapError<E>>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut guard = self.shared.state.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(result) = guard.result.take() {
+            return Poll::Ready(result);
+        }
+
+        guard.waker = Some(cx.waker().clone());
+        Poll::Pending
+    }
+}
 
 fn base_message_request(title: Arc<str>, variant: ToastVariant) -> ToastRequest {
     let req = ToastRequest::new(title).variant(variant);
