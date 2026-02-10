@@ -108,3 +108,22 @@ pub(crate) fn dispatch_key_press(
     dispatch_key_down(ui, app, services, key);
     dispatch_key_up(ui, app, services, key);
 }
+
+pub(crate) fn hover_open_at(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    position: Point,
+) {
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+}
