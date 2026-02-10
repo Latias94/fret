@@ -708,7 +708,10 @@ fn page_preview(
         PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
         PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
+        PAGE_AI_QUEUE_DEMO => preview_ai_queue_demo(cx, theme),
+        PAGE_AI_ATTACHMENTS_DEMO => preview_ai_attachments_demo(cx, theme),
         PAGE_AI_SUGGESTIONS_DEMO => preview_ai_suggestions_demo(cx, theme),
+        PAGE_AI_MESSAGE_BRANCH_DEMO => preview_ai_message_branch_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
         PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
@@ -17106,10 +17109,12 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
     #[derive(Default)]
     struct ChatModels {
         prompt: Option<Model<String>>,
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
         messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
         loading: Option<Model<bool>>,
         pending: Option<Model<Option<PendingReply>>>,
         next_id: Option<Model<u64>>,
+        next_attachment_id: Option<Model<u64>>,
         content_revision: Option<Model<u64>>,
         exported_md_len: Option<Model<Option<usize>>>,
     }
@@ -17120,6 +17125,33 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         None => {
             let model = cx.app.models_mut().insert(String::new());
             cx.with_state(ChatModels::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let attachments = cx.with_state(ChatModels::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Vec::<ui_ai::AttachmentData>::new());
+            cx.with_state(ChatModels::default, |st| {
+                st.attachments = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let next_attachment_id = cx.with_state(ChatModels::default, |st| st.next_attachment_id.clone());
+    let next_attachment_id = match next_attachment_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(ChatModels::default, |st| {
+                st.next_attachment_id = Some(model.clone())
+            });
             model
         }
     };
@@ -17248,7 +17280,9 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
     };
 
     let prompt_non_empty = cx
-        .get_model_cloned(&prompt, Invalidation::Paint)
+        // This marker is used by scripted diagnostics. Use Layout invalidation so the marker can
+        // appear/disappear even when the prompt edit doesn't change geometry.
+        .get_model_cloned(&prompt, Invalidation::Layout)
         .map(|v| !v.trim().is_empty())
         .unwrap_or(false);
     let prompt_non_empty_marker = prompt_non_empty.then(|| {
@@ -17277,9 +17311,66 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         )
     });
 
-    let loading_value = cx
-        .get_model_copied(&loading, Invalidation::Paint)
+    let attachments_non_empty = cx
+        // Same rationale as `prompt_non_empty_marker`.
+        .get_model_cloned(&attachments, Invalidation::Layout)
+        .map(|v| !v.is_empty())
         .unwrap_or(false);
+    let attachments_non_empty_marker = attachments_non_empty.then(|| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-attachments-nonempty")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Px(Px(0.0)),
+                                height: fret_ui::element::Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            },
+        )
+    });
+
+    let loading_value = cx
+        // Same rationale as `prompt_non_empty_marker`.
+        .get_model_copied(&loading, Invalidation::Layout)
+        .unwrap_or(false);
+    let loading_marker = loading_value.then(|| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-loading")),
+                ..Default::default()
+            },
+            |cx| {
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Px(Px(0.0)),
+                                height: fret_ui::element::Length::Px(Px(0.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )]
+            },
+        )
+    });
     let pending_value = cx
         .get_model_cloned(&pending, Invalidation::Paint)
         .unwrap_or(None);
@@ -17359,6 +17450,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
 
     let send: OnActivate = Arc::new({
         let prompt = prompt.clone();
+        let attachments = attachments.clone();
         let messages = messages.clone();
         let pending = pending.clone();
         let loading = loading.clone();
@@ -17389,9 +17481,22 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             let text = host.models_mut().read(&prompt, Clone::clone).ok();
             let Some(text) = text else { return };
             let text = text.trim().to_string();
-            if text.is_empty() {
+
+            let attachments_len = host
+                .models_mut()
+                .read(&attachments, |v| v.len())
+                .ok()
+                .unwrap_or(0);
+
+            if text.is_empty() && attachments_len == 0 {
                 return;
             }
+
+            let text = if text.is_empty() {
+                format!("(sent {attachments_len} attachment(s))")
+            } else {
+                text
+            };
 
             let user_id = host
                 .models_mut()
@@ -17641,6 +17746,32 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         }
     });
 
+    let add_attachment: OnActivate = Arc::new({
+        let attachments = attachments.clone();
+        let next_attachment_id = next_attachment_id.clone();
+        move |host, _action_cx, _reason| {
+            let n = host
+                .models_mut()
+                .update(&next_attachment_id, |v| {
+                    let out = *v;
+                    *v = v.saturating_add(1);
+                    out
+                })
+                .ok()
+                .unwrap_or(0);
+
+            let id = Arc::<str>::from(format!("att-{n}"));
+            let filename = Arc::<str>::from(format!("note-{n}.txt"));
+            let data = ui_ai::AttachmentData::File(
+                ui_ai::AttachmentFileData::new(id)
+                    .filename(filename)
+                    .media_type("text/plain"),
+            );
+
+            let _ = host.models_mut().update(&attachments, |v| v.push(data));
+        }
+    });
+
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -17650,6 +17781,12 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
             vec![
                 cx.text("Goal: interactive demo for PromptInput + transcript append."),
                 cx.text("Send triggers a short \"loading\" window where Stop is available."),
+                shadcn::Button::new("Add attachment (seeded)")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-ai-chat-add-attachment")
+                    .on_activate(add_attachment.clone())
+                    .into_element(cx),
                 shadcn::Button::new("Start streaming (seeded)")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
@@ -17691,6 +17828,8 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
         .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
         .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
+        .prompt_attachments_model(attachments.clone())
+        .prompt_attachments_test_id("ui-gallery-ai-chat-prompt-attachments")
         .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(360.0)))
         .into_element(cx);
 
@@ -17712,6 +17851,8 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         header,
         actions_demo,
         chat,
+        loading_marker.unwrap_or_else(|| cx.text("")),
+        attachments_non_empty_marker.unwrap_or_else(|| cx.text("")),
         prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
         exported.unwrap_or_else(|| cx.text("")),
     ]
@@ -18060,6 +18201,430 @@ fn preview_ai_reasoning_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     )]
 }
 
+fn preview_ai_queue_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_icons::ids;
+    use fret_runtime::Model;
+    use fret_ui::action::ActionCx;
+    use fret_ui::element::SemanticsProps;
+    use fret_ui_kit::declarative::icon as decl_icon;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{Justify, LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct QueueModels {
+        last_action: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let last_action = cx.with_state(QueueModels::default, |st| st.last_action.clone());
+    let last_action = match last_action {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(QueueModels::default, |st| {
+                st.last_action = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let last_action_value = cx.watch_model(&last_action).layout().cloned().flatten();
+
+    let make_set_action = |value: &'static str| {
+        let value: Arc<str> = Arc::from(value);
+        Arc::new({
+            let last_action = last_action.clone();
+            move |host: &mut dyn fret_ui::action::UiActionHost, _action_cx: ActionCx| {
+                let _ = host
+                    .models_mut()
+                    .update(&last_action, |v| *v = Some(value.clone()));
+            }
+        })
+    };
+
+    let make_row = |cx: &mut ElementContext<'_, App>,
+                    id: &'static str,
+                    title: &'static str,
+                    description: Option<&'static str>,
+                    completed: bool,
+                    with_attachment: bool| {
+        ui_ai::QueueItem::new()
+            .test_id(Arc::<str>::from(format!("ui-ai-queue-item-{id}")))
+            .into_element(cx, move |cx, st| {
+                let indicator = ui_ai::QueueItemIndicator::new()
+                    .completed(completed)
+                    .into_element(cx);
+
+                let content = ui_ai::QueueItemContent::new(title)
+                    .completed(completed)
+                    .into_element(cx);
+
+                let actions = ui_ai::QueueItemActions::new([
+                    ui_ai::QueueItemAction::new("Complete")
+                        .visible(st.hovered && !completed)
+                        .test_id(Arc::<str>::from(format!(
+                            "ui-ai-queue-item-{id}-action-complete"
+                        )))
+                        .children([decl_icon::icon(cx, ids::ui::CHECK)])
+                        .on_activate(make_set_action("complete"))
+                        .into_element(cx),
+                    ui_ai::QueueItemAction::new("Remove")
+                        .visible(st.hovered)
+                        .test_id(Arc::<str>::from(format!(
+                            "ui-ai-queue-item-{id}-action-remove"
+                        )))
+                        .children([decl_icon::icon(cx, ids::ui::CLOSE)])
+                        .on_activate(make_set_action("remove"))
+                        .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let left = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(
+                            LayoutRefinement::default()
+                                .min_w_0()
+                                .basis_0()
+                                .flex_grow(1.0),
+                        )
+                        .gap(Space::N2)
+                        .items_start(),
+                    move |_cx| vec![indicator, content],
+                );
+
+                let row = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .items_center()
+                        .justify(Justify::Between)
+                        .gap(Space::N2),
+                    move |_cx| vec![left, actions],
+                );
+
+                let mut out = vec![row];
+
+                if let Some(desc) = description {
+                    out.push(
+                        ui_ai::QueueItemDescription::new(desc)
+                            .completed(completed)
+                            .into_element(cx),
+                    );
+                }
+
+                if with_attachment {
+                    out.push(
+                        ui_ai::QueueItemAttachment::new([ui_ai::QueueItemFile::new(
+                            "requirements.txt",
+                        )
+                        .into_element(cx)])
+                        .into_element(cx),
+                    );
+                }
+
+                if st.hovered {
+                    out.push(cx.semantics(
+                        SemanticsProps {
+                            role: fret_core::SemanticsRole::Generic,
+                            test_id: Some(Arc::<str>::from(format!(
+                                "ui-ai-queue-item-{id}-hovered-marker"
+                            ))),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![],
+                    ));
+                }
+
+                out
+            })
+    };
+
+    let pending_items = [
+        (
+            "1",
+            "Run `cargo fmt`",
+            Some("Format the workspace before committing."),
+            false,
+            false,
+        ),
+        (
+            "2",
+            "Port `queue.tsx`",
+            Some("Align shadcn composition + add diag gate."),
+            false,
+            true,
+        ),
+        ("3", "Add UI Gallery demo", None, false, false),
+        (
+            "4",
+            "Write workstream docs",
+            Some("Update milestones + TODO tracking."),
+            false,
+            false,
+        ),
+        ("5", "Verify with `fretboard diag`", None, false, false),
+        ("6", "Ship", Some("Cut a release when ready."), false, false),
+        ("7", "Extra item A", None, false, false),
+        ("8", "Extra item B", None, false, false),
+        ("9", "Extra item C", None, false, false),
+        ("10", "Extra item D", None, false, false),
+        ("11", "Extra item E", None, false, false),
+        ("12", "Extra item F", None, false, false),
+    ]
+    .into_iter()
+    .map(|(id, title, desc, completed, attach)| make_row(cx, id, title, desc, completed, attach))
+    .collect::<Vec<_>>();
+    let pending_count = pending_items.len() as u32;
+
+    let completed_items = [
+        (
+            "c1",
+            "Bootstrap `fret-ui-ai`",
+            Some("Initial crate wiring."),
+            true,
+            false,
+        ),
+        ("c2", "Port `reasoning.tsx`", None, true, false),
+    ]
+    .into_iter()
+    .map(|(id, title, desc, completed, attach)| make_row(cx, id, title, desc, completed, attach))
+    .collect::<Vec<_>>();
+    let completed_count = completed_items.len() as u32;
+
+    let pending = ui_ai::QueueSection::uncontrolled(true).into_element(
+        cx,
+        |cx, st| {
+            let label = ui_ai::QueueSectionLabel::new("Pending")
+                .count(pending_count)
+                .into_element(cx, st.is_open);
+            ui_ai::QueueSectionTrigger::new(st.open, [label])
+                .test_id("ui-ai-queue-pending-trigger")
+                .into_element(cx, st.is_open)
+        },
+        |cx| {
+            ui_ai::QueueSectionContent::new([ui_ai::QueueList::new(pending_items)
+                .viewport_test_id("ui-ai-queue-pending-list-viewport")
+                .into_element(cx)])
+            .into_element(cx)
+        },
+    );
+
+    let completed = ui_ai::QueueSection::uncontrolled(false).into_element(
+        cx,
+        |cx, st| {
+            let label = ui_ai::QueueSectionLabel::new("Completed")
+                .count(completed_count)
+                .into_element(cx, st.is_open);
+            ui_ai::QueueSectionTrigger::new(st.open, [label])
+                .test_id("ui-ai-queue-completed-trigger")
+                .into_element(cx, st.is_open)
+        },
+        |cx| {
+            ui_ai::QueueSectionContent::new([ui_ai::QueueList::new(completed_items)
+                .viewport_test_id("ui-ai-queue-completed-list-viewport")
+                .into_element(cx)])
+            .into_element(cx)
+        },
+    );
+
+    let queue = ui_ai::Queue::new([pending, completed])
+        .test_id("ui-ai-queue-root")
+        .into_element(cx);
+
+    let label_text = last_action_value
+        .as_deref()
+        .map(|s| format!("Last action: {s}"))
+        .unwrap_or_else(|| "Last action: <none>".to_string());
+
+    let label = cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Text,
+            test_id: Some(Arc::<str>::from("ui-ai-queue-last-action-label")),
+            ..Default::default()
+        },
+        move |cx| vec![cx.text(label_text)],
+    );
+
+    let marker = (last_action_value.as_deref() == Some("complete")).then(|| {
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Generic,
+                test_id: Some(Arc::<str>::from("ui-ai-queue-complete-marker")),
+                ..Default::default()
+            },
+            move |_cx| vec![],
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| {
+            let mut out = vec![cx.text("Queue (AI Elements)"), queue, label];
+            if let Some(marker) = marker {
+                out.push(marker);
+            }
+            out
+        },
+    )]
+}
+
+fn preview_ai_attachments_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::action::ActionCx;
+    use fret_ui::action::UiActionHost;
+    use fret_ui::element::SemanticsProps;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct AttachmentModels {
+        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+        last_removed: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let attachments = cx.with_state(AttachmentModels::default, |st| st.attachments.clone());
+    let attachments = match attachments {
+        Some(model) => model,
+        None => {
+            let initial = vec![
+                ui_ai::AttachmentData::File(
+                    ui_ai::AttachmentFileData::new("att-image")
+                        .filename("cat.png")
+                        .media_type("image/png"),
+                ),
+                ui_ai::AttachmentData::File(
+                    ui_ai::AttachmentFileData::new("att-doc")
+                        .filename("report.pdf")
+                        .media_type("application/pdf"),
+                ),
+                ui_ai::AttachmentData::SourceDocument(
+                    ui_ai::AttachmentSourceDocumentData::new("att-source")
+                        .title("Rust Book")
+                        .filename("the-book.html"),
+                ),
+            ];
+            let model = cx.app.models_mut().insert(initial);
+            cx.with_state(AttachmentModels::default, |st| {
+                st.attachments = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let last_removed = cx.with_state(AttachmentModels::default, |st| st.last_removed.clone());
+    let last_removed = match last_removed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(AttachmentModels::default, |st| {
+                st.last_removed = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    // Use paint invalidation so the demo stays observable during diagnostics passes that may not
+    // run full layout invalidation for every step.
+    let attachments_snapshot = cx.watch_model(&attachments).cloned().unwrap_or_default();
+
+    let removed_value = cx.watch_model(&last_removed).cloned().flatten();
+
+    let on_remove = Arc::new({
+        let attachments = attachments.clone();
+        let last_removed = last_removed.clone();
+        move |host: &mut dyn UiActionHost, _action_cx: ActionCx, id: Arc<str>| {
+            let _ = host.models_mut().update(&attachments, |items| {
+                items.retain(|it| it.id().as_ref() != id.as_ref());
+            });
+            let _ = host.models_mut().update(&last_removed, |v| *v = Some(id));
+        }
+    });
+
+    let render_variant = |cx: &mut ElementContext<'_, App>,
+                          variant: ui_ai::AttachmentVariant,
+                          root_test_id: &'static str|
+     -> AnyElement {
+        let mut children = Vec::new();
+        for data in attachments_snapshot.iter().cloned() {
+            let id = data.id().clone();
+            let root_id = Arc::<str>::from(format!("ui-ai-attachment-{root_test_id}-{id}"));
+            let remove_id =
+                Arc::<str>::from(format!("ui-ai-attachment-{root_test_id}-{id}-remove"));
+            // IMPORTANT: This demo renders the same logical attachments three times (grid/inline/list).
+            // Key by (variant, id) so element identities do not collide across variants.
+            children.push(cx.keyed((root_test_id, id.clone()), |cx| {
+                ui_ai::Attachment::new(data.clone())
+                    .variant(variant)
+                    .on_remove(on_remove.clone())
+                    .show_media_type(true)
+                    .test_id(root_id.clone())
+                    .remove_test_id(remove_id.clone())
+                    .into_element(cx)
+            }));
+        }
+
+        ui_ai::Attachments::new(children)
+            .variant(variant)
+            .test_id(Arc::<str>::from(format!(
+                "ui-ai-attachments-{root_test_id}-root"
+            )))
+            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
+    };
+
+    let removed_marker = removed_value.is_some().then(|| {
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Generic,
+                test_id: Some(Arc::<str>::from("ui-ai-attachments-removed-marker")),
+                ..Default::default()
+            },
+            move |_cx| vec![],
+        )
+    });
+
+    let has_items_marker = (!attachments_snapshot.is_empty()).then(|| {
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Generic,
+                test_id: Some(Arc::<str>::from("ui-ai-attachments-has-items-marker")),
+                ..Default::default()
+            },
+            move |_cx| vec![],
+        )
+    });
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Attachments (AI Elements)"),
+                cx.text("Grid"),
+                render_variant(cx, ui_ai::AttachmentVariant::Grid, "grid"),
+                cx.text("Inline"),
+                render_variant(cx, ui_ai::AttachmentVariant::Inline, "inline"),
+                cx.text("List"),
+                render_variant(cx, ui_ai::AttachmentVariant::List, "list"),
+                has_items_marker.clone().unwrap_or_else(|| cx.text("")),
+                removed_marker.clone().unwrap_or_else(|| cx.text("")),
+            ]
+        },
+    )]
+}
+
 fn preview_ai_suggestions_demo(
     cx: &mut ElementContext<'_, App>,
     _theme: &Theme,
@@ -18167,6 +18732,84 @@ fn preview_ai_suggestions_demo(
             }
             out
         },
+    )]
+}
+
+fn preview_ai_message_branch_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::element::SemanticsProps;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Default)]
+    struct MessageBranchModels {
+        current: Option<Model<usize>>,
+    }
+
+    let current = cx.with_state(MessageBranchModels::default, |st| st.current.clone());
+    let current = match current {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0usize);
+            cx.with_state(MessageBranchModels::default, |st| {
+                st.current = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let branches = (0usize..3usize)
+        .map(|idx| {
+            cx.keyed(idx as u64, |cx| {
+                let marker_id =
+                    Arc::<str>::from(format!("ui-ai-message-branch-active-marker-{idx}"));
+                let marker = cx.semantics(
+                    SemanticsProps {
+                        role: fret_core::SemanticsRole::Generic,
+                        test_id: Some(marker_id),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![],
+                );
+
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N2),
+                    move |cx| {
+                        vec![
+                            cx.text(format!("Branch {idx}")),
+                            cx.text("This is a placeholder for alternate assistant outputs."),
+                            marker,
+                        ]
+                    },
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let branch_ui = ui_ai::MessageBranch::new(branches)
+        .current_branch(current)
+        .test_id_root("ui-ai-message-branch-root")
+        .selector_test_id("ui-ai-message-branch-selector")
+        .prev_test_id("ui-ai-message-branch-prev")
+        .next_test_id("ui-ai-message-branch-next")
+        .page_test_id("ui-ai-message-branch-page")
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| vec![cx.text("Message branch (AI Elements)"), branch_ui],
     )]
 }
 

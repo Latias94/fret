@@ -114,7 +114,10 @@ pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_AI_ARTIFACT_DEMO: &str = "ai_artifact_demo";
 pub(crate) const PAGE_AI_SHIMMER_DEMO: &str = "ai_shimmer_demo";
 pub(crate) const PAGE_AI_REASONING_DEMO: &str = "ai_reasoning_demo";
+pub(crate) const PAGE_AI_QUEUE_DEMO: &str = "ai_queue_demo";
+pub(crate) const PAGE_AI_ATTACHMENTS_DEMO: &str = "ai_attachments_demo";
 pub(crate) const PAGE_AI_SUGGESTIONS_DEMO: &str = "ai_suggestions_demo";
+pub(crate) const PAGE_AI_MESSAGE_BRANCH_DEMO: &str = "ai_message_branch_demo";
 pub(crate) const PAGE_AI_FILE_TREE_DEMO: &str = "ai_file_tree_demo";
 pub(crate) const PAGE_AI_CODE_BLOCK_DEMO: &str = "ai_code_block_demo";
 pub(crate) const PAGE_AI_COMMIT_DEMO: &str = "ai_commit_demo";
@@ -250,7 +253,11 @@ pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_dem
 pub(crate) const CMD_NAV_AI_ARTIFACT_DEMO: &str = "ui_gallery.nav.select.ai_artifact_demo";
 pub(crate) const CMD_NAV_AI_SHIMMER_DEMO: &str = "ui_gallery.nav.select.ai_shimmer_demo";
 pub(crate) const CMD_NAV_AI_REASONING_DEMO: &str = "ui_gallery.nav.select.ai_reasoning_demo";
+pub(crate) const CMD_NAV_AI_QUEUE_DEMO: &str = "ui_gallery.nav.select.ai_queue_demo";
+pub(crate) const CMD_NAV_AI_ATTACHMENTS_DEMO: &str = "ui_gallery.nav.select.ai_attachments_demo";
 pub(crate) const CMD_NAV_AI_SUGGESTIONS_DEMO: &str = "ui_gallery.nav.select.ai_suggestions_demo";
+pub(crate) const CMD_NAV_AI_MESSAGE_BRANCH_DEMO: &str =
+    "ui_gallery.nav.select.ai_message_branch_demo";
 pub(crate) const CMD_NAV_AI_FILE_TREE_DEMO: &str = "ui_gallery.nav.select.ai_file_tree_demo";
 pub(crate) const CMD_NAV_AI_CODE_BLOCK_DEMO: &str = "ui_gallery.nav.select.ai_code_block_demo";
 pub(crate) const CMD_NAV_AI_COMMIT_DEMO: &str = "ui_gallery.nav.select.ai_commit_demo";
@@ -854,6 +861,34 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_AI_REASONING_DEMO,
             ),
             PageSpec::new(
+                PAGE_AI_QUEUE_DEMO,
+                "AI Queue (Demo)",
+                "AI Elements Queue / Sections + Item Actions Demo",
+                "fret-ui-ai (queue surface)",
+                CMD_NAV_AI_QUEUE_DEMO,
+                &[
+                    "ai",
+                    "queue",
+                    "collapsible",
+                    "scroll",
+                    "actions",
+                    "attachments",
+                    "demo",
+                ],
+                docs::DOC_AI_QUEUE_DEMO,
+                docs::USAGE_AI_QUEUE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_ATTACHMENTS_DEMO,
+                "AI Attachments (Demo)",
+                "AI Elements Attachments / Grid + Inline + List Demo",
+                "fret-ui-ai (attachments surface)",
+                CMD_NAV_AI_ATTACHMENTS_DEMO,
+                &["ai", "attachments", "remove", "hover", "demo"],
+                docs::DOC_AI_ATTACHMENTS_DEMO,
+                docs::USAGE_AI_ATTACHMENTS_DEMO,
+            ),
+            PageSpec::new(
                 PAGE_AI_SUGGESTIONS_DEMO,
                 "AI Suggestions (Demo)",
                 "AI Elements Suggestions / Horizontal Pills Demo",
@@ -862,6 +897,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "suggestion", "suggestions", "scroll", "chips", "demo"],
                 docs::DOC_AI_SUGGESTIONS_DEMO,
                 docs::USAGE_AI_SUGGESTIONS_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_MESSAGE_BRANCH_DEMO,
+                "AI Message Branch (Demo)",
+                "AI Elements MessageBranch / Alternate Assistant Outputs Demo",
+                "fret-ui-ai (message surface)",
+                CMD_NAV_AI_MESSAGE_BRANCH_DEMO,
+                &["ai", "message", "branch", "selector", "demo"],
+                docs::DOC_AI_MESSAGE_BRANCH_DEMO,
+                docs::USAGE_AI_MESSAGE_BRANCH_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_FILE_TREE_DEMO,

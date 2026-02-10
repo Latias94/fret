@@ -664,6 +664,59 @@ use fret_ui_ai::{Reasoning, ReasoningContent, ReasoningTrigger};
 ```
 "#;
 
+pub(crate) const DOC_AI_QUEUE_DEMO: &str = r#"
+## AI queue (demo)
+
+This page demonstrates the AI Elements-aligned `Queue` surfaces in `fret-ui-ai`:
+
+- `Queue` root container,
+- `QueueSection` + `QueueSectionTrigger` + `QueueSectionLabel` + `QueueSectionContent`,
+- `QueueList` (ScrollArea-based constrained list),
+- `QueueItem` + `QueueItemIndicator` + `QueueItemContent` + `QueueItemDescription`,
+- `QueueItemActions` + `QueueItemAction`,
+- `QueueItemAttachment` + `QueueItemFile`.
+
+It exists to validate:
+
+- section open/close behavior (Collapsible),
+- hover-driven item chrome + action reveal,
+- scroll constraints for long lists (`max-h-40` parity),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_QUEUE_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Queue, QueueItem, QueueItemAction, QueueItemActions, QueueItemContent, QueueItemIndicator,
+    QueueList, QueueSection, QueueSectionLabel, QueueSectionTrigger,
+};
+```
+"#;
+
+pub(crate) const DOC_AI_ATTACHMENTS_DEMO: &str = r#"
+## AI attachments (demo)
+
+This page demonstrates the AI Elements-aligned attachments surfaces in `fret-ui-ai`:
+
+- `Attachments` container with three variants (`Grid`, `Inline`, `List`),
+- `Attachment` + `AttachmentPreview` + `AttachmentInfo` + `AttachmentRemove`,
+- `AttachmentEmpty` empty state surface.
+
+It exists to validate:
+
+- hover-driven remove affordance visibility (best-effort `group-hover` outcome),
+- remove intent wiring and keyed identity stability,
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_ATTACHMENTS_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Attachment, AttachmentData, AttachmentFileData, AttachmentVariant, Attachments,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_SUGGESTIONS_DEMO: &str = r#"
 ## AI suggestions (demo)
 
@@ -681,6 +734,28 @@ It exists to validate:
 pub(crate) const USAGE_AI_SUGGESTIONS_DEMO: &str = r#"
 ```rust
 use fret_ui_ai::{Suggestion, Suggestions};
+```
+"#;
+
+pub(crate) const DOC_AI_MESSAGE_BRANCH_DEMO: &str = r#"
+## AI message branch (demo)
+
+This page demonstrates AI Elements-aligned message branching surfaces in `fret-ui-ai`:
+
+- `MessageBranchContent` (swap between alternate branches),
+- `MessageBranchSelector` (previous/next + page label),
+- `MessageBranch` (convenience wrapper that composes content + selector).
+
+It exists to validate:
+
+- stable branch identity (hidden branches stay mounted),
+- wrap-around navigation (prev from 1 → last, next from last → 1),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_MESSAGE_BRANCH_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{MessageBranch, MessageBranchContent, MessageBranchSelector};
 ```
 "#;
 
