@@ -9,8 +9,8 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, SemanticsDecoration, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps,
+    SemanticsDecoration, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -21,6 +21,10 @@ use fret_ui_kit::{
     Space,
 };
 use fret_ui_shadcn::{Collapsible, CollapsibleContent, CollapsibleTrigger};
+
+pub type OnTestActivate = Arc<
+    dyn Fn(&mut dyn fret_ui::action::UiActionHost, fret_ui::action::ActionCx, Arc<str>) + 'static,
+>;
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -959,6 +963,7 @@ pub struct Test {
     status: TestStatusKind,
     duration_ms: Option<u32>,
     children: Option<Vec<AnyElement>>,
+    on_activate: Option<OnTestActivate>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -974,6 +979,7 @@ impl std::fmt::Debug for Test {
                 "children_len",
                 &self.children.as_ref().map(|c| c.len()).unwrap_or(0),
             )
+            .field("has_on_activate", &self.on_activate.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
@@ -988,6 +994,7 @@ impl Test {
             status,
             duration_ms: None,
             children: None,
+            on_activate: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default().px(Space::N4).py(Space::N2),
@@ -1001,6 +1008,12 @@ impl Test {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = Some(children.into_iter().collect());
+        self
+    }
+
+    /// Optional click/activate seam for app-owned effects (e.g. open test output).
+    pub fn on_activate(mut self, on_activate: OnTestActivate) -> Self {
+        self.on_activate = Some(on_activate);
         self
     }
 
@@ -1019,25 +1032,32 @@ impl Test {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
         let status = self.status;
         let name = self.name;
         let duration = self.duration_ms;
 
-        let content = if let Some(children) = self.children {
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items_center(),
-                move |_cx| children,
-            )
-        } else {
-            let status_el = status_icon(cx, &theme, status, Px(16.0));
+        let layout = self.layout;
+        let chrome = self.chrome;
+        let test_id = self.test_id;
 
+        let theme_for_content = theme.clone();
+        let name_for_content = name.clone();
+        let content_factory = move |cx: &mut ElementContext<'_, H>| {
+            if let Some(children) = self.children.clone() {
+                return stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N2)
+                        .items_center(),
+                    move |_cx| children,
+                );
+            }
+
+            let status_el = status_icon(cx, &theme_for_content, status, Px(16.0));
             let name_el = cx.text_props(TextProps {
                 layout: LayoutStyle {
                     size: SizeStyle {
@@ -1048,7 +1068,7 @@ impl Test {
                     },
                     ..Default::default()
                 },
-                text: name,
+                text: name_for_content.clone(),
                 style: None,
                 color: None,
                 wrap: TextWrap::None,
@@ -1060,7 +1080,7 @@ impl Test {
                     layout: LayoutStyle::default(),
                     text: Arc::<str>::from(format!("{ms}ms")),
                     style: None,
-                    color: Some(theme.color_required("muted-foreground")),
+                    color: Some(theme_for_content.color_required("muted-foreground")),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
                 })
@@ -1081,19 +1101,66 @@ impl Test {
             )
         };
 
-        let el = cx.container(
-            decl_style::container_props(&theme, self.chrome, self.layout),
-            move |_cx| vec![content],
-        );
-
-        let Some(test_id) = self.test_id else {
-            return el;
+        let Some(on_activate) = self.on_activate else {
+            let content = content_factory(cx);
+            let el = cx.container(
+                decl_style::container_props(&theme, chrome, layout),
+                move |_cx| vec![content],
+            );
+            let Some(test_id) = test_id else {
+                return el;
+            };
+            return el.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(test_id),
+            );
         };
-        el.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+
+        let hover_bg = theme
+            .color_by_key("muted")
+            .map(|c| alpha(c, 0.5))
+            .unwrap_or_else(|| alpha(theme.color_required("accent"), 0.2));
+        let pressed_bg = theme
+            .color_by_key("accent")
+            .map(|c| alpha(c, 0.35))
+            .unwrap_or_else(|| alpha(theme.color_required("muted"), 0.8));
+
+        let label_name = name.clone();
+        let mut pressable = PressableProps::default();
+        pressable.enabled = true;
+        pressable.focusable = true;
+        pressable.a11y = PressableA11y {
+            role: Some(SemanticsRole::Button),
+            label: Some(Arc::<str>::from("Open test output")),
+            test_id: test_id.clone(),
+            ..Default::default()
+        };
+
+        cx.pressable(pressable, move |cx, st| {
+            cx.pressable_on_activate({
+                let on_activate = on_activate.clone();
+                let label_name = label_name.clone();
+                Arc::new(move |host, action_cx, _reason| {
+                    on_activate(host, action_cx, label_name.clone());
+                })
+            });
+
+            let bg = if st.pressed {
+                Some(pressed_bg)
+            } else if st.hovered {
+                Some(hover_bg)
+            } else {
+                None
+            };
+
+            let content = content_factory(cx);
+            let mut props = decl_style::container_props(&theme, chrome, layout);
+            if let Some(bg) = bg {
+                props.background = Some(bg);
+            }
+            vec![cx.container(props, move |_cx| vec![content])]
+        })
     }
 }
 
