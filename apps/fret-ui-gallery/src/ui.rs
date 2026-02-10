@@ -727,6 +727,8 @@ fn page_preview(
         PAGE_AI_STACK_TRACE_LARGE_DEMO => preview_ai_stack_trace_large_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_LARGE_DEMO => preview_ai_test_results_large_demo(cx, theme),
+        PAGE_AI_CHECKPOINT_DEMO => preview_ai_checkpoint_demo(cx, theme),
+        PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
         PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
@@ -20187,6 +20189,266 @@ fn preview_ai_test_results_large_demo(
                 children.push(marker);
             }
             children
+        },
+    )]
+}
+
+fn preview_ai_checkpoint_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::{Arc, Mutex};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Clone, Default)]
+    struct ClickedRef(Arc<Mutex<bool>>);
+
+    impl ClickedRef {
+        fn lock(&self) -> std::sync::MutexGuard<'_, bool> {
+            self.0.lock().unwrap_or_else(|e| e.into_inner())
+        }
+    }
+
+    let clicked = cx.with_state(ClickedRef::default, |st| st.clone());
+
+    let on_activate: fret_ui::action::OnActivate = Arc::new({
+        let clicked = clicked.clone();
+        move |host, action_cx, _reason| {
+            *clicked.lock() = true;
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let trigger =
+        ui_ai::CheckpointTrigger::new([ui_ai::CheckpointIcon::default().into_element(cx)])
+            .a11y_label("Add checkpoint")
+            .tooltip("Add a checkpoint")
+            .test_id("ui-ai-checkpoint-trigger")
+            .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
+            .on_activate(on_activate)
+            .into_element(cx);
+
+    let checkpoint = ui_ai::Checkpoint::new([trigger])
+        .test_id("ui-ai-checkpoint-root")
+        .into_element(cx);
+
+    let clicked_marker = if *clicked.lock() {
+        Some(
+            cx.text("Clicked").attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Generic)
+                    .test_id("ui-ai-checkpoint-clicked-marker"),
+            ),
+        )
+    } else {
+        None
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            let mut out: Vec<AnyElement> = vec![cx.text("Checkpoint (AI Elements)"), checkpoint];
+            if let Some(marker) = clicked_marker.clone() {
+                out.push(marker);
+            }
+            out
+        },
+    )]
+}
+
+fn preview_ai_confirmation_demo(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use std::sync::{Arc, Mutex};
+
+    use fret_ui::element::SemanticsDecoration;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+    use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+
+    #[derive(Clone)]
+    struct ConfirmationDemoState {
+        state: Arc<Mutex<ui_ai::ToolUiPartState>>,
+        approved: Arc<Mutex<Option<bool>>>,
+    }
+
+    impl Default for ConfirmationDemoState {
+        fn default() -> Self {
+            Self {
+                state: Arc::new(Mutex::new(ui_ai::ToolUiPartState::InputAvailable)),
+                approved: Arc::new(Mutex::new(None)),
+            }
+        }
+    }
+
+    impl ConfirmationDemoState {
+        fn state(&self) -> ui_ai::ToolUiPartState {
+            *self.state.lock().unwrap_or_else(|e| e.into_inner())
+        }
+
+        fn approved(&self) -> Option<bool> {
+            *self.approved.lock().unwrap_or_else(|e| e.into_inner())
+        }
+
+        fn set_requested(&self) {
+            *self.state.lock().unwrap_or_else(|e| e.into_inner()) =
+                ui_ai::ToolUiPartState::ApprovalRequested;
+            *self.approved.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        }
+
+        fn set_responded(&self, approved: bool) {
+            *self.state.lock().unwrap_or_else(|e| e.into_inner()) =
+                ui_ai::ToolUiPartState::ApprovalResponded;
+            *self.approved.lock().unwrap_or_else(|e| e.into_inner()) = Some(approved);
+        }
+
+        fn reset(&self) {
+            *self.state.lock().unwrap_or_else(|e| e.into_inner()) =
+                ui_ai::ToolUiPartState::InputAvailable;
+            *self.approved.lock().unwrap_or_else(|e| e.into_inner()) = None;
+        }
+    }
+
+    let demo = cx.with_state(ConfirmationDemoState::default, |st| st.clone());
+
+    let set_requested: fret_ui::action::OnActivate = Arc::new({
+        let demo = demo.clone();
+        move |host, action_cx, _reason| {
+            demo.set_requested();
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let reset: fret_ui::action::OnActivate = Arc::new({
+        let demo = demo.clone();
+        move |host, action_cx, _reason| {
+            demo.reset();
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }
+    });
+
+    let state = demo.state();
+    let approved = demo.approved();
+
+    let approval = {
+        let mut a = ui_ai::ToolUiPartApproval::new("run-tests");
+        if let Some(approved) = approved {
+            a = a.approved(approved);
+        }
+        a
+    };
+
+    let request_slot = ui_ai::ConfirmationRequest::new(
+        state,
+        [cx.text("This tool wants to run `cargo nextest run`.")],
+    )
+    .test_id("ui-ai-confirmation-request")
+    .into_element(cx);
+
+    let accepted_slot = ui_ai::ConfirmationAccepted::new(
+        Some(approval.clone()),
+        state,
+        [cx.text("Approved. Running tests...")],
+    )
+    .test_id("ui-ai-confirmation-accepted")
+    .into_element(cx);
+
+    let rejected_slot =
+        ui_ai::ConfirmationRejected::new(Some(approval.clone()), state, [cx.text("Rejected.")])
+            .test_id("ui-ai-confirmation-rejected")
+            .into_element(cx);
+
+    let approve_btn = ui_ai::ConfirmationAction::new("Approve")
+        .test_id("ui-ai-confirmation-approve")
+        .on_activate(Arc::new({
+            let demo = demo.clone();
+            move |host, action_cx, _reason| {
+                demo.set_responded(true);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+            }
+        }))
+        .into_element(cx);
+
+    let reject_btn = ui_ai::ConfirmationAction::new("Reject")
+        .test_id("ui-ai-confirmation-reject")
+        .on_activate(Arc::new({
+            let demo = demo.clone();
+            move |host, action_cx, _reason| {
+                demo.set_responded(false);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+            }
+        }))
+        .into_element(cx);
+
+    let actions_slot = ui_ai::ConfirmationActions::new(state, [approve_btn, reject_btn])
+        .test_id("ui-ai-confirmation-actions")
+        .into_element(cx);
+
+    let confirmation = ui_ai::Confirmation::new(state)
+        .approval(approval)
+        .test_id("ui-ai-confirmation-root")
+        .children([
+            ui_ai::ConfirmationTitle::new("Run tests?").into_element(cx),
+            request_slot,
+            accepted_slot,
+            rejected_slot,
+            actions_slot,
+        ])
+        .into_element(cx);
+
+    let controls = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items_center(),
+        move |cx| {
+            vec![
+                Button::new("Request approval")
+                    .variant(ButtonVariant::Secondary)
+                    .size(ButtonSize::Sm)
+                    .test_id("ui-ai-confirmation-requested-btn")
+                    .on_activate(set_requested.clone())
+                    .into_element(cx),
+                Button::new("Reset")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Sm)
+                    .test_id("ui-ai-confirmation-reset-btn")
+                    .on_activate(reset.clone())
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let state_marker = cx
+        .text(format!("state={state:?} approved={approved:?}"))
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id("ui-ai-confirmation-state-marker"),
+        );
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            vec![
+                cx.text("Confirmation (AI Elements)"),
+                controls,
+                confirmation,
+                state_marker,
+            ]
         },
     )]
 }

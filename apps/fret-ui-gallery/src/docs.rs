@@ -982,6 +982,44 @@ use fret_ui_ai::{OnTestActivate, Test, TestResults, TestSuite, TestStatusKind};
 ```
 "#;
 
+pub(crate) const DOC_AI_CHECKPOINT_DEMO: &str = r#"
+## AI checkpoint (demo)
+
+This page is a small demo for the AI Elements-aligned `Checkpoint` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- `CheckpointTrigger` button behavior (app-owned activate seam),
+- Tooltip hover outcomes with stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CHECKPOINT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{Checkpoint, CheckpointIcon, CheckpointTrigger};
+```
+"#;
+
+pub(crate) const DOC_AI_CONFIRMATION_DEMO: &str = r#"
+## AI confirmation (demo)
+
+This page is a small demo for the AI Elements-aligned `Confirmation` surfaces in `fret-ui-ai`.
+
+It exists to validate:
+
+- conditional rendering based on `ToolUiPartState`,
+- approval request actions are app-owned (effects are outside `fret-ui-ai`),
+- stable `test_id` anchors for `fretboard diag` gates.
+"#;
+
+pub(crate) const USAGE_AI_CONFIRMATION_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{
+    Confirmation, ConfirmationAccepted, ConfirmationAction, ConfirmationActions, ConfirmationRejected,
+    ConfirmationRequest, ConfirmationTitle, ToolUiPartApproval, ToolUiPartState,
+};
+```
+"#;
+
 pub(crate) const DOC_AI_SCHEMA_DISPLAY_DEMO: &str = r#"
 ## AI schema display (demo)
 

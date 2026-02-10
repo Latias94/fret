@@ -131,6 +131,8 @@ pub(crate) const PAGE_AI_STACK_TRACE_LARGE_DEMO: &str = "ai_stack_trace_large_de
 pub(crate) const PAGE_AI_SCHEMA_DISPLAY_DEMO: &str = "ai_schema_display_demo";
 pub(crate) const PAGE_AI_TEST_RESULTS_DEMO: &str = "ai_test_results_demo";
 pub(crate) const PAGE_AI_TEST_RESULTS_LARGE_DEMO: &str = "ai_test_results_large_demo";
+pub(crate) const PAGE_AI_CHECKPOINT_DEMO: &str = "ai_checkpoint_demo";
+pub(crate) const PAGE_AI_CONFIRMATION_DEMO: &str = "ai_confirmation_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -283,6 +285,8 @@ pub(crate) const CMD_NAV_AI_SCHEMA_DISPLAY_DEMO: &str =
 pub(crate) const CMD_NAV_AI_TEST_RESULTS_DEMO: &str = "ui_gallery.nav.select.ai_test_results_demo";
 pub(crate) const CMD_NAV_AI_TEST_RESULTS_LARGE_DEMO: &str =
     "ui_gallery.nav.select.ai_test_results_large_demo";
+pub(crate) const CMD_NAV_AI_CHECKPOINT_DEMO: &str = "ui_gallery.nav.select.ai_checkpoint_demo";
+pub(crate) const CMD_NAV_AI_CONFIRMATION_DEMO: &str = "ui_gallery.nav.select.ai_confirmation_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -1045,6 +1049,26 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["ai", "test", "results", "large", "scroll", "demo"],
                 docs::DOC_AI_TEST_RESULTS_LARGE_DEMO,
                 docs::USAGE_AI_TEST_RESULTS_LARGE_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CHECKPOINT_DEMO,
+                "AI Checkpoint (Demo)",
+                "AI Elements Checkpoint / Tooltip Trigger Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_CHECKPOINT_DEMO,
+                &["ai", "checkpoint", "tooltip", "demo"],
+                docs::DOC_AI_CHECKPOINT_DEMO,
+                docs::USAGE_AI_CHECKPOINT_DEMO,
+            ),
+            PageSpec::new(
+                PAGE_AI_CONFIRMATION_DEMO,
+                "AI Confirmation (Demo)",
+                "AI Elements Confirmation / Approval Request Demo",
+                "fret-ui-ai (tooling chrome)",
+                CMD_NAV_AI_CONFIRMATION_DEMO,
+                &["ai", "confirmation", "approval", "demo"],
+                docs::DOC_AI_CONFIRMATION_DEMO,
+                docs::USAGE_AI_CONFIRMATION_DEMO,
             ),
             PageSpec::new(
                 PAGE_AI_SCHEMA_DISPLAY_DEMO,
