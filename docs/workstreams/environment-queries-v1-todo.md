@@ -39,8 +39,7 @@ ADR anchor:
   - [x] contrast preference revision + invalidation,
   - [x] forced-colors mode revision + invalidation,
   - [x] safe-area insets revision + invalidation,
-  - [x] occlusion insets revision + invalidation,
-  - [ ] stability under resize jitter (optional epsilon/hysteresis at policy layer).
+  - [x] occlusion insets revision + invalidation.
 
 ## Runner plumbing (best-effort field sources)
 
