@@ -34,6 +34,7 @@ use fret_ui_kit::{
     resolve_override_slot_opt_with, resolve_override_slot_with,
 };
 
+use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -46,11 +47,6 @@ use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
-
-fn empty_arc_str() -> Arc<str> {
-    static EMPTY: OnceLock<Arc<str>> = OnceLock::new();
-    EMPTY.get_or_init(|| Arc::<str>::from("")).clone()
-}
 
 fn default_select_listbox_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
