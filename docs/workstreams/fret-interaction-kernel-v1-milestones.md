@@ -60,5 +60,5 @@ Exit criteria:
 - A diag repro exists in `tools/diag-scripts/` that guards the parity behavior under a deterministic script.
 - Baseline gate passes (proves the scenario exercised docking drag):
   - `--check-dock-drag-min 1`
-- Strengthened gate is tracked as the follow-up once the repro reliably crosses windows:
+- Strong hover gate passes (proves cross-window hover was exercised):
   - `--check-dock-drag-current-windows-min 2`

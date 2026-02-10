@@ -395,6 +395,7 @@ Recent additions:
 
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
+- `exists_any_window` / `not_exists_any_window` (predicate-only; evaluate a selector across all known windows)
 
 Notes:
 
@@ -415,6 +416,7 @@ Multi-window note:
 - Scripts may optionally set a top-level `window` policy:
   - `"any"` (default): attach to the first window that observes the script trigger.
   - `"focused"`: attach to the first focused window that observes the script trigger (useful for docking/multi-window repros).
+  - `"lowest_id"`: attach to the window with the lowest `AppWindowId` (useful when focus is unstable during window creation).
 
 Supported intent steps (v2):
 
@@ -432,6 +434,24 @@ Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
 Note: `drag_pointer` and `drag_pointer_path` also emit `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
 diagnostics runs, and is ignored unless a matching cross-window drag session is active.
+
+`drag_pointer_path` also supports an optional per-segment `internal_drag_target` selector. When present and it resolves to
+an element in a different window, the harness routes that segment's `Event::InternalDrag` events to the target window and
+updates the active cross-window `DragSession.current_window` accordingly (diagnostics-only), enabling deterministic
+multi-window hover gates.
+
+Example:
+
+```json
+{
+  "type": "drag_pointer_path",
+  "target": { "kind": "test_id", "id": "main-anchor" },
+  "segments": [
+    { "delta_x": 240.0, "delta_y": 0.0, "steps": 24 },
+    { "delta_x": 0.0, "delta_y": 240.0, "steps": 24, "internal_drag_target": { "kind": "test_id", "id": "aux-dock" } }
+  ]
+}
+```
 
 Example: right click a context menu trigger
 
