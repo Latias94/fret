@@ -68,6 +68,8 @@ Notes:
 - `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop + provider mode) is aligned with upstream `prompt-input.tsx` and gated:
   - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
   - Verified PASS: 2026-02-10 (local).
+- `PromptInput` action menu parts are implemented and gated:
+  - `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`
 - Next parity focus inside M1 is PromptInput “parts-first” decomposition so apps can compose prompt chrome without forking:
   - Target: `PromptInputBody` / `PromptInputTextarea` / `PromptInputHeader` / `PromptInputFooter` / `PromptInputTools` /
     `PromptInputButton` / `PromptInputSubmit` / `PromptInputActionMenu*` / `PromptInputActionAddAttachments`.

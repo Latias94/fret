@@ -342,6 +342,9 @@ Keep this list in sync with the pinned upstream commit recorded in
     - `PromptInputActionMenu*` and an intent-driven `PromptInputActionAddAttachments`
   - Keep `PromptInput` as a default recipe wrapper for backward compatibility.
   - Surface (Fret): `PromptInputRoot` + `PromptInputSlots` + `PromptInputHeader`/`Footer`/`Tools`/`Button`/`Submit`/`ActionAddAttachments` (+ `PromptInputProvider`, `use_prompt_input_controller`, `use_prompt_input_config`).
+- [x] AIEL-MVP1-chat-092 PromptInput action menu parity: `PromptInputActionMenu*` surfaces (dropdown menu trigger + items).
+  - Surface: `PromptInputActionMenu` / `PromptInputActionMenuTrigger` / `PromptInputActionMenuContent` / `PromptInputActionMenuItem` + `PromptInputActionAddAttachmentsMenuItem`.
+  - Gate: `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`.
 - [x] AIEL-MVP1-chat-091 Provider-mode composition demo + gate.
   - Add a UI Gallery page that composes `PromptInputProvider` + parts and demonstrates “external actions”
     (e.g. a toolbar button/menu item that triggers `on_add_attachments`).
