@@ -112,6 +112,10 @@ Regression gates:
   - Script: `tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`
   - Gate: verifies that a domain-window change in the top chart propagates to the bottom chart.
   - Run (example): `cargo run -p fretboard -- diag run tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json --check-pixels-changed chart-multi-axis-top --check-pixels-changed chart-multi-axis-bottom --env FRET_DIAG_SCREENSHOTS=1 --launch -- cargo run -p fret-demo --bin chart_multi_axis_demo --release`
+  - Notes:
+    - If `cargo run ... --release` fails with `failed to remove file ... chart_multi_axis_demo.exe (os error 5)`, ensure no `chart_multi_axis_demo.exe` process is still running.
+    - For local reproducibility, prefer a unique output dir: `--dir target/fret-diag/ws-linking-domain-window-...`.
+  - Evidence: `fretboard diag run` passed (2026-02-10) with `--dir target/fret-diag/ws-linking-domain-window-20260210-211143`.
 
 - [x] DEL-ENG4-gates-010 Document a “fast” local/CI nextest subset for chart semantics regressions (keep refactors safe without running the full workspace).
   - Script (preferred): `pwsh -NoProfile -File tools/gates_delinea_fast.ps1`

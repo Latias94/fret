@@ -137,4 +137,5 @@ Status: Done (2026-02-10).
 Known remaining closure items:
 
 - document a “fast” nextest subset for local + CI (done via `tools/gates_delinea_fast.ps1`).
-- ensure the linking `fretboard diag` script remains runnable after refactors and `main` syncs.
+- ensure the linking `fretboard diag` script remains runnable after refactors and `main` syncs
+  (confirmed 2026-02-10 via `tools/diag-scripts/chart-multi-axis-linking-domain-window-pixels-changed.json`).
