@@ -27,6 +27,10 @@ ADR anchor:
 - [x] Dependency tracking: record which view roots observed which environment keys.
 - [x] Invalidation: environment changes invalidate dependents (coalescing OK).
 - [x] Add diagnostics hooks (inspector snapshot / debug logging).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (exports `debug.environment` and
+    `debug.element_runtime.observed_environment` with deps fingerprints).
+  - Evidence: `crates/fret-ui/src/elements/runtime.rs` (`EnvironmentQueryDiagnosticsSnapshot`)
+  - Evidence: `crates/fret-ui/src/elements/mod.rs` (re-exported diagnostics types)
 - [ ] Add unit tests for:
   - [x] invalidation on viewport bounds change,
   - [x] view-cache key participation via deps fingerprint,

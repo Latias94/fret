@@ -53,6 +53,10 @@ Evidence:
 
 - A diagnostics bundle contains fields under a stable schema path (e.g. `debug.environment`), and
   tests (or a scripted gate) assert the fields exist.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.environment`,
+    `ElementDiagnosticsSnapshotV1.observed_environment`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (unit test:
+    `environment_snapshot_exports_committed_preferences_and_insets`)
 
 ## M3 — Policy helpers (kit surface)
 
