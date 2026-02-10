@@ -345,10 +345,15 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [x] AIEL-MVP1-chat-092 PromptInput action menu parity: `PromptInputActionMenu*` surfaces (dropdown menu trigger + items).
   - Surface: `PromptInputActionMenu` / `PromptInputActionMenuTrigger` / `PromptInputActionMenuContent` / `PromptInputActionMenuItem` + `PromptInputActionAddAttachments`.
   - Gate: `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`.
-- [ ] AIEL-MVP1-chat-093 PromptInput attachments constraints parity: accept/multiple/maxFiles/maxFileSize/onError.
+- [x] AIEL-MVP1-chat-093 PromptInput attachments constraints parity: accept/multiple/maxFiles/maxFileSize/onError.
   - Upstream reference: `prompt-input.tsx` (`accept`, `multiple`, `maxFiles`, `maxFileSize`, `onError`).
-  - Policy: keep effects app-owned; validate inputs/drops and emit an error intent (do not read bytes in-component).
-  - Gate: add a targeted `fretboard diag` script that drops N+1 files and asserts the error surface (or a unit test if the error is purely model-level).
+  - Surface (Fret): `PromptInputConfig::{accept,multiple,max_files,max_file_size_bytes,on_error}` (also on `PromptInputRoot` + `PromptInput`).
+  - Behavior: validates external file drops against `accept` + `max_files` + `max_file_size_bytes`, filters rejected items, and emits `on_error` with a typed `PromptInputErrorCode`.
+  - Notes:
+    - Constraints are enforced on `ExternalDragKind::DropFiles` (metadata-only attachments). App-owned file dialogs can reuse the same config, but programmatic attachment insertion is app-owned by design.
+    - `max_file_size_bytes` is enforced only when `size_bytes` is known.
+    - On native, `media_type` may be unavailable; `accept` matching falls back to file extensions for common `image/*` formats.
+  - Gate: unit tests in `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_drop_respects_max_files_and_emits_error`, `prompt_input_drop_accept_and_size_errors_do_not_add_attachments`).
 - [x] AIEL-MVP1-chat-094 PromptInput referenced sources parity: local referenced sources model + chips row.
   - Upstream reference: `prompt-input.tsx` (`ReferencedSourcesContext` local to PromptInput).
   - Note: keep this local even in provider mode (matches upstream: attachments can be provider-owned, referenced sources remain local).

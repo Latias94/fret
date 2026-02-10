@@ -181,6 +181,7 @@ P0 (Chat usability + correctness):
   - attachments chips row (`add/remove/clear`) + add-attachments action (plus button emits an app-owned intent) with app-owned effects (file picker / open URL).
   - keyboard parity: `Enter` submits (IME-safe; `Shift+Enter` inserts newline), `Backspace` on empty input removes the last attachment.
   - external file drop fallback: dropping files onto the prompt input appends file-name-based attachment chips (metadata-only).
+  - attachments constraints parity: `accept` / `multiple` / `maxFiles` / `maxFileSize` are exposed on the prompt config and enforced for external file drops; errors emit via `on_error`.
   - provider mode: optional `PromptInputProvider` lifts text + attachments models outside the `PromptInput` surface.
   - height constraints: align the textarea “grows but clamps” behavior (min/max height outcome).
   - gate: `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`

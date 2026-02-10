@@ -68,6 +68,9 @@ Notes:
 - `PromptInput` attachments + keyboard behavior (Enter/Backspace + add-attachments action + file drop + provider mode) is aligned with upstream `prompt-input.tsx` and gated:
   - `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-attachments-backspace-enter.json`
   - Verified PASS: 2026-02-10 (local).
+- `PromptInput` attachments constraints (`accept` / `multiple` / `maxFiles` / `maxFileSize` / `onError`) are implemented for external drops and gated with unit tests:
+  - `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` (`prompt_input_drop_respects_max_files_and_emits_error`, `prompt_input_drop_accept_and_size_errors_do_not_add_attachments`)
+  - Verified PASS: 2026-02-10 (local).
 - `PromptInput` action menu parts are implemented and gated:
   - `tools/diag-scripts/ui-gallery-ai-prompt-input-action-menu-demo.json`
 - `PromptInput` referenced sources (local to prompt input) are implemented and gated:
