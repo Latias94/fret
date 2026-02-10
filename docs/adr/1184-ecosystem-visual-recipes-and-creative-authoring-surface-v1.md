@@ -37,6 +37,21 @@ Related ADRs:
 - Capabilities + budgets: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`,
   `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 
+Existing in-repo authoring surfaces (to build on, not replace):
+
+- Mechanism wrapper: `EffectLayerProps` in `crates/fret-ui/src/element.rs` (emits `SceneOp::PushEffect/PopEffect`).
+- User guide: `docs/effects-authoring.md` (recommended `EffectLayer` usage + pitfalls).
+- Early “limited recipes” already exist in `fret-ui-kit`:
+  - `ecosystem/fret-ui-kit/src/recipes/glass.rs` + `ecosystem/fret-ui-kit/src/declarative/glass.rs`
+  - `ecosystem/fret-ui-kit/src/recipes/pixelate.rs` + `ecosystem/fret-ui-kit/src/declarative/pixelate.rs`
+
+Design references (non-normative):
+
+- Flutter/Skia: “effects and blends live in a paint-like object at group boundaries” (`saveLayer`
+  + `Paint.blendMode` / `ImageFilter`). Fret mirrors the *boundary-centric* approach, but keeps it
+  portable and budgeted (ADR 0120) and routes authoring through recipes instead of exposing a raw
+  shader surface.
+
 ## Decision
 
 ### D1 — The creative authoring surface lives in `ecosystem/fret-ui-kit`
@@ -98,6 +113,51 @@ Recipes may provide an explicit Tier A escape hatch when a look cannot be expres
 
 This keeps the Tier A vs Tier B decision rule stable and user-visible (ADR 0125 / ADR 0149).
 
+## Proposed API Shape (non-normative)
+
+This section sketches an ergonomic, token-driven surface for component authors. The goal is to
+ensure the ADR is actionable and does not merely restate intent.
+
+### A) Core recipe trait pattern
+
+```rust
+pub struct ResolveCtx<'a> {
+    pub theme: &'a fret_ui::Theme,
+    pub caps: &'a fret_runtime::PlatformCapabilities,
+    pub prefers_reduced_motion: Option<bool>,
+}
+
+pub struct ResolvedWithFallback<T> {
+    pub value: T,
+    pub degraded: bool,
+    pub reason: Option<&'static str>,
+}
+
+pub trait EffectRecipe {
+    fn resolve(&self, cx: &ResolveCtx<'_>) -> ResolvedWithFallback<fret_core::EffectChain>;
+}
+```
+
+Notes:
+
+- `ResolveCtx` must be easy to obtain inside `ElementContext`/widget contexts.
+- The resolved form carries a *single* degradation report that diagnostics can surface.
+
+### B) Declarative wrapper integration
+
+Recipes should provide wrappers that compile down to mechanism:
+
+- `EffectLayerProps` for postprocessing (existing).
+- `PushMask/PopMask` for alpha masks (ADR 1178).
+- `PushCompositeGroup/PopCompositeGroup` for blend groups (ADR 1180).
+- `Paint` / `MaterialId` for fills and strokes (ADR 1172 / ADR 1174).
+
+### C) Migration rule (normative intent)
+
+Existing “limited recipe” helpers in `fret-ui-kit` (glass/pixelate) should be treated as the
+bootstrap implementation of this pattern. Future creative recipes (MagicUI, shadcn extensions)
+must follow the same resolve/fallback/report shape so we do not grow inconsistent one-off APIs.
+
 ## Consequences
 
 - Component authors can build creative UIs by composing small recipes instead of assembling raw
@@ -111,4 +171,3 @@ This keeps the Tier A vs Tier B decision rule stable and user-visible (ADR 0125 
 - This ADR does not add a general-purpose shader graph or plugin ABI.
 - This ADR does not require all ecosystems to share identical visuals; it requires shared seams and
   consistent degradation rules.
-

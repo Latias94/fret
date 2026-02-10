@@ -30,6 +30,12 @@ Related ADRs:
 - Renderer budgets + deterministic degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Renderer extensibility tiers: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 
+Design references (non-normative):
+
+- Flutter/Skia expresses isolated compositing via `saveLayer(bounds, paint)` where `paint` carries
+  `blendMode` (and optionally filters). Fret’s design mirrors this *shape*, but keeps the public
+  contract portable and budgeted (ADR 0120) rather than exposing backend paint objects.
+
 ## Decision
 
 ### D1 — Add an explicit compositing group stack
@@ -96,3 +102,14 @@ Compositing groups respect the effective transform and clip stacks:
 - This ADR does not define a general-purpose shader surface for arbitrary blend math.
 - This ADR does not define layer-as-isolation (ADR 0079 remains intact).
 
+## Implementation Notes (non-normative)
+
+To reduce future churn as the group surface grows (e.g. adding an optional color filter), prefer a
+descriptor-struct shape rather than repeatedly changing the `SceneOp` enum variant fields:
+
+- `SceneOp::PushCompositeGroup { desc: CompositeGroupDesc }`
+- `#[non_exhaustive] pub struct CompositeGroupDesc { bounds, mode, quality, ... }`
+
+This is directly inspired by mature “paint object” designs (Flutter/Skia), while keeping Fret’s
+mechanism/policy split intact: component authors primarily consume ecosystem recipes, not raw group
+descriptors.
